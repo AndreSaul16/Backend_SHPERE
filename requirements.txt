@@ -1,0 +1,24 @@
+# Dependencias básicas del backend SPHERE
+fastapi
+uvicorn[standard]
+requests
+pydantic
+pydantic-settings
+motor
+openai
+python-dotenv
+certifi
+colorama  # Para logs con colores en Windows
+
+# --- Librerías de IA Agéntica ---
+langchain
+langchain-core
+langchain-openai
+langchain-mongodb
+langgraph
+langgraph-checkpoint-mongodb
+
+# --- Dependencias de Testing ---
+pytest
+pytest-asyncio
+httpx
