@@ -14,14 +14,25 @@ from app.core.logger import api_logger as logger
 router = APIRouter()
 
 
+class SessionMetadata(BaseModel):
+    override_name: Optional[str] = None
+    override_avatar: Optional[str] = None
+    override_color: Optional[str] = None
+    override_role_label: Optional[str] = None
+
+
 class SessionBase(BaseModel):
     session_id: str
     title: str
+    base_agent_id: str = "CEO"
     created_at: datetime
+    metadata: SessionMetadata = SessionMetadata()
 
 
 class CreateSessionRequest(BaseModel):
     title: Optional[str] = "Nueva Estrategia"
+    base_agent_id: Optional[str] = "CEO"
+    metadata: Optional[SessionMetadata] = None
 
 
 @router.post("/", response_model=SessionBase)
@@ -32,12 +43,14 @@ async def create_session(request: CreateSessionRequest):
     new_session = {
         "session_id": session_id,
         "title": request.title,
-        "created_at": datetime.utcnow()
+        "base_agent_id": request.base_agent_id,
+        "created_at": datetime.utcnow(),
+        "metadata": request.metadata.dict() if request.metadata else {}
     }
     
     try:
         sessions_collection = get_sessions_collection()
-        logger.info(f"Creando sesión: {session_id} - '{request.title}'")
+        logger.info(f"Creando sesión: {session_id} - '{request.title}' | Base: {request.base_agent_id}")
         
         result = await sessions_collection.insert_one(new_session)
         logger.debug(f"Sesión insertada con _id: {result.inserted_id}")

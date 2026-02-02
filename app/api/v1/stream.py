@@ -135,12 +135,7 @@ async def generate_chat_events(query: str, session_id: str, target_role: Optiona
                                     if pre_tag.strip():
                                         yield f"data: {json.dumps({'type': 'token', 'content': pre_tag})}\n\n"
                                     
-                                    yield f"data: {json.dumps({
-                                        'type': 'artifact_open',
-                                        'title': title,
-                                        'artifact_type': artifact_type,
-                                        'language': language
-                                    })}\n\n"
+                                    yield f"data: {json.dumps({'type': 'artifact_open', 'title': title, 'artifact_type': artifact_type, 'language': language})}\n\n"
                                     
                                     is_inside_artifact = True
                                     tag_end = tag_section.find(">")
@@ -173,8 +168,20 @@ async def generate_chat_events(query: str, session_id: str, target_role: Optiona
 async def chat_stream_endpoint(request: StreamRequest):
     """Endpoint SSE para streaming de respuestas."""
     try:
+        # Recuperar metadatos de la sesión para conocer el agente base
+        from app.core.database import get_sessions_collection
+        sessions_collection = get_sessions_collection()
+        session_doc = await sessions_collection.find_one({"session_id": request.session_id})
+        
+        final_target_role = request.target_role
+        
+        if not final_target_role and session_doc:
+            # Si no se especifica rol en la petición, usar el de la sesión
+            final_target_role = session_doc.get("base_agent_id", "CEO")
+            logger.debug(f"Usando base_agent_id de la sesión: {final_target_role}")
+
         return StreamingResponse(
-            generate_chat_events(request.query, request.session_id, request.target_role),
+            generate_chat_events(request.query, request.session_id, final_target_role),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
