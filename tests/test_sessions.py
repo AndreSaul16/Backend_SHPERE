@@ -11,26 +11,38 @@ class TestSessionsEndpoint:
 
     @pytest.mark.asyncio
     async def test_create_session(self, async_client):
-        """Test: Crear una nueva sesión."""
+        """Test: Crear una nueva sesión evolucionada."""
+        session_data = {
+            "title": "Test Session Evolution",
+            "user_id": "test_user_pytest",
+            "visual_config": {
+                "name": "Pepe Test",
+                "color": "gold"
+            }
+        }
         response = await async_client.post(
             "/api/v1/sessions/",
-            json={"title": "Test Session - Pytest"}
+            json=session_data
         )
         
         assert response.status_code == 200, f"Error: {response.text}"
         
         data = response.json()
-        assert "session_id" in data, "Respuesta no contiene session_id"
-        assert data["title"] == "Test Session - Pytest"
-        assert "created_at" in data
+        assert "session_id" in data
+        assert data["title"] == "Test Session Evolution"
+        assert data["user_id"] == "test_user_pytest"
+        assert data["visual_config"]["name"] == "Pepe Test"
+        assert data["visual_config"]["color"] == "gold"
+        assert "context_files" in data
+        assert isinstance(data["context_files"], list)
         
         # Guardar para cleanup
         pytest.session_id_created = data["session_id"]
-        print(f"\n✅ Sesión creada: {data['session_id']}")
+        print(f"\n✅ Sesión evolucionada creada: {data['session_id']}")
 
     @pytest.mark.asyncio
-    async def test_create_session_default_title(self, async_client):
-        """Test: Crear sesión con título por defecto."""
+    async def test_create_session_default_values(self, async_client):
+        """Test: Crear sesión con valores por defecto."""
         response = await async_client.post(
             "/api/v1/sessions/",
             json={}
@@ -38,7 +50,9 @@ class TestSessionsEndpoint:
         
         assert response.status_code == 200
         data = response.json()
-        assert data["title"] == "Nueva Estrategia", "Título por defecto incorrecto"
+        assert data["title"] == "Nueva Estrategia"
+        assert data["user_id"] == "default_user"
+        assert data["visual_config"] == {"name": None, "avatar": None, "color": None}
 
     @pytest.mark.asyncio
     async def test_list_sessions(self, async_client):
@@ -48,15 +62,15 @@ class TestSessionsEndpoint:
         assert response.status_code == 200
         
         data = response.json()
-        assert isinstance(data, list), "Respuesta no es una lista"
-        print(f"\n📋 Sesiones encontradas: {len(data)}")
+        assert isinstance(data, list)
         
-        # Verificar estructura de cada sesión
+        # Verificar estructura de la nueva sesión
         if data:
             session = data[0]
             assert "session_id" in session
-            assert "title" in session
-            assert "created_at" in session
+            assert "user_id" in session
+            assert "visual_config" in session
+            assert "context_files" in session
 
     @pytest.mark.asyncio
     async def test_get_session_history_empty(self, async_client):

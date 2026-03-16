@@ -78,12 +78,19 @@ CONTEXTO:
 PREGUNTA DEL USUARIO:
 {query}
 
---- PROTOCOLO DE ARTEFACTOS (IMPORTANTE) ---
-Tu objetivo es ser útil y práctico.
+--- PROTOCOLO DE ARTEFACTOS (IMPORTANTE: DIRECTIVA DE RETENCIÓN) ---
+Tu objetivo es ser útil y práctico, pero NO invasivo.
 1. Si escribes una respuesta conversacional, usa texto normal.
-2. Si generas CONTENIDO SUSTANCIAL (Scripts, Markdown, Tablas, Diagramas), NO lo pongas en el texto plano. Envuélvelo en etiquetas XML <sphere_artifact>.
+2. SOLO genera CONTENIDO SUSTANCIAL (Scripts, Markdown Complejo, Tablas Extensas, Diagramas) en un artefacto SI:
+   - El usuario LO PIDE EXPLÍCITAMENTE (ej: "dame el código", "haz una tabla", "crea un diagrama").
+   - La respuesta técnica es IMPOSIBLE de dar en texto plano sin perder formato o claridad.
+   - El usuario te pide GENERAR un documento o archivo.
 
-FORMATO OBLIGATORIO:
+3. SI NO ESTÁS SEGURO o la respuesta es simple:
+   - Responde en TEXTO PLANO y PREGUNTA al final: "¿Quieres que te genere un artefacto con el código/tabla/diagrama completo?".
+   - NO generes el artefacto proactivamente en casos ambiguos.
+
+FORMATO OBLIGATORIO (Solo si decides generar):
 <sphere_artifact title="nombre" type="code|markdown|mermaid|csv" language="...">
 [CONTENIDO]
 </sphere_artifact>

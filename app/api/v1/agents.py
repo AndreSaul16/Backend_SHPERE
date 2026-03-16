@@ -14,41 +14,58 @@ from app.core.logger import api_logger as logger
 router = APIRouter()
 
 
-class CustomAgentCreate(BaseModel):
+class AgentIdentity(BaseModel):
     name: str
-    description: str
-    system_prompt: str
     role: str = "specialist"
     color: str = "blue"
+    avatar_style: Optional[str] = "cyberpunk"
+
+
+class BrainConfig(BaseModel):
+    model: str = "deepseek-r1"
+    temperature: float = 0.3
+    system_prompt: str
+
+
+class CustomAgentCreate(BaseModel):
+    owner_user_id: str = "default_user"
+    is_public: bool = False
+    identity: AgentIdentity
+    brain_config: BrainConfig
+    default_tools: List[str] = []
+    knowledge_bases: List[str] = []
 
 
 class CustomAgentResponse(BaseModel):
     agent_id: str
-    name: str
-    description: str
-    role: str
-    color: str
+    owner_user_id: str
+    is_public: bool
+    identity: AgentIdentity
+    brain_config: BrainConfig
+    default_tools: List[str]
+    knowledge_bases: List[str]
     created_at: datetime
 
 
 @router.post("/", response_model=CustomAgentResponse)
 async def create_custom_agent(agent_data: CustomAgentCreate):
-    """Crea un nuevo agente personalizado."""
+    """Crea un nuevo agente con perfil de habilidades."""
     agent_id = str(uuid.uuid4())
     
     new_agent = {
         "agent_id": agent_id,
-        "name": agent_data.name,
-        "description": agent_data.description,
-        "system_prompt": agent_data.system_prompt,
-        "role": agent_data.role,
-        "color": agent_data.color,
+        "owner_user_id": agent_data.owner_user_id,
+        "is_public": agent_data.is_public,
+        "identity": agent_data.identity.dict(),
+        "brain_config": agent_data.brain_config.dict(),
+        "default_tools": agent_data.default_tools,
+        "knowledge_bases": agent_data.knowledge_bases,
         "created_at": datetime.utcnow()
     }
     
     try:
         custom_agents_collection = get_custom_agents_collection()
-        logger.info(f"Creando agente: {agent_id} - '{agent_data.name}'")
+        logger.info(f"Creando agente evolucionado: {agent_id} - '{agent_data.identity.name}'")
         
         result = await custom_agents_collection.insert_one(new_agent)
         logger.debug(f"Agente insertado con _id: {result.inserted_id}")
@@ -62,13 +79,16 @@ async def create_custom_agent(agent_data: CustomAgentCreate):
 
 @router.get("/", response_model=List[CustomAgentResponse])
 async def list_custom_agents():
-    """Lista todos los agentes personalizados creados por el usuario."""
+    """Lista todos los agentes evolucionados."""
     try:
         custom_agents_collection = get_custom_agents_collection()
-        logger.debug("Obteniendo lista de agentes...")
+        logger.debug("Obteniendo lista de agentes evolucionados...")
         
         agents = []
         async for agent in custom_agents_collection.find().sort("created_at", -1):
+            # Asegurar que el formato coincida con el modelo de respuesta
+            if "_id" in agent:
+                agent.pop("_id")
             agents.append(agent)
         
         logger.info(f"Devolviendo {len(agents)} agentes")
@@ -79,12 +99,12 @@ async def list_custom_agents():
         raise HTTPException(status_code=500, detail=f"Error al obtener agentes: {str(e)}")
 
 
-@router.get("/{agent_id}")
+@router.get("/{agent_id}", response_model=CustomAgentResponse)
 async def get_custom_agent(agent_id: str):
-    """Obtiene los detalles de un agente personalizado (incluyendo el prompt)."""
+    """Obtiene los detalles completos de un agente."""
     try:
         custom_agents_collection = get_custom_agents_collection()
-        logger.debug(f"Buscando agente: {agent_id}")
+        logger.debug(f"Buscando agente evolucionado: {agent_id}")
         
         agent = await custom_agents_collection.find_one({"agent_id": agent_id})
         
@@ -92,17 +112,11 @@ async def get_custom_agent(agent_id: str):
             logger.warning(f"Agente no encontrado: {agent_id}")
             raise HTTPException(status_code=404, detail="Agente no encontrado")
         
-        logger.info(f"Agente encontrado: {agent['name']}")
+        logger.info(f"Agente encontrado: {agent['identity']['name']}")
         
-        return {
-            "agent_id": agent["agent_id"],
-            "name": agent["name"],
-            "description": agent["description"],
-            "system_prompt": agent["system_prompt"],
-            "role": agent.get("role", "specialist"),
-            "color": agent.get("color", "blue"),
-            "created_at": agent["created_at"]
-        }
+        if "_id" in agent:
+            agent.pop("_id")
+        return agent
         
     except HTTPException:
         raise

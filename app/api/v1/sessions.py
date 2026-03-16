@@ -14,43 +14,84 @@ from app.core.logger import api_logger as logger
 router = APIRouter()
 
 
-class SessionMetadata(BaseModel):
-    override_name: Optional[str] = None
-    override_avatar: Optional[str] = None
-    override_color: Optional[str] = None
-    override_role_label: Optional[str] = None
+from enum import Enum
+
+class SessionType(str, Enum):
+    GROUP = "group"
+    DIRECT = "direct"
+
+
+class VisualConfig(BaseModel):
+    name: Optional[str] = None
+    avatar: Optional[str] = None
+    color: Optional[str] = None
+    theme: Optional[str] = None         # For groups: Palette name
+    bubble_color: Optional[str] = None  # For direct: Specific bubble color
+    secondary_color: Optional[str] = None
+
+
+class ContextFile(BaseModel):
+    file_id: str
+    name: str
+    vector_index_id: Optional[str] = None
+    uploaded_at: datetime = datetime.utcnow()
 
 
 class SessionBase(BaseModel):
     session_id: str
+    user_id: str = "default_user"
     title: str
     base_agent_id: str = "CEO"
+    type: SessionType = SessionType.DIRECT
+    visual_config: VisualConfig = VisualConfig()
+    context_files: List[ContextFile] = []
+    enabled_tools: List[str] = []
+    members: List[str] = []  # List of agent IDs in the group
     created_at: datetime
-    metadata: SessionMetadata = SessionMetadata()
 
 
 class CreateSessionRequest(BaseModel):
     title: Optional[str] = "Nueva Estrategia"
+    user_id: Optional[str] = "default_user"
     base_agent_id: Optional[str] = "CEO"
-    metadata: Optional[SessionMetadata] = None
+    type: Optional[SessionType] = None  # Explicit type or inferred
+    visual_config: Optional[VisualConfig] = None
+    enabled_tools: Optional[List[str]] = None
+    members: Optional[List[str]] = None
 
 
 @router.post("/", response_model=SessionBase)
 async def create_session(request: CreateSessionRequest):
-    """Crea una nueva sala de guerra vacía."""
+    """Crea una nueva sala de guerra evolucionada."""
     session_id = str(uuid.uuid4())
+    
+    # Infer session type if not provided
+    session_type = request.type
+    if not session_type:
+        if request.base_agent_id == "group-chat" or (request.members and len(request.members) > 1):
+            session_type = SessionType.GROUP
+        else:
+            session_type = SessionType.DIRECT
+
+    # Visual overrides
+    visual_config = request.visual_config.dict() if request.visual_config else {}
     
     new_session = {
         "session_id": session_id,
+        "user_id": request.user_id,
         "title": request.title,
         "base_agent_id": request.base_agent_id,
-        "created_at": datetime.utcnow(),
-        "metadata": request.metadata.dict() if request.metadata else {}
+        "type": session_type,
+        "visual_config": visual_config,
+        "context_files": [], 
+        "enabled_tools": request.enabled_tools or [],
+        "members": request.members or [],
+        "created_at": datetime.utcnow()
     }
     
     try:
         sessions_collection = get_sessions_collection()
-        logger.info(f"Creando sesión: {session_id} - '{request.title}' | Base: {request.base_agent_id}")
+        logger.info(f"Creando sesión evolucionada: {session_id} - User: {request.user_id}")
         
         result = await sessions_collection.insert_one(new_session)
         logger.debug(f"Sesión insertada con _id: {result.inserted_id}")
@@ -113,6 +154,58 @@ async def get_session_history(session_id: str):
             "messages": [],
             "final_response": ""
         }
+
+
+class UpdateSessionRequest(BaseModel):
+    title: Optional[str] = None
+    visual_config: Optional[VisualConfig] = None
+    enabled_tools: Optional[List[str]] = None
+    members: Optional[List[str]] = None
+
+
+@router.patch("/{session_id}", response_model=SessionBase)
+async def update_session(session_id: str, request: UpdateSessionRequest):
+    """Actualiza parcialmente una sesión de chat."""
+    try:
+        sessions_collection = get_sessions_collection()
+        logger.info(f"Actualizando sesión: {session_id}")
+        
+        update_data = {}
+        if request.title is not None:
+            update_data["title"] = request.title
+        if request.visual_config is not None:
+            update_data["visual_config"] = request.visual_config.dict(exclude_unset=True)
+        if request.enabled_tools is not None:
+            update_data["enabled_tools"] = request.enabled_tools
+        if request.members is not None:
+            update_data["members"] = request.members
+            
+        if not update_data:
+            # No hay cambios que aplicar
+            doc = await sessions_collection.find_one({"session_id": session_id})
+            if not doc:
+                raise HTTPException(status_code=404, detail="Sesión no encontrada")
+            doc.pop("_id", None)
+            return SessionBase(**doc)
+            
+        result = await sessions_collection.find_one_and_update(
+            {"session_id": session_id},
+            {"$set": update_data},
+            return_document=True
+        )
+        
+        if not result:
+            logger.warning(f"Sesión no encontrada para actualizar: {session_id}")
+            raise HTTPException(status_code=404, detail="Sesión no encontrada")
+            
+        result.pop("_id", None)
+        return SessionBase(**result)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error actualizando sesión {session_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error al actualizar sesión: {str(e)}")
 
 
 @router.delete("/{session_id}")

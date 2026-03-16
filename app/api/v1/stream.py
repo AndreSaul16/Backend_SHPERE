@@ -107,6 +107,11 @@ async def generate_chat_events(query: str, session_id: str, target_role: Optiona
                                             "</sphere_artifa", "</sphere_artifac", "</sphere_artifact"]
                             
                             if not any(artifact_buffer.endswith(p) for p in close_prefixes):
+                                # 🛡️ RETENCIÓN DE TAGS ANIDADOS: Si el LLM alucina y repite la etiqueta de apertura DENTRO, la ignoramos/limpiamos
+                                if "<sphere_artifact" in artifact_buffer:
+                                    # Limpiamos cualquier intento de anidación
+                                    artifact_buffer = re.sub(r'<sphere_artifact[^>]*>', '', artifact_buffer)
+                                    
                                 if artifact_buffer:
                                     yield f"data: {json.dumps({'type': 'artifact_chunk', 'content': artifact_buffer})}\n\n"
                                     artifact_buffer = ""
@@ -159,6 +164,9 @@ async def generate_chat_events(query: str, session_id: str, target_role: Optiona
         yield "data: [DONE]\n\n"
         logger.info(f"Stream finalizado para sesión: {session_id}")
         
+    except GeneratorExit:
+        logger.info(f"🛑 Cliente desconectado (Stop Generation): {session_id}")
+        return
     except Exception as e:
         logger.error(f"🔥 Error en streaming: {e}", exc_info=True)
         yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"

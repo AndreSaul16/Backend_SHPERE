@@ -11,13 +11,18 @@ class TestAgentsEndpoint:
 
     @pytest.mark.asyncio
     async def test_create_agent(self, async_client):
-        """Test: Crear un nuevo agente personalizado."""
+        """Test: Crear un nuevo agente evolucionado."""
         agent_data = {
-            "name": "Test Agent",
-            "description": "Agente de prueba creado por Pytest",
-            "system_prompt": "Eres un agente de prueba. Solo responde 'PYTEST OK'.",
-            "role": "tester",
-            "color": "purple"
+            "identity": {
+                "name": "Oberon Pytest",
+                "role": "tester",
+                "color": "purple"
+            },
+            "brain_config": {
+                "system_prompt": "Eres un agente de prueba evolucionado.",
+                "model": "deepseek-r1"
+            },
+            "default_tools": ["tester_tool"]
         }
         
         response = await async_client.post("/api/v1/agents/", json=agent_data)
@@ -26,20 +31,20 @@ class TestAgentsEndpoint:
         
         data = response.json()
         assert "agent_id" in data
-        assert data["name"] == "Test Agent"
-        assert data["role"] == "tester"
+        assert data["identity"]["name"] == "Oberon Pytest"
+        assert data["brain_config"]["model"] == "deepseek-r1"
+        assert "tester_tool" in data["default_tools"]
         
         # Guardar ID para otros tests
         pytest.test_agent_id = data["agent_id"]
-        print(f"\n✅ Agente creado: {data['agent_id']}")
+        print(f"\n✅ Agente evolucionado creado: {data['agent_id']}")
 
     @pytest.mark.asyncio
     async def test_create_agent_defaults(self, async_client):
         """Test: Crear agente con valores por defecto."""
         agent_data = {
-            "name": "Agente Minimal",
-            "description": "Sin role ni color especificado",
-            "system_prompt": "Prompt básico"
+            "identity": {"name": "Agente Minimal"},
+            "brain_config": {"system_prompt": "Prompt básico"}
         }
         
         response = await async_client.post("/api/v1/agents/", json=agent_data)
@@ -48,8 +53,9 @@ class TestAgentsEndpoint:
         data = response.json()
         
         # Verificar defaults
-        assert data["role"] == "specialist", "Default role incorrecto"
-        assert data["color"] == "blue", "Default color incorrecto"
+        assert data["identity"]["role"] == "specialist"
+        assert data["brain_config"]["model"] == "deepseek-r1"
+        assert data["is_public"] is False
 
     @pytest.mark.asyncio
     async def test_list_agents(self, async_client):
