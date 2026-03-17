@@ -3,9 +3,9 @@ API de Sesiones de Chat - SPHERE Backend.
 CRUD para gestionar sesiones de conversación.
 """
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 from app.core.database import get_sessions_collection
@@ -34,7 +34,7 @@ class ContextFile(BaseModel):
     file_id: str
     name: str
     vector_index_id: Optional[str] = None
-    uploaded_at: datetime = datetime.utcnow()
+    uploaded_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class SessionBase(BaseModel):
@@ -74,7 +74,7 @@ async def create_session(request: CreateSessionRequest):
             session_type = SessionType.DIRECT
 
     # Visual overrides
-    visual_config = request.visual_config.dict() if request.visual_config else {}
+    visual_config = request.visual_config.model_dump() if request.visual_config else {}
     
     new_session = {
         "session_id": session_id,
@@ -86,7 +86,7 @@ async def create_session(request: CreateSessionRequest):
         "context_files": [], 
         "enabled_tools": request.enabled_tools or [],
         "members": request.members or [],
-        "created_at": datetime.utcnow()
+        "created_at": datetime.now(timezone.utc)
     }
     
     try:
@@ -174,7 +174,11 @@ async def update_session(session_id: str, request: UpdateSessionRequest):
         if request.title is not None:
             update_data["title"] = request.title
         if request.visual_config is not None:
-            update_data["visual_config"] = request.visual_config.dict(exclude_unset=True)
+            # Usar dot-notation para actualizar solo los campos enviados
+            # sin borrar los que no vienen en la petición (ej: enviar solo color
+            # no debe eliminar name, avatar, etc.)
+            for field, value in request.visual_config.model_dump(exclude_unset=True).items():
+                update_data[f"visual_config.{field}"] = value
         if request.enabled_tools is not None:
             update_data["enabled_tools"] = request.enabled_tools
         if request.members is not None:

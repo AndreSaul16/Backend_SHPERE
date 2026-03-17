@@ -5,7 +5,7 @@ CRUD para gestionar agentes custom creados por el usuario.
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 from app.core.database import get_custom_agents_collection
@@ -56,11 +56,11 @@ async def create_custom_agent(agent_data: CustomAgentCreate):
         "agent_id": agent_id,
         "owner_user_id": agent_data.owner_user_id,
         "is_public": agent_data.is_public,
-        "identity": agent_data.identity.dict(),
-        "brain_config": agent_data.brain_config.dict(),
+        "identity": agent_data.identity.model_dump(),
+        "brain_config": agent_data.brain_config.model_dump(),
         "default_tools": agent_data.default_tools,
         "knowledge_bases": agent_data.knowledge_bases,
-        "created_at": datetime.utcnow()
+        "created_at": datetime.now(timezone.utc)
     }
     
     try:

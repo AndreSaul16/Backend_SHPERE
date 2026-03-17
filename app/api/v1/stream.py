@@ -15,14 +15,14 @@ import re
 from typing import Optional
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from app.core.orchestrator import app as orchestrator_app
 from app.core.logger import stream_logger as logger
 
 router = APIRouter()
 
 class StreamRequest(BaseModel):
-    query: str
+    query: str = Field(..., min_length=1, max_length=10_000)
     session_id: str  # <--- OBLIGATORIO AHORA
     target_role: Optional[str] = None  # Para chats privados
 

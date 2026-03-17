@@ -123,8 +123,8 @@ async def router_node(state: AgentState):
         agent = await custom_agents_collection.find_one({"agent_id": target_role})
         if agent:
             return {
-                "next_agent": agent["name"],
-                "system_prompt": agent["system_prompt"]
+                "next_agent": agent["identity"]["name"],
+                "system_prompt": agent["brain_config"]["system_prompt"]
             }
         logger.warning(f"Agente {target_role} no encontrado, fallback a CEO")
         target_role = "CEO"
@@ -158,9 +158,9 @@ async def agent_node(state: AgentState):
     # 1. Determinar el prompt base
     system_instruction = custom_system_prompt or DEFAULT_CORE_PROMPTS.get(target_role or role, DEFAULT_CORE_PROMPTS["system"])
     
-    # 2. Recuperar Contexto RAG
+    # 2. Recuperar Contexto RAG (async para no bloquear el event loop)
     rag_role = target_role if target_role in CORE_ROLES else "all"
-    context = retrieve_context(query, rag_role)
+    context = await retrieve_context(query, rag_role)
     
     # 3. Preparar historial (excluyendo el prompt de instrucción actual para no duplicar)
     # Filtramos para no pasar mensajes de sistema previos si queremos control total

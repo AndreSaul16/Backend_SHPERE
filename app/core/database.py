@@ -49,7 +49,7 @@ class Database:
             self._client_kwargs.update({
                 "tls": True,
                 "tlsCAFile": certifi.where(),
-                "tlsAllowInvalidCertificates": True,  # Solo para diagnóstico
+                "tlsAllowInvalidCertificates": False,
             })
             logger.debug("TLS configurado para conexión Atlas")
 
