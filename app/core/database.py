@@ -208,6 +208,12 @@ def get_custom_agents_collection():
     return db.get_async_db()["custom_agents"]
 
 
+def get_gridfs_bucket():
+    """Bucket GridFS para almacenamiento de archivos de agentes."""
+    from motor.motor_asyncio import AsyncIOMotorGridFSBucket
+    return AsyncIOMotorGridFSBucket(db.get_async_db(), bucket_name="agent_files")
+
+
 # Aliases para compatibilidad con código existente
 sessions_collection = property(lambda self: get_sessions_collection())
 checkpoints_collection = property(lambda self: get_checkpoints_collection())

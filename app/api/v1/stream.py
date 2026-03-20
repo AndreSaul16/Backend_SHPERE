@@ -73,7 +73,20 @@ async def generate_chat_events(query: str, session_id: str, target_role: Optiona
                     logger.debug(f"Router detectó agente: {role}")
                     yield f"data: {json.dumps({'type': 'meta', 'role': role})}\n\n"
 
-            # --- B. STREAMING DE TOKENS ---
+            # --- B. TOOL EXECUTION EVENTS ---
+            if kind == "on_tool_start":
+                tool_name = event.get("name", "unknown_tool")
+                tool_input = event.get("data", {}).get("input", {})
+                logger.info(f"🔧 Tool start: {tool_name}")
+                yield f"data: {json.dumps({'type': 'tool_start', 'tool_name': tool_name, 'args': tool_input})}\n\n"
+
+            if kind == "on_tool_end":
+                tool_name = event.get("name", "unknown_tool")
+                tool_output = str(event.get("data", {}).get("output", ""))[:500]
+                logger.info(f"✅ Tool end: {tool_name}")
+                yield f"data: {json.dumps({'type': 'tool_result', 'tool_name': tool_name, 'result': tool_output})}\n\n"
+
+            # --- C. STREAMING DE TOKENS ---
             if kind == "on_chat_model_stream":
                 chunk = event.get("data", {}).get("chunk")
                 if chunk and hasattr(chunk, 'content'):
@@ -177,16 +190,35 @@ async def chat_stream_endpoint(request: StreamRequest):
     """Endpoint SSE para streaming de respuestas."""
     try:
         # Recuperar metadatos de la sesión para conocer el agente base
-        from app.core.database import get_sessions_collection
+        from app.core.database import get_sessions_collection, get_custom_agents_collection
         sessions_collection = get_sessions_collection()
         session_doc = await sessions_collection.find_one({"session_id": request.session_id})
-        
+
         final_target_role = request.target_role
-        
+
         if not final_target_role and session_doc:
-            # Si no se especifica rol en la petición, usar el de la sesión
-            final_target_role = session_doc.get("base_agent_id", "CEO")
-            logger.debug(f"Usando base_agent_id de la sesión: {final_target_role}")
+            session_type = session_doc.get("type", "direct")
+            if session_type == "group":
+                # Sesiones GROUP: dejar target_role en None para que el router clasifique
+                final_target_role = None
+                logger.debug("Sesión GROUP detectada: router clasificará la consulta")
+            else:
+                # Sesiones DIRECT: resolver según tipo de agente
+                agent_ref_type = session_doc.get("agent_ref_type", "core")
+                base_agent_id = session_doc.get("base_agent_id", "CEO")
+
+                if agent_ref_type == "custom":
+                    # Validar que el agente custom sigue existiendo
+                    agents_col = get_custom_agents_collection()
+                    agent = await agents_col.find_one({"agent_id": base_agent_id})
+                    if not agent:
+                        raise HTTPException(
+                            status_code=422,
+                            detail="El agente asignado a esta sesión fue eliminado. Crea una nueva sesión."
+                        )
+
+                final_target_role = base_agent_id
+                logger.debug(f"Sesión DIRECT ({agent_ref_type}): target_role={final_target_role}")
 
         return StreamingResponse(
             generate_chat_events(request.query, request.session_id, final_target_role),
@@ -197,6 +229,8 @@ async def chat_stream_endpoint(request: StreamRequest):
                 "X-Accel-Buffering": "no"
             }
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"🔥 Error iniciando stream: {e}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     # CORS — en producción, set to comma-separated list of frontend URLs
     ALLOWED_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
 
+    # n8n - Workflow Automation
+    N8N_BASE_URL: str = "http://n8n:5678"
+    N8N_WEBHOOK_SECRET: str = ""
+
     @property
     def allowed_origins_list(self) -> list[str]:
         return [o.strip() for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]

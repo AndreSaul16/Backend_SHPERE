@@ -18,6 +18,12 @@ langchain-mongodb
 langgraph
 langgraph-checkpoint-mongodb
 
+# --- Pipeline de Documentos (RAG personalizado) ---
+python-multipart
+pymupdf
+python-docx
+tiktoken
+
 # --- Dependencias de Testing ---
 pytest
 pytest-asyncio

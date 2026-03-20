@@ -60,6 +60,11 @@ def _retrieve_context_sync(query: str, role: str, limit: int = 3) -> str:
 
         results = list(collection.aggregate(pipeline))
 
+        # Fallback: si custom agent no tiene docs propios, buscar en "all"
+        if not results and role not in ("CEO", "CTO", "CFO", "CMO", "system", "all"):
+            pipeline[0]["$vectorSearch"]["filter"] = {"agent_target": "all"}
+            results = list(collection.aggregate(pipeline))
+
         if not results:
             return "No encontré información específica en mi base de conocimientos sobre este tema."
 
