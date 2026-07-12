@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Search, Plus, MoreVertical, Trash2, Share2, Settings, CreditCard } from "lucide-react";
+import { Search, Plus, MoreVertical, Trash2, Share2, Settings, CreditCard, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -46,24 +46,63 @@ export function Sidebar() {
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
     const [copiedId, setCopiedId] = useState<string | null>(null);
+    const [sharingId, setSharingId] = useState<string | null>(null);
+    // Admin: fetch perezoso — solo mostramos el link si /admin/users NO devuelve 403.
+    const [isAdmin, setIsAdmin] = useState(false);
 
-    const handleShare = async (e: React.MouseEvent, sessionId: string) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const url = `${window.location.origin}/chat/${sessionId}`;
+    useEffect(() => {
+        let active = true;
+        import("@/services/api")
+            .then(({ adminService }) => adminService.users())
+            .then(() => { if (active) setIsAdmin(true); })
+            .catch(() => { /* 403 o error: no es admin, no mostramos el link */ });
+        return () => { active = false; };
+    }, []);
+
+    const copyToClipboard = async (text: string) => {
         try {
-            await navigator.clipboard.writeText(url);
+            await navigator.clipboard.writeText(text);
         } catch {
             // Fallback para navegadores sin clipboard API
             const ta = document.createElement("textarea");
-            ta.value = url;
+            ta.value = text;
             document.body.appendChild(ta);
             ta.select();
             try { document.execCommand("copy"); } catch { /* noop */ }
             document.body.removeChild(ta);
         }
-        setCopiedId(sessionId);
-        setTimeout(() => setCopiedId((id) => (id === sessionId ? null : id)), 1800);
+    };
+
+    const handleShare = async (e: React.MouseEvent, sessionId: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setSharingId(sessionId);
+        try {
+            const { chatService } = await import("@/services/api");
+            const { share_token } = await chatService.shareSession(sessionId);
+            await copyToClipboard(`${window.location.origin}/share/${share_token}`);
+            // Refrescar sesiones para que el menú muestre "Dejar de compartir".
+            fetchSessions();
+            setCopiedId(sessionId);
+            setTimeout(() => setCopiedId((id) => (id === sessionId ? null : id)), 1800);
+        } catch (error) {
+            console.error("Failed to share session:", error);
+        } finally {
+            setSharingId((id) => (id === sessionId ? null : id));
+        }
+    };
+
+    const handleUnshare = async (e: React.MouseEvent, sessionId: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+            const { chatService } = await import("@/services/api");
+            await chatService.unshareSession(sessionId);
+            fetchSessions();
+            setActiveMenuId(null);
+        } catch (error) {
+            console.error("Failed to unshare session:", error);
+        }
     };
 
     // Close menu when clicking outside
@@ -234,11 +273,27 @@ export function Sidebar() {
                                                     <>
                                                         <button
                                                             onClick={(e) => handleShare(e, session.session_id)}
-                                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-text-secondary hover:text-text-primary hover:bg-surface-highlight rounded-lg transition-colors"
+                                                            disabled={sharingId === session.session_id}
+                                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-text-secondary hover:text-text-primary hover:bg-surface-highlight rounded-lg transition-colors disabled:opacity-50"
                                                         >
                                                             <Share2 className="h-3.5 w-3.5" />
-                                                            {copiedId === session.session_id ? "¡Enlace copiado!" : "Compartir"}
+                                                            {copiedId === session.session_id
+                                                                ? "¡Enlace copiado!"
+                                                                : sharingId === session.session_id
+                                                                    ? "Generando…"
+                                                                    : session.share_token
+                                                                        ? "Copiar enlace"
+                                                                        : "Compartir"}
                                                         </button>
+                                                        {session.share_token && (
+                                                            <button
+                                                                onClick={(e) => handleUnshare(e, session.session_id)}
+                                                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-amber-400 hover:text-amber-500 hover:bg-amber-500/10 rounded-lg transition-colors"
+                                                            >
+                                                                <Share2 className="h-3.5 w-3.5" />
+                                                                Dejar de compartir
+                                                            </button>
+                                                        )}
                                                         <div className="h-px bg-surface-highlight my-1 mx-1" />
                                                         <button
                                                             onClick={(e) => triggerConfirmDelete(e, session.session_id)}
@@ -323,6 +378,16 @@ export function Sidebar() {
                     <Settings className="h-4 w-4" />
                     <span>Configuración</span>
                 </Link>
+                {isAdmin && (
+                    <Link
+                        to="/admin"
+                        onClick={() => toggleSidebar(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface/40 border border-transparent hover:border-surface-highlight transition-all text-sm"
+                    >
+                        <ShieldCheck className="h-4 w-4" />
+                        <span>Admin</span>
+                    </Link>
+                )}
             </div>
         </div>
     );

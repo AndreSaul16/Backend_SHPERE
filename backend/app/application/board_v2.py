@@ -18,6 +18,7 @@ early-exit por consenso, devil's advocate y síntesis por "juez" (CEO) separado.
 
 import json
 import re
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from langchain_core.messages import HumanMessage
@@ -31,7 +32,7 @@ from app.application.orchestrator import (
     BOARD_SYSTEM_PROMPT_ADDITION,
     BOARD_CEO_OPENER,
 )
-from app.infrastructure.database import db
+from app.infrastructure.database import db, get_board_actas_collection
 from app.core.logger import checkpoint_logger as logger
 
 # Directores que pueden sentarse a debatir (el CEO siempre abre y cierra).
@@ -174,6 +175,66 @@ Consulta del fundador:
 """
 
 
+# ---------------------------------------------------------------------------
+# Memoria ejecutiva (F8): persistir el acta y recuperar las anteriores.
+# Aislamiento estricto: SIEMPRE se filtra por user_id Y session_id.
+# ---------------------------------------------------------------------------
+
+_ACTA_ARTIFACT_RE = re.compile(
+    r"<sphere_artifact\b[^>]*>(.*?)</sphere_artifact>", re.IGNORECASE | re.DOTALL
+)
+
+
+async def _save_acta(user_id: Optional[str], session_id: Optional[str], content: str) -> None:
+    """Guarda el acta del debate. Tolerante a fallos: nunca rompe el debate."""
+    if not (user_id and session_id and content):
+        return
+    try:
+        m = _ACTA_ARTIFACT_RE.search(content)
+        acta_md = m.group(1).strip() if m else content.strip()
+        summary_text = _ACTA_ARTIFACT_RE.sub("", content).strip()
+        await get_board_actas_collection().insert_one({
+            "user_id": user_id,
+            "session_id": session_id,
+            "created_at": datetime.now(timezone.utc),
+            "summary": summary_text[:500],
+            "acta_md": acta_md,
+        })
+    except Exception as e:
+        logger.warning(f"No se pudo guardar el acta (session={session_id}): {e}")
+
+
+async def _load_prior_actas_context(
+    user_id: Optional[str],
+    session_id: Optional[str],
+    limit: int = 2,
+    max_chars: int = 1500,
+) -> str:
+    """Recupera las últimas `limit` actas de ESTA sesión como contexto breve.
+
+    Devuelve "" si no hay actas o si algo falla. Sin vectores: solo find ordenado.
+    """
+    if not (user_id and session_id):
+        return ""
+    try:
+        cursor = (
+            get_board_actas_collection()
+            .find({"user_id": user_id, "session_id": session_id})
+            .sort("created_at", -1)
+            .limit(limit)
+        )
+        actas = [doc async for doc in cursor]
+    except Exception as e:
+        logger.warning(f"No se pudieron leer actas anteriores (session={session_id}): {e}")
+        return ""
+
+    parts = [f"- {(a.get('summary') or '').strip()}" for a in actas if (a.get("summary") or "").strip()]
+    if not parts:
+        return ""
+    ctx = "[ACTAS ANTERIORES DE ESTA JUNTA]\n" + "\n".join(parts)
+    return ctx[:max_chars]
+
+
 async def triage_node(state: AgentState):
     """Elige los directores participantes con el modelo rápido (v4-flash).
     En regeneración, preserva los del checkpoint."""
@@ -212,15 +273,18 @@ async def triage_node(state: AgentState):
         "board_mode": True,
         # Reset del acumulado de votos para este debate (sentinel del reducer).
         "board_votes": {"__RESET__": True},
+        # Limpia residuos del board legacy en el mismo checkpoint. El triage es
+        # el único escritor de este canal en V2, por eso no necesita reducer.
+        "board_agents_done": [],
     }
 
 
-def _board_query(role: str, phase: str, query: str, participants: list[str]) -> str:
+def _board_query(role: str, phase: str, query: str, participants: list[str], prior_actas: str = "") -> str:
     """Construye el `query` (HumanMessage) con TODO el protocolo de la fase. agent_node
     ignora system_prompt, así que aquí va todo lo que el modelo debe seguir este turno."""
     if role == "CEO":
         delega = ", ".join(participants)
-        return (
+        opener = (
             BOARD_CEO_OPENER
             + f"\n\n[REUNIÓN DE JUNTA DIRECTIVA — APERTURA]\n\n"
             f'El fundador ha enviado a la junta:\n\n"{query}"\n\n'
@@ -228,6 +292,13 @@ def _board_query(role: str, phase: str, query: str, participants: list[str]) -> 
             f"EXCLUSIVAMENTE a estos directores presentes hoy: {delega}. "
             f"No menciones a directores fuera de esa lista. NO respondas la pregunta todavía."
         )
+        # Memoria ejecutiva (F8): contexto de actas anteriores de esta misma junta.
+        if prior_actas:
+            opener += (
+                f"\n\n{prior_actas}\n"
+                "Tené en cuenta estas conclusiones previas para dar continuidad a la junta."
+            )
+        return opener
     if phase == "analysis":
         return (
             BOARD_SYSTEM_PROMPT_ADDITION
@@ -255,7 +326,9 @@ def board_v2_node_factory(role: str, phase: str):
 
     async def node(state: AgentState):
         participants = state.get("board_participants") or BOARD_DIRECTORS
-        board_query = _board_query(role, phase, state.get("query", ""), participants)
+        board_query = _board_query(
+            role, phase, state.get("query", ""), participants, state.get("board_prior_actas", "")
+        )
 
         modified_state = {
             **state,
@@ -266,9 +339,13 @@ def board_v2_node_factory(role: str, phase: str):
         }
         result = await agent_node(modified_state)
 
-        # Etiquetar la respuesta y parsear el voto (CEO opener no vota).
+        # Estos nodos corren EN PARALELO dentro del superstep (análisis/réplicas):
+        # solo pueden escribir canales con reducer (messages, board_votes).
+        # Propagar final_response/tool_calls_remaining (LastValue) haría colisionar
+        # las escrituras de los directores del mismo step (InvalidUpdateError).
+        # final_response lo escribe únicamente synthesis al cerrar el debate.
         msgs = result.get("messages") or []
-        out: dict[str, Any] = {**result}
+        out: dict[str, Any] = {"messages": msgs}
         if msgs:
             msg = msgs[0]
             ak = getattr(msg, "additional_kwargs", None)
@@ -278,9 +355,7 @@ def board_v2_node_factory(role: str, phase: str):
             if role != "CEO":
                 vote = _parse_vote(getattr(msg, "content", "") or "")
                 if vote:
-                    cleaned = _strip_vote_line(msg.content)
-                    msg.content = cleaned
-                    out["final_response"] = cleaned
+                    msg.content = _strip_vote_line(msg.content)
                     if isinstance(ak, dict):
                         ak["board_vote"] = vote
                     out["board_votes"] = {role: vote}
@@ -290,7 +365,14 @@ def board_v2_node_factory(role: str, phase: str):
 
 
 async def ceo_open_node(state: AgentState):
-    return await board_v2_node_factory("CEO", "opening")(state)
+    # Memoria ejecutiva (F8): en el camino fresh (no regeneración) recuperamos las
+    # últimas actas de ESTA sesión y las pasamos como contexto al CEO.
+    factory = board_v2_node_factory("CEO", "opening")
+    if not state.get("board_regenerate"):
+        prior = await _load_prior_actas_context(state.get("user_id"), state.get("session_id"))
+        if prior:
+            return await factory({**state, "board_prior_actas": prior})
+    return await factory(state)
 
 
 async def consensus_gate_node(state: AgentState):
@@ -426,6 +508,15 @@ async def synthesis_node(state: AgentState):
         f"Cerrá la reunión con tu resumen ejecutivo + el acta como artefacto, usando los "
         f"votos reales en la tabla de votación."
     )
+    # Última ventana de intervención: cubre el camino early-exit (que salta
+    # rebuttal_join) y las intervenciones llegadas durante el devil's advocate.
+    intervention = await _pop_intervention(state.get("user_id"), state.get("session_id"))
+    if intervention:
+        logger.info("Board V2: inyectando intervención del fundador antes de la síntesis")
+        conclusion_query += (
+            f"\n\n[INTERVENCIÓN DEL FUNDADOR DURANTE EL DEBATE] {intervention}\n"
+            f"Incorporá esta intervención a tu decisión final."
+        )
     modified_state = {
         **state,
         "next_agent": role,
@@ -441,6 +532,17 @@ async def synthesis_node(state: AgentState):
             ak["agent_role"] = "CEO"
             ak["board_phase"] = "synthesis"
             ak["is_conclusion"] = True
+    if intervention:
+        # Registrar la intervención en el historial ANTES de la respuesta del CEO
+        # (mismo formato que consensus_gate/rebuttal_join; stream.py la ecoa a la UI).
+        result["messages"] = [
+            HumanMessage(content=f"[INTERVENCIÓN DEL FUNDADOR DURANTE EL DEBATE] {intervention}")
+        ] + msgs
+
+    # Memoria ejecutiva (F8): persistir el acta de este debate (tolerante a fallos).
+    acta_content = result.get("final_response") or (msgs[0].content if msgs else "")
+    await _save_acta(state.get("user_id"), state.get("session_id"), acta_content)
+
     return result
 
 

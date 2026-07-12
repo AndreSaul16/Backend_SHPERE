@@ -94,7 +94,7 @@ describe('BillingPage - Loading / Error / Stripe States (Task 2.3)', () => {
             loaded: true,
             isLoading: false,
             error: null,
-            plan_id: 'starter',
+            plan_id: 'free',
             pro_messages_balance: 100,
             topup_messages_balance: 50,
             stripe_configured: true,
@@ -102,9 +102,30 @@ describe('BillingPage - Loading / Error / Stripe States (Task 2.3)', () => {
 
         renderPage();
 
-        expect(screen.getByText('Facturación y Planes')).toBeInTheDocument();
-        expect(screen.getByText('starter')).toBeInTheDocument();
+        // Modelo mono-plan de créditos: cabecera + balance + catálogo de packs.
+        expect(screen.getByText('Créditos y Facturación')).toBeInTheDocument();
         expect(screen.getByText('100')).toBeInTheDocument();
+        expect(screen.getByText('Packs de recarga')).toBeInTheDocument();
+        expect(screen.getByText('Total disponible')).toBeInTheDocument();
+        expect(screen.getByText('150')).toBeInTheDocument();
+    });
+
+    it('checkout buttons stay disabled until EU consent is accepted', () => {
+        useBillingStore.setState({
+            loaded: true,
+            isLoading: false,
+            stripe_configured: true,
+            plan_id: 'free',
+        });
+
+        renderPage();
+
+        const buyButtons = screen.getAllByRole('button', { name: /comprar/i });
+        buyButtons.forEach((b) => expect(b).toBeDisabled());
+
+        screen.getByRole('checkbox').click();
+
+        screen.getAllByRole('button', { name: /comprar/i }).forEach((b) => expect(b).toBeEnabled());
     });
 
     it('shows inline error on checkout failure (BF-004)', async () => {
@@ -123,9 +144,10 @@ describe('BillingPage - Loading / Error / Stripe States (Task 2.3)', () => {
 
         renderPage();
 
-        // Click the "Suscribirse" button on the Starter plan
-        const subscribeButtons = screen.getAllByText('Suscribirse');
-        subscribeButtons[0].click();
+        // Aceptar el consentimiento UE y comprar el primer pack.
+        screen.getByRole('checkbox').click();
+        const buyButtons = screen.getAllByRole('button', { name: /comprar/i });
+        buyButtons[0].click();
 
         // En vez de un alert(), ahora se muestra un mensaje de error inline.
         await vi.waitFor(() => {

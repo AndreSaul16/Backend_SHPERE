@@ -1,3 +1,5 @@
+import hmac
+import json
 from datetime import datetime, timezone
 
 import stripe
@@ -9,6 +11,7 @@ from app.core.config import settings
 from app.core.logger import api_logger as logger
 from app.core.plan_limits import validate_topup_tier, get_user_plan
 from app.infrastructure.database import db
+from app.infrastructure.tools.n8n_client import canonical_sign
 
 router = APIRouter()
 
@@ -291,3 +294,89 @@ async def stripe_webhook(request: Request):
         {"$set": {"status": "done", "processed_at": datetime.now(timezone.utc)}},
     )
     return {"status": "success"}
+
+
+# ---------------------------------------------------------------------------
+# Webhook n8n → backend (F9)
+# ---------------------------------------------------------------------------
+
+
+def verify_n8n_signature(payload: dict, signature: str | None) -> bool:
+    """Verifica la firma HMAC del webhook n8n→backend.
+
+    Usa canonical_sign (misma forma canónica que n8n_client._sign) y comparación
+    en tiempo constante. Firma ausente → False.
+    """
+    if not signature:
+        return False
+    expected = canonical_sign(payload, settings.N8N_WEBHOOK_SECRET or "")
+    return hmac.compare_digest(expected, signature)
+
+
+async def _notify_schedule_post_result(payload: dict) -> None:
+    """Notifica por WhatsApp el resultado de una publicación programada (best-effort).
+
+    Decisión por defecto: el destino se toma de la credencial WhatsApp del usuario
+    (metadata `notify_to`). Si no está configurado, solo se registra en logs.
+    """
+    from app.core.tool_context import set_current_user_id
+    from app.infrastructure.tools.credential_injector import inject_credentials_into_payload
+    from app.infrastructure.tools.n8n_client import n8n_client
+
+    user_id = payload.get("user_id")
+    platform = payload.get("platform", "?")
+    success = bool(payload.get("success"))
+    detail = payload.get("detail", "")
+
+    if not user_id:
+        return
+
+    set_current_user_id(user_id)
+    try:
+        estado = "se publicó correctamente" if success else "falló"
+        message = f"Tu publicación programada en {platform} {estado}. {detail}".strip()
+        base, creds = await inject_credentials_into_payload({"message": message}, ["whatsapp"])
+        wa = (creds or {}).get("whatsapp") or {}
+        target = wa.get("notify_to")
+        if wa.get("access_token") and target:
+            base["group"] = target
+            await n8n_client.call_webhook("shared/whatsapp-notify", base, user_credentials=creds)
+            logger.info(f"Webhook n8n: notificado a {user_id} por WhatsApp ({platform})")
+        else:
+            logger.info(
+                f"Webhook n8n: WhatsApp no configurado o sin destino para {user_id}; solo log."
+            )
+    except Exception as e:
+        logger.warning(f"No se pudo notificar schedule_post_result a {user_id}: {e}")
+    finally:
+        set_current_user_id(None)
+
+
+@router.post("/n8n")
+async def n8n_webhook(request: Request):
+    """Recibe eventos de n8n (p. ej. resultado de una publicación programada).
+
+    Verifica la firma HMAC (X-Webhook-Signature) antes de procesar. Siempre loguea.
+    """
+    raw = await request.body()
+    try:
+        payload = json.loads(raw)
+    except Exception:
+        raise HTTPException(status_code=400, detail="JSON inválido")
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="Payload inválido")
+
+    signature = request.headers.get("X-Webhook-Signature")
+    if not verify_n8n_signature(payload, signature):
+        logger.warning("Webhook n8n rechazado: firma inválida o ausente")
+        raise HTTPException(status_code=401, detail="Firma inválida")
+
+    event_type = payload.get("type")
+    logger.info(f"Webhook n8n recibido: type={event_type} user={payload.get('user_id')}")
+
+    if event_type == "schedule_post_result":
+        await _notify_schedule_post_result(payload)
+    else:
+        logger.info(f"Webhook n8n: tipo no manejado '{event_type}'")
+
+    return {"status": "ok"}

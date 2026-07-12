@@ -16,8 +16,11 @@ from pydantic import BaseModel, Field
 from langchain_core.tools import StructuredTool
 from app.infrastructure.tools.registry import register_role_tool
 from app.infrastructure.tools.n8n_client import n8n_client
-from app.infrastructure.tools.credential_injector import inject_credentials_into_payload
-from app.core.tool_context import requires_confirmation
+from app.infrastructure.tools.credential_injector import (
+    inject_credentials_into_payload,
+    missing_credential_error,
+)
+from app.core.tool_context import requires_confirmation, get_current_user_id
 from app.core.logger import checkpoint_logger as logger
 
 
@@ -127,6 +130,9 @@ async def _post_to_linkedin(
 
     payload = {"content": content, "image_url": image_url}
     payload, creds = await inject_credentials_into_payload(payload, ["linkedin"])
+    err = missing_credential_error(creds, "linkedin", "post_to_linkedin")
+    if err:
+        return err
     result = await n8n_client.call_webhook(
         "cmo/linkedin-post",
         payload,
@@ -153,6 +159,9 @@ async def _post_to_instagram(
 
     payload = {"content": content, "image_url": image_url, "type": post_type}
     payload, creds = await inject_credentials_into_payload(payload, ["instagram"])
+    err = missing_credential_error(creds, "instagram", "post_to_instagram")
+    if err:
+        return err
     result = await n8n_client.call_webhook(
         "cmo/instagram-post",
         payload,
@@ -174,6 +183,12 @@ async def _get_social_analytics(
     }
     services = ["linkedin", "instagram"] if platform == "all" else [platform]
     payload, creds = await inject_credentials_into_payload(payload, services)
+    # El workflow solo soporta métricas de Instagram (para LinkedIn responde con
+    # una nota honesta), así que solo Instagram se pre-valida.
+    if platform in ("instagram", "all"):
+        err = missing_credential_error(creds, "instagram", "get_social_analytics")
+        if err:
+            return err
     result = await n8n_client.call_webhook(
         "cmo/social-analytics",
         payload,
@@ -203,9 +218,15 @@ async def _schedule_post(
         "content": content,
         "scheduled_time": scheduled_time,
         "image_url": image_url,
+        # F9: user_id viaja al workflow para que el callback n8n→backend sepa a
+        # quién notificar el resultado de la publicación.
+        "user_id": get_current_user_id(),
     }
-    services = ["linkedin"] if platform == "linkedin" else ["instagram"]
-    payload, creds = await inject_credentials_into_payload(payload, services)
+    service = "linkedin" if platform == "linkedin" else "instagram"
+    payload, creds = await inject_credentials_into_payload(payload, [service])
+    err = missing_credential_error(creds, service, "schedule_post")
+    if err:
+        return err
     result = await n8n_client.call_webhook(
         "cmo/schedule-post",
         payload,

@@ -95,6 +95,14 @@ class Settings(BaseSettings):
     STRIPE_PRICE_DEEP_DIVE: str = ""      # Deep Dive — 50 créditos — 14,99€
     FRONTEND_URL: str = "http://localhost:5173"
 
+    # Admin: emails con acceso al panel /admin (separados por coma).
+    ADMIN_EMAILS: str = ""
+
+    @property
+    def admin_emails_list(self) -> list[str]:
+        """Lista de emails admin normalizados (minúsculas, sin espacios)."""
+        return [e.strip().lower() for e in self.ADMIN_EMAILS.split(",") if e.strip()]
+
     @property
     def topup_messages_map(self) -> dict[str, int]:
         """Mapeo SKU -> créditos que otorga esa compra puntual.

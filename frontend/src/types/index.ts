@@ -83,6 +83,21 @@ export interface ChatSession {
     tags?: string[];
     pinned_messages?: string[];
     created_at: string;
+    /** Token de compartir público read-only (solo si la sesión está compartida). */
+    share_token?: string | null;
+}
+
+// --- Share público read-only ---
+export interface SharedMessage {
+    role: "user" | "assistant";
+    content: string;
+    agent_role?: string;
+    board_vote?: { decision?: string; confidence?: number } | null;
+}
+
+export interface SharedSession {
+    title: string;
+    messages: SharedMessage[];
 }
 
 // --- Agent Templates ---

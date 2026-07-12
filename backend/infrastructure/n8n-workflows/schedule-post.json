@@ -32,7 +32,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const payload = $input.first().json.body || $input.first().json;\nconst li = payload.user_credentials?.linkedin || {};\nconst ig = payload.user_credentials?.instagram || {};\nconst platform = (payload.platform || '').toLowerCase();\n\nconst scheduledTime = payload.scheduled_time || '';\nconst validParams = ['linkedin', 'instagram'].includes(platform)\n  && Boolean(scheduledTime)\n  && Boolean(payload.content)\n  && !isNaN(Date.parse(scheduledTime))\n  && Date.parse(scheduledTime) > Date.now();\n\nconst hasCreds = platform === 'linkedin'\n  ? Boolean(li.access_token)\n  : Boolean(ig.access_token && ig.instagram_account_id);\n\nreturn [{\n  json: {\n    valid: validParams,\n    has_creds: hasCreds,\n    platform,\n    content: payload.content || '',\n    image_url: payload.image_url || '',\n    scheduled_time: scheduledTime,\n    li_access_token: li.access_token || '',\n    ig_access_token: ig.access_token || '',\n    ig_account_id: ig.instagram_account_id || ''\n  }\n}];"
+        "jsCode": "const payload = $input.first().json.body || $input.first().json;\nconst li = payload.user_credentials?.linkedin || {};\nconst ig = payload.user_credentials?.instagram || {};\nconst platform = (payload.platform || '').toLowerCase();\n\nconst scheduledTime = payload.scheduled_time || '';\nconst validParams = ['linkedin', 'instagram'].includes(platform)\n  && Boolean(scheduledTime)\n  && Boolean(payload.content)\n  && !isNaN(Date.parse(scheduledTime))\n  && Date.parse(scheduledTime) > Date.now();\n\nconst hasCreds = platform === 'linkedin'\n  ? Boolean(li.access_token && li.li_person_urn)\n  : Boolean(ig.access_token && ig.instagram_account_id);\n\nreturn [{\n  json: {\n    valid: validParams,\n    user_id: payload.user_id || '',\n    has_creds: hasCreds,\n    platform,\n    content: payload.content || '',\n    image_url: payload.image_url || '',\n    scheduled_time: scheduledTime,\n    li_access_token: li.access_token || '',\n    li_person_urn: li.li_person_urn || '',\n    ig_access_token: ig.access_token || '',\n    ig_account_id: ig.instagram_account_id || ''\n  }\n}];"
       },
       "id": "code-1",
       "name": "Extract Input",
@@ -179,7 +179,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"author\": \"urn:li:person:me\",\n  \"lifecycleState\": \"PUBLISHED\",\n  \"specificContent\": {\n    \"com.linkedin.ugc.ShareContent\": {\n      \"shareCommentary\": {\n        \"text\": {{ JSON.stringify($('Extract Input').first().json.content) }}\n      },\n      \"shareMediaCategory\": \"NONE\"\n    }\n  },\n  \"visibility\": {\n    \"com.linkedin.ugc.MemberNetworkVisibility\": \"PUBLIC\"\n  }\n}",
+        "jsonBody": "={\n  \"author\": {{ JSON.stringify('urn:li:person:' + $('Extract Input').first().json.li_person_urn) }},\n  \"lifecycleState\": \"PUBLISHED\",\n  \"specificContent\": {\n    \"com.linkedin.ugc.ShareContent\": {\n      \"shareCommentary\": {\n        \"text\": {{ JSON.stringify($('Extract Input').first().json.content) }}\n      },\n      \"shareMediaCategory\": \"NONE\"\n    }\n  },\n  \"visibility\": {\n    \"com.linkedin.ugc.MemberNetworkVisibility\": \"PUBLIC\"\n  }\n}",
         "options": {}
       },
       "id": "http-1",
@@ -189,7 +189,8 @@
       "position": [
         1650,
         120
-      ]
+      ],
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -251,7 +252,51 @@
       "position": [
         1850,
         280
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst secret = $env.N8N_WEBHOOK_SECRET || '';\nconst meta = $('Extract Input').first().json;\nconst item = $input.first().json || {};\n\n// Éxito si la respuesta del publish no trae error.\nconst success = !(item.error || item.errors);\nconst detail = success\n  ? 'OK'\n  : String(item.error?.message || item.error || 'fallo al publicar').slice(0, 300);\n\nconst payload = {\n  type: 'schedule_post_result',\n  user_id: meta.user_id || '',\n  platform: meta.platform || '',\n  success: success,\n  detail: detail,\n};\n\n// Forma canonica identica al backend (canonical_sign / Verify Signature).\nfunction canon(v) {\n  if (v === null || typeof v !== 'object') return JSON.stringify(v);\n  if (Array.isArray(v)) return '[' + v.map(canon).join(',') + ']';\n  return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + canon(v[k])).join(',') + '}';\n}\nconst signature = crypto.createHmac('sha256', secret)\n  .update(Buffer.from(canon(payload), 'utf8'))\n  .digest('hex');\n\nreturn [{ json: { payload, signature } }];\n"
+      },
+      "name": "Sign Callback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2050,
+        200
       ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SPHERE_BACKEND_URL || 'http://backend:8000' }}/api/v1/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Webhook-Signature",
+              "value": "={{ $json.signature }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.payload) }}",
+        "options": {}
+      },
+      "name": "Notify Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        2250,
+        200
+      ],
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -373,6 +418,39 @@
         [
           {
             "node": "Extract Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LinkedIn Post": {
+      "main": [
+        [
+          {
+            "node": "Sign Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Instagram Publish": {
+      "main": [
+        [
+          {
+            "node": "Sign Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign Callback": {
+      "main": [
+        [
+          {
+            "node": "Notify Backend",
             "type": "main",
             "index": 0
           }

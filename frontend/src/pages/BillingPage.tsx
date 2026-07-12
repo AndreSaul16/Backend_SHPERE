@@ -3,6 +3,7 @@ import { CreditCard, Zap, Sparkles, ArrowLeft, Loader2, HardDrive, FileText, Ref
 import { Link } from 'react-router-dom';
 import { useBillingStore } from '../store/useBillingStore';
 import { authHeaders, profileService, type StorageUsage } from '../services/api';
+import { capture, ANALYTICS_EVENTS } from '@/lib/analytics';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
@@ -82,6 +83,9 @@ export const BillingPage: React.FC = () => {
     const [actionError, setActionError] = useState<string | null>(null);
     const [pendingPlan, setPendingPlan] = useState<string | null>(null);
     const [storage, setStorage] = useState<StorageUsage | null>(null);
+    // Consentimiento UE (servicios digitales de ejecución inmediata): sin marcar
+    // la casilla no se puede iniciar ningún checkout.
+    const [consentAccepted, setConsentAccepted] = useState(false);
 
     useEffect(() => {
         refresh();
@@ -90,6 +94,7 @@ export const BillingPage: React.FC = () => {
         // porque el webhook puede tardar unos segundos en procesar el pago.
         const params = new URLSearchParams(window.location.search);
         if (params.get('success') === 'true') {
+            capture(ANALYTICS_EVENTS.PURCHASE_COMPLETED);
             const intervals = [2000, 5000, 10000];
             intervals.forEach((ms) => setTimeout(() => refresh(), ms));
         }
@@ -97,8 +102,13 @@ export const BillingPage: React.FC = () => {
 
     const handleCheckout = async (planId: string) => {
         if (pendingPlan) return;
+        if (!consentAccepted) {
+            setActionError('Debes aceptar las condiciones de compra antes de continuar.');
+            return;
+        }
         setActionError(null);
         setPendingPlan(planId);
+        capture(ANALYTICS_EVENTS.CHECKOUT_STARTED, { plan_id: planId });
         try {
             const headers = await authHeaders();
             const response = await fetch(`${API_URL}/billing/checkout`, {
@@ -249,9 +259,26 @@ export const BillingPage: React.FC = () => {
                 {stripe_configured && (
                     <>
                         <h2 className="text-lg font-bold mb-1 text-text-primary">Packs de recarga</h2>
-                        <p className="text-xs text-text-secondary mb-6">
+                        <p className="text-xs text-text-secondary mb-4">
                             1 mensaje a un agente = 1 crédito · 1 mensaje al Consejo (board meeting) = 5 créditos. Los créditos comprados no caducan.
                         </p>
+
+                        {/* Consentimiento UE: ejecución inmediata + renuncia al desistimiento */}
+                        <label className="flex items-start gap-3 mb-6 p-4 glass-panel rounded-2xl border border-surface-highlight cursor-pointer select-none">
+                            <input
+                                type="checkbox"
+                                checked={consentAccepted}
+                                onChange={(e) => setConsentAccepted(e.target.checked)}
+                                className="mt-0.5 h-4 w-4 shrink-0 accent-electric-cyan"
+                            />
+                            <span className="text-xs text-text-secondary leading-relaxed">
+                                Solicito que los créditos se abonen en mi cuenta inmediatamente tras el pago y{' '}
+                                <span className="text-text-primary font-medium">
+                                    acepto perder mi derecho de desistimiento de 14 días
+                                </span>{' '}
+                                una vez comience la ejecución del servicio digital (art. 103.m LGDCU / Directiva 2011/83/UE).
+                            </span>
+                        </label>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-12">
                             {PACKS.map((pack) => (
                                 <div
@@ -271,7 +298,8 @@ export const BillingPage: React.FC = () => {
                                     <p className="text-text-secondary text-sm mb-8 flex-1">{pack.blurb}</p>
                                     <button
                                         onClick={() => handleCheckout(pack.id)}
-                                        disabled={pendingPlan === pack.id}
+                                        disabled={pendingPlan === pack.id || !consentAccepted}
+                                        title={!consentAccepted ? 'Acepta las condiciones de compra para continuar' : undefined}
                                         className={`w-full py-2.5 rounded-xl transition-all font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
                                             pack.popular
                                                 ? 'bg-luxury-purple text-white hover:bg-luxury-purple/80'
@@ -300,8 +328,9 @@ export const BillingPage: React.FC = () => {
                                     </div>
                                     <button
                                         onClick={() => handleCheckout(t.id)}
-                                        disabled={pendingPlan === t.id}
-                                        className="shrink-0 px-4 py-2.5 bg-surface-highlight hover:bg-surface-highlight/70 disabled:opacity-50 rounded-xl text-sm font-bold flex items-center gap-2 text-text-primary transition-colors"
+                                        disabled={pendingPlan === t.id || !consentAccepted}
+                                        title={!consentAccepted ? 'Acepta las condiciones de compra para continuar' : undefined}
+                                        className="shrink-0 px-4 py-2.5 bg-surface-highlight hover:bg-surface-highlight/70 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-sm font-bold flex items-center gap-2 text-text-primary transition-colors"
                                     >
                                         {pendingPlan === t.id && <Loader2 className="h-4 w-4 animate-spin" />}
                                         {t.price}

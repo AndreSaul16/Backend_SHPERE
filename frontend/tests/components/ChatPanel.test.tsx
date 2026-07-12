@@ -216,22 +216,9 @@ describe('ChatPanel — Billing Integration (Task 2.2)', () => {
         );
     };
 
-    it('calls decrementOptimistic after sending a message', async () => {
-        useChatStore.setState({ currentSessionId: 'billing-test' });
-        renderChatPanel('billing-test');
-
-        // Clear any calls from initial render
-        vi.mocked(useBillingStore.getState().decrementOptimistic).mockClear();
-
-        const input = screen.getByPlaceholderText(/Transmite tu consulta/i);
-        fireEvent.change(input, { target: { value: 'Hola' } });
-        fireEvent.keyDown(input, { key: 'Enter', code: 'Enter', charCode: 13 });
-
-        // decrementOptimistic should have been called after sendMessage
-        await waitFor(() => {
-            expect(useBillingStore.getState().decrementOptimistic).toHaveBeenCalledTimes(1);
-        });
-    });
+    // El decremento optimista vive en chatService.streamChat (tras response.ok),
+    // que aquí está mockeado — su contrato se cubre en
+    // tests/services/streamChat.billing.test.ts contra el endpoint MSW real.
 
     it('calls refresh after streaming stops (isTyping: true → false)', async () => {
         useChatStore.setState({

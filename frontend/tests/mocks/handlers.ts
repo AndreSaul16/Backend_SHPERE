@@ -42,6 +42,25 @@ export const handlers = [
         return HttpResponse.json([]);
     }),
 
+    // Mock del stream SSE de chat: un token y cierre. Lo consumen los tests de
+    // billing — el decremento optimista ocurre tras response.ok del stream.
+    http.post('http://localhost:8000/api/v1/stream/', () => {
+        const body = 'data: {"type": "token", "content": "Hola"}\n\ndata: [DONE]\n\n';
+        return new HttpResponse(body, {
+            headers: { 'Content-Type': 'text/event-stream' },
+        });
+    }),
+
+    // Default: usuario NO admin (F4). Los tests que necesiten admin sobreescriben con server.use.
+    http.get('http://localhost:8000/api/v1/admin/users', () => {
+        return HttpResponse.json({ detail: 'Sin acceso' }, { status: 403 });
+    }),
+
+    // Default: sin juntas programadas (F3). Los tests las sobreescriben con server.use.
+    http.get('http://localhost:8000/api/v1/me/scheduled-boards', () => {
+        return HttpResponse.json([]);
+    }),
+
     // Mock para crear sesión (Esquema Evolucionado)
     http.post('http://localhost:8000/api/v1/sessions/', () => {
         return HttpResponse.json({

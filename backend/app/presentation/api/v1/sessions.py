@@ -7,6 +7,8 @@ from fastapi import APIRouter, HTTPException, Depends, Header
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime, timezone
+import re
+import secrets
 import uuid
 
 from app.infrastructure.database import get_sessions_collection, get_custom_agents_collection
@@ -63,6 +65,7 @@ class SessionBase(BaseModel):
     enabled_tools: List[str] = []
     members: List[str] = []
     created_at: datetime
+    share_token: Optional[str] = None
 
 
 class CreateSessionRequest(BaseModel):
@@ -227,6 +230,39 @@ async def _atomic_create_session_with_idem(
             raise
 
 
+async def create_session_record(
+    user_id: str,
+    title: str,
+    *,
+    session_type: SessionType = SessionType.GROUP,
+    base_agent_id: str = "group-chat",
+    members: Optional[List[str]] = None,
+) -> dict:
+    """Crea e inserta una sesión (sin idempotency key).
+
+    Reutilizable desde procesos server-side (p. ej. el scheduler de juntas
+    programadas), donde no hay request HTTP ni Idempotency-Key.
+    """
+    session_id = str(uuid.uuid4())
+    agent_ref_type = "core" if base_agent_id in CORE_AGENT_IDS else "custom"
+    doc = {
+        "session_id": session_id,
+        "user_id": user_id,
+        "title": title,
+        "base_agent_id": base_agent_id,
+        "agent_ref_type": agent_ref_type,
+        "type": session_type,
+        "visual_config": {},
+        "context_files": [],
+        "enabled_tools": [],
+        "members": members or [],
+        "created_at": datetime.now(timezone.utc),
+    }
+    await get_sessions_collection().insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
 @router.get("/", response_model=List[SessionBase])
 async def get_sessions(
     user: dict = Depends(get_current_user),
@@ -254,6 +290,23 @@ async def get_sessions(
         raise HTTPException(status_code=500, detail="Error al obtener sesiones")
 
 
+async def _load_session_messages(user_id: str, session_id: str):
+    """Recupera (messages, final_response) de LangGraph para una sesión.
+
+    Lógica compartida entre el historial autenticado y el share público:
+    el checkpointer indexa por thread_id multi-tenant `user_id:session_id`.
+    """
+    from app.application.orchestrator import app as orchestrator_app
+
+    thread_id = f"{user_id}:{session_id}"
+    config = {"configurable": {"thread_id": thread_id}}
+    state = await orchestrator_app.aget_state(config)
+
+    messages = state.values.get("messages", []) if state.values else []
+    final_response = state.values.get("final_response", "") if state.values else ""
+    return messages, final_response
+
+
 @router.get("/{session_id}/history")
 async def get_session_history(
     session_id: str,
@@ -264,8 +317,6 @@ async def get_session_history(
     logger.debug(f"Obteniendo historial para sesión: {session_id}")
 
     try:
-        from app.application.orchestrator import app as orchestrator_app
-
         sessions_collection = get_sessions_collection()
         session_doc = await sessions_collection.find_one({"session_id": session_id})
         require_owner(session_doc, user_id, "Sesión")
@@ -278,13 +329,7 @@ async def get_session_history(
             if not agent:
                 warning = "agent_deleted"
 
-        # thread_id multi-tenant: user_id:session_id
-        thread_id = f"{user_id}:{session_id}"
-        config = {"configurable": {"thread_id": thread_id}}
-        state = await orchestrator_app.aget_state(config)
-
-        messages = state.values.get("messages", []) if state.values else []
-        final_response = state.values.get("final_response", "") if state.values else ""
+        messages, final_response = await _load_session_messages(user_id, session_id)
 
         logger.info(f"Historial cargado: {len(messages)} mensajes")
 
@@ -408,6 +453,122 @@ async def delete_session(
     except Exception as e:
         logger.error(f"Error eliminando sesión: {e}")
         raise HTTPException(status_code=500, detail="Error al eliminar sesión")
+
+
+# --- COMPARTIR SESIÓN (público read-only) ---
+
+# Solo estos roles de additional_kwargs se exponen en el share público. Nada de
+# user_id, emails ni payloads de herramientas.
+_SHARE_ALLOWED_KWARGS = ("agent_role", "board_vote")
+_ARTIFACT_OPEN_RE = re.compile(r"<sphere_artifact\b[^>]*>", re.IGNORECASE)
+_ARTIFACT_CLOSE_RE = re.compile(r"</sphere_artifact>", re.IGNORECASE)
+
+
+def _sanitize_shared_messages(messages: list) -> list:
+    """Reduce los mensajes de LangGraph a lo mínimo público y seguro.
+
+    - Solo mensajes human/ai (los tool traen payloads sensibles → se descartan).
+    - Se conserva role + content + agent_role/board_vote; nunca additional_kwargs
+      completo (contiene tokens, timestamps internos, tool_calls, etc.).
+    - Se quitan las etiquetas <sphere_artifact> dejando el contenido interno.
+    """
+    sanitized = []
+    for m in messages:
+        # Los mensajes pueden ser objetos BaseMessage o dicts (según serialización).
+        if isinstance(m, dict):
+            mtype = m.get("type")
+            content = m.get("content") or ""
+            kwargs = m.get("additional_kwargs") or {}
+        else:
+            mtype = getattr(m, "type", None)
+            content = getattr(m, "content", "") or ""
+            kwargs = getattr(m, "additional_kwargs", {}) or {}
+
+        if mtype not in ("human", "ai"):
+            continue
+        if not isinstance(content, str) or not content.strip():
+            continue
+
+        content = _ARTIFACT_OPEN_RE.sub("", content)
+        content = _ARTIFACT_CLOSE_RE.sub("", content)
+
+        item = {"role": "user" if mtype == "human" else "assistant", "content": content}
+        for key in _SHARE_ALLOWED_KWARGS:
+            if kwargs.get(key) is not None:
+                item[key] = kwargs[key]
+        sanitized.append(item)
+    return sanitized
+
+
+@router.post("/{session_id}/share")
+async def share_session(
+    session_id: str,
+    user: dict = Depends(get_current_user),
+):
+    """Genera (o reutiliza) un token público read-only para la sesión."""
+    user_id = user["firebase_uid"]
+    sessions_collection = get_sessions_collection()
+
+    session_doc = await sessions_collection.find_one({"session_id": session_id})
+    require_owner(session_doc, user_id, "Sesión")
+
+    token = session_doc.get("share_token")
+    if not token:
+        token = secrets.token_urlsafe(24)
+        await sessions_collection.update_one(
+            {"session_id": session_id, "user_id": user_id},
+            {"$set": {"share_token": token, "shared_at": datetime.now(timezone.utc)}},
+        )
+    return {"share_token": token}
+
+
+@router.delete("/{session_id}/share")
+async def unshare_session(
+    session_id: str,
+    user: dict = Depends(get_current_user),
+):
+    """Revoca el enlace público de la sesión."""
+    user_id = user["firebase_uid"]
+    sessions_collection = get_sessions_collection()
+
+    session_doc = await sessions_collection.find_one({"session_id": session_id})
+    require_owner(session_doc, user_id, "Sesión")
+
+    await sessions_collection.update_one(
+        {"session_id": session_id, "user_id": user_id},
+        {"$unset": {"share_token": "", "shared_at": ""}},
+    )
+    return {"status": "unshared"}
+
+
+@router.get("/share/{token}")
+async def get_shared_session(token: str):
+    """Vista pública (sin auth) de una conversación compartida.
+
+    Rate-limit ligero por token para no exponer un endpoint sin auth a abuso.
+    """
+    from app.core.rate_limit import chat_rate_limiter
+
+    if not chat_rate_limiter.try_acquire(f"share:{token}", times=30, seconds=60):
+        raise HTTPException(status_code=429, detail="Demasiadas peticiones")
+
+    sessions_collection = get_sessions_collection()
+    session_doc = await sessions_collection.find_one({"share_token": token})
+    if not session_doc:
+        raise HTTPException(status_code=404, detail="Conversación no encontrada")
+
+    try:
+        messages, _ = await _load_session_messages(
+            session_doc["user_id"], session_doc["session_id"]
+        )
+    except Exception as e:
+        logger.warning(f"No se pudo cargar historial compartido {token}: {e}")
+        messages = []
+
+    return {
+        "title": session_doc.get("title", "Conversación"),
+        "messages": _sanitize_shared_messages(messages),
+    }
 
 
 # --- PINS ---

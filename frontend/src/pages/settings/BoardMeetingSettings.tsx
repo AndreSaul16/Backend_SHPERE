@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react";
+import { ScheduledBoardsSection } from "./ScheduledBoardsSection";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
@@ -186,6 +187,9 @@ export function BoardMeetingSettings() {
           </div>
         )}
       </div>
+
+      {/* Juntas programadas (F3) */}
+      <ScheduledBoardsSection />
 
       {/* Warning modal */}
       {showWarning && (

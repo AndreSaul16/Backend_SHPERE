@@ -41,6 +41,32 @@ async def create_page(access_token: str, parent_id: str, title: str, content: st
         return {"url": data.get("url", ""), "id": data["id"]}
 
 
+async def search_first_page(access_token: str) -> str | None:
+    """Busca la primera página accesible por la integración (para usar de padre).
+
+    Notion no expone un "root" navegable vía API: hay que buscar entre las
+    páginas que el usuario compartió con la integración. Devuelve el id de la
+    primera, o None si la integración no tiene acceso a ninguna.
+    """
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{NOTION_API}/search",
+            json={"filter": {"value": "page", "property": "object"}, "page_size": 1},
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Notion-Version": "2022-06-28",
+                "Content-Type": "application/json",
+            },
+            timeout=15.0,
+        )
+        resp.raise_for_status()
+        results = resp.json().get("results", [])
+        for item in results:
+            if item.get("object") == "page" and item.get("id"):
+                return item["id"]
+        return None
+
+
 async def update_page(access_token: str, page_id: str, content: str) -> dict:
     """Agrega contenido a una página existente."""
     async with httpx.AsyncClient() as client:

@@ -958,7 +958,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 },
                 (targetRole as any) === "specialist" ? (selectedAgentId || undefined) : targetRole,
                 abortController.signal,
-                !!regenerateFromId  // Pasar regenerate=true al backend cuando regeneramos
+                !!regenerateFromId,  // Pasar regenerate=true al backend cuando regeneramos
+                isGroup ? 5 : 1  // Coste optimista: un board meeting descuenta 5 (A4)
             );
         } catch (error: any) {
             // No reportar error si fue una cancelación intencional (Stop Generation)

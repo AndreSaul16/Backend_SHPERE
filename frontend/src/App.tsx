@@ -19,6 +19,8 @@ import { ErrorOverlay } from "@/components/common/ErrorOverlay";
 import { useChatStore } from "@/store/useChatStore";
 import { PaywallModal } from "@/components/modals/PaywallModal";
 import { BillingPage } from "@/pages/BillingPage";
+import { SharedSessionPage } from "@/pages/SharedSessionPage";
+import { AdminPage } from "@/pages/AdminPage";
 
 function AuthenticatedApp() {
   const { fetchSessions, fetchCustomAgents } = useChatStore();
@@ -38,6 +40,8 @@ function AuthenticatedApp() {
       <Route path="/register" element={<RegisterPage />} />
       {/* Verificación de email (cuentas password sin verificar) */}
       <Route path="/verify-email" element={<VerifyEmailPage />} />
+      {/* Conversación compartida (público read-only, fuera de RequireAuth) */}
+      <Route path="/share/:token" element={<SharedSessionPage />} />
 
       {/* Protected routes */}
       <Route
@@ -119,6 +123,14 @@ function AuthenticatedApp() {
         element={
           <RequireAuth>
             <MainLayout sidebar={<Sidebar />} chat={<BillingPage />} />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <RequireAuth>
+            <MainLayout sidebar={<Sidebar />} chat={<AdminPage />} />
           </RequireAuth>
         }
       />

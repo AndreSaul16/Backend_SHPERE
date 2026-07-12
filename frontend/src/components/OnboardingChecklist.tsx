@@ -1,14 +1,15 @@
 /**
- * Onboarding first-run: checklist de 3 pasos sobre el Welcome Screen.
- * El progreso se deriva de datos reales (sesiones de grupo, mensajes, agentes custom)
- * — sin estado nuevo en backend. Al completar los 3 pasos llama a completeOnboarding()
- * y deja de mostrarse (flag onboarding_completed del perfil).
+ * Onboarding first-run: checklist de 4 pasos sobre el Welcome Screen.
+ * El progreso se deriva de datos reales (sesiones de grupo, mensajes, agentes
+ * custom, servicios conectados) — sin estado nuevo en backend. Al completar
+ * todos llama a completeOnboarding() y deja de mostrarse.
  */
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Check, Users, MessagesSquare, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Check, Users, MessagesSquare, Sparkles, Plug } from "lucide-react";
 import { useChatStore } from "@/store/useChatStore";
-import { profileService } from "@/services/api";
+import { profileService, integrationsService, serviceCredentialsService } from "@/services/api";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -17,8 +18,10 @@ interface Props {
 
 export function OnboardingChecklist({ onPrimaryAction }: Props) {
     const { sessions, customAgents, messagesBySession } = useChatStore();
+    const navigate = useNavigate();
     const [dismissed, setDismissed] = useState(false);
     const [loaded, setLoaded] = useState(false);
+    const [hasConnection, setHasConnection] = useState(false);
     const completedRef = useState({ done: false })[0];
 
     // Cargar flag de perfil: si ya completó onboarding, no mostrar.
@@ -28,6 +31,21 @@ export function OnboardingChecklist({ onPrimaryAction }: Props) {
             .then((p) => { if (alive && p.onboarding_completed) setDismissed(true); })
             .catch(() => { /* ignore */ })
             .finally(() => { if (alive) setLoaded(true); });
+        return () => { alive = false; };
+    }, []);
+
+    // ¿Tiene alguna herramienta conectada? (OAuth o credencial de servicio).
+    // Sin esto, el usuario descubre Settings → Connections solo cuando una
+    // tool le falla en el chat.
+    useEffect(() => {
+        let alive = true;
+        Promise.allSettled([integrationsService.list(), serviceCredentialsService.list()])
+            .then(([oauth, creds]) => {
+                if (!alive) return;
+                const oauthConnected = oauth.status === "fulfilled" && oauth.value.connected.length > 0;
+                const credConnected = creds.status === "fulfilled" && creds.value.services.some((s) => s.connected);
+                setHasConnection(oauthConnected || credConnected);
+            });
         return () => { alive = false; };
     }, []);
 
@@ -41,8 +59,9 @@ export function OnboardingChecklist({ onPrimaryAction }: Props) {
             { key: "group", label: "Convoca tu Junta Directiva", desc: "Crea un chat grupal con tus expertos", done: hasGroup, icon: Users },
             { key: "debate", label: "Lanza tu primer debate", desc: "Envía una decisión y deja que debatan", done: hasMessage, icon: MessagesSquare },
             { key: "custom", label: "Crea tu experto a medida", desc: "Un agente con tu conocimiento y tono", done: hasCustom, icon: Sparkles },
+            { key: "connect", label: "Conecta tus herramientas", desc: "Calendar, WhatsApp, LinkedIn… para que actúen por ti", done: hasConnection, icon: Plug },
         ];
-    }, [sessions, customAgents, messagesBySession]);
+    }, [sessions, customAgents, messagesBySession, hasConnection]);
 
     const allDone = steps.every((s) => s.done);
 
@@ -73,7 +92,13 @@ export function OnboardingChecklist({ onPrimaryAction }: Props) {
                 return (
                     <button
                         key={step.key}
-                        onClick={step.done ? undefined : onPrimaryAction}
+                        onClick={
+                            step.done
+                                ? undefined
+                                : step.key === "connect"
+                                    ? () => navigate("/settings/integrations")
+                                    : onPrimaryAction
+                        }
                         disabled={step.done}
                         className={cn(
                             "w-full flex items-center gap-3 p-2.5 rounded-xl border transition-all text-left",

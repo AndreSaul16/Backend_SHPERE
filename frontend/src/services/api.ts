@@ -77,7 +77,8 @@ export const chatService = {
         callbacks: StreamCallbacks,
         targetRole?: string,
         signal?: AbortSignal,
-        regenerate?: boolean
+        regenerate?: boolean,
+        estimatedCost: number = 1
     ) {
         try {
             const token = await getAuthToken();
@@ -102,9 +103,11 @@ export const chatService = {
             }
             if (!response.body) throw new Error("No response body");
 
-            // Stream OK → decremento optimista. Reconciliamos al [DONE] llamando a refresh.
+            // Stream OK → decremento optimista con el coste real del envío (1 chat,
+            // 5 board). Reconciliamos al [DONE] llamando a refresh (cubre también el
+            // refund parcial del triage cuando el board se reduce a 3 créditos).
             import('../store/useBillingStore').then(({ useBillingStore }) => {
-                useBillingStore.getState().decrementOptimistic();
+                useBillingStore.getState().decrementOptimistic(estimatedCost);
             });
 
             const reader = response.body.getReader();
@@ -485,6 +488,33 @@ export const chatService = {
             throw new Error(err.message);
         }
         return response.json();
+    },
+
+    // --- COMPARTIR SESIÓN (público read-only) ---
+    /** Genera/reutiliza el token público de la sesión. */
+    async shareSession(sessionId: string): Promise<{ share_token: string }> {
+        const response = await fetch(`${API_URL}/sessions/${sessionId}/share`, {
+            method: 'POST',
+            headers: await authHeaders(),
+        });
+        if (!response.ok) throw new Error(`Error sharing session: ${response.status}`);
+        return response.json();
+    },
+
+    /** Revoca el enlace público de la sesión. */
+    async unshareSession(sessionId: string): Promise<void> {
+        const response = await fetch(`${API_URL}/sessions/${sessionId}/share`, {
+            method: 'DELETE',
+            headers: await authHeaders(),
+        });
+        if (!response.ok) throw new Error(`Error unsharing session: ${response.status}`);
+    },
+
+    /** Vista pública de una conversación compartida (sin auth). */
+    async getSharedSession(token: string): Promise<import('@/types').SharedSession> {
+        const response = await fetch(`${API_URL}/sessions/share/${encodeURIComponent(token)}`);
+        if (!response.ok) throw new Error(`Error fetching shared session: ${response.status}`);
+        return response.json();
     }
 };
 
@@ -612,6 +642,13 @@ export const profileService = {
     getStorage: () => req<StorageUsage>("/me/storage"),
 };
 
+export const serviceCredentialsService = {
+    list: () =>
+        req<{ services: Array<{ service: string; connected: boolean }>; available: string[] }>(
+            "/me/service-credentials"
+        ),
+};
+
 export const integrationsService = {
     list: () => req<IntegrationsList>("/integrations/"),
     // Pide al backend la URL de autorización (con Bearer token) y redirige.
@@ -641,6 +678,106 @@ export const contactsService = {
         req<Contact>("/me/contacts", { method: "POST", json: contact }),
     remove: (contactId: string) =>
         req<void>(`/me/contacts/${contactId}`, { method: "DELETE" }),
+};
+
+export const exportsService = {
+    /** Exporta el acta como página de Notion. */
+    notion: (title: string, content: string) =>
+        req<{ url: string; id: string }>("/me/exports/notion", {
+            method: "POST",
+            json: { title, content },
+        }),
+    /** Crea issues de GitHub a partir de los próximos pasos del acta. */
+    githubIssues: (
+        owner: string,
+        repo: string,
+        issues: { title: string; body: string }[]
+    ) =>
+        req<{
+            created: { title: string; url: string }[];
+            errors: { title: string; error: string }[];
+        }>("/me/exports/github-issues", {
+            method: "POST",
+            json: { owner, repo, issues },
+        }),
+};
+
+export interface ScheduledBoard {
+    id: string;
+    query: string;
+    cadence: "daily" | "weekly";
+    hour_utc: number;
+    weekday?: number | null;
+    channel: "whatsapp" | "slack" | "none";
+    channel_target?: string | null;
+    enabled: boolean;
+    next_run_at?: string | null;
+    last_run_at?: string | null;
+    last_status?: string | null;
+}
+
+export type ScheduledBoardInput = Omit<
+    ScheduledBoard,
+    "id" | "next_run_at" | "last_run_at" | "last_status"
+>;
+
+export const scheduledBoardsService = {
+    list: () => req<ScheduledBoard[]>("/me/scheduled-boards"),
+    create: (data: ScheduledBoardInput) =>
+        req<ScheduledBoard>("/me/scheduled-boards", { method: "POST", json: data }),
+    update: (id: string, data: Partial<ScheduledBoardInput>) =>
+        req<ScheduledBoard>(`/me/scheduled-boards/${id}`, { method: "PATCH", json: data }),
+    remove: (id: string) =>
+        req<void>(`/me/scheduled-boards/${id}`, { method: "DELETE" }),
+};
+
+// --- ADMIN (F4 + F5) ---
+export interface AdminUser {
+    uid: string;
+    email?: string | null;
+    plan: string;
+    pro_messages_balance: number;
+    topup_messages_balance: number;
+}
+
+export interface AdminDayMetric {
+    date: string;
+    credits_consumed: number;
+    cost_usd_estimated: number;
+    cost_usd_actual: number;
+    debates: number;
+    chats: number;
+    refunds: number;
+}
+
+export interface AdminMetrics {
+    days: number;
+    by_day: AdminDayMetric[];
+    totals: {
+        credits_consumed: number;
+        cost_usd_estimated: number;
+        cost_usd_actual: number;
+        debates: number;
+        chats: number;
+        refunds: number;
+        purchases_count: number;
+        credits_granted: number;
+    };
+}
+
+export const adminService = {
+    users: (q?: string) =>
+        req<AdminUser[]>(`/admin/users${q ? `?q=${encodeURIComponent(q)}` : ""}`),
+    adjust: (uid: string, delta: number, reason: string) =>
+        req<{ uid: string; delta: number; topup_messages_balance: number }>(
+            `/admin/users/${uid}/adjust`,
+            { method: "POST", json: { delta, reason } }
+        ),
+    transactions: (uid?: string, limit = 50) =>
+        req<{ transactions: any[] }>(
+            `/admin/transactions?limit=${limit}${uid ? `&uid=${encodeURIComponent(uid)}` : ""}`
+        ),
+    metrics: (days = 30) => req<AdminMetrics>(`/admin/metrics?days=${days}`),
 };
 
 export const agentOverridesService = {

@@ -20,6 +20,7 @@ import {
   type User as FirebaseUser,
 } from "firebase/auth";
 import { auth, googleProvider, githubProvider, microsoftProvider } from "@/lib/firebase";
+import { initAnalytics, identify, capture, resetAnalytics, ANALYTICS_EVENTS } from "@/lib/analytics";
 
 interface AuthUser {
   uid: string;
@@ -52,6 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Analytics (F6): init idempotente; no-op si no hay VITE_POSTHOG_KEY.
+    initAnalytics();
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         setUser({
@@ -62,6 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           emailVerified: firebaseUser.emailVerified,
           providerId: firebaseUser.providerData[0]?.providerId || 'password',
         });
+        // Analytics: asociar los eventos al uid de Firebase.
+        identify(firebaseUser.uid);
         const token = await firebaseUser.getIdToken();
         setIdToken(token);
       } else {
@@ -102,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       if (import.meta.env.DEV) console.error("sendEmailVerification falló:", e);
     }
+    capture(ANALYTICS_EVENTS.SIGNUP_COMPLETED, { method: "password" });
   }, []);
 
   const resendVerification = useCallback(async () => {
@@ -142,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await firebaseSignOut(auth);
     setUser(null);
     setIdToken(null);
+    resetAnalytics();
     // Limpiar estado del usuario para no filtrar datos a la siguiente cuenta (A6).
     const { clearUserStores } = await import("@/lib/clearStores");
     clearUserStores();

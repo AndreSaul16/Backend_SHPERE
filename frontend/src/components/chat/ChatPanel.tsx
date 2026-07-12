@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 import { exportAsMarkdown, downloadAsFile } from "@/utils/exportChat";
 import { CreditsIndicator } from "@/components/CreditsIndicator";
 import { useBillingStore } from "@/store/useBillingStore";
+import { capture, ANALYTICS_EVENTS } from "@/lib/analytics";
+import { DebateTemplates } from "./DebateTemplates";
 
 export function ChatPanel() {
     const navigate = useNavigate();
@@ -64,7 +66,7 @@ export function ChatPanel() {
         : undefined;
     const typingLabel = speakingAgent
         ? `${speakingAgent.name.split(' ')[0]} está escribiendo`
-        : 'Procesando_Respuesta';
+        : 'Procesando respuesta…';
 
     // Load pins when session changes
     useEffect(() => {
@@ -190,6 +192,9 @@ export function ChatPanel() {
     const handleSendMessage = async () => {
         const text = inputValue.trim();
         if (!text) return;
+        // Analytics (F6): primer mensaje de la sesión y arranque de debate del board.
+        if (messages.length === 0) capture(ANALYTICS_EVENTS.FIRST_MESSAGE_SENT, { group: isGroupChat });
+        if (isGroupChat) capture(ANALYTICS_EVENTS.BOARD_DEBATE_STARTED);
         // Limpiamos el input optimistamente. El decremento de créditos lo hace
         // streamChat una sola vez tras confirmar que el backend aceptó el envío
         // (A4: antes se decrementaba aquí Y en streamChat → -2 por mensaje).
@@ -439,6 +444,9 @@ export function ChatPanel() {
                                         : "Escribe tu primer mensaje para empezar la conversación."}
                                 </p>
                             </div>
+
+                            {/* Plantillas de debate (F7): solo en sesión de grupo vacía. */}
+                            {isGroupChat && <DebateTemplates onPick={setInputValue} />}
                         </motion.div>
                     ) : (
                         <>

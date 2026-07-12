@@ -3,6 +3,7 @@ SPHERE Backend - FastAPI Application
 Orquestador multi-tenant de agentes IA para startups.
 """
 
+import asyncio
 import hashlib
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Depends
@@ -22,6 +23,9 @@ from app.presentation.api.v1 import (
     integrations,
     billing,
     webhooks,
+    exports,
+    scheduled_boards,
+    admin,
 )
 from app.infrastructure.tools.n8n_client import N8NClient
 import app.infrastructure.tools.n8n_client as n8n_module
@@ -139,6 +143,11 @@ async def _ensure_indexes():
     await sessions_col.create_index(
         [("user_id", ASCENDING), ("created_at", DESCENDING)], background=True
     )
+    # Share público read-only: lookup por token. Sparse porque la mayoría de
+    # sesiones no están compartidas.
+    await sessions_col.create_index(
+        [("share_token", ASCENDING)], unique=True, sparse=True, background=True
+    )
 
     # Custom agents
     agents_col = get_custom_agents_collection()
@@ -224,6 +233,25 @@ async def _ensure_indexes():
         background=True,
     )
 
+    # Juntas programadas (F3): lookup de jobs due + scope por usuario.
+    from app.infrastructure.database import get_scheduled_boards_collection
+
+    sched_col = get_scheduled_boards_collection()
+    await sched_col.create_index([("id", ASCENDING)], unique=True, background=True)
+    await sched_col.create_index([("user_id", ASCENDING)], background=True)
+    await sched_col.create_index(
+        [("enabled", ASCENDING), ("next_run_at", ASCENDING)], background=True
+    )
+
+    # Actas del board (F8): recuperación de las últimas actas por sesión.
+    from app.infrastructure.database import get_board_actas_collection
+
+    actas_col = get_board_actas_collection()
+    await actas_col.create_index(
+        [("user_id", ASCENDING), ("session_id", ASCENDING), ("created_at", DESCENDING)],
+        background=True,
+    )
+
     # Tool audit log
     audit_col = get_tool_audit_log_collection()
     await audit_col.create_index(
@@ -304,7 +332,7 @@ async def lifespan(app: FastAPI):
             webhook_secret=settings.N8N_WEBHOOK_SECRET,
         )
         await client.start()
-        n8n_module.n8n_client = client
+        n8n_module.set_client(client)
         logger.info("N8N Client inicializado")
 
         # Deploy n8n workflows automatically
@@ -318,6 +346,13 @@ async def lifespan(app: FastAPI):
 
         load_all_tools()
         logger.info("Tool registry cargado")
+
+        # Scheduler in-process de juntas programadas (F3). Un solo worker uvicorn
+        # en Railway → el scheduler in-process es exacto. No es fatal si falla.
+        phase = "scheduler"
+        from app.application.scheduled_boards import scheduler_loop
+
+        scheduled_boards_task = asyncio.create_task(scheduler_loop())
     except Exception as exc:
         _fatal_startup(phase, exc)
         raise
@@ -327,6 +362,11 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     logger.info("Cerrando SPHERE Backend...")
+    scheduled_boards_task.cancel()
+    try:
+        await scheduled_boards_task
+    except (asyncio.CancelledError, Exception):
+        pass
     if client is not None:
         await client.close()
 
@@ -469,6 +509,27 @@ app.include_router(
     billing.router,
     prefix=f"{settings.API_V1_STR}/billing",
     tags=["Billing"],
+    dependencies=[_general_limit],
+)
+# Exports (acta → Notion/GitHub): endpoints /me/exports/* montados en API_V1_STR.
+app.include_router(
+    exports.router,
+    prefix=f"{settings.API_V1_STR}",
+    tags=["Exports"],
+    dependencies=[_general_limit],
+)
+# Juntas programadas (F3): endpoints /me/scheduled-boards/* montados en API_V1_STR.
+app.include_router(
+    scheduled_boards.router,
+    prefix=f"{settings.API_V1_STR}",
+    tags=["ScheduledBoards"],
+    dependencies=[_general_limit],
+)
+# Panel admin (F4 + F5): /admin/* — protegido por require_admin en cada endpoint.
+app.include_router(
+    admin.router,
+    prefix=f"{settings.API_V1_STR}/admin",
+    tags=["Admin"],
     dependencies=[_general_limit],
 )
 # Webhooks publicos, sin rate limit general ni prefijo de /v1 por defecto si no lo deseas, 

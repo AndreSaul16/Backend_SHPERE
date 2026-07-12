@@ -17,6 +17,21 @@ from tenacity import (
 from app.core.logger import checkpoint_logger as logger
 
 
+def canonical_sign(payload: dict, secret: str) -> str:
+    """Firma HMAC-SHA256 sobre la forma canónica del payload.
+
+    Forma canónica = JSON con claves ordenadas, sin espacios, UTF-8 sin escapar.
+    Los workflows de n8n no tienen acceso al raw body (reciben el JSON ya parseado),
+    así que ambos lados firman/verifican la misma serialización reconstruible desde
+    el objeto. Reutilizada por el cliente (envío) y por el webhook n8n→backend
+    (verificación, F9) para que la firma sea idéntica en ambos sentidos.
+    """
+    canonical = json.dumps(
+        payload, separators=(",", ":"), sort_keys=True, ensure_ascii=False
+    ).encode("utf-8")
+    return hmac.new(secret.encode(), canonical, hashlib.sha256).hexdigest()
+
+
 class N8NClient:
     """Cliente singleton para comunicarse con n8n via webhooks."""
 
@@ -52,18 +67,8 @@ class N8NClient:
         return self._circuit_breaker
 
     def _sign(self, payload: dict) -> str:
-        """Firma HMAC-SHA256 sobre la forma canónica del payload (claves ordenadas,
-        sin espacios, UTF-8 sin escapar). Los workflows de n8n no tienen acceso al
-        raw body (reciben el JSON ya parseado), así que ambos lados firman/verifican
-        la misma serialización canónica reconstruible desde el objeto."""
-        canonical = json.dumps(
-            payload, separators=(",", ":"), sort_keys=True, ensure_ascii=False
-        ).encode("utf-8")
-        return hmac.new(
-            self.webhook_secret.encode(),
-            canonical,
-            hashlib.sha256,
-        ).hexdigest()
+        """Firma HMAC-SHA256 sobre la forma canónica del payload. Ver canonical_sign."""
+        return canonical_sign(payload, self.webhook_secret)
 
     async def call_webhook(
         self,
@@ -111,12 +116,18 @@ class N8NClient:
             logger.error(
                 f"Error en call_webhook ({webhook_path}): {type(e).__name__}: {e}"
             )
-            # Retornar error en vez de raise — las tools deben ser resilientes
+            # Retornar error en vez de raise — las tools deben ser resilientes.
+            # El hint lo lee el USUARIO en el chat (card de tool_error), no un
+            # operador: darle una acción útil, no "revisa el contenedor".
             return {
                 "error": True,
                 "service": "n8n",
-                "message": f"Servicio n8n no disponible: {type(e).__name__}",
-                "hint": "Verifica que el contenedor n8n esté corriendo.",
+                "message": f"Servicio de automatizaciones no disponible: {type(e).__name__}",
+                "hint": (
+                    "El servicio externo de automatizaciones no responde ahora mismo. "
+                    "Inténtalo de nuevo en unos minutos; si persiste, revisa el estado "
+                    "de tus conexiones en Settings → Connections."
+                ),
             }
 
     @retry(
@@ -185,5 +196,31 @@ class N8NClient:
             raise
 
 
-# Instancia global — se inicializa en main.py lifespan
-n8n_client: N8NClient | None = None
+# Instancia global — main.py la setea en el lifespan vía set_client().
+_client: N8NClient | None = None
+
+
+def set_client(client: N8NClient | None) -> None:
+    """Registra la instancia real (llamado desde el lifespan de main.py)."""
+    global _client
+    _client = client
+
+
+class _N8NClientProxy:
+    """Resuelve la instancia real en tiempo de LLAMADA, no de import.
+
+    Las tools hacen `from ...n8n_client import n8n_client` a nivel de módulo;
+    con una variable plana capturarían None si algo las importara antes del
+    lifespan (p. ej. un test). El proxy elimina esa dependencia del orden.
+    """
+
+    def __getattr__(self, name):
+        if _client is None:
+            raise RuntimeError(
+                "n8n_client no inicializado: el lifespan de main.py aún no llamó "
+                "a set_client() (¿import fuera de la app, o test sin fixture?)"
+            )
+        return getattr(_client, name)
+
+
+n8n_client = _N8NClientProxy()

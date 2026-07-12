@@ -276,6 +276,16 @@ def get_user_oauth_apps_collection():
     return db.get_async_db()["user_oauth_apps"]
 
 
+def get_scheduled_boards_collection():
+    """Colección de juntas programadas (F3): jobs recurrentes de board meeting."""
+    return db.get_async_db()["scheduled_boards"]
+
+
+def get_board_actas_collection():
+    """Colección de actas del board (F8): memoria ejecutiva por sesión."""
+    return db.get_async_db()["board_actas"]
+
+
 # Aliases para compatibilidad con código existente
 sessions_collection = property(lambda self: get_sessions_collection())
 checkpoints_collection = property(lambda self: get_checkpoints_collection())
