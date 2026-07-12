@@ -350,6 +350,21 @@ SERVICE_DEFINITIONS = {
             "schedule_post",
         ],
     },
+    "financial_api": {
+        "label": "Datos financieros (Alpha Vantage)",
+        "credential_type": "api_key",
+        "fields": ["api_key"],
+        "metadata_fields": [],
+        "description": (
+            "Permite al CFO consultar noticias, cotizaciones y análisis de mercado. "
+            "Consigue una API key gratuita en alphavantage.co."
+        ),
+        "tools": [
+            "get_financial_news",
+            "get_stock_data",
+            "get_market_analysis",
+        ],
+    },
 }
 
 
@@ -517,10 +532,26 @@ async def test_service_credential(
                     headers={"Authorization": f"Bearer {cred['key']}"},
                 )
                 if resp.status_code == 200:
+                    # Derivar y persistir el URN de la persona: la API ugcPosts
+                    # exige author="urn:li:person:{id}" real y el usuario no
+                    # tiene forma razonable de conocer su id a mano.
+                    person_id = (resp.json() or {}).get("id")
+                    if person_id:
+                        await credentials_service.store_service_credential(
+                            user["firebase_uid"],
+                            service,
+                            cred["key"],
+                            credential_type="oauth_token",
+                            metadata={
+                                **cred.get("metadata", {}),
+                                "li_person_urn": str(person_id),
+                            },
+                        )
                     return {
                         "service": service,
                         "success": True,
-                        "message": "Conexión exitosa con LinkedIn",
+                        "message": "Conexión exitosa con LinkedIn"
+                        + ("" if person_id else " (no se pudo derivar el URN de persona)"),
                     }
                 return {
                     "service": service,
@@ -554,18 +585,34 @@ async def test_service_credential(
                 }
 
         elif service == "jules":
-            # Jules API test - adjust endpoint as needed
+            # Jules no expone endpoint de verificación: ser honestos en vez de
+            # devolver un check verde que sugiere una validación que no ocurrió.
             return {
                 "service": service,
                 "success": True,
-                "message": "API key almacenada (test no disponible aún)",
+                "verified": False,
+                "message": (
+                    "API key almacenada. Jules no ofrece verificación previa: "
+                    "se validará en el primer uso real."
+                ),
             }
 
         elif service == "instagram":
+            # Validar contra la MISMA API que usa el workflow de publicación
+            # (graph.facebook.com + instagram_account_id). El antiguo test contra
+            # graph.instagram.com/me pasaba en verde con credenciales que luego
+            # fallaban al publicar.
+            account_id = cred.get("metadata", {}).get("instagram_account_id", "")
+            if not account_id:
+                return {
+                    "service": service,
+                    "success": False,
+                    "message": "Instagram Account ID no configurado",
+                }
             async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.get(
-                    "https://graph.instagram.com/me",
-                    params={"fields": "id,username", "access_token": cred["key"]},
+                    f"https://graph.facebook.com/v18.0/{account_id}",
+                    params={"fields": "username", "access_token": cred["key"]},
                 )
                 if resp.status_code == 200:
                     return {
@@ -577,6 +624,32 @@ async def test_service_credential(
                     "service": service,
                     "success": False,
                     "message": f"Error HTTP {resp.status_code}",
+                }
+
+        elif service == "financial_api":
+            # Alpha Vantage responde 200 incluso con key inválida: hay que mirar
+            # el cuerpo (Global Quote presente = key válida).
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(
+                    "https://www.alphavantage.co/query",
+                    params={
+                        "function": "GLOBAL_QUOTE",
+                        "symbol": "IBM",
+                        "apikey": cred["key"],
+                    },
+                )
+                data = resp.json() if resp.status_code == 200 else {}
+                if "Global Quote" in data:
+                    return {
+                        "service": service,
+                        "success": True,
+                        "message": "Conexión exitosa con Alpha Vantage",
+                    }
+                detail = data.get("Information") or data.get("Error Message") or f"HTTP {resp.status_code}"
+                return {
+                    "service": service,
+                    "success": False,
+                    "message": f"Alpha Vantage rechazó la key: {str(detail)[:150]}",
                 }
 
         return {

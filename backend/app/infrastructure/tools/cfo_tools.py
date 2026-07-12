@@ -8,6 +8,10 @@ from pydantic import BaseModel, Field
 from langchain_core.tools import StructuredTool
 from app.infrastructure.tools.registry import register_role_tool
 from app.infrastructure.tools.n8n_client import n8n_client
+from app.infrastructure.tools.credential_injector import (
+    inject_credentials_into_payload,
+    missing_credential_error,
+)
 
 
 # ============================================================
@@ -40,10 +44,16 @@ class GetMarketAnalysisInput(BaseModel):
 async def _get_financial_news(
     topic: str, date_range: Literal["today", "week", "month"] = "today", limit: int = 5,
 ) -> str:
+    payload = {"topic": topic, "date_range": date_range, "limit": limit}
+    payload, creds = await inject_credentials_into_payload(payload, ["financial_api"])
+    err = missing_credential_error(creds, "financial_api", "get_financial_news")
+    if err:
+        return err
     result = await n8n_client.call_webhook(
         "cfo/financial-news",
-        {"topic": topic, "date_range": date_range, "limit": limit},
+        payload,
         timeout=15.0,
+        user_credentials=creds,
     )
     return json.dumps(result, ensure_ascii=False)
 
@@ -51,10 +61,16 @@ async def _get_financial_news(
 async def _get_stock_data(
     symbol: str, period: Literal["1d", "5d", "1mo", "3mo"] = "1d",
 ) -> str:
+    payload = {"symbol": symbol.upper(), "period": period}
+    payload, creds = await inject_credentials_into_payload(payload, ["financial_api"])
+    err = missing_credential_error(creds, "financial_api", "get_stock_data")
+    if err:
+        return err
     result = await n8n_client.call_webhook(
         "cfo/stock-data",
-        {"symbol": symbol.upper(), "period": period},
+        payload,
         timeout=15.0,
+        user_credentials=creds,
     )
     return json.dumps(result, ensure_ascii=False)
 
@@ -62,10 +78,16 @@ async def _get_stock_data(
 async def _get_market_analysis(
     sector: str, metrics: Optional[list[str]] = None,
 ) -> str:
+    payload = {"sector": sector, "metrics": metrics or ["price", "volume", "momentum"]}
+    payload, creds = await inject_credentials_into_payload(payload, ["financial_api"])
+    err = missing_credential_error(creds, "financial_api", "get_market_analysis")
+    if err:
+        return err
     result = await n8n_client.call_webhook(
         "cfo/market-analysis",
-        {"sector": sector, "metrics": metrics or ["price", "volume", "momentum"]},
+        payload,
         timeout=20.0,
+        user_credentials=creds,
     )
     return json.dumps(result, ensure_ascii=False)
 

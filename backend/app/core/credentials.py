@@ -547,10 +547,15 @@ class CredentialsService:
         Carga credenciales de múltiples servicios para inyectar en payloads de n8n.
         Retorna dict: {"google_calendar": {"api_key": "...", ...}, ...}
 
+        El secreto se expone bajo AMBAS claves — `api_key` y `access_token` —
+        porque los workflows n8n no son homogéneos: google-calendar/jules/cfo
+        leen `creds.api_key`, mientras whatsapp/linkedin/instagram leen
+        `creds.access_token`. Emitir solo una rompía el otro grupo. El metadata
+        del usuario (phone_number_id, calendar_id, ...) puede sobreescribirlas.
+
         Caso especial google_calendar: Google Calendar API necesita un access_token
         OAuth2 (no una api_key). Si el usuario conectó Google vía OAuth, usamos su
-        token (auto-refrescado) como `api_key` para el workflow (que hace Bearer
-        {api_key}). Si no hay OAuth, caemos al service-credential api_key (compat).
+        token (auto-refrescado). Si no hay OAuth, caemos al service-credential (compat).
         """
         result = {}
         for service in services:
@@ -560,12 +565,13 @@ class CredentialsService:
                     # Conservar calendar_id del service-credential si existe.
                     sc = await self.get_service_credential_with_metadata(user_id, service)
                     metadata = (sc or {}).get("metadata", {}) if sc else {}
-                    result[service] = {"api_key": token, **metadata}
+                    result[service] = {"api_key": token, "access_token": token, **metadata}
                     continue
             cred = await self.get_service_credential_with_metadata(user_id, service)
             if cred:
                 result[service] = {
                     "api_key": cred["key"],
+                    "access_token": cred["key"],
                     **cred["metadata"],
                 }
         return result

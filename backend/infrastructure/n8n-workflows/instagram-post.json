@@ -62,7 +62,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"image_url\": \"{{ $json.image_url }}\",\n  \"caption\": {{ JSON.stringify($json.content) }},\n  \"media_type\": \"{{ $json.type === 'reel' ? 'REELS' : 'IMAGE' }}\"\n}",
+        "jsonBody": "={\n  \"image_url\": {{ JSON.stringify($json.image_url) }},\n  \"caption\": {{ JSON.stringify($json.content) }},\n  \"media_type\": \"{{ $json.type === 'reel' ? 'REELS' : 'IMAGE' }}\"\n}",
         "options": {}
       },
       "id": "http-1",

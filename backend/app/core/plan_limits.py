@@ -58,13 +58,6 @@ PURCHASABLE_SKUS: set[str] = {
     "deep_dive",
 }
 
-# Compat: la validación cross-tier ya no restringe (un solo plan). Se conserva
-# la función validate_topup_tier abajo, que ahora valida contra PURCHASABLE_SKUS.
-ALLOWED_TOPUPS_BY_PLAN: dict[str, set[str]] = {
-    "free": PURCHASABLE_SKUS,
-}
-
-
 def get_user_plan(user: dict) -> str:
     """Devuelve el plan_id del usuario desde el documento de MongoDB."""
     return (user.get("subscription") or {}).get("plan_id", "free")

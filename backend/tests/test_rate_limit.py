@@ -111,28 +111,49 @@ class TestNonBlockingAcquire:
             )
 
 
-class TestRateLimitNoopWhenRedisDown:
-    """Verifica que el rate limiting sea no-op cuando Redis no está disponible."""
+class TestChatRateLimiterWiring:
+    """Tests del servicio real que usa stream.py (app/core/rate_limit.py).
 
-    @pytest.mark.asyncio
-    async def test_stream_endpoint_skips_rate_limit_when_redis_none(self):
-        """Cuando _redis_client es None, el rate limit NO se aplica."""
-        import app.infrastructure.redis_client as redis_mod
+    El bug original tenía dos capas: el Limiter se recreaba por request (bucket
+    vacío siempre → no limitaba) y aunque fuera singleton, SingleBucketFactory
+    comparte UN bucket global entre todos los usuarios. Estas pruebas cubren
+    ambas: el estado persiste entre llamadas y cada identidad tiene su cuota.
+    """
 
-        old_redis = redis_mod._redis_client
-        redis_mod._redis_client = None
+    def _fresh(self):
+        from app.core.rate_limit import ChatRateLimiter
 
-        try:
-            # El rate limit config sigue siendo válido
-            from app.core.plan_limits import RATE_LIMIT_CHAT_BY_PLAN
-            assert RATE_LIMIT_CHAT_BY_PLAN["free"] == (60, 60)
+        return ChatRateLimiter()
 
-            # Cuando _redis_client es None, el stream.py salta el
-            # bloque completo de rate limiting → no-op.
-            # No necesitamos invocar el endpoint real para probar esto;
-            # es suficiente con verificar que el fast-path existe.
-        finally:
-            redis_mod._redis_client = old_redis
+    def test_estado_persiste_entre_llamadas(self):
+        """El historial acumula entre requests: con cuota 3, la 4ª se bloquea."""
+        limiter = self._fresh()
+        results = [limiter.try_acquire("user_a", 3, 60) for _ in range(4)]
+        assert results == [True, True, True, False]
+
+    def test_cuota_aislada_por_usuario(self):
+        """Agotar la cuota de un usuario NO consume la de otro."""
+        limiter = self._fresh()
+        for _ in range(3):
+            assert limiter.try_acquire("user_agotado", 3, 60)
+        assert not limiter.try_acquire("user_agotado", 3, 60)
+        # Otro usuario sigue teniendo su cuota íntegra.
+        assert limiter.try_acquire("user_fresco", 3, 60)
+
+    def test_singleton_de_modulo(self):
+        """stream.py importa una instancia de módulo: debe ser la misma siempre."""
+        from app.core.rate_limit import chat_rate_limiter as a
+        from app.core.rate_limit import chat_rate_limiter as b
+
+        assert a is b
+
+    def test_tasas_distintas_no_comparten_historial(self):
+        """Si el plan de un usuario cambia de tasa, arranca con bucket propio."""
+        limiter = self._fresh()
+        assert limiter.try_acquire("user_x", 1, 60)
+        assert not limiter.try_acquire("user_x", 1, 60)
+        # Nueva configuración de tasa → nuevo bucket, no hereda el bloqueo.
+        assert limiter.try_acquire("user_x", 5, 60)
 
     def test_rate_limiter_config_matches_spec(self):
         """Los límites configurados coinciden con el modelo single-plan: todos uniformes."""

@@ -298,8 +298,8 @@ async def generate_chat_events(
                             yield f"data: {json.dumps({'type': 'board_consensus', 'unanimous': tally['unanimous'], 'tally': tally['counts'], 'early_exit': early and node_name == 'consensus_gate'})}\n\n"
                         except Exception as exc:
                             logger.debug(f"board_consensus snapshot falló: {exc}")
-                    # board_intervention: si el gate inyectó una intervención
-                    if node_name in ("consensus_gate", "rebuttal_join") and isinstance(output, dict):
+                    # board_intervention: si el gate/join/síntesis inyectó una intervención
+                    if node_name in ("consensus_gate", "rebuttal_join", "synthesis") and isinstance(output, dict):
                         for m in output.get("messages", []) or []:
                             content = getattr(m, "content", "")
                             if isinstance(content, str) and content.startswith("[INTERVENCIÓN DEL FUNDADOR"):
@@ -557,26 +557,20 @@ async def chat_stream_endpoint(
         user_id = user["firebase_uid"]
 
         # Per-plan rate limit: se resuelve AQUÍ después de saber el plan del usuario.
-        # Si Redis no está disponible, el rate limit es no-op (fast-path).
-        from app.infrastructure.redis_client import _redis_client
+        # Rate limit por usuario (in-memory por proceso, ver app/core/rate_limit.py).
         from app.core.plan_limits import RATE_LIMIT_CHAT_BY_PLAN
+        from app.core.rate_limit import chat_rate_limiter
 
-        if _redis_client is not None:
-            plan_id = (user.get("subscription") or {}).get("plan_id", "free")
-            times, seconds = RATE_LIMIT_CHAT_BY_PLAN.get(plan_id, RATE_LIMIT_CHAT_BY_PLAN["free"])
-            from pyrate_limiter import Limiter, Rate, Duration
-
-            rate = Rate(times, Duration.SECOND * seconds)
-            limiter = Limiter(rate)
-            # Usar user_id como identificador (ya viene del JWT)
-            if not limiter.try_acquire(user_id, blocking=False):
-                raise HTTPException(
-                    status_code=429,
-                    detail={
-                        "error": "rate_limit_exceeded",
-                        "message": f"Rate limit exceeded. Tu plan ({plan_id}) permite {times} requests por {seconds}s.",
-                    },
-                )
+        plan_id = (user.get("subscription") or {}).get("plan_id", "free")
+        times, seconds = RATE_LIMIT_CHAT_BY_PLAN.get(plan_id, RATE_LIMIT_CHAT_BY_PLAN["free"])
+        if not chat_rate_limiter.try_acquire(user_id, times, seconds):
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "error": "rate_limit_exceeded",
+                    "message": f"Rate limit exceeded. Tu plan ({plan_id}) permite {times} requests por {seconds}s.",
+                },
+            )
 
         # Email verification gate — debe ir ANTES del credit check.
         # Es un gate de autorización más fundamental que el billing.

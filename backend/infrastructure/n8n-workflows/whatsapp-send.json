@@ -62,7 +62,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.to }}\",\n  \"text\": {\n    \"body\": \"{{ $json.message }}\"\n  }\n}",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": {{ JSON.stringify($json.to) }},\n  \"text\": {\n    \"body\": {{ JSON.stringify($json.message) }}\n  }\n}",
         "options": {}
       },
       "id": "http-1",

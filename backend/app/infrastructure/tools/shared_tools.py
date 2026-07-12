@@ -16,7 +16,10 @@ from pydantic import BaseModel, Field
 from langchain_core.tools import StructuredTool
 from app.infrastructure.tools.registry import register_shared_tool
 from app.infrastructure.tools.n8n_client import n8n_client
-from app.infrastructure.tools.credential_injector import inject_credentials_into_payload
+from app.infrastructure.tools.credential_injector import (
+    inject_credentials_into_payload,
+    missing_credential_error,
+)
 from app.core.logger import checkpoint_logger as logger
 from app.core.tool_context import get_current_user_id
 from app.core.contacts_service import is_authorized
@@ -118,6 +121,9 @@ async def _calendar_list_events(
 ) -> str:
     payload = {"date_from": date_from, "date_to": date_to, "max_results": max_results}
     payload, creds = await inject_credentials_into_payload(payload, ["google_calendar"])
+    err = missing_credential_error(creds, "google_calendar", "calendar_list_events")
+    if err:
+        return err
     result = await n8n_client.call_webhook(
         "shared/calendar-list",
         payload,
@@ -154,6 +160,9 @@ async def _calendar_create_event(
         "attendees": attendees or [],
     }
     payload, creds = await inject_credentials_into_payload(payload, ["google_calendar"])
+    err = missing_credential_error(creds, "google_calendar", "calendar_create_event")
+    if err:
+        return err
     result = await n8n_client.call_webhook(
         "shared/calendar-create",
         payload,
@@ -179,6 +188,9 @@ async def _calendar_update_event(
     if description:
         payload["description"] = description
     payload, creds = await inject_credentials_into_payload(payload, ["google_calendar"])
+    err = missing_credential_error(creds, "google_calendar", "calendar_update_event")
+    if err:
+        return err
     result = await n8n_client.call_webhook(
         "shared/calendar-update", payload, user_credentials=creds
     )
@@ -188,6 +200,9 @@ async def _calendar_update_event(
 async def _calendar_delete_event(event_id: str) -> str:
     payload = {"event_id": event_id}
     payload, creds = await inject_credentials_into_payload(payload, ["google_calendar"])
+    err = missing_credential_error(creds, "google_calendar", "calendar_delete_event")
+    if err:
+        return err
     result = await n8n_client.call_webhook(
         "shared/calendar-delete", payload, user_credentials=creds
     )
@@ -197,6 +212,9 @@ async def _calendar_delete_event(event_id: str) -> str:
 async def _calendar_check_availability(date: str, duration_minutes: int = 60) -> str:
     payload = {"date": date, "duration_minutes": duration_minutes}
     payload, creds = await inject_credentials_into_payload(payload, ["google_calendar"])
+    err = missing_credential_error(creds, "google_calendar", "calendar_check_availability")
+    if err:
+        return err
     result = await n8n_client.call_webhook(
         "shared/calendar-availability",
         payload,

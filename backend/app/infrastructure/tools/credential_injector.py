@@ -12,12 +12,65 @@ from app.core.logger import checkpoint_logger as logger
 
 # Map de servicios a sus credenciales requeridas
 SERVICE_CREDENTIAL_MAP = {
-    "calendar": ["google_calendar"],
+    "google_calendar": ["google_calendar"],
     "whatsapp": ["whatsapp"],
     "linkedin": ["linkedin"],
     "instagram": ["instagram"],
     "jules": ["jules"],
+    "financial_api": ["financial_api"],
 }
+
+# Etiquetas y campos mínimos por servicio para el pre-check de tools: llamar a
+# n8n con credenciales vacías produce un 401 del proveedor → 500 de n8n → el
+# usuario ve "n8n no disponible" en vez de "conecta el servicio". Validar ANTES.
+SERVICE_LABELS = {
+    "google_calendar": "Google (Calendar)",
+    "whatsapp": "WhatsApp Business",
+    "linkedin": "LinkedIn",
+    "instagram": "Instagram",
+    "jules": "Jules",
+    "financial_api": "Datos financieros (Alpha Vantage)",
+}
+
+REQUIRED_CREDENTIAL_FIELDS = {
+    "google_calendar": ["api_key"],
+    "whatsapp": ["access_token", "phone_number_id"],
+    "linkedin": ["access_token", "li_person_urn"],
+    "instagram": ["access_token", "instagram_account_id"],
+    "jules": ["api_key"],
+    "financial_api": ["api_key"],
+}
+
+
+def missing_credential_error(creds: dict, service: str, tool_name: str):
+    """Devuelve un JSON de error accionable si faltan credenciales del servicio,
+    o None si están completas. Pensado para llamarse ANTES de invocar n8n."""
+    import json as _json
+
+    svc = (creds or {}).get(service) or {}
+    required = REQUIRED_CREDENTIAL_FIELDS.get(service, ["api_key"])
+    missing = [f for f in required if not svc.get(f)]
+    if not missing:
+        return None
+    label = SERVICE_LABELS.get(service, service)
+    if service == "google_calendar":
+        hint = "Conecta Google en Settings → Connections (OAuth) para usar el calendario."
+    elif service == "linkedin" and svc.get("access_token"):
+        hint = (
+            "Falta el URN de tu perfil: pulsa 'Probar conexión' en Settings → "
+            "Connections → LinkedIn para completar la configuración."
+        )
+    else:
+        hint = f"Configura {label} en Settings → Connections antes de usar esta herramienta."
+    return _json.dumps(
+        {
+            "error": f"{service}_not_configured",
+            "tool": tool_name,
+            "missing": missing,
+            "hint": hint,
+        },
+        ensure_ascii=False,
+    )
 
 
 async def load_user_credentials_for_services(
@@ -79,24 +132,3 @@ async def inject_credentials_into_payload(
     return payload, credentials
 
 
-def get_required_services(webhook_path: str) -> list[str]:
-    """
-    Determina qué servicios necesita un webhook basado en su path.
-
-    Args:
-        webhook_path: Path del webhook (ej: "shared/calendar-list")
-
-    Returns:
-        Lista de servicios necesarios (ej: ["google_calendar"])
-    """
-    if "calendar" in webhook_path:
-        return ["google_calendar"]
-    elif "whatsapp" in webhook_path:
-        return ["whatsapp"]
-    elif "linkedin" in webhook_path:
-        return ["linkedin"]
-    elif "instagram" in webhook_path:
-        return ["instagram"]
-    elif "jules" in webhook_path:
-        return ["jules"]
-    return []

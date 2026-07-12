@@ -49,3 +49,4 @@ def load_all_tools():
     import app.infrastructure.tools.cfo_tools      # noqa: F401
     import app.infrastructure.tools.cmo_tools      # noqa: F401
     import app.infrastructure.tools.cto_tools      # noqa: F401
+    import app.infrastructure.tools.oauth_tools    # noqa: F401

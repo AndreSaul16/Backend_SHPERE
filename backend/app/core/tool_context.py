@@ -29,7 +29,7 @@ DESTRUCTIVE_TOOLS: set[str] = {
     "calendar_create_event",
     "calendar_delete_event",
     "github_create_repo",
-    "github_delete_repo",
+    "slack_post_message",
 }
 
 

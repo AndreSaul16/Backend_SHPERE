@@ -11,7 +11,10 @@ from pydantic import BaseModel, Field
 from langchain_core.tools import StructuredTool
 from app.infrastructure.tools.registry import register_role_tool
 from app.infrastructure.tools.n8n_client import n8n_client
-from app.infrastructure.tools.credential_injector import inject_credentials_into_payload
+from app.infrastructure.tools.credential_injector import (
+    inject_credentials_into_payload,
+    missing_credential_error,
+)
 
 
 # ============================================================
@@ -66,6 +69,9 @@ async def _create_jules_task(
         payload["language"] = language
 
     payload, creds = await inject_credentials_into_payload(payload, ["jules"])
+    err = missing_credential_error(creds, "jules", "create_jules_task")
+    if err:
+        return err
     result = await n8n_client.call_webhook(
         "cto/jules-create",
         payload,
@@ -76,19 +82,33 @@ async def _create_jules_task(
 
 
 async def _check_jules_status(jules_task_id: str) -> str:
+    payload, creds = await inject_credentials_into_payload(
+        {"jules_task_id": jules_task_id}, ["jules"]
+    )
+    err = missing_credential_error(creds, "jules", "check_jules_status")
+    if err:
+        return err
     result = await n8n_client.call_webhook(
         "cto/jules-status",
-        {"jules_task_id": jules_task_id},
+        payload,
         timeout=15.0,
+        user_credentials=creds,
     )
     return json.dumps(result, ensure_ascii=False)
 
 
 async def _review_jules_output(jules_task_id: str, include_diff: bool = True) -> str:
+    payload, creds = await inject_credentials_into_payload(
+        {"jules_task_id": jules_task_id, "include_diff": include_diff}, ["jules"]
+    )
+    err = missing_credential_error(creds, "jules", "review_jules_output")
+    if err:
+        return err
     result = await n8n_client.call_webhook(
         "cto/jules-review",
-        {"jules_task_id": jules_task_id, "include_diff": include_diff},
+        payload,
         timeout=20.0,
+        user_credentials=creds,
     )
     return json.dumps(result, ensure_ascii=False)
 

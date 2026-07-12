@@ -32,7 +32,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const payload = $input.first().json.body || $input.first().json;\nconst creds = payload.user_credentials?.linkedin || {};\n\nreturn [{\n  json: {\n    access_token: creds.access_token || '',\n    content: payload.content,\n    image_url: payload.image_url || ''\n  }\n}];"
+        "jsCode": "const payload = $input.first().json.body || $input.first().json;\nconst creds = payload.user_credentials?.linkedin || {};\n\nreturn [{\n  json: {\n    access_token: creds.access_token || '',\n    li_person_urn: creds.li_person_urn || '',\n    content: payload.content,\n    image_url: payload.image_url || ''\n  }\n}];"
       },
       "id": "code-1",
       "name": "Extract Credentials",
@@ -66,7 +66,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"author\": \"urn:li:person:me\",\n  \"lifecycleState\": \"PUBLISHED\",\n  \"specificContent\": {\n    \"com.linkedin.ugc.ShareContent\": {\n      \"shareCommentary\": {\n        \"text\": {{ JSON.stringify($json.content) }}\n      },\n      \"shareMediaCategory\": \"NONE\"\n    }\n  },\n  \"visibility\": {\n    \"com.linkedin.ugc.MemberNetworkVisibility\": \"PUBLIC\"\n  }\n}",
+        "jsonBody": "={\n  \"author\": {{ JSON.stringify('urn:li:person:' + $json.li_person_urn) }},\n  \"lifecycleState\": \"PUBLISHED\",\n  \"specificContent\": {\n    \"com.linkedin.ugc.ShareContent\": {\n      \"shareCommentary\": {\n        \"text\": {{ JSON.stringify($json.content) }}\n      },\n      \"shareMediaCategory\": \"NONE\"\n    }\n  },\n  \"visibility\": {\n    \"com.linkedin.ugc.MemberNetworkVisibility\": \"PUBLIC\"\n  }\n}",
         "options": {}
       },
       "id": "http-1",

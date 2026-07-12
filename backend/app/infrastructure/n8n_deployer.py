@@ -199,6 +199,14 @@ async def deploy_all_workflows():
         )
         return
 
+    if not getattr(settings, "N8N_API_KEY", ""):
+        # Sin API key, list/create devuelven 401 silencioso → 0 workflows y todas
+        # las tools fallando en runtime. Que el operador lo vea en el arranque.
+        logger.critical(
+            "🚨 N8N_BASE_URL está configurado pero falta N8N_API_KEY: el deploy de "
+            "workflows fallará (401) y las tools de n8n no funcionarán."
+        )
+
     # Buscar archivos de workflow
     if not WORKFLOWS_DIR.exists():
         logger.warning(f"⚠️ Directorio de workflows no existe: {WORKFLOWS_DIR}")
