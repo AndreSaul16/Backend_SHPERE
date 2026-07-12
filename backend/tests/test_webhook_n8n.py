@@ -53,3 +53,11 @@ def test_canonical_sign_es_independiente_del_orden_de_claves():
 def test_firma_con_secreto_distinto_falla():
     sig = canonical_sign(PAYLOAD, "otro-secreto")
     assert verify_n8n_signature(PAYLOAD, sig) is False
+
+
+def test_secreto_vacio_rechaza_todo(monkeypatch):
+    # Sin secreto configurado, una firma calculada con clave vacía (forjable
+    # porque el esquema es público) NO debe aceptarse.
+    monkeypatch.setattr(settings, "N8N_WEBHOOK_SECRET", "")
+    forged = canonical_sign(PAYLOAD, "")
+    assert verify_n8n_signature(PAYLOAD, forged) is False

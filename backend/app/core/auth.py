@@ -322,10 +322,12 @@ async def _auto_provision_user(firebase_claims: dict) -> dict:
         )
     except Exception as e:
         if "duplicate key" in str(e).lower():
-            if email:
+            if email and email_verified:
                 # Email collision: el mismo email ya está registrado con otro firebase_uid
-                # (ej: Google + Email/Password). Retornar el usuario existente por email
-                # en lugar de crear un fantasma en memoria.
+                # (ej: Google + Email/Password del MISMO dueño). Solo fusionamos si el
+                # token entrante tiene el email VERIFICADO: de lo contrario un atacante
+                # podría registrar el email de una víctima (sin verificar) y recibir su
+                # documento (y por tanto su firebase_uid y todos sus datos).
                 existing = await users_col.find_one({"email": email})
                 if existing:
                     logger.warning(

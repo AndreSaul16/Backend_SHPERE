@@ -309,7 +309,14 @@ def verify_n8n_signature(payload: dict, signature: str | None) -> bool:
     """
     if not signature:
         return False
-    expected = canonical_sign(payload, settings.N8N_WEBHOOK_SECRET or "")
+    secret = (settings.N8N_WEBHOOK_SECRET or "").strip()
+    if not secret:
+        # Sin secreto configurado la firma se calcularía con clave vacía y sería
+        # trivialmente falsificable (el esquema canónico es público). Rechazar
+        # todo en vez de aceptar firmas forjables.
+        logger.warning("Webhook n8n rechazado: N8N_WEBHOOK_SECRET no configurado")
+        return False
+    expected = canonical_sign(payload, secret)
     return hmac.compare_digest(expected, signature)
 
 
@@ -328,7 +335,9 @@ async def _notify_schedule_post_result(payload: dict) -> None:
     success = bool(payload.get("success"))
     detail = payload.get("detail", "")
 
-    if not user_id:
+    # user_id DEBE ser string: si llega un dict (p. ej. {"$ne": null}) acabaría en
+    # una query Mongo como operador. Defensa en profundidad tras la firma HMAC.
+    if not user_id or not isinstance(user_id, str):
         return
 
     set_current_user_id(user_id)
@@ -358,6 +367,13 @@ async def n8n_webhook(request: Request):
 
     Verifica la firma HMAC (X-Webhook-Signature) antes de procesar. Siempre loguea.
     """
+    # Rate-limit por IP: endpoint sin auth, evita enumeración/abuso de user_id.
+    from app.core.rate_limit import chat_rate_limiter
+
+    client_ip = request.client.host if request.client else "unknown"
+    if not chat_rate_limiter.try_acquire(f"n8n-webhook:{client_ip}", times=60, seconds=60):
+        raise HTTPException(status_code=429, detail="Demasiadas peticiones")
+
     raw = await request.body()
     try:
         payload = json.loads(raw)

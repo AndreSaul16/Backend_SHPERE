@@ -25,9 +25,16 @@ router = APIRouter()
 
 
 async def require_admin(user: dict = Depends(get_current_user)) -> dict:
-    """Deja pasar solo a los emails configurados en ADMIN_EMAILS. 403 si no."""
+    """Deja pasar solo a los emails configurados en ADMIN_EMAILS. 403 si no.
+
+    Exige email verificado: el claim `email` de Firebase se rellena aunque el
+    correo no esté verificado, así que sin este check un atacante podría
+    registrar el email de un admin (sin verificarlo) y colarse en el panel.
+    """
     email = (user.get("email") or "").strip().lower()
     if not email or email not in settings.admin_emails_list:
+        raise HTTPException(status_code=403, detail="Sin acceso")
+    if user.get("email_verified") is not True:
         raise HTTPException(status_code=403, detail="Sin acceso")
     return user
 

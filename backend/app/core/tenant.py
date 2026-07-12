@@ -87,10 +87,12 @@ def require_owner(doc: Optional[dict], user_id: str, resource_name: str = "recur
 
     # Soportar ambos campos: user_id y owner_user_id
     doc_user_id = doc.get("user_id") or doc.get("owner_user_id")
-    if doc_user_id and doc_user_id != user_id:
+    # Un documento sin dueño (campo ausente/None/"") NO pertenece a nadie: negar.
+    # Antes se saltaba la comprobación y cualquier usuario autenticado accedía.
+    if not doc_user_id or doc_user_id != user_id:
         logger.warning(
             f"Acceso denegado: usuario {user_id} intentó acceder a "
-            f"{resource_name} perteneciente a {doc_user_id}"
+            f"{resource_name} perteneciente a {doc_user_id or '(sin dueño)'}"
         )
         raise HTTPException(
             status_code=404,  # 404 en vez de 403 para no revelar existencia

@@ -17,8 +17,16 @@ from app.core.config import settings
 
 async def test_require_admin_email_en_lista(monkeypatch):
     monkeypatch.setattr(settings, "ADMIN_EMAILS", "boss@sphere.es, admin@sphere.es")
-    user = {"firebase_uid": "u1", "email": "Admin@Sphere.es"}  # case-insensitive
+    user = {"firebase_uid": "u1", "email": "Admin@Sphere.es", "email_verified": True}  # case-insensitive
     assert await require_admin(user=user) is user
+
+
+async def test_require_admin_email_sin_verificar_bloquea(monkeypatch):
+    # Defensa: el claim `email` se rellena aunque no esté verificado.
+    monkeypatch.setattr(settings, "ADMIN_EMAILS", "admin@sphere.es")
+    with pytest.raises(HTTPException) as exc:
+        await require_admin(user={"firebase_uid": "u1", "email": "admin@sphere.es", "email_verified": False})
+    assert exc.value.status_code == 403
 
 
 async def test_require_admin_email_fuera_de_lista(monkeypatch):
