@@ -43,7 +43,7 @@ Settings en `config.py:23-25`: `N8N_BASE_URL` (default `http://n8n:5678`),
 - `N8N_WEBHOOK_SECRET` = **mismo valor** que el del servicio n8n (HMAC de
   `n8n_client.py:55-59,144`).
 
-### A3. API key + import de los 16 workflows (automático en arranque)
+### A3. API key + import de los 18 workflows (automático en arranque)
 `deploy_all_workflows()` (`n8n_deployer.py:145`) corre en el lifespan del backend:
 lista workflows (`GET /api/v1/workflows`) y crea/activa los que falten
 (`POST`/`PATCH`), con header `X-N8N-API-KEY`. Si falta `N8N_API_KEY` o n8n no está
@@ -105,7 +105,7 @@ hasta reconexión o se fuerza re-registro (probablemente no hay aún en prod).
 
 ## Verificación (end-to-end)
 - **n8n:** `python scripts/railway-doctor.py n8n` → SUCCESS; UI carga; tras
-  `N8N_API_KEY`, los 16 workflows aparecen; un webhook de prueba responde.
+  `N8N_API_KEY`, los 18 workflows aparecen; un webhook de prueba responde.
 - **OAuth BYO:** un usuario registra su app (`POST /me/oauth-apps/github`) →
   connect → callback → token cifrado en `oauth_credentials`; integración real
   funciona; `DELETE` revoca app + tokens. Tests espejo de `service_credentials`.

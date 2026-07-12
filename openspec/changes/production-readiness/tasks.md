@@ -39,12 +39,16 @@ Chain strategy: stacked-to-main
 
 ## Phase 3: Top-Up Validation & Backend Tests
 
-- [ ] 3.1 Add `ALLOWED_TOPUPS_BY_PLAN` to `plan_limits.py` (free→{topup_free}, starter→{topup_free, topup_starter}, premium→all)
-- [ ] 3.2 Validate `req.plan_id` against user allowed top-ups in `billing.py:17` — reject with 403 if tier mismatch
-- [ ] 3.3 Add defense-in-depth: validate top-up plan_id against user's current tier in `webhooks.py:_grant_topup` (L47-56) — log and reject if mismatch
-- [ ] 3.4 Refactor `conftest.py:_make_user_profile` → `make_profile(plan)` factory returning plan-specific wallet balances (free=5, starter=50, premium=100)
-- [ ] 3.5 Create `tests/test_rate_limit.py` — test per-plan rate limiting for free/starter/premium with mocked Redis
-- [ ] 3.6 Add top-up gating tests to `test_billing_api.py` — free user rejected for `topup_premium_10k`, starter accepted for `topup_starter`
+> ✅ Fase auditada contra el código el 2026-07-12. El producto pivotó a mono-plan
+> de solo-créditos, así que el "gating por tier" se convirtió en validación de
+> catálogo (`validate_topup_tier` contra `PURCHASABLE_SKUS`).
+
+- [x] 3.1 ~~Add `ALLOWED_TOPUPS_BY_PLAN` to `plan_limits.py`~~ *Obsoleto por el pivote a mono-plan: la validación vive en `validate_topup_tier` (catálogo `PURCHASABLE_SKUS`); el mapa por tiers se eliminó por código muerto.*
+- [x] 3.2 Validate `req.plan_id` against user allowed top-ups in `billing.py` — reject with 403 if tier mismatch *(hecho vía `validate_topup_tier` en el checkout)*
+- [x] 3.3 Add defense-in-depth: validate top-up plan_id in `webhooks.py:_grant_topup` — log and reject if mismatch *(hecho: valida antes de otorgar, sin romper el webhook)*
+- [x] 3.4 Refactor `conftest.py:_make_user_profile` → factory con balances por plan *(hecho: `_PLAN_WALLETS` + parámetro `email_verified`)*
+- [x] 3.5 Create `tests/test_rate_limit.py` *(hecho; ampliado 2026-07-12 con tests del wiring real per-usuario)*
+- [x] 3.6 Add top-up gating tests to `test_billing_api.py` *(hecho: `TestTopupSKUValidation` + `TestWebhookInvalidSKU` con la semántica mono-plan)*
 
 ## Phase 4: Frontend UI Integration
 

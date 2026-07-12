@@ -1,5 +1,13 @@
 # PLAN DE IMPLEMENTACIÓN DEL SISTEMA DE PAGOS (SPHERE)
 
+> ⚠️ **SUPERSEDED (2026-07-12)**: el producto pivotó del modelo de 3 tiers con
+> suscripción descrito aquí a un **modelo mono-plan de solo-créditos**: un único
+> plan `free` (30 créditos/mes) + compras puntuales (packs y top-ups,
+> `mode=payment`, sin suscripciones). La fuente de verdad actual es
+> `app/core/config.py` (catálogo/precios) y `app/core/plan_limits.py` (límites).
+> Este documento se conserva como referencia histórica de la estrategia; las
+> secciones de tiers, feature gating por plan y suscripciones NO están vigentes.
+
 Este documento detalla la estrategia financiera y técnica para integrar un sistema de pagos nativo y un sistema de cuotas de mensajes con feature gating. El objetivo es maximizar la rentabilidad (margen garantizado >50% en planes pagos worst-case) utilizando exclusivamente DeepSeek V4 Pro, manteniendo una arquitectura limpia y escalable.
 
 ---

@@ -10,7 +10,7 @@ El código ya está completo (registry de tools, cliente n8n, auto-deploy de wor
 
 ## 1. Qué ya funciona en el código (tras este PR)
 
-- **Auto-deploy de workflows n8n**: en cada arranque del backend, `deploy_all_workflows()` sube y activa los 16 workflows de `backend/infrastructure/n8n-workflows/`. Ahora además **actualiza** los que cambian de contenido (antes solo creaba los que faltaban).
+- **Auto-deploy de workflows n8n**: en cada arranque del backend, `deploy_all_workflows()` sube y activa los 18 workflows de `backend/infrastructure/n8n-workflows/`. Ahora además **actualiza** los que cambian de contenido (antes solo creaba los que faltaban).
 - **Contactos CRUD**: arreglado el bug por el que los contactos volvían sin `id` y no se podían borrar. Añadir/listar/borrar funciona en la UI.
 - **Google Calendar por OAuth**: Calendar ya NO se conecta con una "api_key" (que Google rechaza) — ahora es OAuth real (`/settings/integrations` → Google Calendar). El token se auto-refresca y se inyecta en los workflows de calendario.
 - **Inyección multi-tenant de credenciales**: cada llamada a n8n lleva las credenciales cifradas del usuario (`user_credentials` en el payload).
@@ -62,7 +62,10 @@ El código ya está completo (registry de tools, cliente n8n, auto-deploy de wor
 > Alternativa sin fricción para el usuario: registrar UNA OAuth app de Google de SPHERE y compartir su `client_id/secret` por defecto (requiere pantalla de consentimiento verificada por Google). Hoy el flujo es BYO (cada usuario su app), igual que GitHub/Notion/Slack.
 
 ### WhatsApp / LinkedIn / Instagram (api_key / token — `/settings/integrations` → credenciales)
-- Estos aceptan tokens de larga duración pegables: el usuario pega el `access_token` (y `phone_number_id` para WhatsApp). Se cifran con Fernet. El botón "Test" valida contra la API real.
+- Estos aceptan tokens de larga duración pegables: el usuario pega el `access_token` (y `phone_number_id` para WhatsApp; `instagram_account_id` para Instagram). Se cifran con Fernet.
+- El botón "Test" valida contra la API real en WhatsApp, LinkedIn, Instagram y Datos financieros. **LinkedIn además deriva y guarda automáticamente el URN de tu perfil** (necesario para publicar) — pulsa "Probar conexión" al menos una vez tras pegar el token. Jules no ofrece verificación previa: se valida en el primer uso.
+- **Datos financieros (CFO)**: el usuario pega su API key de Alpha Vantage (gratuita en alphavantage.co) para que el CFO consulte noticias, cotizaciones y análisis de mercado.
+- Nota técnica (2026-07-12): el injector expone el secreto como `api_key` **y** `access_token` a los workflows — los JSON no son homogéneos y antes solo se emitía `api_key`, lo que rompía WhatsApp/LinkedIn/Instagram.
 
 ### Contactos (`/settings/contacts`)
 - Whitelist obligatoria: los agentes solo envían a contactos que el usuario añada (anti prompt-injection). Añadir/borrar ya funciona.

@@ -124,7 +124,7 @@ Modo **Board Meeting**: agentes discuten secuencialmente (CEO→CTO→CFO→CMO�
 | I3 | GET | `/integrations/` | Lista estados de conexión | ✅ |
 | I4 | DELETE | `/integrations/{provider}` | Desconecta/revoca proveedor | ✅ |
 
-Proveedores: `github`, `notion`, `slack`. State CSRF firmado HMAC, TTL 10 min.
+Proveedores: `github`, `notion`, `slack`, `google`. State CSRF firmado HMAC, TTL 10 min.
 
 ### 1.8 Billing (Stripe) — `billing.py` (prefijo `/billing`) 🔒
 | # | Método | Ruta | Body | Descripción | Estado |
@@ -268,3 +268,45 @@ documents (upload/list/status/delete), billing (`/me`, checkout, portal), integr
 Endpoints que requieren servicios externos o firmas (Stripe webhook, OAuth callback,
 respuesta real de LLM en stream) se prueban a nivel de *contrato* (acepta request /
 responde con el error estructurado esperado), no de integración completa.
+
+---
+
+## Añadido 2026-07-12
+
+Nueve funcionalidades nuevas (F1–F9). Backend en `app/presentation/api/v1/` y
+`app/application/`; frontend en `src/`.
+
+- **F1 — Compartir sesión público read-only.** `POST/DELETE /sessions/{id}/share`
+  (genera/revoca `share_token`) y `GET /sessions/share/{token}` público, con
+  mensajes sanitizados (solo role/content/agent_role/board_vote; nunca user_id,
+  emails ni payloads de tools) y rate-limit por token (30/60s). Frontend: ruta
+  pública `/share/:token` (`SharedSessionPage`), "Compartir" copia el enlace y
+  "Dejar de compartir" en el menú del Sidebar.
+- **F2 — Acta → acción.** `POST /me/exports/notion` (usa/persiste
+  `notion_parent_page_id`, busca la primera página si no hay) y
+  `POST /me/exports/github-issues`. Frontend: acciones en el `ArtifactPanel`
+  para actas markdown (parser de "Próximos pasos" → issues, modal owner/repo con
+  localStorage).
+- **F3 — Junta programada.** Colección `scheduled_boards`, CRUD
+  `/me/scheduled-boards` (máx 3), scheduler in-process en el lifespan (tick 60s):
+  cobra 5 créditos, crea sesión group, corre `board_v2_app`, notifica por
+  Slack/WhatsApp. UI en `BoardMeetingSettings` (sección "Juntas programadas").
+- **F4 — Panel admin de créditos.** `require_admin` (`ADMIN_EMAILS`), `/admin/users`,
+  `/admin/users/{uid}/adjust`, `/admin/transactions`. Página `/admin`; link "Admin"
+  en Sidebar solo si el usuario es admin (fetch perezoso).
+- **F5 — Dashboard coste/margen.** `GET /admin/metrics?days=` (agregación en
+  Python sobre `credit_transactions`). Pestaña "Métricas" con tarjetas + barras SVG.
+- **F6 — Analytics PostHog.** `src/lib/analytics.ts` (no-op sin `VITE_POSTHOG_KEY`);
+  eventos signup/first_message/board_debate/checkout/purchase.
+- **F7 — Plantillas de debate.** 6 plantillas (`src/lib/debateTemplates.ts`); chips
+  en `ChatPanel` para sesión de grupo vacía que rellenan el input.
+- **F8 — Memoria ejecutiva.** Colección `board_actas`; `synthesis_node` guarda el
+  acta (tolerante a fallos), `ceo_open` inyecta las 2 últimas actas de la MISMA
+  sesión (filtrado por user_id + session_id).
+- **F9 — Webhook n8n→backend.** `POST /webhooks/n8n` con verificación HMAC
+  (`canonical_sign`, reutilizada por ambos lados); workflow `schedule-post.json`
+  llama de vuelta tras publicar (nodo Sign Callback + Notify Backend) con `user_id`.
+
+Configuración externa requerida: `ADMIN_EMAILS` (backend), `VITE_POSTHOG_KEY`
+(frontend, opcional), `SPHERE_BACKEND_URL` en n8n (callback F9), `N8N_WEBHOOK_SECRET`
+(ya existente, necesario para F9).
