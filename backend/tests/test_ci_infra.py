@@ -274,12 +274,22 @@ def test_frontend_dockerfile_uses_placeholder_in_build():
     )
 
 
-def test_frontend_dockerfile_has_healthcheck():
-    """IN-003: frontend/Dockerfile includes HEALTHCHECK."""
+def test_frontend_dockerfile_has_no_healthcheck():
+    """IN-003 (revisado 2026-07-12): el frontend NO debe llevar HEALTHCHECK de
+    Docker. El commit 5ec712f lo retiró deliberadamente tras un incidente real:
+    el healthcheck competía con el probe de Railway y Docker mataba el
+    contenedor como unhealthy antes de que Railway lo verificara. La salud la
+    comprueba Railway vía healthcheckPath en frontend/railway.toml."""
     path = ROOT / "frontend" / "Dockerfile"
     lines = read_dockerfile(path)
     health_lines = [l for l in lines if l.upper().startswith("HEALTHCHECK ")]
-    assert len(health_lines) >= 1, "Missing HEALTHCHECK in frontend/Dockerfile"
+    assert len(health_lines) == 0, (
+        f"frontend/Dockerfile no debe tener HEALTHCHECK (ver 5ec712f): {health_lines}"
+    )
+    railway = (ROOT / "frontend" / "railway.toml").read_text()
+    assert "healthcheckPath" in railway, (
+        "Sin HEALTHCHECK de Docker, frontend/railway.toml debe definir healthcheckPath"
+    )
 
 
 def test_nginx_conf_template_has_sub_filter():

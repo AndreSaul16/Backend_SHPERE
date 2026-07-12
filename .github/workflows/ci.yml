@@ -1,0 +1,86 @@
+# CI de SPHERE — tests de backend (pytest con Mongo/Redis reales) y frontend (tsc + vitest).
+#
+# Reincorporado el 2026-07-12 (se retiró "temporalmente" en 1867ff4 porque Railway
+# marcaba los deploys como SKIPPED esperando estos checks). Antes de hacer push,
+# confirmar que el servicio de Railway NO espera a CI para desplegar, o marcar
+# estos checks como no requeridos en la protección de rama.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - "27017:27017"
+      redis:
+        image: redis:7
+        ports:
+          - "6379:6379"
+    env:
+      MONGODB_URL: mongodb://localhost:27017
+      DB_NAME: sphere_test
+      REDIS_URL: redis://localhost:6379/0
+      PYTHONUNBUFFERED: "1"
+      ENVIRONMENT: development
+      OPENAI_API_KEY: sk-test-ci
+      DEEPSEEK_API_KEY: sk-test-ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('backend/requirements.txt') }}
+          restore-keys: |
+            pip-${{ runner.os }}-py${{ matrix.python-version }}-
+      - name: Install dependencies
+        run: pip install -r backend/requirements.txt
+      - name: Run tests
+        working-directory: backend
+        run: python -m pytest tests/ -q
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Typecheck
+        working-directory: frontend
+        run: npx tsc --noEmit
+      - name: Run tests
+        working-directory: frontend
+        run: npm test
+
+  lint:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Ruff (backend, no bloqueante)
+        run: pipx run ruff check backend/app
