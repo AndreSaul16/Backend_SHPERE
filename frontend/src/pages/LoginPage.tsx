@@ -37,6 +37,8 @@ export function LoginPage() {
         "auth/invalid-email": "Email inválido",
         "auth/invalid-credential": "Credenciales inválidas",
         "auth/too-many-requests": "Demasiados intentos. Intenta más tarde.",
+        "auth/operation-not-allowed":
+          "El acceso con email y contraseña no está habilitado. Usa Google, GitHub o Microsoft.",
       };
       setError(messages[code] || "Error de autenticación. Intenta de nuevo.");
     } finally {

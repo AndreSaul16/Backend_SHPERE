@@ -171,7 +171,7 @@ export function AgentSelectorModal() {
                                                 <Users className="h-3.5 w-3.5" /> Chats Grupales
                                             </h3>
                                             <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-                                                Un orquestador analiza tu consulta y delega al experto más adecuado. Activa <strong className="text-electric-cyan">Board Meeting</strong> en Configuración para que todos los agentes debatan entre sí.
+                                                Un orquestador analiza tu consulta y delega al experto más adecuado. Al entrar podrás activar el <strong className="text-electric-cyan">Board Meeting</strong> con un clic para que todos los agentes debatan entre sí.
                                             </p>
                                             <motion.button
                                                 whileHover={{ y: -4, scale: 1.02 }}

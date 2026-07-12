@@ -19,8 +19,18 @@ export function CreditsIndicator({ className = "", refreshMs = 60_000 }: Props) 
 
   useEffect(() => {
     refresh();
-    const interval = setInterval(refresh, refreshMs);
-    return () => clearInterval(interval);
+    // A19: no sondear con la pestaña oculta; al volver, refrescar de inmediato.
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") refresh();
+    }, refreshMs);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [refresh, refreshMs]);
 
   const total = pro_messages_balance + topup_messages_balance;
@@ -37,7 +47,7 @@ export function CreditsIndicator({ className = "", refreshMs = 60_000 }: Props) 
         isZero && "border-rose-500/30 bg-rose-500/5",
         className
       )}
-      title={`Mensajes Pro: ${pro_messages_balance} | Top-ups: ${topup_messages_balance} | Plan: ${planLabel}`}
+      title={`Créditos del plan: ${pro_messages_balance} (30 gratis cada mes) · Comprados: ${topup_messages_balance} (no caducan) · Clic para recargar`}
       data-testid="credits-indicator"
     >
       <Zap className={`h-4 w-4 ${color} shrink-0`} />

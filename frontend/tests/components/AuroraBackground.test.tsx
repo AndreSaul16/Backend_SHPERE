@@ -9,7 +9,7 @@ vi.mock('framer-motion', () => {
         const { animate, transition, initial, exit, ...domProps } = props;
         return <div {...domProps}>{children}</div>;
     };
-    return { motion: { div: Div } };
+    return { motion: { div: Div }, useReducedMotion: () => false };
 });
 
 describe('AuroraBackground Animation Component', () => {

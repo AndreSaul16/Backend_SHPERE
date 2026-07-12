@@ -1,11 +1,14 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useChatStore, getBoardAgentByRole } from '@/store/useChatStore';
 
 export const AuroraBackground: React.FC = () => {
     // Board V2: la aurora reacciona al color del director que está hablando.
     const boardSession = useChatStore(state => state.boardSession);
     const getAgents = useChatStore(state => state.getAgents);
+    // Accesibilidad: con prefers-reduced-motion los blobs quedan estáticos
+    // (mantienen el tinte del agente que habla, sin loops de animación).
+    const reducedMotion = useReducedMotion();
 
     const accentColor = React.useMemo(() => {
         if (!boardSession?.active) return null;
@@ -15,14 +18,14 @@ export const AuroraBackground: React.FC = () => {
         return agent?.hexColor || null;
     }, [boardSession?.active, boardSession?.statusByRole, getAgents]);
 
-    const reactive = !!accentColor;
+    const reactive = !!accentColor && !reducedMotion;
 
     return (
         <div className="aurora-container">
             {/* Deep Blue Base */}
             <motion.div
                 className="aurora-blob w-[600px] h-[600px] bg-blue-900/20 top-[-10%] left-[-10%]"
-                animate={{
+                animate={reducedMotion ? undefined : {
                     x: [0, 50, 0],
                     y: [0, 30, 0],
                     scale: [1, 1.1, 1],
@@ -38,9 +41,11 @@ export const AuroraBackground: React.FC = () => {
             <motion.div
                 className="aurora-blob w-[500px] h-[500px] bottom-[10%] right-[-5%]"
                 animate={{
-                    x: [0, -40, 0],
-                    y: [0, 50, 0],
-                    scale: reactive ? [1.1, 1.35, 1.1] : [1, 1.2, 1],
+                    ...(reducedMotion ? {} : {
+                        x: [0, -40, 0],
+                        y: [0, 50, 0],
+                        scale: reactive ? [1.1, 1.35, 1.1] : [1, 1.2, 1],
+                    }),
                     backgroundColor: accentColor ? `${accentColor}20` : 'rgba(0,245,212,0.10)',
                 }}
                 transition={{
@@ -54,7 +59,7 @@ export const AuroraBackground: React.FC = () => {
             {/* Luxury Purple Glow */}
             <motion.div
                 className="aurora-blob w-[700px] h-[700px] bg-luxury-purple/10 top-[20%] right-[10%]"
-                animate={{
+                animate={reducedMotion ? undefined : {
                     x: [0, -30, 0],
                     y: [0, -60, 0],
                     rotate: [0, 10, 0],

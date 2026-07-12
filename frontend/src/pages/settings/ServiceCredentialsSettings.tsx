@@ -18,6 +18,7 @@ import {
   XCircle,
   Shield,
   TestTube2,
+  TrendingUp,
 } from "lucide-react";
 
 interface ServiceDefinition {
@@ -42,6 +43,7 @@ const SERVICE_ICONS: Record<string, React.ReactNode> = {
   whatsapp: <MessageCircle className="h-5 w-5" />,
   jules: <Code2 className="h-5 w-5" />,
   instagram: <Instagram className="h-5 w-5" />,
+  financial_api: <TrendingUp className="h-5 w-5" />,
 };
 
 const SERVICE_COLORS: Record<string, string> = {
@@ -50,6 +52,7 @@ const SERVICE_COLORS: Record<string, string> = {
   whatsapp: "text-emerald-400",
   jules: "text-purple-400",
   instagram: "text-pink-400",
+  financial_api: "text-amber-400",
 };
 
 export function ServiceCredentialsSettings() {

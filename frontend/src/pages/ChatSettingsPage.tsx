@@ -29,6 +29,7 @@ export function ChatSettingsPage() {
     // Board Meeting state
     const [boardEnabled, setBoardEnabled] = useState(false);
     const [boardLoading, setBoardLoading] = useState(false);
+    const [boardError, setBoardError] = useState<string | null>(null);
 
     const getAuthToken = useCallback(async () => {
         const { getAuth } = await import("firebase/auth");
@@ -49,13 +50,18 @@ export function ChatSettingsPage() {
                 if (resp.ok) {
                     const data = await resp.json();
                     setBoardEnabled(data.board_meeting_enabled);
+                } else {
+                    setBoardError("No se pudo cargar el estado del Board Meeting.");
                 }
-            } catch { /* ignore */ }
+            } catch {
+                setBoardError("No se pudo cargar el estado del Board Meeting.");
+            }
         })();
     }, [isGroupChat, getAuthToken]);
 
     const toggleBoardMeeting = async () => {
         setBoardLoading(true);
+        setBoardError(null);
         try {
             const token = await getAuthToken();
             const resp = await fetch(`${API_URL}/me/board-settings`, {
@@ -66,9 +72,12 @@ export function ChatSettingsPage() {
             if (resp.ok) {
                 const data = await resp.json();
                 setBoardEnabled(data.board_meeting_enabled);
+            } else {
+                setBoardError("No se pudo guardar el cambio. Inténtalo de nuevo.");
             }
         } catch (e) {
             console.error("Error toggling board meeting:", e);
+            setBoardError("Error de conexión al guardar el cambio. Inténtalo de nuevo.");
         } finally {
             setBoardLoading(false);
         }
@@ -431,6 +440,11 @@ export function ChatSettingsPage() {
                                     )}
                                 </button>
                             </div>
+                            {boardError && (
+                                <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2">
+                                    {boardError}
+                                </p>
+                            )}
                         </section>
                     )}
 

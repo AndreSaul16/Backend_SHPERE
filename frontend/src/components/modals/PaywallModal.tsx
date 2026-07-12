@@ -6,9 +6,9 @@ export const PaywallModal: React.FC = () => {
 
     if (!paywall.open) return null;
 
-    let message = "Has agotado tus créditos. Sube de plan para continuar.";
-    if (paywall.reason === 'rag_full') message = "Has alcanzado el límite de RAG de tu plan. Sube a Premium para 1 GB.";
-    if (paywall.reason === 'agents_full') message = "Tu plan permite máx. 3 agentes custom. Sube a Premium para ilimitados.";
+    let message = "Has agotado tus créditos. Compra un pack de recarga para continuar.";
+    if (paywall.reason === 'rag_full') message = "Has alcanzado el límite de almacenamiento de documentos.";
+    if (paywall.reason === 'agents_full') message = "Has alcanzado el límite de agentes personalizados.";
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
@@ -26,7 +26,7 @@ export const PaywallModal: React.FC = () => {
                         onClick={() => window.location.href = '/billing'}
                         className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors font-medium"
                     >
-                        Ver Planes
+                        Comprar créditos
                     </button>
                 </div>
             </div>

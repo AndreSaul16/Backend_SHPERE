@@ -19,13 +19,13 @@ describe('PaywallModal Component', () => {
         useBillingStore.setState({ paywall: { open: true, reason: '402' } });
         render(<PaywallModal />);
         expect(screen.getByText('Límite Alcanzado')).toBeDefined();
-        expect(screen.getByText('Has agotado tus créditos. Sube de plan para continuar.')).toBeDefined();
+        expect(screen.getByText('Has agotado tus créditos. Compra un pack de recarga para continuar.')).toBeDefined();
     });
 
     it('renders with rag_full reason', () => {
         useBillingStore.setState({ paywall: { open: true, reason: 'rag_full' } });
         render(<PaywallModal />);
-        expect(screen.getByText('Has alcanzado el límite de RAG de tu plan. Sube a Premium para 1 GB.')).toBeDefined();
+        expect(screen.getByText('Has alcanzado el límite de almacenamiento de documentos.')).toBeDefined();
     });
 
     it('calls closePaywall when Cancelar is clicked', () => {

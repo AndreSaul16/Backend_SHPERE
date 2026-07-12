@@ -49,6 +49,8 @@ export function RegisterPage() {
         "auth/weak-password": "La contraseña debe tener al menos 6 caracteres",
         "auth/invalid-email": "Email inválido",
         "auth/too-many-requests": "Demasiados intentos. Intenta más tarde.",
+        "auth/operation-not-allowed":
+          "El registro con email y contraseña no está habilitado. Usa Google, GitHub o Microsoft.",
       };
       setError(messages[code] || "Error al crear la cuenta. Intenta de nuevo.");
     } finally {
