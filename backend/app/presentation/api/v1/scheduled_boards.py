@@ -4,7 +4,7 @@ API CRUD de juntas programadas (F3): /me/scheduled-boards.
 Máximo 3 juntas por usuario. Cada junta consume 5 créditos por ejecución.
 """
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -105,13 +105,6 @@ async def create_scheduled_board(
     user_id = user["firebase_uid"]
     col = get_scheduled_boards_collection()
 
-    count = await col.count_documents({"user_id": user_id})
-    if count >= MAX_BOARDS_PER_USER:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Máximo {MAX_BOARDS_PER_USER} juntas programadas por usuario",
-        )
-
     next_run = compute_next_run_at(body.cadence, body.hour_utc, body.weekday)
     doc = {
         "id": str(uuid.uuid4()),
@@ -126,8 +119,25 @@ async def create_scheduled_board(
         "next_run_at": next_run,
         "last_run_at": None,
         "last_status": None,
+        "created_at": datetime.now(timezone.utc),
     }
+    # Límite atómico frente a creaciones concurrentes: insertar primero y luego
+    # comprobar el rango por created_at. Un count-then-insert deja pasar dos
+    # requests simultáneas por encima del máximo (que también es el tope de coste
+    # recurrente). Si mi documento no está entre los MAX más antiguos, lo borro.
     await col.insert_one(doc)
+    oldest_ids = [
+        d["id"]
+        async for d in col.find({"user_id": user_id}, {"id": 1})
+        .sort([("created_at", 1), ("id", 1)])
+        .limit(MAX_BOARDS_PER_USER)
+    ]
+    if doc["id"] not in oldest_ids:
+        await col.delete_one({"id": doc["id"], "user_id": user_id})
+        raise HTTPException(
+            status_code=400,
+            detail=f"Máximo {MAX_BOARDS_PER_USER} juntas programadas por usuario",
+        )
     logger.info(f"Junta programada creada para {user_id}: {doc['id']}")
     return _to_response(doc)
 

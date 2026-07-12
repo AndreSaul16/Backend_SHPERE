@@ -82,8 +82,27 @@ async def export_to_notion(
     try:
         result = await notion_client.create_page(token, parent_id, body.title, body.content)
     except Exception as e:
-        logger.error(f"Error creando página Notion para {user_id}: {e}")
-        raise HTTPException(status_code=502, detail="Notion rechazó la creación de la página")
+        # El parent cacheado puede haberse borrado o dejado de compartir con la
+        # integración: invalidar el cache y reintentar buscando una página nueva
+        # una sola vez, en vez de devolver 502 para siempre.
+        logger.warning(f"Notion create_page falló para {user_id} (parent={parent_id}): {e}")
+        await users_col.update_one(
+            {"firebase_uid": user_id}, {"$unset": {"notion_parent_page_id": ""}}
+        )
+        try:
+            new_parent = await notion_client.search_first_page(token)
+        except Exception:
+            new_parent = None
+        if not new_parent or new_parent == parent_id:
+            raise HTTPException(status_code=502, detail="Notion rechazó la creación de la página")
+        try:
+            result = await notion_client.create_page(token, new_parent, body.title, body.content)
+        except Exception as e2:
+            logger.error(f"Notion create_page reintento falló para {user_id}: {e2}")
+            raise HTTPException(status_code=502, detail="Notion rechazó la creación de la página")
+        await users_col.update_one(
+            {"firebase_uid": user_id}, {"$set": {"notion_parent_page_id": new_parent}}
+        )
 
     return {"url": result.get("url", ""), "id": result.get("id", "")}
 

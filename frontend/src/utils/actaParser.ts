@@ -11,9 +11,23 @@ export interface ParsedIssue {
 }
 
 const HEADING_RE = /^#{1,6}\s+/;
-// Coincide con "Próximos pasos" / "Proximos pasos" (con o sin acento), como heading.
-const PROXIMOS_HEADING_RE = /^#{1,6}\s+pr[oó]ximos\s+pasos\s*$/i;
 const BULLET_RE = /^\s*(?:[-*]|\d+[.)])\s+(.*)$/;
+
+/**
+ * ¿Es esta línea el heading de "Próximos pasos"? Tolerante a la decoración que
+ * suele meter el LLM: negritas (**), backticks, numeración ("4."), emoji, dos
+ * puntos finales. Antes exigía el texto exacto y `## **Próximos pasos**` no
+ * coincidía → la sección existía pero no se detectaba ningún item.
+ */
+function isProximosPasosHeading(trimmed: string): boolean {
+    if (!HEADING_RE.test(trimmed)) return false;
+    const text = trimmed
+        .replace(HEADING_RE, "")       // quita los #
+        .replace(/[*`_#:]/g, "")        // quita markdown/puntuación decorativa
+        .replace(/^\s*\d+[.)]\s*/, "")  // quita numeración inicial
+        .toLowerCase();
+    return /pr[oó]ximos\s+pasos/.test(text);
+}
 
 /**
  * Devuelve los items de "## Próximos pasos" del markdown del acta.
@@ -26,7 +40,7 @@ export function parseProximosPasos(markdown: string): ParsedIssue[] {
     // Localizar el heading de la sección.
     let start = -1;
     for (let i = 0; i < lines.length; i++) {
-        if (PROXIMOS_HEADING_RE.test(lines[i].trim())) {
+        if (isProximosPasosHeading(lines[i].trim())) {
             start = i + 1;
             break;
         }

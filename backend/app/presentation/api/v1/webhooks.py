@@ -317,7 +317,12 @@ def verify_n8n_signature(payload: dict, signature: str | None) -> bool:
         logger.warning("Webhook n8n rechazado: N8N_WEBHOOK_SECRET no configurado")
         return False
     expected = canonical_sign(payload, secret)
-    return hmac.compare_digest(expected, signature)
+    # compare_digest lanza TypeError si el str tiene caracteres no-ASCII; un
+    # header manipulado no debe provocar un 500, solo un rechazo.
+    try:
+        return hmac.compare_digest(expected, signature)
+    except TypeError:
+        return False
 
 
 async def _notify_schedule_post_result(payload: dict) -> None:

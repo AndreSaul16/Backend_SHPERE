@@ -48,4 +48,17 @@ describe('parseProximosPasos (F2)', () => {
     it('devuelve [] con markdown vacío', () => {
         expect(parseProximosPasos('')).toEqual([]);
     });
+
+    it('detecta el heading con decoración del LLM (negrita, dos puntos, numeración, emoji)', () => {
+        for (const heading of [
+            '## **Próximos pasos**',
+            '## Próximos pasos:',
+            '### 4. Próximos pasos',
+            '## Próximos pasos 🚀',
+            '## `Proximos pasos`',
+        ]) {
+            const issues = parseProximosPasos(`${heading}\n- Tarea única`);
+            expect(issues.map((i) => i.title)).toEqual(['Tarea única']);
+        }
+    });
 });

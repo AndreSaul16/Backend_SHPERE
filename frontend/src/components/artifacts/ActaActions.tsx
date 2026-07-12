@@ -35,6 +35,7 @@ export function ActaActions({ title, content }: ActaActionsProps) {
     const [ghRepo, setGhRepo] = useState(loadLastRepo);
     const [ghStatus, setGhStatus] = useState<Status>("idle");
     const [ghCreated, setGhCreated] = useState<{ title: string; url: string }[]>([]);
+    const [ghFailed, setGhFailed] = useState<{ title: string; error: string }[]>([]);
     const [ghError, setGhError] = useState<string>("");
 
     const parsedIssues = parseProximosPasos(content);
@@ -58,12 +59,13 @@ export function ActaActions({ title, content }: ActaActionsProps) {
         setGhError("");
         try {
             localStorage.setItem(GH_REPO_STORAGE_KEY, JSON.stringify(ghRepo));
-            const { created } = await exportsService.githubIssues(
+            const { created, errors } = await exportsService.githubIssues(
                 ghRepo.owner.trim(),
                 ghRepo.repo.trim(),
                 parsedIssues
             );
             setGhCreated(created);
+            setGhFailed(errors || []);
             setGhStatus("success");
         } catch (e) {
             setGhError(e instanceof Error ? e.message : "Error al crear issues");
@@ -172,6 +174,13 @@ export function ActaActions({ title, content }: ActaActionsProps) {
                                 >
                                     <CheckCircle2 className="h-3 w-3" /> {c.title} <ExternalLink className="h-3 w-3" />
                                 </a>
+                            ))}
+                            {/* Éxito parcial: mostrar también los que fallaron para
+                                no dar por creados items de acción que se perdieron. */}
+                            {ghFailed.map((f, i) => (
+                                <p key={`err-${i}`} className="flex items-center gap-1.5 text-[11px] text-rose-400">
+                                    <AlertCircle className="h-3 w-3" /> {f.title}: {f.error}
+                                </p>
                             ))}
                         </div>
                     )}

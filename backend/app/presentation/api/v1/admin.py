@@ -104,12 +104,26 @@ async def adjust_user_credits(
         raise HTTPException(status_code=400, detail="delta no puede ser 0")
 
     users_col = get_users_collection()
+    # Un delta negativo mayor que el saldo dejaría el balance en negativo, y una
+    # compra posterior (que hace $inc) "absorbería" esa deuda → el usuario perdería
+    # créditos pagados. Para restar, exigir atómicamente saldo suficiente.
+    query = {"firebase_uid": uid}
+    if body.delta < 0:
+        query["wallet.topup_messages_balance"] = {"$gte": -body.delta}
     result = await users_col.find_one_and_update(
-        {"firebase_uid": uid},
+        query,
         {"$inc": {"wallet.topup_messages_balance": body.delta}},
         return_document=True,
     )
     if not result:
+        if body.delta < 0:
+            # Distinguir "usuario no existe" de "saldo insuficiente para restar".
+            exists = await users_col.find_one({"firebase_uid": uid}, {"_id": 1})
+            if exists:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Saldo top-up insuficiente para restar esa cantidad",
+                )
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
     balance_after = (result.get("wallet") or {}).get("topup_messages_balance", 0)

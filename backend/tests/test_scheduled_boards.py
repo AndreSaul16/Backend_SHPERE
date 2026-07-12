@@ -49,17 +49,50 @@ def test_weekly_sin_weekday_falla():
 # --- Guard de máximo 3 ---
 
 
+class _Cursor:
+    """Cursor mínimo que soporta .sort().limit() y async iteración."""
+
+    def __init__(self, docs):
+        self._docs = docs
+
+    def sort(self, spec):
+        for field, direction in reversed(spec):
+            self._docs.sort(key=lambda d: d.get(field), reverse=direction < 0)
+        return self
+
+    def limit(self, n):
+        self._docs = self._docs[:n]
+        return self
+
+    def __aiter__(self):
+        async def _gen():
+            for d in self._docs:
+                yield d
+        return _gen()
+
+
 class FakeCol:
-    def __init__(self, count=0):
-        self._count = count
+    """Colección en memoria: soporta el patrón insert-then-rank del límite atómico."""
+
+    def __init__(self, seed=0):
+        # Sembrar `seed` juntas preexistentes (más antiguas que las nuevas).
+        self.docs = [
+            {"id": f"seed-{i}", "user_id": "u1", "created_at": datetime(2020, 1, 1, i, tzinfo=timezone.utc)}
+            for i in range(seed)
+        ]
         self.inserted = []
         self.updates = []
 
-    async def count_documents(self, query):
-        return self._count
-
     async def insert_one(self, doc):
+        self.docs.append(dict(doc))
         self.inserted.append(doc)
+
+    def find(self, query, projection=None):
+        matched = [d for d in self.docs if d.get("user_id") == query.get("user_id")]
+        return _Cursor(matched)
+
+    async def delete_one(self, query):
+        self.docs = [d for d in self.docs if d.get("id") != query.get("id")]
 
     async def update_one(self, query, update):
         self.updates.append((query, update))
@@ -72,7 +105,7 @@ async def test_guard_maximo_3(monkeypatch):
         ScheduledBoardCreate,
     )
 
-    col = FakeCol(count=3)
+    col = FakeCol(seed=3)  # ya tiene 3 juntas más antiguas
     monkeypatch.setattr(router_mod, "get_scheduled_boards_collection", lambda: col)
 
     body = ScheduledBoardCreate(query="Revisión semanal", cadence="daily", hour_utc=9)
@@ -80,6 +113,8 @@ async def test_guard_maximo_3(monkeypatch):
         await create_scheduled_board(body, user={"firebase_uid": "u1"})
     assert exc.value.status_code == 400
     assert "3" in exc.value.detail
+    # La junta insertada de más debe haberse borrado (rollback).
+    assert len(col.docs) == 3
 
 
 async def test_create_ok_calcula_next_run(monkeypatch):
@@ -89,7 +124,7 @@ async def test_create_ok_calcula_next_run(monkeypatch):
         ScheduledBoardCreate,
     )
 
-    col = FakeCol(count=1)
+    col = FakeCol(seed=1)
     monkeypatch.setattr(router_mod, "get_scheduled_boards_collection", lambda: col)
 
     body = ScheduledBoardCreate(
@@ -100,6 +135,7 @@ async def test_create_ok_calcula_next_run(monkeypatch):
     assert resp.next_run_at is not None
     assert resp.channel == "slack"
     assert len(col.inserted) == 1
+    assert len(col.docs) == 2  # se conserva (dentro del máximo)
 
 
 # --- Tick del scheduler ---

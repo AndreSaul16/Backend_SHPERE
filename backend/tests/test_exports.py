@@ -96,6 +96,33 @@ async def test_notion_busca_y_persiste_parent_default(patch_token, monkeypatch):
     assert col.doc.get("notion_parent_page_id") == "found-page-9"
 
 
+async def test_notion_parent_cacheado_invalido_reintenta_y_reescribe(patch_token, monkeypatch):
+    # El parent cacheado ya no es accesible: create_page falla la 1ª vez, se
+    # invalida el cache, search encuentra otra página y el reintento crea OK.
+    patch_token("tok-notion")
+    col = FakeUsersCol({"notion_parent_page_id": "page-borrada"})
+    monkeypatch.setattr(exports, "get_users_collection", lambda: col)
+
+    attempts = {"n": 0}
+
+    async def fake_create_page(token, parent_id, title, content):
+        attempts["n"] += 1
+        if parent_id == "page-borrada":
+            raise RuntimeError("parent no accesible")
+        return {"url": "https://notion.so/z", "id": "new-3"}
+
+    async def fake_search(token):
+        return "page-nueva"
+
+    monkeypatch.setattr(exports.notion_client, "create_page", fake_create_page)
+    monkeypatch.setattr(exports.notion_client, "search_first_page", fake_search)
+
+    result = await export_to_notion(NotionExportRequest(title="Acta"), user=USER)
+    assert result["id"] == "new-3"
+    assert attempts["n"] == 2
+    assert col.doc.get("notion_parent_page_id") == "page-nueva"
+
+
 async def test_notion_sin_paginas_accesibles_400(patch_token, monkeypatch):
     patch_token("tok-notion")
     col = FakeUsersCol({})

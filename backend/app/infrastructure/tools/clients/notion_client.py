@@ -6,6 +6,48 @@ from app.core.logger import checkpoint_logger as logger
 
 NOTION_API = "https://api.notion.com/v1"
 
+# Notion rechaza cualquier text.content > 2000 caracteres (validation_error).
+_NOTION_TEXT_LIMIT = 2000
+
+
+def _content_to_blocks(content: str) -> list[dict]:
+    """Trocea el markdown del acta en bloques Notion de <=2000 chars.
+
+    Una acta real (resumen + tabla de votación + próximos pasos) supera siempre
+    los 2000 chars, así que meter todo en un solo bloque hacía fallar la
+    exportación con 400. Partimos por líneas y, si una línea excede el límite,
+    la cortamos en trozos; cada trozo es un bloque paragraph.
+    """
+    if not content:
+        return []
+    chunks: list[str] = []
+    buffer = ""
+    for line in content.split("\n"):
+        # Una línea sola más larga que el límite: partirla en trozos duros.
+        while len(line) > _NOTION_TEXT_LIMIT:
+            if buffer:
+                chunks.append(buffer)
+                buffer = ""
+            chunks.append(line[:_NOTION_TEXT_LIMIT])
+            line = line[_NOTION_TEXT_LIMIT:]
+        candidate = f"{buffer}\n{line}" if buffer else line
+        if len(candidate) > _NOTION_TEXT_LIMIT:
+            chunks.append(buffer)
+            buffer = line
+        else:
+            buffer = candidate
+    if buffer:
+        chunks.append(buffer)
+    # Notion admite hasta 100 bloques por request; un acta no se acerca.
+    return [
+        {
+            "object": "block",
+            "type": "paragraph",
+            "paragraph": {"rich_text": [{"type": "text", "text": {"content": c}}]},
+        }
+        for c in chunks[:100]
+    ]
+
 
 async def create_page(access_token: str, parent_id: str, title: str, content: str = "") -> dict:
     """Crea una página en Notion."""
@@ -16,18 +58,10 @@ async def create_page(access_token: str, parent_id: str, title: str, content: st
                 "parent": {"page_id": parent_id},
                 "properties": {
                     "title": {
-                        "title": [{"text": {"content": title}}]
+                        "title": [{"text": {"content": title[:_NOTION_TEXT_LIMIT]}}]
                     }
                 },
-                "children": [
-                    {
-                        "object": "block",
-                        "type": "paragraph",
-                        "paragraph": {
-                            "rich_text": [{"type": "text", "text": {"content": content}}]
-                        }
-                    }
-                ] if content else [],
+                "children": _content_to_blocks(content),
             },
             headers={
                 "Authorization": f"Bearer {access_token}",
