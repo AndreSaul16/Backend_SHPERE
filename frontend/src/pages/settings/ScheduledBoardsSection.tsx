@@ -9,6 +9,7 @@ import {
     type ScheduledBoard,
     type ScheduledBoardInput,
 } from "@/services/api";
+import { SelectField, TextAreaField, TextField } from "@/components/ui/Field";
 
 const WEEKDAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
@@ -181,86 +182,81 @@ export function ScheduledBoardsSection() {
             {/* Formulario crear/editar */}
             {showForm && (
                 <div className="p-4 rounded-xl bg-midnight/50 border border-surface-highlight space-y-3">
-                    <textarea
-                        aria-label="Pregunta"
-                        placeholder="¿Qué debe debatir el board? (ej: Revisar métricas y prioridades de la semana)"
+                    {/* Los `aria-label` de estos seis controles NO eran
+                        equivalentes a su etiqueta visible («Hora (UTC)» frente a
+                        «Hora UTC»), lo que rompe WCAG 2.5.3: quien dicta por voz
+                        lee la etiqueta de la pantalla y el control no responde a
+                        ese nombre. Con <Field> la etiqueta visible ES el nombre
+                        accesible, así que no hay dos verdades. */}
+                    <TextAreaField
+                        label="Pregunta"
+                        id="scheduled-query"
+                        placeholder="¿Qué debe debatir la junta? (ej: revisar métricas y prioridades de la semana)"
                         value={form.query}
                         onChange={(e) => setForm((f) => ({ ...f, query: e.target.value }))}
                         rows={2}
-                        className="w-full bg-surface border border-surface-highlight rounded-lg px-3 py-2 text-sm text-content-strong focus:border-electric-cyan/50"
                     />
                     <div className="flex flex-wrap gap-3">
-                        <label className="text-xs text-content-muted space-y-1">
-                            <span className="block">Cadencia</span>
-                            <select
-                                aria-label="Cadencia"
-                                value={form.cadence}
-                                onChange={(e) =>
-                                    setForm((f) => ({ ...f, cadence: e.target.value as "daily" | "weekly" }))
-                                }
-                                className="bg-surface border border-surface-highlight rounded-lg px-2 py-1.5 text-content-strong"
-                            >
-                                <option value="daily">Diaria</option>
-                                <option value="weekly">Semanal</option>
-                            </select>
-                        </label>
+                        <SelectField
+                            label="Cadencia"
+                            id="scheduled-cadence"
+                            value={form.cadence}
+                            onChange={(e) =>
+                                setForm((f) => ({ ...f, cadence: e.target.value as "daily" | "weekly" }))
+                            }
+                        >
+                            <option value="daily">Diaria</option>
+                            <option value="weekly">Semanal</option>
+                        </SelectField>
                         {form.cadence === "weekly" && (
-                            <label className="text-xs text-content-muted space-y-1">
-                                <span className="block">Día</span>
-                                <select
-                                    aria-label="Día"
-                                    value={form.weekday ?? 0}
-                                    onChange={(e) =>
-                                        setForm((f) => ({ ...f, weekday: Number(e.target.value) }))
-                                    }
-                                    className="bg-surface border border-surface-highlight rounded-lg px-2 py-1.5 text-content-strong"
-                                >
-                                    {WEEKDAYS.map((d, i) => (
-                                        <option key={i} value={i}>{d}</option>
-                                    ))}
-                                </select>
-                            </label>
-                        )}
-                        <label className="text-xs text-content-muted space-y-1">
-                            <span className="block">Hora (UTC)</span>
-                            <input
-                                aria-label="Hora UTC"
-                                type="number"
-                                min={0}
-                                max={23}
-                                value={form.hour_utc}
+                            <SelectField
+                                label="Día"
+                                id="scheduled-weekday"
+                                value={form.weekday ?? 0}
                                 onChange={(e) =>
-                                    setForm((f) => ({ ...f, hour_utc: Number(e.target.value) }))
+                                    setForm((f) => ({ ...f, weekday: Number(e.target.value) }))
                                 }
-                                className="w-20 bg-surface border border-surface-highlight rounded-lg px-2 py-1.5 text-content-strong"
-                            />
-                        </label>
-                        <label className="text-xs text-content-muted space-y-1">
-                            <span className="block">Canal</span>
-                            <select
-                                aria-label="Canal"
-                                value={form.channel}
-                                onChange={(e) =>
-                                    setForm((f) => ({
-                                        ...f,
-                                        channel: e.target.value as "none" | "slack" | "whatsapp",
-                                    }))
-                                }
-                                className="bg-surface border border-surface-highlight rounded-lg px-2 py-1.5 text-content-strong"
                             >
-                                <option value="none">Ninguno</option>
-                                <option value="slack">Slack</option>
-                                <option value="whatsapp">WhatsApp</option>
-                            </select>
-                        </label>
+                                {WEEKDAYS.map((d, i) => (
+                                    <option key={i} value={i}>{d}</option>
+                                ))}
+                            </SelectField>
+                        )}
+                        <TextField
+                            label="Hora (UTC)"
+                            id="scheduled-hour"
+                            type="number"
+                            min={0}
+                            max={23}
+                            value={form.hour_utc}
+                            onChange={(e) =>
+                                setForm((f) => ({ ...f, hour_utc: Number(e.target.value) }))
+                            }
+                            controlClassName="w-24"
+                        />
+                        <SelectField
+                            label="Canal"
+                            id="scheduled-channel"
+                            value={form.channel}
+                            onChange={(e) =>
+                                setForm((f) => ({
+                                    ...f,
+                                    channel: e.target.value as "none" | "slack" | "whatsapp",
+                                }))
+                            }
+                        >
+                            <option value="none">Ninguno</option>
+                            <option value="slack">Slack</option>
+                            <option value="whatsapp">WhatsApp</option>
+                        </SelectField>
                     </div>
                     {form.channel !== "none" && (
-                        <input
-                            aria-label="Destino"
+                        <TextField
+                            label="Destino"
+                            id="scheduled-target"
                             placeholder={form.channel === "slack" ? "#canal o ID" : "teléfono / grupo"}
                             value={form.channel_target ?? ""}
                             onChange={(e) => setForm((f) => ({ ...f, channel_target: e.target.value }))}
-                            className="w-full bg-surface border border-surface-highlight rounded-lg px-3 py-2 text-sm text-content-strong focus:border-electric-cyan/50"
                         />
                     )}
                     <div className="flex gap-2 justify-end">

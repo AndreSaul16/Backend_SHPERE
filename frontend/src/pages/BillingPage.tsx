@@ -264,12 +264,13 @@ export const BillingPage: React.FC = () => {
                         </p>
 
                         {/* Consentimiento UE: ejecución inmediata + renuncia al desistimiento */}
-                        <label className="flex items-start gap-3 mb-6 p-4 glass-panel rounded-2xl border border-surface-highlight cursor-pointer select-none">
+                        <label htmlFor="billing-consent" className="flex items-start gap-3 mb-6 p-4 glass-panel rounded-2xl border border-surface-highlight cursor-pointer select-none">
                             <input
+                                id="billing-consent"
                                 type="checkbox"
                                 checked={consentAccepted}
                                 onChange={(e) => setConsentAccepted(e.target.checked)}
-                                className="mt-0.5 h-4 w-4 shrink-0 accent-electric-cyan"
+                                className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
                             />
                             <span className="text-xs text-content-muted leading-relaxed">
                                 Solicito que los créditos se abonen en mi cuenta inmediatamente tras el pago y{' '}

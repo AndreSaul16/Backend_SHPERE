@@ -395,9 +395,11 @@ export function ChatPanel() {
                         className="border-b border-white/5 bg-midnight/60 backdrop-blur-xl px-6 overflow-hidden"
                     >
                         <div className="flex items-center gap-3 py-3 max-w-4xl mx-auto">
-                            <Search className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                            <Search className="h-4 w-4 text-content-muted flex-shrink-0" aria-hidden="true" />
                             <input
-                                type="text"
+                                id="chat-search"
+                                aria-label="Buscar en esta conversación"
+                                type="search"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Buscar en esta conversación..."
@@ -524,6 +526,7 @@ export function ChatPanel() {
                     >
                         <input
                             ref={fileInputRef}
+                            aria-label="Adjuntar documento a la conversación"
                             type="file"
                             className="hidden"
                             accept=".pdf,.txt,.md,.docx,.csv,.json"
@@ -556,6 +559,8 @@ export function ChatPanel() {
                         </button>
 
                         <textarea
+                            id="chat-composer"
+                            aria-label={canIntervene ? "Intervenir en el debate" : "Tu consulta a la junta"}
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                             onKeyDown={handleKeyDown}

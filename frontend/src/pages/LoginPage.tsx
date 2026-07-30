@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { PasswordField, TextField } from "@/components/ui/Field";
 
 const SOCIAL_LABELS: Record<string, string> = {
   google: "Google",
@@ -89,38 +90,35 @@ export function LoginPage() {
           </h2>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+            <div role="alert" className="mb-4 p-3 bg-dissent/10 border border-dissent/30 rounded-lg text-dissent text-sm">
               {error}
             </div>
           )}
 
           {/* Email/Password Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors"
-                placeholder="tu@email.com"
-                required
-                disabled={loading}
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Contraseña</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors"
-                placeholder="••••••••"
-                required
-                minLength={6}
-                disabled={loading}
-              />
-            </div>
+            <TextField
+              label="Correo electrónico"
+              id="login-email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="tu@email.com"
+              required
+              disabled={loading}
+            />
+            <PasswordField
+              label="Contraseña"
+              id="login-password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+              minLength={6}
+              disabled={loading}
+            />
 
             <button
               type="submit"

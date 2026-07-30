@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore, getGroupMembers } from "@/store/useChatStore";
 import { cn } from "@/lib/utils";
+import { TextField } from "@/components/ui/Field";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
@@ -263,11 +264,13 @@ export function ChatSettingsPage() {
 
                         <div className="relative group">
                             <input
+                                id="session-avatar-file"
+                                aria-label="Subir imagen de avatar"
                                 type="file"
                                 ref={fileInputRef}
                                 onChange={handleAvatarChange}
                                 accept="image/*"
-                                className="hidden"
+                                className="sr-only"
                             />
                             <div
                                 onClick={triggerFileInput}
@@ -289,18 +292,16 @@ export function ChatSettingsPage() {
 
                         <div className="w-full max-w-sm space-y-4">
                             <div className="space-y-1.5">
-                                <label className="text-[10px] text-content-muted uppercase tracking-widest font-mono block text-left ml-1 opacity-60">
-                                    {isGroupChat ? 'Nombre del Grupo' : 'Nombre del Agente'}
-                                </label>
                                 <div className="relative group/input">
-                                    <input
-                                        type="text"
+                                    <TextField
+                                        label={isGroupChat ? 'Nombre del grupo' : 'Nombre del agente'}
+                                        id="session-name"
                                         value={localName}
                                         onChange={(e) => handleNameInput(e.target.value)}
-                                        className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-3 text-lg font-bold text-content-strong focus:border-electric-cyan/50 focus:ring-1 focus:ring-electric-cyan/20 transition-all text-center"
+                                        controlClassName="py-3 pe-11 text-lg font-bold text-center"
                                         placeholder={isGroupChat ? "Junta Directiva" : "Ej: Oberon"}
                                     />
-                                    <Pencil className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-content-quiet group-focus-within/input:text-electric-cyan transition-colors" />
+                                    <Pencil className="absolute right-4 top-[2.6rem] h-4 w-4 text-content-muted group-focus-within/input:text-accent transition-colors" aria-hidden="true" />
                                 </div>
                             </div>
 
@@ -394,6 +395,8 @@ export function ChatSettingsPage() {
                                     >
                                         <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none" />
                                         <input
+                                            id="session-color"
+                                            aria-label="Color de la sesión"
                                             type="color"
                                             value={sessionColor}
                                             onChange={(e) => handleColorChange(e.target.value)}
@@ -533,25 +536,23 @@ export function ChatSettingsPage() {
                                     </div>
 
                                     <div className="space-y-4">
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] text-content-muted uppercase tracking-widest font-mono">Nombre</label>
-                                            <input
-                                                type="text"
-                                                value={editName}
-                                                onChange={(e) => setEditName(e.target.value)}
-                                                className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm text-content-strong focus:border-electric-cyan/50 transition-all"
-                                                placeholder="Ej: Hernesto"
-                                            />
-                                        </div>
+                                        <TextField
+                                            label="Nombre"
+                                            id="member-name"
+                                            value={editName}
+                                            onChange={(e) => setEditName(e.target.value)}
+                                            placeholder="Ej: Hernesto"
+                                        />
 
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] text-content-muted uppercase tracking-widest font-mono">Color</label>
+                                            <label htmlFor="member-color" className="text-micro text-content-muted uppercase font-mono">Color</label>
                                             <div className="flex items-center gap-3">
                                                 <div
                                                     className="h-10 w-10 rounded-xl border-2 cursor-pointer relative overflow-hidden"
                                                     style={{ borderColor: editColor, backgroundColor: `${editColor}20` }}
                                                 >
                                                     <input
+                                                        id="member-color"
                                                         type="color"
                                                         value={editColor}
                                                         onChange={(e) => setEditColor(e.target.value)}

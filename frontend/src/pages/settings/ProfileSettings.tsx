@@ -2,9 +2,11 @@
  * Sección Perfil: edita professional_profile, communication_style,
  * financial_preferences, ui_preferences.
  */
-import { useEffect, useState } from "react";
+import { cloneElement, useEffect, useState } from "react";
 import { Save, User, Briefcase, MessageSquare, Wallet, Palette } from "lucide-react";
 import { profileService, type UserProfile } from "@/services/api";
+import { Field as FormField } from "@/components/ui/Field";
+import { fieldControlClass } from "@/components/ui/fieldStyles";
 
 export function ProfileSettings() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -286,17 +288,27 @@ export function ProfileSettings() {
   );
 }
 
-const inputCls =
-  "w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm focus:border-electric-cyan/50 transition-all";
+/**
+ * §9.2: los 9 `<select>` de esta página heredaban el desplegable del sistema
+ * operativo (a menudo blanco sobre blanco). El `[&>option]` lo arregla.
+ */
+const inputCls = fieldControlClass({
+  className: "[&>option]:bg-surface-1 [&>option]:text-content",
+});
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+/**
+ * Envoltorio local, ahora sobre el `<Field>` canónico: clona el control para
+ * inyectarle el `id` y el `aria-describedby` que el `<label htmlFor>` necesita.
+ *
+ * Se conserva el envoltorio en vez de reescribir sus 19 sitios de uso porque el
+ * problema no era la forma, era que la etiqueta no apuntaba a nada. Con esto,
+ * los 19 controles de la página quedan etiquetados de golpe.
+ */
+function Field({ label, children }: { label: string; children: React.ReactElement }) {
   return (
-    <div>
-      <label className="text-[10px] uppercase font-mono text-content-muted ml-1 block mb-1">
-        {label}
-      </label>
-      {children}
-    </div>
+    <FormField label={label}>
+      {(control) => cloneElement(children, control)}
+    </FormField>
   );
 }
 

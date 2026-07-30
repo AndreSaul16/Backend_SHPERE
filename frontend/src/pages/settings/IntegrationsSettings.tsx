@@ -25,6 +25,7 @@ import {
   type IntegrationsList,
   type OAuthAppsList,
 } from "@/services/api";
+import { PasswordField, TextField } from "@/components/ui/Field";
 
 const PROVIDER_META: Record<
   string,
@@ -299,34 +300,24 @@ export function IntegrationsSettings() {
                   </div>
 
                   <div className="space-y-2">
-                    <div>
-                      <label className="block text-xs text-content-muted mb-1">
-                        Client ID
-                      </label>
-                      <input
-                        type="text"
-                        value={clientIds[p] || ""}
-                        onChange={(e) =>
-                          setClientIds((prev) => ({ ...prev, [p]: e.target.value }))
-                        }
-                        placeholder="Tu Client ID"
-                        className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-content-strong text-sm focus:border-electric-cyan/50 placeholder:text-content-quiet"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-content-muted mb-1">
-                        Client Secret
-                      </label>
-                      <input
-                        type="password"
-                        value={clientSecrets[p] || ""}
-                        onChange={(e) =>
-                          setClientSecrets((prev) => ({ ...prev, [p]: e.target.value }))
-                        }
-                        placeholder="Tu Client Secret"
-                        className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-content-strong text-sm focus:border-electric-cyan/50 placeholder:text-content-quiet"
-                      />
-                    </div>
+                    <TextField
+                      label="Client ID"
+                      id={`oauth-client-id-${p}`}
+                      value={clientIds[p] || ""}
+                      onChange={(e) =>
+                        setClientIds((prev) => ({ ...prev, [p]: e.target.value }))
+                      }
+                      placeholder="Tu Client ID"
+                    />
+                    <PasswordField
+                      label="Client Secret"
+                      id={`oauth-client-secret-${p}`}
+                      value={clientSecrets[p] || ""}
+                      onChange={(e) =>
+                        setClientSecrets((prev) => ({ ...prev, [p]: e.target.value }))
+                      }
+                      placeholder="Tu Client Secret"
+                    />
                   </div>
 
                   <button

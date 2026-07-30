@@ -17,6 +17,7 @@ import {
     Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TextAreaField, TextField } from "@/components/ui/Field";
 import { KnowledgeBasePanel } from "@/components/agents/KnowledgeBasePanel";
 
 // ---------------------------------------------------------------------------
@@ -509,41 +510,34 @@ export function AgentDetailPage() {
                         </div>
 
                         {/* Name */}
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] text-content-muted uppercase tracking-widest font-mono block ml-1 opacity-60">
-                                Nombre
-                            </label>
-                            <input
-                                type="text"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                placeholder="Ej: Nexus, Oberon..."
-                                className="w-full bg-midnight/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-content-strong focus:border-electric-cyan/50 focus:ring-1 focus:ring-electric-cyan/20 transition-all placeholder:text-content-quiet"
-                            />
-                        </div>
+                        <TextField
+                            label="Nombre"
+                            id="agent-name"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            placeholder="Ej: Nexus, Oberon..."
+                        />
 
                         {/* Description */}
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] text-content-muted uppercase tracking-widest font-mono block ml-1 opacity-60">
-                                Descripción
-                            </label>
-                            <textarea
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                rows={2}
-                                placeholder="Breve descripcion del propósito del agente..."
-                                className="w-full bg-midnight/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-content-strong focus:border-electric-cyan/50 focus:ring-1 focus:ring-electric-cyan/20 transition-all resize-none placeholder:text-content-quiet"
-                            />
-                        </div>
+                        <TextAreaField
+                            label="Descripción"
+                            id="agent-description"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            rows={2}
+                            placeholder="Breve descripción del propósito del agente..."
+                            controlClassName="resize-none"
+                        />
 
                         {/* Color Picker */}
                         <div className="space-y-1.5">
-                            <label className="text-[10px] text-content-muted uppercase tracking-widest font-mono block ml-1 opacity-60">
-                                Color de Identidad
+                            <label htmlFor="agent-color" className="text-micro text-content-muted uppercase font-mono block ml-1">
+                                Color de identidad
                             </label>
                             <div className="flex items-center gap-3">
                                 <div className="relative">
                                     <input
+                                        id="agent-color"
                                         type="color"
                                         value={color}
                                         onChange={(e) => setColor(e.target.value)}
@@ -559,8 +553,10 @@ export function AgentDetailPage() {
                                     />
                                 </div>
                                 <div className="relative flex-1">
-                                    <Palette className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-content-quiet" />
+                                    <Palette className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-content-muted" aria-hidden="true" />
                                     <input
+                                        id="agent-color-hex"
+                                        aria-label="Color de identidad en hexadecimal"
                                         type="text"
                                         value={color}
                                         onChange={(e) => {
@@ -612,27 +608,25 @@ export function AgentDetailPage() {
                         </div>
 
                         {/* System Prompt */}
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] text-content-muted uppercase tracking-widest font-mono block ml-1 opacity-60">
-                                System Prompt
-                            </label>
-                            <textarea
-                                value={systemPrompt}
-                                onChange={(e) => setSystemPrompt(e.target.value)}
-                                rows={10}
-                                placeholder="Eres un asistente experto en..."
-                                className="w-full bg-midnight/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-content-strong font-mono leading-relaxed focus:border-electric-cyan/50 focus:ring-1 focus:ring-electric-cyan/20 transition-all resize-y min-h-[160px] placeholder:text-content-quiet"
-                            />
-                            <p className="text-[10px] text-content-quiet ml-1">
-                                {systemPrompt.length} caracteres
-                            </p>
-                        </div>
+                        {/* El recuento va como `hint`, o sea ligado con
+                            aria-describedby: antes era un <p> suelto que el
+                            lector de pantalla no asociaba a nada. */}
+                        <TextAreaField
+                            label="System Prompt"
+                            id="agent-system-prompt"
+                            value={systemPrompt}
+                            onChange={(e) => setSystemPrompt(e.target.value)}
+                            rows={10}
+                            placeholder="Eres un asistente experto en..."
+                            hint={`${systemPrompt.length} caracteres`}
+                            controlClassName="font-mono leading-relaxed resize-y min-h-[160px]"
+                        />
 
                         {/* Temperature Slider */}
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <label className="text-[10px] text-content-muted uppercase tracking-widest font-mono ml-1 opacity-60 flex items-center gap-1.5">
-                                    <Thermometer className="h-3 w-3" />
+                                <label htmlFor="agent-temperature" className="text-micro text-content-muted uppercase font-mono ml-1 flex items-center gap-1.5">
+                                    <Thermometer className="h-3 w-3" aria-hidden="true" />
                                     Temperatura
                                 </label>
                                 <span
@@ -648,12 +642,14 @@ export function AgentDetailPage() {
                             </div>
                             <div className="relative px-1">
                                 <input
+                                    id="agent-temperature"
                                     type="range"
                                     min={0}
                                     max={2}
                                     step={0.1}
                                     value={temperature}
                                     onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                                    aria-valuetext={`${temperature.toFixed(1)} de 2`}
                                     className="w-full h-2 rounded-full appearance-none cursor-pointer bg-midnight/80 border border-white/5
                                         [&::-webkit-slider-thumb]:appearance-none
                                         [&::-webkit-slider-thumb]:h-5
@@ -701,15 +697,17 @@ export function AgentDetailPage() {
 
                         {/* Model Selector */}
                         <div className="space-y-1.5">
-                            <label className="text-[10px] text-content-muted uppercase tracking-widest font-mono block ml-1 opacity-60 flex items-center gap-1.5">
-                                <Cpu className="h-3 w-3" />
+                            <span id="agent-model-label" className="text-micro text-content-muted uppercase font-mono ml-1 flex items-center gap-1.5">
+                                <Cpu className="h-3 w-3" aria-hidden="true" />
                                 Modelo
-                            </label>
-                            <div className="grid grid-cols-2 gap-2">
+                            </span>
+                            <div className="grid grid-cols-2 gap-2" role="group" aria-labelledby="agent-model-label">
                                 {ALLOWED_MODELS.map((m) => (
                                     <button
                                         key={m}
+                                        type="button"
                                         onClick={() => setModel(m)}
+                                        aria-pressed={model === m}
                                         className={cn(
                                             "px-4 py-3 rounded-xl border text-sm font-mono transition-all text-left",
                                             model === m

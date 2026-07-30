@@ -3,8 +3,9 @@
  * externo (WhatsApp, Calendar, etc.). Sin contactos aquí, las tools bloquean.
  */
 import { useEffect, useState } from "react";
-import { Trash2, Plus, Users, Shield } from "lucide-react";
+import { Trash2, Plus, Users, Shield, Check } from "lucide-react";
 import { contactsService, type Contact } from "@/services/api";
+import { SelectField, TextField } from "@/components/ui/Field";
 
 const CONTACT_TYPES: Record<string, string> = {
   email: "Email",
@@ -111,71 +112,63 @@ export function ContactsSettings() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="text-[10px] uppercase font-mono text-content-muted block mb-1">
-              Tipo
-            </label>
-            <select
-              className={inputCls}
-              value={newType}
-              onChange={(e) => setNewType(e.target.value)}
-            >
-              {Object.entries(CONTACT_TYPES).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="text-[10px] uppercase font-mono text-content-muted block mb-1">
-              Valor
-            </label>
-            <input
-              type="text"
-              className={inputCls}
-              placeholder={
-                newType === "phone"
-                  ? "+34612345678"
-                  : newType === "email"
-                  ? "alguien@empresa.com"
-                  : "..."
-              }
-              value={newValue}
-              onChange={(e) => setNewValue(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="text-[10px] uppercase font-mono text-content-muted block mb-1">
-            Nombre (opcional)
-          </label>
-          <input
-            type="text"
-            className={inputCls}
-            placeholder="Juan Pérez"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
+          <SelectField
+            label="Tipo"
+            id="contact-type"
+            value={newType}
+            onChange={(e) => setNewType(e.target.value)}
+          >
+            {Object.entries(CONTACT_TYPES).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v}
+              </option>
+            ))}
+          </SelectField>
+          <TextField
+            label="Valor"
+            id="contact-value"
+            placeholder={
+              newType === "phone"
+                ? "+34612345678"
+                : newType === "email"
+                ? "alguien@empresa.com"
+                : "..."
+            }
+            value={newValue}
+            onChange={(e) => setNewValue(e.target.value)}
           />
         </div>
 
+        <TextField
+          label="Nombre (opcional)"
+          id="contact-name"
+          placeholder="Juan Pérez"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+        />
+
         <div>
-          <label className="text-[10px] uppercase font-mono text-content-muted block mb-2">
+          {/* Grupo de chips, no campo: `role="group"` + aria-labelledby (§12.7).
+              Y cada chip lleva `aria-pressed` y un glifo Check cuando está
+              activo, porque §9.9 prohíbe que su estado sea sólo cromático —
+              que es lo que era. */}
+          <span id="contact-perms-label" className="text-micro uppercase font-mono text-content-muted block mb-2">
             Autorizado para
-          </label>
-          <div className="flex flex-wrap gap-2">
+          </span>
+          <div className="flex flex-wrap gap-2" role="group" aria-labelledby="contact-perms-label">
             {AVAILABLE_PERMISSIONS.map((p) => (
               <button
                 key={p}
                 type="button"
                 onClick={() => togglePerm(p)}
-                className={`px-3 py-1 rounded-full text-xs border transition-colors ${
+                aria-pressed={newPerms.includes(p)}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs border transition-colors ${
                   newPerms.includes(p)
-                    ? "bg-electric-cyan/20 border-electric-cyan/50 text-electric-cyan"
-                    : "bg-midnight/50 border-surface-highlight text-content-muted hover:border-electric-cyan/30"
+                    ? "bg-accent/20 border-accent/50 text-accent"
+                    : "bg-midnight/50 border-surface-highlight text-content-muted hover:border-accent/30"
                 }`}
               >
+                {newPerms.includes(p) && <Check className="h-3 w-3" aria-hidden="true" />}
                 {p}
               </button>
             ))}
@@ -256,5 +249,3 @@ export function ContactsSettings() {
   );
 }
 
-const inputCls =
-  "w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm focus:border-electric-cyan/50 transition-all";

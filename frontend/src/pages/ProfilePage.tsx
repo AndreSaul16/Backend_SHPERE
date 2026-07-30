@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useUserAvatar, saveUserAvatar } from "@/hooks/useUserAvatar";
 import { profileService } from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { TextField } from "@/components/ui/Field";
 
 export function ProfilePage() {
     const avatarUrl = useUserAvatar();
@@ -134,11 +135,13 @@ export function ProfilePage() {
                         {/* Avatar with Upload */}
                         <div className="relative group">
                             <input
+                                id="profile-avatar-file"
+                                aria-label="Subir imagen de avatar"
                                 type="file"
                                 ref={fileInputRef}
                                 onChange={handleAvatarChange}
                                 accept="image/*"
-                                className="hidden"
+                                className="sr-only"
                             />
                             <div
                                 onClick={triggerFileInput}
@@ -177,24 +180,23 @@ export function ProfilePage() {
                                 <h3>Información Personal</h3>
                             </div>
                             <div className="space-y-4">
-                                <div>
-                                    <label className="text-[10px] uppercase font-mono text-content-muted ml-1">Nombre Público</label>
-                                    <input
-                                        type="text"
-                                        value={displayName}
-                                        onChange={(e) => setDisplayName(e.target.value)}
-                                        className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm focus:border-electric-cyan/50 transition-all mt-1"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-[10px] uppercase font-mono text-content-muted ml-1">Email de Acceso</label>
-                                    <input
-                                        type="email"
-                                        value={userEmail}
-                                        readOnly
-                                        className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm transition-all mt-1 opacity-60 cursor-not-allowed"
-                                    />
-                                </div>
+                                <TextField
+                                    label="Nombre público"
+                                    id="profile-display-name"
+                                    value={displayName}
+                                    onChange={(e) => setDisplayName(e.target.value)}
+                                />
+                                {/* §9.2 readonly: NO `disabled` ni `opacity-60`
+                                    (que daba ~2.5:1). El campo cambia de token,
+                                    sigue enfocable y anuncia su candado. */}
+                                <TextField
+                                    label="Correo de acceso"
+                                    id="profile-email"
+                                    type="email"
+                                    value={userEmail}
+                                    readOnly
+                                    hint="El correo de acceso no se puede cambiar aquí."
+                                />
                             </div>
                         </div>
 

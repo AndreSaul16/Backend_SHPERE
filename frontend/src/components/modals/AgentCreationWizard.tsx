@@ -31,6 +31,7 @@ import {
     XCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { TextAreaField, TextField } from '@/components/ui/Field';
 import { useChatStore } from '@/store/useChatStore';
 
 // ---------------------------------------------------------------------------
@@ -880,71 +881,74 @@ function StepConfigure({
             transition={{ duration: 0.25, ease: 'easeInOut' }}
             className="p-8 space-y-6"
         >
-            {/* Name */}
-            <div className="space-y-2">
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">
-                    Nombre del agente *
-                </label>
-                <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Ej: Analista Financiero, Redactor SEO..."
-                    className="w-full glass-input rounded-2xl py-3.5 px-5 text-sm text-white placeholder:text-gray-600"
-                />
-            </div>
+            <TextField
+                label="Nombre del agente"
+                id="wizard-name"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ej: Analista Financiero, Redactor SEO..."
+            />
 
-            {/* Description */}
-            <div className="space-y-2">
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">
-                    Descripcion breve
-                </label>
-                <input
-                    type="text"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Una linea que describa para que sirve este agente"
-                    className="w-full glass-input rounded-2xl py-3.5 px-5 text-sm text-white placeholder:text-gray-600"
-                />
-            </div>
+            <TextField
+                label="Descripción breve"
+                id="wizard-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Una línea que describa para qué sirve este agente"
+            />
 
-            {/* System Prompt */}
-            <div className="space-y-2">
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 flex items-center gap-2">
-                    System Prompt *
-                    {isTemplate && (
-                        <span className="px-2 py-0.5 bg-luxury-purple/10 text-luxury-purple rounded-md text-[9px] font-semibold border border-luxury-purple/20">
-                            Pre-rellenado por plantilla
-                        </span>
-                    )}
-                </label>
-                <textarea
-                    value={systemPrompt}
-                    onChange={(e) => setSystemPrompt(e.target.value)}
-                    placeholder="Instrucciones detalladas que definen la personalidad, expertise y comportamiento del agente..."
-                    rows={6}
-                    className="w-full glass-input rounded-2xl py-3.5 px-5 text-sm text-white placeholder:text-gray-600 resize-none font-mono leading-relaxed"
-                />
-            </div>
+            <TextAreaField
+                label={
+                    <>
+                        System Prompt
+                        {isTemplate && (
+                            <span className="ms-2 px-2 py-0.5 bg-brass-600/12 text-brass-300 rounded-xs text-micro font-semibold border border-brass-600/40">
+                                Pre-rellenado por plantilla
+                            </span>
+                        )}
+                    </>
+                }
+                id="wizard-system-prompt"
+                required
+                value={systemPrompt}
+                onChange={(e) => setSystemPrompt(e.target.value)}
+                placeholder="Instrucciones detalladas que definen la personalidad, expertise y comportamiento del agente..."
+                rows={6}
+                controlClassName="resize-none font-mono leading-relaxed"
+            />
 
             {/* Color picker + Temperature + Model in a row */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 {/* Color picker */}
                 <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 flex items-center gap-1.5">
-                        <Palette className="h-3 w-3" />
+                    {/* Un grupo de muestras no es un campo: no lleva <label> sino
+                        `role="group"` con `aria-labelledby` (§12.7). Y cada
+                        muestra lleva `aria-pressed` porque su estado no puede
+                        depender sólo del color (§P5, §9.9). */}
+                    <span
+                        id="wizard-color-label"
+                        className="text-micro font-bold text-content-muted uppercase ml-1 flex items-center gap-1.5"
+                    >
+                        <Palette className="h-3 w-3" aria-hidden="true" />
                         Color
-                    </label>
-                    <div className="flex flex-wrap gap-2 p-3 rounded-2xl bg-white/[0.03] border border-white/5">
+                    </span>
+                    <div
+                        role="group"
+                        aria-labelledby="wizard-color-label"
+                        className="flex flex-wrap gap-2 p-3 rounded-2xl bg-white/[0.03] border border-white/5"
+                    >
                         {PRESET_COLORS.map((c) => (
                             <button
                                 key={c}
                                 type="button"
                                 onClick={() => setColor(c)}
+                                aria-pressed={color === c}
+                                aria-label={`Color ${c}`}
                                 className={cn(
                                     'h-7 w-7 rounded-lg transition-all border-2',
                                     color === c
-                                        ? 'border-white scale-110 shadow-lg'
+                                        ? 'border-content-strong scale-110 shadow-lg'
                                         : 'border-transparent hover:scale-105',
                                 )}
                                 style={{ backgroundColor: c }}
@@ -955,8 +959,11 @@ function StepConfigure({
 
                 {/* Temperature */}
                 <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 flex items-center gap-1.5">
-                        <Thermometer className="h-3 w-3" />
+                    <label
+                        htmlFor="wizard-temperature"
+                        className="text-micro font-bold text-content-muted uppercase ml-1 flex items-center gap-1.5"
+                    >
+                        <Thermometer className="h-3 w-3" aria-hidden="true" />
                         Temperatura
                     </label>
                     <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 space-y-3">
@@ -968,12 +975,14 @@ function StepConfigure({
                             <span className="text-xs text-gray-500">Creativo</span>
                         </div>
                         <input
+                            id="wizard-temperature"
                             type="range"
                             min={0}
                             max={2}
                             step={0.1}
                             value={temperature}
                             onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                            aria-valuetext={`${temperature.toFixed(1)} de 2`}
                             className="w-full accent-electric-cyan h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer
                                        [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4
                                        [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-electric-cyan
@@ -985,16 +994,20 @@ function StepConfigure({
 
                 {/* Model selector */}
                 <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 flex items-center gap-1.5">
-                        <Bot className="h-3 w-3" />
+                    <span
+                        id="wizard-model-label"
+                        className="text-micro font-bold text-content-muted uppercase ml-1 flex items-center gap-1.5"
+                    >
+                        <Bot className="h-3 w-3" aria-hidden="true" />
                         Modelo
-                    </label>
-                    <div className="space-y-2">
+                    </span>
+                    <div className="space-y-2" role="group" aria-labelledby="wizard-model-label">
                         {MODEL_OPTIONS.map((opt) => (
                             <button
                                 key={opt.value}
                                 type="button"
                                 onClick={() => setModel(opt.value)}
+                                aria-pressed={model === opt.value}
                                 className={cn(
                                     'w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left',
                                     model === opt.value

@@ -5,6 +5,7 @@
 import { useEffect, useState } from "react";
 import { Save, RotateCcw, Bot } from "lucide-react";
 import { agentOverridesService, type AgentOverride } from "@/services/api";
+import { TextAreaField, TextField } from "@/components/ui/Field";
 
 const CORE_ROLES = [
   { id: "CEO", name: "Oberon — CEO", color: "text-amber-400" },
@@ -126,56 +127,44 @@ export function AgentOverridesSettings() {
               )}
             </div>
 
-            <div>
-              <label className="text-[10px] uppercase font-mono text-content-muted block mb-1">
-                Instrucciones adicionales
-              </label>
-              <textarea
-                className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm focus:border-electric-cyan/50 transition-all min-h-[90px] resize-y"
-                placeholder={`Ej: "Siempre responde con ejemplos en TypeScript" o "Enfócate en startups B2B europeas"`}
-                value={ov?.system_prompt_addition || ""}
-                onChange={(e) =>
-                  handleChange(role.id, { system_prompt_addition: e.target.value })
-                }
-              />
-            </div>
+            <TextAreaField
+              label="Instrucciones adicionales"
+              id={`override-prompt-${role.id}`}
+              placeholder={`Ej: "Siempre responde con ejemplos en TypeScript" o "Enfócate en startups B2B europeas"`}
+              value={ov?.system_prompt_addition || ""}
+              onChange={(e) =>
+                handleChange(role.id, { system_prompt_addition: e.target.value })
+              }
+              controlClassName="min-h-[90px] resize-y"
+            />
 
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] uppercase font-mono text-content-muted block mb-1">
-                  Temperatura (creatividad)
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  max={2}
-                  step={0.1}
-                  className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm focus:border-electric-cyan/50"
-                  placeholder="default"
-                  value={ov?.temperature_override ?? ""}
-                  onChange={(e) =>
-                    handleChange(role.id, {
-                      temperature_override: e.target.value
-                        ? Number(e.target.value)
-                        : null,
-                    })
-                  }
-                />
-              </div>
-              <div>
-                <label className="text-[10px] uppercase font-mono text-content-muted block mb-1">
-                  Modelo override
-                </label>
-                <input
-                  type="text"
-                  className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm focus:border-electric-cyan/50"
-                  placeholder="deepseek-v4-pro"
-                  value={ov?.model_override || ""}
-                  onChange={(e) =>
-                    handleChange(role.id, { model_override: e.target.value || null })
-                  }
-                />
-              </div>
+              <TextField
+                label="Temperatura (creatividad)"
+                id={`override-temperature-${role.id}`}
+                type="number"
+                min={0}
+                max={2}
+                step={0.1}
+                placeholder="Por defecto"
+                value={ov?.temperature_override ?? ""}
+                onChange={(e) =>
+                  handleChange(role.id, {
+                    temperature_override: e.target.value
+                      ? Number(e.target.value)
+                      : null,
+                  })
+                }
+              />
+              <TextField
+                label="Modelo alternativo"
+                id={`override-model-${role.id}`}
+                placeholder="deepseek-v4-pro"
+                value={ov?.model_override || ""}
+                onChange={(e) =>
+                  handleChange(role.id, { model_override: e.target.value || null })
+                }
+              />
             </div>
 
             <div className="flex justify-end">
