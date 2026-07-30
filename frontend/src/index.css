@@ -450,6 +450,31 @@
   .doc-prose img{ max-inline-size:100%; height:auto; border-radius:var(--radius-sm);
                   border:1px solid var(--stroke-hairline); }
 
+  /* ── Acciones de fila — §9.11 «acciones» y §12.4/§12.13 ──────────────────
+     «visibles con `group-hover` Y `focus-within` Y siempre en `(hover: none)`».
+     Las tres cosas a la vez, que es lo que el sitio de uso nunca acierta a
+     escribir: hoy las cuatro filas de acciones de la app son `opacity-0` con
+     `group-hover:opacity-100`, o sea inalcanzables por teclado e invisibles en
+     táctil, donde el hover no existe.
+
+     Va en CSS y con atributos de datos en vez de clases de utilidad a propósito:
+     el punto de partida por defecto tiene que ser VISIBLE, y sólo se oculta
+     cuando el dispositivo demuestra que tiene hover fino. Con utilidades es al
+     revés (se parte de oculto y se añaden excepciones), y cualquier excepción
+     que falte deja la acción inalcanzable sin que nada lo avise.
+
+     Uso:  <div data-row> … <div data-row-actions> … </div> </div>            */
+  [data-row-actions]{ opacity: 1; }
+  @media (hover: hover) and (pointer: fine){
+    [data-row-actions]{
+      opacity: 0;
+      transition: opacity var(--duration-tap) var(--ease-settle);
+    }
+    [data-row]:hover [data-row-actions],
+    [data-row]:focus-within [data-row-actions],
+    [data-row-actions]:focus-within{ opacity: 1; }
+  }
+
   /* El acta se lee siempre sobre papel, en los dos temas.
      B9 (auditoría v3): la hoja no re-colorea por elemento — RE-DECLARA EL
      CONTEXTO de variables. .doc-prose consume var(--content/--accent/...):
