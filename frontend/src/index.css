@@ -1,97 +1,555 @@
 @import "tailwindcss";
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+/* ═════════════════════════════════════════════════════════════════════════════
+   SPHERE — sistema de tokens. Fuente de verdad: DESIGN.md §13.
+   Sala capitular: paño verde, latón como único metal, oxblood para el disenso,
+   anilina sólo para el sello, papel para todo documento. Materia, no luz.
 
-@theme {
-  /* "Midnight Protocol" Palette v2.0 */
-  --color-midnight: #030305;
-  --color-surface: #0A0A0F;
-  --color-surface-soft: #12121A;
-  --color-surface-highlight: #1C1C26;
+   `tailwind.config.js` está BORRADO a propósito: Tailwind v4 no lo lee sin una
+   directiva `@config`, así que era una fuente de verdad muerta cuyos hex además
+   contradecían a los del `@theme` vivo. Todo token vive aquí.
+   ════════════════════════════════════════════════════════════════════════════ */
 
-  /* Accent Glows */
-  --color-electric-cyan: #00F5D4;
-  --color-luxury-purple: #9D85FF;
-  --color-neon-pink: #FF2E97;
+/* ─── Oscuro por defecto; el claro es opt-in con data-theme="light" (B1) ──────
+   El fallo seguro con el atributo ausente tiene que ser el tema que la app ya
+   tiene. Si el default fuese el claro, `body` pasaría a papel casi blanco
+   mientras los 88 hex oscuros por componente siguen vivos hasta la fase 7:
+   texto claro sobre paneles oscuros sobre página clara, en producción. */
+@custom-variant dark (&:where(:root:not([data-theme=light]), :root:not([data-theme=light]) *));
 
-  /* Glass - Apple Style */
-  --color-glass-white: rgba(255, 255, 255, 0.03);
-  --color-glass-border: rgba(255, 255, 255, 0.08);
+/* ─── Fuentes: auto-hospedadas, variables, subseteadas latin+latin-ext ────────
+   Sustituyen al `@import url(https://fonts.googleapis.com/...)` que había aquí
+   mismo, que era la peor estrategia posible: CSS bloqueante que dispara otra
+   petición de CSS que dispara las de las fuentes, sin preconnect ni preload.
+   Se generan con `scripts/subset-fonts.sh`, que verifica que los ejes `wdth`
+   (Archivo) y `opsz` (Literata) sobreviven al subseteo. */
+@font-face{font-family:Archivo;src:url(/fonts/archivo-var.woff2)format("woff2-variations");
+  font-weight:100 900;font-stretch:62% 125%;font-style:normal;font-display:swap}
+@font-face{font-family:Literata;src:url(/fonts/literata-var.woff2)format("woff2-variations");
+  font-weight:200 900;font-style:normal;font-display:swap}
+@font-face{font-family:Literata;src:url(/fonts/literata-var-italic.woff2)format("woff2-variations");
+  font-weight:200 900;font-style:italic;font-display:swap}
+@font-face{font-family:"JetBrains Mono";src:url(/fonts/jetbrains-mono-var.woff2)format("woff2-variations");
+  font-weight:100 800;font-style:normal;font-display:swap}
 
-  /* Bubbles - High Contrast */
-  --color-user-bubble: #2563EB;
-  --color-ai-bubble: #161B22;
+/* ═══ ESCALAS CRUDAS — independientes del tema ═══════════════════════════════ */
+:root{
+  /* paño */
+  --baize-950:oklch(0.155 0.018 158); --baize-900:oklch(0.196 0.021 158);
+  --baize-850:oklch(0.232 0.023 158); --baize-800:oklch(0.268 0.025 158);
+  --baize-700:oklch(0.330 0.027 158); --baize-600:oklch(0.400 0.028 158);
+  /* tinta (sobre paño) */
+  --ink-50:oklch(0.985 0.004 95);  --ink-100:oklch(0.945 0.006 95);
+  --ink-200:oklch(0.885 0.008 95); --ink-300:oklch(0.805 0.010 95);
+  --ink-400:oklch(0.700 0.012 95); --ink-500:oklch(0.600 0.012 95);
+  /* papel */
+  --paper-50:oklch(0.988 0.006 88);  --paper-100:oklch(0.971 0.010 88);
+  --paper-200:oklch(0.945 0.014 88); --paper-300:oklch(0.900 0.016 88);
+  --paper-400:oklch(0.820 0.018 88);
+  /* grafito (sobre papel) */
+  --graphite-900:oklch(0.245 0.016 158); --graphite-800:oklch(0.320 0.018 158);
+  --graphite-700:oklch(0.405 0.018 158); --graphite-600:oklch(0.500 0.016 158);
+  /* latón */
+  --brass-300:oklch(0.880 0.075 82); --brass-400:oklch(0.820 0.100 82);
+  --brass-500:oklch(0.760 0.120 82); --brass-600:oklch(0.680 0.115 82);
+  --brass-700:oklch(0.580 0.100 82);
+  --brass-800:oklch(0.520 0.090 82); /* #836323 — latón de texto sobre papel (enlaces del acta): 5.38:1 sobre paper-50, medido */
+  /* oxblood */
+  --oxblood-400:oklch(0.640 0.170 25); --oxblood-500:oklch(0.550 0.180 25);
+  --oxblood-600:oklch(0.470 0.160 25); --oxblood-700:oklch(0.380 0.130 25);
+  /* anilina — SÓLO el sello */
+  --aniline-400:oklch(0.680 0.180 300); --aniline-500:oklch(0.600 0.200 300);
+  --aniline-600:oklch(0.520 0.190 300);
 
-  /* Typography */
-  --font-sans: "Inter", "SF Pro Display", "-apple-system", "sans-serif";
-  --font-mono: "JetBrains Mono", "Menlo", "monospace";
-  /* Animations */
-  --animate-aurora-mesh: aurora-mesh 20s ease-in-out infinite;
-  --animate-glow-pulse: glow-pulse 10s ease-in-out infinite;
+  /* duraciones — NO en @theme: Tailwind v4 no tiene namespace --duration-*.
+     Meterlas ahí no genera nada, y una clave numérica es peor: `duration-1`
+     compila a `transition-duration: 1ms` porque `duration-<número>` es una
+     utilidad de valor desnudo en ms. Se consumen con duration-(--duration-pop). */
+  --duration-tap:90ms;    --duration-pop:160ms;   --duration-reveal:220ms;
+  --duration-panel:320ms; --duration-scene:560ms;
 
-  @keyframes aurora-mesh {
-    0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
-    33% { transform: translate(5%, 10%) scale(1.1) rotate(2deg); }
-    66% { transform: translate(-5%, -5%) scale(0.95) rotate(-2deg); }
+  /* medidas y contenedores (DESIGN §4.2). Los añade la corrección R7 de la
+     auditoría: las tareas de las fases 3-6 los citan por nombre y el bloque
+     §13 no los definía, así que el implementador tendría que inventar dónde
+     viven. Van en :root porque no pertenecen a ningún namespace de @theme,
+     salvo --container-measure, que sí está abajo. */
+  --measure-doc:min(68ch, 100% - 32px);
+  --measure-form:44rem;
+  --container-app:100%;
+  --rail-order:56px;
+  --gutter-sidebar:288px;      /* era 320px: 32px que se los queda el transcript */
+  --panel-artifact-min:380px;
+  --panel-artifact-default:480px;
+  --panel-artifact-max:760px;
+}
+
+/* ═══ TEMA OSCURO (POR DEFECTO — B1: el fallo seguro es el tema que existe) ══ */
+:root{
+  --surface-0:var(--baize-950); --surface-1:var(--baize-900);
+  --surface-2:var(--baize-850); --surface-3:var(--baize-800);
+  --surface-inset:var(--baize-700); --surface-doc:var(--paper-50);
+
+  --content-strong:var(--ink-50); --content:var(--ink-100);
+  --content-muted:var(--ink-300); --content-quiet:var(--ink-500); /* 4.59:1 suelo — SÓLO sobre e0/e1; sobre e2+ usar ink-400 */
+
+  --stroke-highlight:color-mix(in oklab, var(--ink-50) 6%, transparent);
+  --stroke-hairline:color-mix(in oklab, var(--ink-50) 14%, transparent);
+  --stroke-edge:color-mix(in oklab, var(--ink-50) 24%, transparent);
+  --stroke-control:color-mix(in oklab, var(--ink-50) 38%, transparent); /* 3.47:1 */
+
+  --accent:var(--brass-500); --accent-hover:var(--brass-400);
+  --accent-fill:var(--brass-500);          /* 8.96:1 con --accent-on-fill */
+  --accent-on-fill:var(--baize-950);
+  --focus-ring:var(--brass-400);           /* 10.35:1 sobre baize-900 */
+
+  --dissent:var(--oxblood-400); --dissent-strong:var(--oxblood-500);
+  --certify:var(--aniline-400);
+  --success:oklch(0.72 0.15 150); --warning:oklch(0.72 0.15 75);
+  --danger:oklch(0.72 0.16 25);   --info:oklch(0.72 0.13 232);
+
+  --agent-ceo:oklch(0.72 0.135 300); --agent-cto:oklch(0.72 0.135 185);
+  --agent-cfo:oklch(0.72 0.135 265); --agent-cmo:oklch(0.72 0.135 345);
+  --agent-devil:oklch(0.72 0.135 18); --agent-user:oklch(0.72 0.135 232);
+
+  --shadow-e2:0 8px 24px -8px rgb(0 0 0 / .50);
+  --shadow-e3:0 16px 40px -12px rgb(0 0 0 / .60);
+  --shadow-e4:0 32px 80px -20px rgb(0 0 0 / .70);
+  --lamp:color-mix(in oklab, var(--brass-400) 12%, transparent);
+
+  --row-h:44px; --pad-y:10px; --pad-x:14px;
+}
+
+/* ═══ TEMA CLARO (opt-in con data-theme="light"; lo activa el conmutador de la
+   fase 6.11 — hasta entonces este bloque es inerte y no hay flash claro) ═════ */
+[data-theme="light"]{
+  --surface-0:var(--paper-100); --surface-1:var(--paper-200);
+  --surface-2:var(--paper-50);  --surface-3:var(--paper-50);
+  --surface-inset:var(--paper-300); --surface-doc:var(--paper-50);
+
+  --content-strong:var(--graphite-900); --content:var(--graphite-800);
+  --content-muted:var(--graphite-700);  --content-quiet:var(--graphite-600);
+
+  --stroke-highlight:color-mix(in oklab, var(--paper-50) 60%, transparent);
+  --stroke-hairline:color-mix(in oklab, var(--graphite-900) 12%, transparent);
+  --stroke-edge:color-mix(in oklab, var(--graphite-900) 16%, transparent);
+  --stroke-control:color-mix(in oklab, var(--graphite-900) 50%, transparent); /* 3.13:1 */
+
+  --accent:var(--brass-700);            /* el latón claro es filete, no campo */
+  --accent-hover:var(--brass-600);
+  --accent-fill:var(--graphite-900);    /* primario invertido: 15.59:1 */
+  --accent-on-fill:var(--paper-50);
+  --focus-ring:var(--brass-700);        /* 3.96:1 sobre paper-100 */
+
+  --dissent:var(--oxblood-600); --dissent-strong:var(--oxblood-700);
+  --certify:var(--aniline-600);
+  --success:oklch(0.53 0.14 150); --warning:oklch(0.55 0.19 75);
+  --danger:oklch(0.565 0.19 25);  --info:oklch(0.535 0.12 232);
+
+  --agent-ceo:oklch(0.565 0.19 300); --agent-cto:oklch(0.515 0.13 185);
+  --agent-cfo:oklch(0.555 0.19 265); --agent-cmo:oklch(0.570 0.19 345);
+  --agent-devil:oklch(0.570 0.19 18); --agent-user:oklch(0.535 0.13 232);
+
+  --shadow-e2:0 2px 6px -2px rgb(26 35 30 / .10);
+  --shadow-e3:0 8px 20px -6px rgb(26 35 30 / .14);
+  --shadow-e4:0 20px 48px -12px rgb(26 35 30 / .18);
+  --lamp:transparent;
+}
+
+/* Densidad compacta */
+[data-density="compact"]{ --row-h:34px; --pad-y:6px; --pad-x:10px; }
+@media (pointer: coarse){ [data-density="compact"]{ --row-h:44px; --pad-y:10px; } }
+
+/* ═══ @theme inline — genera las utilidades de Tailwind ══════════════════════
+   AVISO (auditoría v3 §4.4.2): varias claves de aquí se llaman IGUAL que la
+   variable cruda que referencian (p. ej. `--shadow-e2: var(--shadow-e2)`). No
+   hay ciclo porque las declaraciones sin capa de los `:root` de arriba ganan a
+   la `@layer theme` en la cascada — pero es una mina: si alguien «limpia» esos
+   valores crudos o los mete en una @layer, la app pierde sombras y colores sin
+   que el compilador diga nada. NO mover los :root de arriba dentro de una capa. */
+@theme inline {
+  /* superficies y contenido */
+  --color-surface-0:var(--surface-0);   --color-surface-1:var(--surface-1);
+  --color-surface-2:var(--surface-2);   --color-surface-3:var(--surface-3);
+  --color-surface-inset:var(--surface-inset); --color-surface-doc:var(--surface-doc);
+  --color-content-strong:var(--content-strong); --color-content:var(--content);
+  --color-content-muted:var(--content-muted);   --color-content-quiet:var(--content-quiet);
+
+  /* trazos */
+  --color-stroke-hairline:var(--stroke-hairline);
+  --color-stroke-edge:var(--stroke-edge);
+  --color-stroke-control:var(--stroke-control);
+  --color-stroke-highlight:var(--stroke-highlight);
+
+  /* acción y semánticos */
+  --color-accent:var(--accent); --color-accent-hover:var(--accent-hover);
+  --color-accent-fill:var(--accent-fill); --color-accent-on-fill:var(--accent-on-fill);
+  --color-dissent:var(--dissent); --color-dissent-strong:var(--dissent-strong);
+  --color-certify:var(--certify);
+  --color-success:var(--success); --color-warning:var(--warning);
+  --color-danger:var(--danger);   --color-info:var(--info);
+
+  /* identidades */
+  --color-agent-ceo:var(--agent-ceo); --color-agent-cto:var(--agent-cto);
+  --color-agent-cfo:var(--agent-cfo); --color-agent-cmo:var(--agent-cmo);
+  --color-agent-devil:var(--agent-devil); --color-agent-user:var(--agent-user);
+
+  /* escalas crudas expuestas — COMPLETAS (B2: §9 las exige por nombre;
+     una escala a medias vuelve a fabricar clases muertas) */
+  --color-baize-950:var(--baize-950); --color-baize-900:var(--baize-900);
+  --color-baize-850:var(--baize-850); --color-baize-800:var(--baize-800);
+  --color-baize-700:var(--baize-700); --color-baize-600:var(--baize-600);
+  --color-ink-50:var(--ink-50);   --color-ink-100:var(--ink-100);
+  --color-ink-200:var(--ink-200); --color-ink-300:var(--ink-300);
+  --color-ink-400:var(--ink-400); --color-ink-500:var(--ink-500);
+  --color-brass-300:var(--brass-300); --color-brass-400:var(--brass-400);
+  --color-brass-500:var(--brass-500); --color-brass-600:var(--brass-600);
+  --color-brass-700:var(--brass-700); --color-brass-800:var(--brass-800);
+  --color-oxblood-400:var(--oxblood-400); --color-oxblood-500:var(--oxblood-500);
+  --color-oxblood-600:var(--oxblood-600); --color-oxblood-700:var(--oxblood-700);
+  --color-aniline-400:var(--aniline-400); --color-aniline-500:var(--aniline-500);
+  --color-aniline-600:var(--aniline-600);
+  --color-graphite-900:var(--graphite-900); --color-graphite-800:var(--graphite-800);
+  --color-graphite-700:var(--graphite-700); --color-graphite-600:var(--graphite-600);
+  --color-paper-50:var(--paper-50);   --color-paper-100:var(--paper-100);
+  --color-paper-200:var(--paper-200); --color-paper-300:var(--paper-300);
+  --color-paper-400:var(--paper-400);
+
+  /* ─── SHIM — retirar en fase 6 ────────────────────────────────────────────
+     Alias de los nombres de color del sistema viejo («Midnight Protocol»)
+     apuntados a los tokens nuevos.
+
+     MOTIVO, y es el mismo del bloqueante B3 pero 40 veces más grande: el
+     `@theme` que este fichero sustituye era la ÚNICA fuente de verdad viva, y
+     `src` consume sus nombres 660 veces (electric-cyan ×296, surface y
+     surface-highlight ×215, midnight ×83, luxury-purple ×66, user/ai-bubble
+     ×2). Borrarlos sin más dejaría la app entera sin fondo, sin borde y sin
+     color de acción hasta que las fases 3-6 repinten componente a componente.
+     La auditoría contó los 15 usos de `glass-*` y no contó estos.
+
+     Con el alias, la app adopta la paleta nueva de golpe en vez de pasar
+     semanas mezclando dos sistemas visuales en producción, que es justo lo que
+     avisaba R10. Se retiran en la fase 6, cuando ya no queden usos. */
+  --color-midnight:var(--surface-0);            /* fondo de página (e0) */
+  --color-surface:var(--surface-1);             /* panel asentado (e1) */
+  --color-surface-highlight:var(--surface-3);   /* flotante / hover (e3) */
+  --color-electric-cyan:var(--accent);          /* acción primaria → latón */
+  --color-luxury-purple:var(--brass-600);       /* acento secundario → latón en reposo.
+     No a anilina: §2.5 la reserva al sello, y §0 rechaza expresamente el
+     degradado violeta→cian. Dos pasos de latón mantienen la distinción. */
+  --color-user-bubble:var(--agent-user);
+  --color-ai-bubble:var(--surface-2);            /* §9.11: burbuja de agente = e2 */
+  /* ─── fin del SHIM de color ───────────────────────────────────────────── */
+
+  /* tipografía */
+  --font-sans:Archivo, ui-sans-serif, system-ui, sans-serif;
+  --font-serif:Literata, ui-serif, Georgia, serif;
+  --font-mono:"JetBrains Mono", ui-monospace, monospace;
+
+  --text-micro:0.75rem;   --text-micro--line-height:1.35; --text-micro--letter-spacing:0.07em;
+  --text-xs:0.8333rem;    --text-xs--line-height:1.45;    --text-xs--letter-spacing:0.005em;
+  --text-sm:0.875rem;     --text-sm--line-height:1.5;
+  --text-base:1rem;       --text-base--line-height:1.55;
+  --text-lg:1.2rem;       --text-lg--line-height:1.45;    --text-lg--letter-spacing:-0.005em;
+  --text-xl:1.44rem;      --text-xl--line-height:1.3;     --text-xl--letter-spacing:-0.01em;
+  --text-2xl:1.728rem;    --text-2xl--line-height:1.22;   --text-2xl--letter-spacing:-0.015em;
+  --text-3xl:2.0736rem;   --text-3xl--line-height:1.15;   --text-3xl--letter-spacing:-0.02em;
+  --text-4xl:2.4883rem;   --text-4xl--line-height:1.08;   --text-4xl--letter-spacing:-0.025em;
+  /* display fluido, sólo marketing (§3.4): el valor de diseño es el de 390px */
+  --text-display:clamp(2.4883rem, 1.867rem + 2.56vw, 3.5831rem);
+  --text-display--line-height:1.12; --text-display--letter-spacing:-0.025em;
+  --text-hero:clamp(3.2rem, 2.2rem + 4.2vw, 5.16rem);
+  --text-hero--line-height:1.05;    --text-hero--letter-spacing:-0.03em;
+
+  /* radios */
+  --radius-xs:2px; --radius-sm:4px; --radius-md:8px; --radius-lg:12px;
+
+  /* sombras */
+  --shadow-e2:var(--shadow-e2); --shadow-e3:var(--shadow-e3); --shadow-e4:var(--shadow-e4);
+
+  /* movimiento */
+  --ease-settle:cubic-bezier(0.16, 1, 0.30, 1);
+  --ease-travel:cubic-bezier(0.83, 0, 0.17, 1);
+  --ease-exit:cubic-bezier(0.4, 0, 1, 1);
+  --ease-impact:cubic-bezier(0.34, 1.42, 0.64, 1);
+  --ease-mech:linear; /* §7.1: movimiento de máquina — faltaba en el @theme (auditoría v3) */
+
+  /* animaciones con nombre (auditoría v3): §8.9, §9.12, §9.2 */
+  --animate-pulse-ring:pulse-ring 600ms cubic-bezier(0.16, 1, 0.30, 1) 1;
+  --animate-sweep:sweep 1400ms linear infinite;
+  --animate-indeterminate:indeterminate 1200ms linear infinite;
+  @keyframes pulse-ring{ from{ transform:scale(1); opacity:.6 } to{ transform:scale(1.8); opacity:0 } }
+  @keyframes sweep{ from{ transform:translateX(-100%) } to{ transform:translateX(100%) } }
+  @keyframes indeterminate{ from{ transform:translateX(-100%) scaleX(.4) } to{ transform:translateX(250%) scaleX(.4) } }
+
+  /* NOTA: las duraciones NO van aquí. Tailwind v4 no tiene namespace
+     --duration-*; viven en :root (arriba) y se consumen con
+     duration-(--duration-pop). Ver §7.2. */
+
+  /* layout.
+     --spacing en rem, no en px (corrección R2 de la auditoría): 0.25rem es
+     idéntico a 4px con la fuente base por defecto, pero en px el espaciado NO
+     escala con la preferencia de tamaño de letra del navegador mientras la
+     tipografía sí (rem), o sea que se rompen las densidades justo para quien
+     más lo necesita. El default de v4 es 0.25rem; DESIGN §13 dice 4px, y
+     copiarlo literal habría metido una regresión de accesibilidad que la app
+     hoy NO tiene, porque hoy no declara --spacing y hereda el default. */
+  --spacing:0.25rem;
+  --container-measure:68ch;
+  /* Idénticos a los valores por defecto de v4: se dejan como documentación del
+     contrato de §4.3, no porque cambien nada (R13). */
+  --breakpoint-sm:40rem;  --breakpoint-md:48rem;  --breakpoint-lg:64rem;
+  --breakpoint-xl:80rem;  --breakpoint-2xl:96rem;
+}
+
+/* ═══ BASE ══════════════════════════════════════════════════════════════════ */
+@layer base{
+  html{ color-scheme: dark; }
+  html[data-theme="light"]{ color-scheme: light; }
+
+  body{
+    background-color: var(--surface-0);
+    color: var(--content);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+    /* §8.5 El grano del paño: un pintado estático, coste cero.
+       (Sin background-attachment: el grano tileado puede desplazarse con el
+       contenido — imperceptible — y iOS ignora `fixed` de todas formas.)
+       Sustituye a tres blobs de 600-700px con blur(100px) y mix-blend-screen
+       animando transform en bucle infinito, más un backdrop-blur de 120px a
+       pantalla completa. El efecto más distintivo es también el más barato. */
+    background-image: url("/textures/baize-128.webp");
+    background-repeat: repeat;
+    background-blend-mode: overlay;
+  }
+  /* §8.5 La lámpara: fixed REAL — iOS ignora background-attachment: fixed */
+  body::before{
+    content:""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background: radial-gradient(120% 90% at 12% -8%, var(--lamp), transparent 60%);
   }
 
-  @keyframes glow-pulse {
-    0%, 100% { opacity: 0.4; filter: blur(80px); }
-    50% { opacity: 0.7; filter: blur(120px); }
+  /* §12.2 Foco visible en todo lo accionable, sin excepción.
+     Va con :where() (especificidad 0) a propósito: cualquier regla de
+     componente lo puede ajustar, pero NADIE debe ponerle `outline: none` sin
+     sustituto. Hoy hay 32 `outline-none` y 0 `focus-visible`; los retira 1.6. */
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible{
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+  }
+
+  /* Cifras tabulares donde el número cambia en su sitio (§3.3) */
+  :where([data-numeric], td[data-numeric], .tnum){ font-variant-numeric: tabular-nums; }
+
+  ::selection{ background: color-mix(in oklab, var(--accent) 30%, transparent); }
+
+  ::-webkit-scrollbar{ width:10px; height:10px; }
+  ::-webkit-scrollbar-track{ background: transparent; }
+  ::-webkit-scrollbar-thumb{
+    background: var(--stroke-edge);
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover{ background: var(--stroke-control); background-clip: content-box; }
+  *{ scrollbar-width: thin; scrollbar-color: var(--stroke-edge) transparent; }
+
+  /* §7.6 Obligatorio */
+  @media (prefers-reduced-motion: reduce){
+    *, *::before, *::after{
+      animation-duration:1ms !important; animation-iteration-count:1 !important;
+      transition-duration:1ms !important; scroll-behavior:auto !important;
+    }
   }
 }
 
-@layer base {
-  body {
-    @apply bg-midnight text-gray-100 font-sans antialiased overflow-x-hidden;
-    background-image:
-      radial-gradient(circle at 50% -20%, rgba(157, 133, 255, 0.12), transparent),
-      radial-gradient(circle at 10% 20%, rgba(0, 245, 212, 0.05), transparent);
-    background-attachment: fixed;
+/* ═══ .doc-prose — tipografía de documento propia (§P1) ═════════════════════ */
+/* Decisión: NO se instala @tailwindcss/typography. El acta necesita las reglas
+   de un libro de actas, no las de un artículo de blog, y el Preflight de
+   Tailwind pone h1-h6 en font-size:inherit, ol/ul en list-style:none y los
+   enlaces en color:inherit — así que sin esta capa el markdown de los agentes
+   se renderiza como un muro gris. Cero dependencias nuevas. */
+@layer components{
+  .doc-prose{
+    font-family: var(--font-serif);
+    font-size: var(--text-base);
+    line-height: 1.55;
+    color: var(--content);
+    max-inline-size: var(--container-measure);
+    text-wrap: pretty;
+  }
+  .doc-prose > * + *{ margin-block-start: 0.75em; }
+
+  .doc-prose :is(h1,h2,h3,h4,h5,h6){
+    font-family: var(--font-serif); font-weight:600;
+    color: var(--content-strong); text-wrap: balance;
+    /* §4.1 más aire encima que debajo */
+    margin-block: 2em 0.75em;
+  }
+  .doc-prose > :is(h1,h2,h3):first-child{ margin-block-start: 0; }
+  .doc-prose h1{ font-size:var(--text-3xl); line-height:1.15; letter-spacing:-0.02em; }
+  .doc-prose h2{ font-size:var(--text-2xl); line-height:1.22; letter-spacing:-0.015em;
+                 padding-block-end:0.3em; border-block-end:1px solid var(--stroke-hairline); }
+  .doc-prose h3{ font-size:var(--text-xl); line-height:1.3; }
+  .doc-prose h4{ font-size:var(--text-lg); }
+  .doc-prose :is(h5,h6){ font-family:var(--font-sans); font-size:var(--text-micro);
+                 text-transform:uppercase; letter-spacing:0.07em; color:var(--content-muted); }
+
+  .doc-prose :is(ul,ol){ padding-inline-start:1.4em; margin-block:0.75em; }
+  .doc-prose ul{ list-style: disc; }
+  .doc-prose ol{ list-style: decimal; }
+  .doc-prose li{ margin-block:0.3em; }
+  .doc-prose li::marker{ color: var(--accent); }
+  .doc-prose li > :is(ul,ol){ margin-block:0.3em; }
+
+  .doc-prose a{ color: var(--accent); text-decoration: underline;
+                text-decoration-thickness:1px; text-underline-offset:2px; }
+  .doc-prose a:hover{ color: var(--accent-hover); text-decoration-thickness:2px; }
+
+  .doc-prose strong{ font-weight:650; color: var(--content-strong); }
+  .doc-prose em{ font-style: italic; }
+
+  .doc-prose blockquote{
+    margin-block:1em; padding: 0.5em 1em;
+    border-inline-start: 2px solid var(--dissent);
+    background: color-mix(in oklab, var(--dissent) 8%, transparent);
+    font-style: italic; color: var(--content);
   }
 
-  /* Premium Scrollbar */
-  ::-webkit-scrollbar {
-    @apply w-1.5;
+  .doc-prose code{
+    font-family: var(--font-mono); font-size: 0.875em;
+    background: var(--surface-inset); color: var(--content-strong);
+    padding: 0.1em 0.35em; border-radius: var(--radius-xs);
+    border: 1px solid var(--stroke-hairline);
+  }
+  .doc-prose pre{
+    margin-block:1em; padding:1em; overflow-x:auto;
+    background: var(--surface-1); border:1px solid var(--stroke-edge);
+    border-radius: var(--radius-sm);
+  }
+  .doc-prose pre code{ background:none; border:none; padding:0; font-size:var(--text-xs); }
+
+  .doc-prose table{
+    inline-size:100%; margin-block:1em; border-collapse:collapse;
+    font-family: var(--font-sans); font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+  }
+  .doc-prose th{
+    text-align:start; font-family:var(--font-sans); font-size:var(--text-micro);
+    text-transform:uppercase; letter-spacing:0.07em; color:var(--content-muted);
+    padding:0.5em 0.75em; border-block-end:1px solid var(--stroke-control);
+  }
+  .doc-prose td{ padding:0.5em 0.75em; border-block-end:1px solid var(--stroke-hairline); }
+
+  .doc-prose hr{ margin-block:2em; border:0; border-block-start:1px solid var(--stroke-edge); }
+  .doc-prose img{ max-inline-size:100%; height:auto; border-radius:var(--radius-sm);
+                  border:1px solid var(--stroke-hairline); }
+
+  /* El acta se lee siempre sobre papel, en los dos temas.
+     B9 (auditoría v3): la hoja no re-colorea por elemento — RE-DECLARA EL
+     CONTEXTO de variables. .doc-prose consume var(--content/--accent/...):
+     sin este bloque, en tema oscuro el blockquote quedaba a 1.13:1, th/h5 a
+     1.78:1, las viñetas a 2.10:1 y los enlaces a 4.17:1 sobre el papel
+     (medido). Con él, todo lo que se pinte dentro de la hoja — incluido un
+     chip semántico — usa la rama clara automáticamente. */
+  .acta-sheet{
+    background: var(--surface-doc);
+    border-radius: var(--radius-lg);
+    /* §6 el bisel de la hoja encuadernada */
+    clip-path: polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px);
+    box-shadow: var(--shadow-e2);
+
+    --content: var(--graphite-800);        --content-strong: var(--graphite-900);
+    --content-muted: var(--graphite-700);  --content-quiet: var(--graphite-600);
+    --accent: var(--brass-800);            /* enlaces y viñetas: ≥4.5:1 sobre paper-50 */
+    --accent-hover: var(--brass-700);
+    --dissent: var(--oxblood-600);         --dissent-strong: var(--oxblood-700);
+    --certify: var(--aniline-600);
+    --surface-inset: var(--paper-300);
+    --stroke-hairline: color-mix(in oklab, var(--graphite-900) 12%, transparent);
+    --stroke-edge: color-mix(in oklab, var(--graphite-900) 16%, transparent);
+    --stroke-control: color-mix(in oklab, var(--graphite-900) 50%, transparent);
+    --success: oklch(0.53 0.14 150); --warning: oklch(0.55 0.19 75);
+    --danger: oklch(0.565 0.19 25);  --info: oklch(0.535 0.12 232);
+
+    color: var(--content);
+  }
+}
+
+/* ╔═══════════════════════════════════════════════════════════════════════════╗
+   ║  SHIM DE TRANSICIÓN — retirar en fase 6                                   ║
+   ╚═══════════════════════════════════════════════════════════════════════════╝
+   Bloqueante B3 de la auditoría. Estas clases siguen usadas en `src` y sus
+   sustitutos (`<Modal>`, `<Card>`, `<Field>`, el grano del paño) no llegan
+   hasta las fases 3-6. Borrarlas hoy dejaría paneles, tarjetas y campos de
+   media app sin fondo ni borde durante semanas. Se reimplementan sobre los
+   tokens nuevos, respetando P3 (materia, no luz): fuera el `backdrop-blur`, que
+   §P3 sólo autoriza en el velo de un modal y como máximo a 3px.
+
+   Al retirarlas, comprobar que no queda ningún uso:
+     grep -rn 'glass-panel\|glass-card\|glass-input\|hover-lift\|active-scale\|aurora-' src
+*/
+@layer components{
+  /* e2 de §5: relleno + filete + filete interior + sombra proyectada.
+     Se elige e2 porque los 11 usos son tarjetas y paneles de contenido; los
+     modales que la usan suben a e4 cuando la fase 1.8 los pase a <Modal>. */
+  .glass-panel{
+    background: var(--surface-2);
+    border: 1px solid var(--stroke-edge);
+    box-shadow: var(--shadow-e2), inset 0 1px 0 var(--stroke-highlight);
   }
 
-  ::-webkit-scrollbar-track {
-    @apply bg-transparent;
+  /* §9.3 Card. Sin usos hoy; se define para que nadie la reintroduzca rota. */
+  .glass-card{
+    background: var(--surface-2);
+    border: 1px solid var(--stroke-edge);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-e2), inset 0 1px 0 var(--stroke-highlight);
+    transition: border-color var(--duration-tap) var(--ease-settle);
   }
+  .glass-card:hover{ border-color: var(--brass-600); }
 
-  ::-webkit-scrollbar-thumb {
-    @apply bg-white/5 rounded-full border-2 border-midnight hover:bg-white/10 transition-colors;
+  /* §9.2 Input. El `outline-none` de la versión anterior es literalmente el
+     D07 que la fase 1 viene a arreglar, así que NO se reproduce: el foco lo
+     pone la regla global de :focus-visible de @layer base y aquí sólo se añade
+     el filete de latón, porque §9.2 pide filete Y anillo, los dos. */
+  .glass-input{
+    background: var(--surface-1);
+    border: 1px solid var(--stroke-control); /* 3.47:1 ✓ WCAG 1.4.11 */
+    border-radius: var(--radius-sm);
+    color: var(--content);
+    transition: border-color var(--duration-tap) var(--ease-settle);
   }
-}
+  .glass-input::placeholder{ color: var(--content-quiet); } /* 4.59:1: el placeholder es texto y cumple AA */
+  .glass-input:hover{ border-color: var(--brass-600); }
+  .glass-input:focus-visible{ border-color: var(--brass-400); }
 
-/* Silicon Valley Glass Effects */
-.glass-panel {
-  @apply backdrop-blur-3xl bg-surface/80 border border-white/5 shadow-2xl;
-}
+  /* §7.5 hover de fila. OJO: el nombre miente y el sistema lo prohíbe — §9.3 y
+     §7.5 dicen «sin translateY, sin escala» en hover. Se reimplementa como el
+     hover que sí manda el sistema (fondo a hairline, filete a latón) y se deja
+     el nombre para no tocar sitios de uso. Hoy tiene 0 usos, así que muere en
+     la fase 6 sin coste. */
+  .hover-lift{ transition: background-color var(--duration-tap) var(--ease-settle),
+                           border-color var(--duration-tap) var(--ease-settle); }
+  .hover-lift:hover{ background-color: var(--stroke-hairline); border-color: var(--brass-600); }
 
-.glass-card {
-  @apply backdrop-blur-xl bg-white/5 border border-white/10 hover:border-white/20 transition-all duration-300;
-}
+  /* §7.5 press: scale(0.985), NO 0.95 — a 0.95 el botón se hunde y parece de
+     juguete. Los 12 usos heredaban `active:scale-95`. */
+  .active-scale{ transition: transform var(--duration-tap) var(--ease-settle); }
+  .active-scale:active{ transform: scale(0.985); }
 
-.glass-input {
-  @apply bg-white/5 border border-white/10 focus:border-electric-cyan/50 focus:bg-white/8 outline-none transition-all;
-}
+  /* Contenedor de los blobs: sólo layout, inofensivo. */
+  .aurora-container{ position:absolute; inset:0; z-index:-10; overflow:hidden; }
 
-/* Aurora Components */
-.aurora-container {
-  @apply absolute inset-0 -z-10 overflow-hidden;
-}
-
-.aurora-blob {
-  @apply absolute rounded-full mix-blend-screen animate-aurora-mesh;
-  filter: blur(100px);
-}
-
-/* Micro-interactions */
-.hover-lift {
-  @apply transition-transform duration-300 hover:-translate-y-1;
-}
-
-.active-scale {
-  @apply active:scale-95 transition-transform;
+  /* §7.4 prohíbe expresamente los bucles del aurora («los cuatro bucles
+     heredados no vuelven») y §8.5 dice que el grano del paño los SUSTITUYE, y
+     el grano ya está vivo en `body`. Así que el shim correcto no es repintar
+     los blobs: es apagarlos. Se quedan 6 divs inertes en 3 páginas hasta que
+     3.1 borre el marcado, y a cambio se liberan 6 capas compuestas con
+     blur(100px) desde hoy. La clase sigue definida para que el detector de
+     clases muertas no la marque. */
+  .aurora-blob{ display: none; }
 }
