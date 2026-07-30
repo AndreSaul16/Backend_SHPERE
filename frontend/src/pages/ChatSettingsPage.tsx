@@ -31,6 +31,29 @@ export function ChatSettingsPage() {
     const [boardLoading, setBoardLoading] = useState(false);
     const [boardError, setBoardError] = useState<string | null>(null);
 
+    // Nombre base derivado de la sesión/agente. Se calcula ANTES de cualquier
+    // return condicional porque `localName` y su efecto de sincronización son
+    // hooks: si vivieran debajo del early return, React vería un número de
+    // hooks distinto entre el render "sesión cargando" y el render con sesión
+    // ("Rendered more hooks than during the previous render") y la pantalla
+    // reventaba al entrar en /chat/settings antes de que llegara la sesión.
+    // Tolera currentSession/activeAgent undefined y se sincroniza al llegar.
+    const sessionName = currentSession?.visual_config?.name || currentSession?.title;
+    const baseName =
+        sessionName ||
+        activeAgent?.identity?.name ||
+        activeAgent?.name.match(/^(.+?)\s*\(([A-Z]+)\)$/)?.[1]?.trim() ||
+        activeAgent?.name ||
+        "";
+
+    // Input controlado con debounce para el nombre
+    const [localName, setLocalName] = useState(baseName);
+
+    // Sincronizar cuando cambia la sesión (o cuando llega por primera vez)
+    useEffect(() => {
+        setLocalName(baseName);
+    }, [currentSessionId, baseName]);
+
     const getAuthToken = useCallback(async () => {
         const { getAuth } = await import("firebase/auth");
         const user = getAuth().currentUser;
@@ -139,22 +162,13 @@ export function ChatSettingsPage() {
     };
 
     // Use data from session if available, otherwise fallback to agent
-    const sessionName = currentSession?.visual_config?.name || currentSession?.title;
     // For direct chats, prioritize bubble_color, then effective color. For groups, use theme color.
     const sessionColor = currentSession?.visual_config?.bubble_color || currentSession?.visual_config?.color || activeAgent.hexColor;
 
-    const baseName = sessionName || activeAgent.identity?.name || (activeAgent.name.match(/^(.+?)\s*\(([A-Z]+)\)$/)?.[1]?.trim() || activeAgent.name);
     const roleLabel = activeAgent.identity?.role || (activeAgent.name.match(/^(.+?)\s*\(([A-Z]+)\)$/)?.[2] || activeAgent.role);
 
-    // isGroupChat already computed above (before hooks)
-
-    // Input controlado con debounce para el nombre
-    const [localName, setLocalName] = useState(baseName);
-
-    // Sincronizar cuando cambia la sesión
-    useEffect(() => {
-        setLocalName(baseName);
-    }, [currentSessionId, baseName]);
+    // isGroupChat, baseName, localName y su efecto de sincronización se calculan
+    // arriba (antes del early return) para no violar las Rules of Hooks.
 
     const handleNameInput = (val: string) => {
         setLocalName(val);
