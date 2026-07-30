@@ -235,7 +235,10 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                         />
                     )}
 
-                    <div className="prose prose-invert prose-sm max-w-none break-words leading-relaxed [&>p]:mb-3 last:[&>p]:mb-0">
+                    {/* `max-w-none` neutraliza la medida de 68ch de `.doc-prose`:
+                        aquí la impone la burbuja, y la medida del transcript la
+                        fija la tarea 3.7. */}
+                    <div className="doc-prose max-w-none break-words">
                         {/* Process message content, detecting artifact + tool placeholders */}
                         {(() => {
                             const combinedPattern = /\[ARTIFACT:([^:]+):([^\]]+)\]|\[TOOL_START:([^\]]+)\]|\[TOOL_RESULT:([^:]+):([^\]]*)\]|\[TOOL_ERROR:([^:]+):([^\]]*)\]/g;

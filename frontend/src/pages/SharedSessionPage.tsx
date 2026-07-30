@@ -84,7 +84,7 @@ export function SharedSessionPage() {
                                             {m.agent_role}
                                         </p>
                                     )}
-                                    <div className="prose prose-invert prose-sm max-w-none break-words">
+                                    <div className="doc-prose max-w-none break-words">
                                         <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                                             {m.content}
                                         </ReactMarkdown>

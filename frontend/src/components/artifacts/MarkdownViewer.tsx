@@ -40,23 +40,19 @@ export function MarkdownViewer({ artifact }: MarkdownViewerProps) {
 
             {/* Markdown Content */}
             <div className="flex-1 overflow-auto p-8 sm:p-12 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-                <div className="max-w-3xl mx-auto">
-                    <div className="prose prose-invert prose-sm 
-                        prose-headings:text-white prose-headings:font-bold prose-headings:tracking-tight
-                        prose-p:text-gray-400 prose-p:leading-relaxed prose-p:mb-6
-                        prose-a:text-luxury-purple prose-a:no-underline hover:prose-a:underline
-                        prose-code:text-electric-cyan prose-code:bg-white/5 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:before:content-none prose-code:after:content-none
-                        prose-pre:bg-white/[0.03] prose-pre:border prose-pre:border-white/5 prose-pre:rounded-2xl
-                        prose-strong:text-white prose-strong:font-bold
-                        prose-ul:text-gray-400 prose-ol:text-gray-400
-                        prose-blockquote:border-l-luxury-purple prose-blockquote:bg-luxury-purple/5 prose-blockquote:py-1 prose-blockquote:px-6 prose-blockquote:rounded-r-xl
-                        prose-img:rounded-2xl prose-img:border prose-img:border-white/5
-                    ">
+                {/* El acta se lee sobre papel, en los dos temas: `.acta-sheet`
+                    aporta la superficie, el bisel de 6px y — lo importante — el
+                    re-mapeo de contexto de variables de DESIGN §13, sin el cual
+                    `.doc-prose` sacaría tinta clara sobre papel (blockquote a
+                    1.13:1, viñetas a 2.10:1). La cabecera con fecha y recuento y
+                    la medida definitiva son de la tarea 2.1. */}
+                <article className="acta-sheet mx-auto p-8 sm:p-10">
+                    <div className="doc-prose">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
                             {artifact.content}
                         </ReactMarkdown>
                     </div>
-                </div>
+                </article>
             </div>
         </div>
     );
