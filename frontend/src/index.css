@@ -18,9 +18,11 @@
 @custom-variant dark (&:where(:root:not([data-theme=light]), :root:not([data-theme=light]) *));
 
 /* ─── Fuentes: auto-hospedadas, variables, subseteadas latin+latin-ext ────────
-   Sustituyen al `@import url(https://fonts.googleapis.com/...)` que había aquí
-   mismo, que era la peor estrategia posible: CSS bloqueante que dispara otra
-   petición de CSS que dispara las de las fuentes, sin preconnect ni preload.
+   Sustituyen al `@import url(...)` de Google Fonts que había aquí mismo, que era
+   la peor estrategia posible: CSS bloqueante que dispara otra petición de CSS
+   que dispara las de los ficheros de fuente, sin preconnect ni preload.
+   (El dominio no se escribe ni en un comentario: DESIGN §3.1.5 lo audita con un
+   grep literal sobre todo `frontend/`, y ese grep debe dar 0.)
    Se generan con `scripts/subset-fonts.sh`, que verifica que los ejes `wdth`
    (Archivo) y `opsz` (Literata) sobreviven al subseteo. */
 @font-face{font-family:Archivo;src:url(/fonts/archivo-var.woff2)format("woff2-variations");
