@@ -85,8 +85,8 @@ export function AdminPage() {
         return (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-center p-8">
                 <ShieldAlert className="h-12 w-12 text-rose-400" />
-                <h2 className="text-lg font-bold text-text-primary">Sin acceso</h2>
-                <p className="text-sm text-text-secondary">No tienes permisos para ver el panel de administración.</p>
+                <h2 className="text-lg font-bold text-content-strong">Sin acceso</h2>
+                <p className="text-sm text-content-muted">No tienes permisos para ver el panel de administración.</p>
             </div>
         );
     }
@@ -94,12 +94,12 @@ export function AdminPage() {
     return (
         <div className="h-full overflow-y-auto p-6 space-y-6">
             <div className="flex items-center gap-4 border-b border-surface-highlight pb-3">
-                <h1 className="text-xl font-bold text-text-primary">Administración</h1>
+                <h1 className="text-xl font-bold text-content-strong">Administración</h1>
                 <div className="flex gap-1">
                     <button
                         onClick={() => setTab("users")}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                            tab === "users" ? "bg-electric-cyan/10 text-electric-cyan" : "text-text-secondary hover:text-text-primary"
+                            tab === "users" ? "bg-electric-cyan/10 text-electric-cyan" : "text-content-muted hover:text-content-strong"
                         }`}
                     >
                         <Users className="h-3.5 w-3.5" /> Usuarios
@@ -107,7 +107,7 @@ export function AdminPage() {
                     <button
                         onClick={() => setTab("metrics")}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                            tab === "metrics" ? "bg-electric-cyan/10 text-electric-cyan" : "text-text-secondary hover:text-text-primary"
+                            tab === "metrics" ? "bg-electric-cyan/10 text-electric-cyan" : "text-content-muted hover:text-content-strong"
                         }`}
                     >
                         <BarChart3 className="h-3.5 w-3.5" /> Métricas
@@ -123,18 +123,18 @@ export function AdminPage() {
                             onSubmit={(e) => { e.preventDefault(); loadUsers(query); }}
                             className="relative"
                         >
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-content-muted" />
                             <input
                                 aria-label="Buscar usuario"
                                 placeholder="Buscar por email o UID…"
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
-                                className="w-full bg-surface border border-surface-highlight rounded-xl py-2 pl-9 pr-4 text-sm text-text-primary focus:outline-none focus:border-electric-cyan/50"
+                                className="w-full bg-surface border border-surface-highlight rounded-xl py-2 pl-9 pr-4 text-sm text-content-strong focus:outline-none focus:border-electric-cyan/50"
                             />
                         </form>
 
                         {loadingUsers ? (
-                            <Loader2 className="h-5 w-5 animate-spin text-text-secondary" />
+                            <Loader2 className="h-5 w-5 animate-spin text-content-muted" />
                         ) : (
                             <div className="space-y-1">
                                 {users.map((u) => (
@@ -147,14 +147,14 @@ export function AdminPage() {
                                                 : "border-surface-highlight hover:bg-surface-highlight/40"
                                         }`}
                                     >
-                                        <p className="text-sm text-text-primary truncate">{u.email || u.uid}</p>
-                                        <p className="text-[11px] text-text-secondary font-mono">
+                                        <p className="text-sm text-content-strong truncate">{u.email || u.uid}</p>
+                                        <p className="text-[11px] text-content-muted font-mono">
                                             plan: {u.plan} · pro: {u.pro_messages_balance} · topup: {u.topup_messages_balance}
                                         </p>
                                     </button>
                                 ))}
                                 {users.length === 0 && (
-                                    <p className="text-xs text-text-secondary">Sin resultados.</p>
+                                    <p className="text-xs text-content-muted">Sin resultados.</p>
                                 )}
                             </div>
                         )}
@@ -165,8 +165,8 @@ export function AdminPage() {
                         {selected ? (
                             <>
                                 <div className="p-4 rounded-xl bg-surface/40 border border-surface-highlight space-y-3">
-                                    <h3 className="text-sm font-semibold text-text-primary">Ajustar créditos</h3>
-                                    <p className="text-[11px] text-text-secondary">{selected.email || selected.uid}</p>
+                                    <h3 className="text-sm font-semibold text-content-strong">Ajustar créditos</h3>
+                                    <p className="text-[11px] text-content-muted">{selected.email || selected.uid}</p>
                                     <div className="flex gap-2">
                                         <input
                                             aria-label="Delta de créditos"
@@ -174,14 +174,14 @@ export function AdminPage() {
                                             value={adjustDelta}
                                             onChange={(e) => setAdjustDelta(Number(e.target.value))}
                                             placeholder="delta (+/-)"
-                                            className="w-28 bg-midnight border border-surface-highlight rounded-lg px-2 py-1.5 text-sm text-text-primary"
+                                            className="w-28 bg-midnight border border-surface-highlight rounded-lg px-2 py-1.5 text-sm text-content-strong"
                                         />
                                         <input
                                             aria-label="Motivo"
                                             value={adjustReason}
                                             onChange={(e) => setAdjustReason(e.target.value)}
                                             placeholder="Motivo"
-                                            className="flex-1 min-w-0 bg-midnight border border-surface-highlight rounded-lg px-2 py-1.5 text-sm text-text-primary"
+                                            className="flex-1 min-w-0 bg-midnight border border-surface-highlight rounded-lg px-2 py-1.5 text-sm text-content-strong"
                                         />
                                         <button
                                             onClick={submitAdjust}
@@ -194,22 +194,22 @@ export function AdminPage() {
                                 </div>
 
                                 <div className="p-4 rounded-xl bg-surface/40 border border-surface-highlight">
-                                    <h3 className="text-sm font-semibold text-text-primary mb-2">Transacciones</h3>
+                                    <h3 className="text-sm font-semibold text-content-strong mb-2">Transacciones</h3>
                                     <div className="space-y-1 max-h-80 overflow-y-auto">
                                         {txs.map((t, i) => (
                                             <div key={i} className="flex items-center justify-between text-[11px] font-mono">
-                                                <span className="text-text-secondary truncate">{t.reason}</span>
+                                                <span className="text-content-muted truncate">{t.reason}</span>
                                                 <span className={t.delta < 0 ? "text-rose-400" : "text-emerald-400"}>
                                                     {t.delta > 0 ? "+" : ""}{t.delta}
                                                 </span>
                                             </div>
                                         ))}
-                                        {txs.length === 0 && <p className="text-xs text-text-secondary">Sin transacciones.</p>}
+                                        {txs.length === 0 && <p className="text-xs text-content-muted">Sin transacciones.</p>}
                                     </div>
                                 </div>
                             </>
                         ) : (
-                            <p className="text-sm text-text-secondary">Selecciona un usuario para ver detalles.</p>
+                            <p className="text-sm text-content-muted">Selecciona un usuario para ver detalles.</p>
                         )}
                     </div>
                 </div>
@@ -223,14 +223,14 @@ export function AdminPage() {
 function StatCard({ label, value }: { label: string; value: string | number }) {
     return (
         <div className="p-4 rounded-xl bg-surface/40 border border-surface-highlight">
-            <p className="text-[11px] uppercase tracking-widest text-text-secondary/60">{label}</p>
-            <p className="text-xl font-bold text-text-primary mt-1">{value}</p>
+            <p className="text-[11px] uppercase tracking-widest text-content-quiet">{label}</p>
+            <p className="text-xl font-bold text-content-strong mt-1">{value}</p>
         </div>
     );
 }
 
 function MetricsView({ metrics }: { metrics: AdminMetrics | null }) {
-    if (!metrics) return <Loader2 className="h-5 w-5 animate-spin text-text-secondary" />;
+    if (!metrics) return <Loader2 className="h-5 w-5 animate-spin text-content-muted" />;
 
     const t = metrics.totals;
     const maxConsumed = Math.max(1, ...metrics.by_day.map((d) => d.credits_consumed));
@@ -251,7 +251,7 @@ function MetricsView({ metrics }: { metrics: AdminMetrics | null }) {
 
             {/* Gráfico de barras: créditos consumidos por día (SVG/divs a mano) */}
             <div className="p-4 rounded-xl bg-surface/40 border border-surface-highlight">
-                <h3 className="text-sm font-semibold text-text-primary mb-4">
+                <h3 className="text-sm font-semibold text-content-strong mb-4">
                     Créditos consumidos / día (últimos {metrics.days} días)
                 </h3>
                 <div className="flex items-end gap-1 h-40" role="img" aria-label="Créditos consumidos por día">
@@ -264,7 +264,7 @@ function MetricsView({ metrics }: { metrics: AdminMetrics | null }) {
                         </div>
                     ))}
                     {metrics.by_day.length === 0 && (
-                        <p className="text-xs text-text-secondary">Sin datos en el periodo.</p>
+                        <p className="text-xs text-content-muted">Sin datos en el periodo.</p>
                     )}
                 </div>
             </div>

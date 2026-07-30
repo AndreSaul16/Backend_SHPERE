@@ -38,7 +38,7 @@ export function SharedSessionPage() {
     }, [token]);
 
     return (
-        <div className="min-h-screen bg-midnight text-text-primary">
+        <div className="min-h-screen bg-midnight text-content-strong">
             {/* Banner de origen */}
             <div className="sticky top-0 z-10 border-b border-surface-highlight bg-midnight/90 backdrop-blur-md px-4 py-3 flex items-center justify-between gap-3">
                 <span className="text-sm font-semibold tracking-tight">
@@ -54,12 +54,12 @@ export function SharedSessionPage() {
 
             <div className="mx-auto max-w-3xl px-4 py-8">
                 {loading && (
-                    <p className="text-center text-text-secondary text-sm py-16">Cargando conversación…</p>
+                    <p className="text-center text-content-muted text-sm py-16">Cargando conversación…</p>
                 )}
 
                 {!loading && error && (
                     <div className="text-center py-16 space-y-4">
-                        <p className="text-text-secondary text-sm">{error}</p>
+                        <p className="text-content-muted text-sm">{error}</p>
                         <Link to="/register" className="text-electric-cyan text-sm font-semibold hover:underline">
                             Descubre SPHERE
                         </Link>
@@ -80,7 +80,7 @@ export function SharedSessionPage() {
                                     }
                                 >
                                     {m.role === "assistant" && m.agent_role && (
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-text-secondary/60 mb-1.5">
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-content-quiet mb-1.5">
                                             {m.agent_role}
                                         </p>
                                     )}
@@ -92,7 +92,7 @@ export function SharedSessionPage() {
                                 </div>
                             ))}
                             {data.messages.length === 0 && (
-                                <p className="text-center text-text-secondary text-sm py-8">
+                                <p className="text-center text-content-muted text-sm py-8">
                                     Esta conversación aún no tiene mensajes.
                                 </p>
                             )}
@@ -100,7 +100,7 @@ export function SharedSessionPage() {
 
                         {/* CTA a registro */}
                         <div className="mt-12 rounded-2xl border border-surface-highlight bg-surface/50 p-6 text-center space-y-3">
-                            <p className="text-sm text-text-secondary">
+                            <p className="text-sm text-content-muted">
                                 Crea tu propio consejo de directores con IA.
                             </p>
                             <Link

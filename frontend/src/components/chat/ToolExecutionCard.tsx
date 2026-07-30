@@ -69,7 +69,7 @@ export const ToolExecutionCard: React.FC<ToolExecutionCardProps> = ({
                 'my-2 rounded-lg border px-3 py-2 text-xs',
                 isFailed
                     ? 'bg-red-500/5 border-red-500/30'
-                    : 'bg-surface-elevated/50 border-surface-highlight',
+                    : 'bg-surface-3 border-surface-highlight',
             )}
         >
             <div
@@ -83,14 +83,14 @@ export const ToolExecutionCard: React.FC<ToolExecutionCardProps> = ({
                 ) : (
                     <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />
                 )}
-                <Wrench className="h-3 w-3 text-text-secondary" />
-                <span className={cn('font-medium flex-1', isFailed ? 'text-red-300' : 'text-text-secondary')}>
+                <Wrench className="h-3 w-3 text-content-muted" />
+                <span className={cn('font-medium flex-1', isFailed ? 'text-red-300' : 'text-content-muted')}>
                     {isFailed ? `${label} — falló` : label}
                 </span>
                 {result && (
                     expanded
-                        ? <ChevronUp className="h-3 w-3 text-text-muted" />
-                        : <ChevronDown className="h-3 w-3 text-text-muted" />
+                        ? <ChevronUp className="h-3 w-3 text-content-quiet" />
+                        : <ChevronDown className="h-3 w-3 text-content-quiet" />
                 )}
             </div>
             {isFailed && (
@@ -119,7 +119,7 @@ export const ToolExecutionCard: React.FC<ToolExecutionCardProps> = ({
                         exit={{ height: 0, opacity: 0 }}
                         className="overflow-hidden"
                     >
-                        <pre className="mt-2 text-[11px] text-text-muted whitespace-pre-wrap break-words max-h-32 overflow-y-auto bg-midnight/60 rounded p-2">
+                        <pre className="mt-2 text-[11px] text-content-quiet whitespace-pre-wrap break-words max-h-32 overflow-y-auto bg-midnight/60 rounded p-2">
                             {result}
                         </pre>
                     </motion.div>

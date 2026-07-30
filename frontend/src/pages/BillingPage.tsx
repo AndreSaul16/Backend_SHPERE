@@ -150,7 +150,7 @@ export const BillingPage: React.FC = () => {
                 <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-8 text-center max-w-md">
                     <div className="text-4xl mb-4">⚠️</div>
                     <h2 className="text-xl font-bold text-red-400 mb-2">Error de conexión</h2>
-                    <p className="text-text-secondary mb-6">{error}</p>
+                    <p className="text-content-muted mb-6">{error}</p>
                     <button
                         onClick={refresh}
                         className="px-6 py-3 bg-electric-cyan/10 text-electric-cyan border border-electric-cyan/30 hover:bg-electric-cyan hover:text-midnight rounded-xl transition-all font-medium"
@@ -166,10 +166,10 @@ export const BillingPage: React.FC = () => {
         <div className="flex flex-col h-full bg-midnight/40 overflow-y-auto">
             {/* Header */}
             <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-surface flex items-center gap-3 bg-midnight/90 backdrop-blur-md sticky top-0 z-10">
-                <Link to="/" className="p-2 hover:bg-surface rounded-full transition-colors text-text-secondary hover:text-text-primary">
+                <Link to="/" className="p-2 hover:bg-surface rounded-full transition-colors text-content-muted hover:text-content-strong">
                     <ArrowLeft className="h-5 w-5" />
                 </Link>
-                <h1 className="text-base sm:text-xl font-bold text-text-primary flex items-center gap-2">
+                <h1 className="text-base sm:text-xl font-bold text-content-strong flex items-center gap-2">
                     <CreditCard className="h-5 w-5 text-electric-cyan" />
                     Créditos y Facturación
                 </h1>
@@ -200,20 +200,20 @@ export const BillingPage: React.FC = () => {
                     <div className="glass-panel p-6 rounded-2xl border border-surface-highlight">
                         <div className="flex items-center gap-2 mb-4">
                             <Zap className="h-4 w-4 text-electric-cyan" />
-                            <h2 className="text-xs uppercase tracking-widest font-mono text-text-secondary">Tus Créditos</h2>
+                            <h2 className="text-xs uppercase tracking-widest font-mono text-content-muted">Tus Créditos</h2>
                         </div>
                         <div className="flex flex-col gap-3">
                             <div className="flex justify-between items-baseline">
-                                <span className="text-text-secondary text-sm">Plan Free (30/mes)</span>
-                                <span className="text-2xl font-bold text-text-primary">{pro_messages_balance}</span>
+                                <span className="text-content-muted text-sm">Plan Free (30/mes)</span>
+                                <span className="text-2xl font-bold text-content-strong">{pro_messages_balance}</span>
                             </div>
                             <div className="flex justify-between items-baseline">
-                                <span className="text-text-secondary text-sm">Comprados</span>
+                                <span className="text-content-muted text-sm">Comprados</span>
                                 <span className="text-2xl font-bold text-electric-cyan">{topup_messages_balance}</span>
                             </div>
                             <div className="border-t border-surface-highlight pt-3 flex justify-between items-baseline">
-                                <span className="text-text-primary font-medium">Total disponible</span>
-                                <span className="text-3xl font-bold text-text-primary">{totalBalance}</span>
+                                <span className="text-content-strong font-medium">Total disponible</span>
+                                <span className="text-3xl font-bold text-content-strong">{totalBalance}</span>
                             </div>
                         </div>
                     </div>
@@ -223,11 +223,11 @@ export const BillingPage: React.FC = () => {
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-2">
                                 <HardDrive className="h-4 w-4 text-luxury-purple" />
-                                <h2 className="text-xs uppercase tracking-widest font-mono text-text-secondary">Almacenamiento</h2>
+                                <h2 className="text-xs uppercase tracking-widest font-mono text-content-muted">Almacenamiento</h2>
                             </div>
                             <button
                                 onClick={() => profileService.getStorage().then(setStorage).catch(() => {})}
-                                className="p-1.5 text-text-secondary hover:text-electric-cyan transition-colors"
+                                className="p-1.5 text-content-muted hover:text-electric-cyan transition-colors"
                                 title="Actualizar"
                             >
                                 <RefreshCw className="h-3.5 w-3.5" />
@@ -236,21 +236,21 @@ export const BillingPage: React.FC = () => {
                         {storage ? (
                             <div className="space-y-3">
                                 <div className="flex items-end justify-between text-sm">
-                                    <span className="text-text-primary font-mono">
-                                        {formatBytes(storage.used_bytes)} <span className="text-text-secondary">/ {formatBytes(storage.quota_bytes)}</span>
+                                    <span className="text-content-strong font-mono">
+                                        {formatBytes(storage.used_bytes)} <span className="text-content-muted">/ {formatBytes(storage.quota_bytes)}</span>
                                     </span>
-                                    <span className="text-text-secondary text-xs font-mono">{storagePct.toFixed(1)}%</span>
+                                    <span className="text-content-muted text-xs font-mono">{storagePct.toFixed(1)}%</span>
                                 </div>
                                 <div className="h-2.5 bg-midnight/50 rounded-full overflow-hidden border border-surface-highlight">
                                     <div className={`h-full rounded-full transition-all ${barColor(storagePct)}`} style={{ width: `${storagePct}%` }} />
                                 </div>
-                                <div className="flex items-center gap-2 text-[11px] text-text-secondary">
+                                <div className="flex items-center gap-2 text-[11px] text-content-muted">
                                     <FileText className="h-3.5 w-3.5" />
                                     {storage.file_count} {storage.file_count === 1 ? 'documento' : 'documentos'} en tus agentes
                                 </div>
                             </div>
                         ) : (
-                            <p className="text-xs text-text-secondary">No se pudo obtener el uso de almacenamiento.</p>
+                            <p className="text-xs text-content-muted">No se pudo obtener el uso de almacenamiento.</p>
                         )}
                     </div>
                 </div>
@@ -258,8 +258,8 @@ export const BillingPage: React.FC = () => {
                 {/* Catálogo: solo si Stripe está configurado */}
                 {stripe_configured && (
                     <>
-                        <h2 className="text-lg font-bold mb-1 text-text-primary">Packs de recarga</h2>
-                        <p className="text-xs text-text-secondary mb-4">
+                        <h2 className="text-lg font-bold mb-1 text-content-strong">Packs de recarga</h2>
+                        <p className="text-xs text-content-muted mb-4">
                             1 mensaje a un agente = 1 crédito · 1 mensaje al Consejo (board meeting) = 5 créditos. Los créditos comprados no caducan.
                         </p>
 
@@ -271,9 +271,9 @@ export const BillingPage: React.FC = () => {
                                 onChange={(e) => setConsentAccepted(e.target.checked)}
                                 className="mt-0.5 h-4 w-4 shrink-0 accent-electric-cyan"
                             />
-                            <span className="text-xs text-text-secondary leading-relaxed">
+                            <span className="text-xs text-content-muted leading-relaxed">
                                 Solicito que los créditos se abonen en mi cuenta inmediatamente tras el pago y{' '}
-                                <span className="text-text-primary font-medium">
+                                <span className="text-content-strong font-medium">
                                     acepto perder mi derecho de desistimiento de 14 días
                                 </span>{' '}
                                 una vez comience la ejecución del servicio digital (art. 103.m LGDCU / Directiva 2011/83/UE).
@@ -292,10 +292,10 @@ export const BillingPage: React.FC = () => {
                                             POPULAR
                                         </div>
                                     )}
-                                    <h3 className="text-lg font-bold mb-1 text-text-primary">{pack.name}</h3>
+                                    <h3 className="text-lg font-bold mb-1 text-content-strong">{pack.name}</h3>
                                     <p className="text-sm text-electric-cyan font-medium mb-2">{pack.credits}</p>
-                                    <p className="text-3xl font-bold mb-3 text-text-primary">{pack.price}</p>
-                                    <p className="text-text-secondary text-sm mb-8 flex-1">{pack.blurb}</p>
+                                    <p className="text-3xl font-bold mb-3 text-content-strong">{pack.price}</p>
+                                    <p className="text-content-muted text-sm mb-8 flex-1">{pack.blurb}</p>
                                     <button
                                         onClick={() => handleCheckout(pack.id)}
                                         disabled={pendingPlan === pack.id || !consentAccepted}
@@ -313,24 +313,24 @@ export const BillingPage: React.FC = () => {
                             ))}
                         </div>
 
-                        <h2 className="text-lg font-bold mb-2 text-text-primary flex items-center gap-2">
+                        <h2 className="text-lg font-bold mb-2 text-content-strong flex items-center gap-2">
                             <Sparkles className="h-4 w-4 text-electric-cyan" />
                             Top-ups rápidos
                         </h2>
-                        <p className="text-sm text-text-secondary mb-6">Recargas pequeñas para cuando solo necesitas un empujón.</p>
+                        <p className="text-sm text-content-muted mb-6">Recargas pequeñas para cuando solo necesitas un empujón.</p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             {TOPUPS.map((t) => (
                                 <div key={t.id} className="glass-panel p-6 rounded-2xl border border-surface-highlight flex items-center justify-between gap-4">
                                     <div>
-                                        <h3 className="text-base font-bold text-text-primary">{t.name}</h3>
+                                        <h3 className="text-base font-bold text-content-strong">{t.name}</h3>
                                         <p className="text-sm text-electric-cyan font-medium">{t.credits}</p>
-                                        <p className="text-xs text-text-secondary mt-1">{t.blurb}</p>
+                                        <p className="text-xs text-content-muted mt-1">{t.blurb}</p>
                                     </div>
                                     <button
                                         onClick={() => handleCheckout(t.id)}
                                         disabled={pendingPlan === t.id || !consentAccepted}
                                         title={!consentAccepted ? 'Acepta las condiciones de compra para continuar' : undefined}
-                                        className="shrink-0 px-4 py-2.5 bg-surface-highlight hover:bg-surface-highlight/70 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-sm font-bold flex items-center gap-2 text-text-primary transition-colors"
+                                        className="shrink-0 px-4 py-2.5 bg-surface-highlight hover:bg-surface-highlight/70 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-sm font-bold flex items-center gap-2 text-content-strong transition-colors"
                                     >
                                         {pendingPlan === t.id && <Loader2 className="h-4 w-4 animate-spin" />}
                                         {t.price}

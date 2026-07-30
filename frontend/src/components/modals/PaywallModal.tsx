@@ -11,7 +11,7 @@ export const PaywallModal: React.FC = () => {
     if (paywall.reason === 'agents_full') message = "Has alcanzado el límite de agentes personalizados.";
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="bg-slate-900 border border-slate-700/50 rounded-xl p-6 w-full max-w-md shadow-2xl relative">
                 <h3 className="text-xl font-bold text-white mb-2">Límite Alcanzado</h3>
                 <p className="text-slate-300 mb-6">{message}</p>

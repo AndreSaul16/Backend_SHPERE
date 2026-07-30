@@ -103,15 +103,15 @@ export function BoardMeetingSettings() {
     }
   };
 
-  if (loading) return <p className="text-text-secondary">Cargando...</p>;
+  if (loading) return <p className="text-content-muted">Cargando...</p>;
 
   return (
     <div className="space-y-6">
       {/* Explanation */}
       <div className="flex items-start gap-3 p-4 rounded-xl bg-purple-500/5 border border-purple-500/20">
         <Users className="h-5 w-5 text-purple-400 mt-0.5 flex-shrink-0" />
-        <div className="text-sm text-text-secondary">
-          <p className="font-medium text-text-primary mb-1">Board Meeting Mode</p>
+        <div className="text-sm text-content-muted">
+          <p className="font-medium text-content-strong mb-1">Board Meeting Mode</p>
           <p>
             Cuando está activado, los agentes discuten entre sí antes de responderte.
             El CEO abre la discusión, el CTO, CFO y CMO aportan sus perspectivas,
@@ -142,8 +142,8 @@ export function BoardMeetingSettings() {
       <div className="p-5 rounded-2xl bg-surface/30 border border-surface-highlight space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-semibold text-text-primary">Activar Board Meeting</h3>
-            <p className="text-xs text-text-secondary mt-1">
+            <h3 className="font-semibold text-content-strong">Activar Board Meeting</h3>
+            <p className="text-xs text-content-muted mt-1">
               Los agentes discutirán entre sí antes de darte una respuesta
             </p>
           </div>
@@ -171,7 +171,7 @@ export function BoardMeetingSettings() {
           <div className="pt-3 border-t border-surface-highlight">
             <div className="flex items-start gap-2 p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/20">
               <AlertTriangle className="h-4 w-4 text-yellow-400 mt-0.5 flex-shrink-0" />
-              <div className="text-xs text-text-secondary">
+              <div className="text-xs text-content-muted">
                 <p className="font-medium text-yellow-400 mb-1">Consumo de tokens</p>
                 <p>
                   1 iteración = ~5 llamadas al LLM (~15k tokens por mensaje).
@@ -197,12 +197,12 @@ export function BoardMeetingSettings() {
           <div className="bg-surface border border-surface-highlight rounded-2xl p-6 max-w-md mx-4 space-y-4">
             <div className="flex items-center gap-3">
               <AlertTriangle className="h-6 w-6 text-yellow-400" />
-              <h3 className="text-lg font-semibold text-text-primary">
+              <h3 className="text-lg font-semibold text-content-strong">
                 Activar Board Meeting
               </h3>
             </div>
 
-            <div className="text-sm text-text-secondary space-y-2">
+            <div className="text-sm text-content-muted space-y-2">
               <p>
                 Al activar Board Meeting, cada mensaje en la Junta Directiva
                 será procesado por <strong>todos los agentes</strong> (CEO, CTO, CFO, CMO).
@@ -221,7 +221,7 @@ export function BoardMeetingSettings() {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowWarning(false)}
-                className="flex-1 py-2 bg-surface/50 text-text-secondary border border-surface-highlight rounded-xl hover:text-text-primary transition-all text-sm"
+                className="flex-1 py-2 bg-surface/50 text-content-muted border border-surface-highlight rounded-xl hover:text-content-strong transition-all text-sm"
               >
                 Cancelar
               </button>

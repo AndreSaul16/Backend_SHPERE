@@ -84,7 +84,7 @@ const MOCK_AGENTS: Agent[] = [
         role: 'system',
         avatar: '🏛️',
         description: 'Orquestación completa - El Router decide quién responde.',
-        color: 'text-text-secondary',
+        color: 'text-content-muted',
         hexColor: '#00F0C8', // Cyan Electrico (Default)
         isOnline: true,
         capabilities: ['Análisis Estratégico', 'Decisiones Ejecutivas', 'Coordinación Multi-agente'],

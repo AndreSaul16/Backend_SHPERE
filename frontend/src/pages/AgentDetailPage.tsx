@@ -158,12 +158,12 @@ function DeleteConfirmationModal({
                         <AlertTriangle className="h-5 w-5 text-red-500" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-bold text-text-primary">Eliminar Agente</h3>
-                        <p className="text-xs text-text-secondary mt-0.5">Esta acción no se puede deshacer</p>
+                        <h3 className="text-lg font-bold text-content-strong">Eliminar Agente</h3>
+                        <p className="text-xs text-content-muted mt-0.5">Esta acción no se puede deshacer</p>
                     </div>
                 </div>
 
-                <p className="text-sm text-text-secondary leading-relaxed">
+                <p className="text-sm text-content-muted leading-relaxed">
                     Vas a eliminar permanentemente al agente{" "}
                     <span className="font-semibold text-red-400">{agentName}</span>.
                     Se perdera toda su configuracion, base de conocimiento y datos asociados.
@@ -173,7 +173,7 @@ function DeleteConfirmationModal({
                     <button
                         onClick={onCancel}
                         disabled={isDeleting}
-                        className="flex-1 py-2.5 bg-surface border border-white/5 rounded-xl text-sm font-medium text-text-secondary hover:bg-surface-highlight transition-colors disabled:opacity-50"
+                        className="flex-1 py-2.5 bg-surface border border-white/5 rounded-xl text-sm font-medium text-content-muted hover:bg-surface-highlight transition-colors disabled:opacity-50"
                     >
                         Cancelar
                     </button>
@@ -371,7 +371,7 @@ export function AgentDetailPage() {
         return (
             <div className="flex flex-col items-center justify-center h-full gap-4 bg-midnight/40">
                 <Loader2 className="h-8 w-8 animate-spin text-electric-cyan" />
-                <p className="text-sm text-text-secondary font-mono tracking-wider">
+                <p className="text-sm text-content-muted font-mono tracking-wider">
                     Cargando agente...
                 </p>
             </div>
@@ -387,7 +387,7 @@ export function AgentDetailPage() {
                     <p className="text-sm text-red-400 font-medium">{fetchError}</p>
                     <button
                         onClick={() => navigate("/chat")}
-                        className="px-4 py-2 bg-surface border border-white/5 rounded-xl text-sm text-text-secondary hover:text-text-primary transition-colors"
+                        className="px-4 py-2 bg-surface border border-white/5 rounded-xl text-sm text-content-muted hover:text-content-strong transition-colors"
                     >
                         Volver al chat
                     </button>
@@ -402,11 +402,11 @@ export function AgentDetailPage() {
             {/* ── Aurora Background ──────────────────────────────────── */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
                 <div
-                    className="aurora-blob w-[60%] h-[60%] top-[-15%] left-[-10%] animate-aurora"
+                    className="aurora-blob w-[60%] h-[60%] top-[-15%] left-[-10%]"
                     style={{ backgroundColor: "rgba(30, 58, 95, 0.5)" }}
                 />
                 <div
-                    className="aurora-blob w-[45%] h-[45%] bottom-[-10%] right-[-5%] animate-aurora"
+                    className="aurora-blob w-[45%] h-[45%] bottom-[-10%] right-[-5%]"
                     style={{ backgroundColor: "rgba(13, 74, 74, 0.4)", animationDelay: "-6s" }}
                 />
             </div>
@@ -416,7 +416,7 @@ export function AgentDetailPage() {
                 <div className="flex items-center gap-3 sm:gap-4">
                     <button
                         onClick={() => navigate("/chat")}
-                        className="p-2 hover:bg-surface rounded-full transition-colors text-text-secondary hover:text-text-primary"
+                        className="p-2 hover:bg-surface rounded-full transition-colors text-content-muted hover:text-content-strong"
                     >
                         <ArrowLeft className="h-5 w-5" />
                     </button>
@@ -434,7 +434,7 @@ export function AgentDetailPage() {
                             {avatarLetter}
                         </div>
                         <div className="flex items-center gap-2">
-                            <h1 className="text-base sm:text-xl font-bold text-text-primary truncate max-w-[180px] sm:max-w-none">
+                            <h1 className="text-base sm:text-xl font-bold text-content-strong truncate max-w-[180px] sm:max-w-none">
                                 {name || "Agente"}
                             </h1>
                             <span
@@ -459,7 +459,7 @@ export function AgentDetailPage() {
                         "flex items-center gap-2 px-3 py-2 rounded-xl font-medium text-sm transition-all",
                         isDirty
                             ? "bg-electric-cyan/10 text-electric-cyan hover:bg-electric-cyan hover:text-midnight"
-                            : "bg-surface text-text-secondary/40 cursor-not-allowed"
+                            : "bg-surface text-content-quiet cursor-not-allowed"
                     )}
                 >
                     {isSaving ? (
@@ -488,7 +488,7 @@ export function AgentDetailPage() {
                     >
                         <div className="flex items-center gap-2">
                             <Sparkles className="h-4 w-4 text-luxury-purple" />
-                            <h2 className="text-text-secondary text-xs sm:text-sm uppercase tracking-widest font-mono">
+                            <h2 className="text-content-muted text-xs sm:text-sm uppercase tracking-widest font-mono">
                                 Identidad del Agente
                             </h2>
                         </div>
@@ -510,7 +510,7 @@ export function AgentDetailPage() {
 
                         {/* Name */}
                         <div className="space-y-1.5">
-                            <label className="text-[10px] text-text-secondary uppercase tracking-widest font-mono block ml-1 opacity-60">
+                            <label className="text-[10px] text-content-muted uppercase tracking-widest font-mono block ml-1 opacity-60">
                                 Nombre
                             </label>
                             <input
@@ -518,13 +518,13 @@ export function AgentDetailPage() {
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 placeholder="Ej: Nexus, Oberon..."
-                                className="w-full bg-midnight/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-electric-cyan/50 focus:ring-1 focus:ring-electric-cyan/20 transition-all placeholder:text-text-secondary/30"
+                                className="w-full bg-midnight/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-content-strong focus:outline-none focus:border-electric-cyan/50 focus:ring-1 focus:ring-electric-cyan/20 transition-all placeholder:text-content-quiet"
                             />
                         </div>
 
                         {/* Description */}
                         <div className="space-y-1.5">
-                            <label className="text-[10px] text-text-secondary uppercase tracking-widest font-mono block ml-1 opacity-60">
+                            <label className="text-[10px] text-content-muted uppercase tracking-widest font-mono block ml-1 opacity-60">
                                 Descripción
                             </label>
                             <textarea
@@ -532,13 +532,13 @@ export function AgentDetailPage() {
                                 onChange={(e) => setDescription(e.target.value)}
                                 rows={2}
                                 placeholder="Breve descripcion del propósito del agente..."
-                                className="w-full bg-midnight/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-electric-cyan/50 focus:ring-1 focus:ring-electric-cyan/20 transition-all resize-none placeholder:text-text-secondary/30"
+                                className="w-full bg-midnight/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-content-strong focus:outline-none focus:border-electric-cyan/50 focus:ring-1 focus:ring-electric-cyan/20 transition-all resize-none placeholder:text-content-quiet"
                             />
                         </div>
 
                         {/* Color Picker */}
                         <div className="space-y-1.5">
-                            <label className="text-[10px] text-text-secondary uppercase tracking-widest font-mono block ml-1 opacity-60">
+                            <label className="text-[10px] text-content-muted uppercase tracking-widest font-mono block ml-1 opacity-60">
                                 Color de Identidad
                             </label>
                             <div className="flex items-center gap-3">
@@ -559,7 +559,7 @@ export function AgentDetailPage() {
                                     />
                                 </div>
                                 <div className="relative flex-1">
-                                    <Palette className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/40" />
+                                    <Palette className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-content-quiet" />
                                     <input
                                         type="text"
                                         value={color}
@@ -568,7 +568,7 @@ export function AgentDetailPage() {
                                             if (/^#[0-9A-Fa-f]{0,6}$/.test(val)) setColor(val);
                                         }}
                                         maxLength={7}
-                                        className="w-full bg-midnight/50 border border-white/5 rounded-xl pl-10 pr-4 py-2.5 text-sm font-mono text-text-primary uppercase focus:outline-none focus:border-electric-cyan/50 transition-all"
+                                        className="w-full bg-midnight/50 border border-white/5 rounded-xl pl-10 pr-4 py-2.5 text-sm font-mono text-content-strong uppercase focus:outline-none focus:border-electric-cyan/50 transition-all"
                                         placeholder="#00F0C8"
                                     />
                                 </div>
@@ -606,14 +606,14 @@ export function AgentDetailPage() {
                     >
                         <div className="flex items-center gap-2">
                             <Brain className="h-4 w-4 text-electric-cyan" />
-                            <h2 className="text-text-secondary text-xs sm:text-sm uppercase tracking-widest font-mono">
+                            <h2 className="text-content-muted text-xs sm:text-sm uppercase tracking-widest font-mono">
                                 Configuración Cerebral
                             </h2>
                         </div>
 
                         {/* System Prompt */}
                         <div className="space-y-1.5">
-                            <label className="text-[10px] text-text-secondary uppercase tracking-widest font-mono block ml-1 opacity-60">
+                            <label className="text-[10px] text-content-muted uppercase tracking-widest font-mono block ml-1 opacity-60">
                                 System Prompt
                             </label>
                             <textarea
@@ -621,9 +621,9 @@ export function AgentDetailPage() {
                                 onChange={(e) => setSystemPrompt(e.target.value)}
                                 rows={10}
                                 placeholder="Eres un asistente experto en..."
-                                className="w-full bg-midnight/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-text-primary font-mono leading-relaxed focus:outline-none focus:border-electric-cyan/50 focus:ring-1 focus:ring-electric-cyan/20 transition-all resize-y min-h-[160px] placeholder:text-text-secondary/30"
+                                className="w-full bg-midnight/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-content-strong font-mono leading-relaxed focus:outline-none focus:border-electric-cyan/50 focus:ring-1 focus:ring-electric-cyan/20 transition-all resize-y min-h-[160px] placeholder:text-content-quiet"
                             />
-                            <p className="text-[10px] text-text-secondary/40 ml-1">
+                            <p className="text-[10px] text-content-quiet ml-1">
                                 {systemPrompt.length} caracteres
                             </p>
                         </div>
@@ -631,7 +631,7 @@ export function AgentDetailPage() {
                         {/* Temperature Slider */}
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <label className="text-[10px] text-text-secondary uppercase tracking-widest font-mono ml-1 opacity-60 flex items-center gap-1.5">
+                                <label className="text-[10px] text-content-muted uppercase tracking-widest font-mono ml-1 opacity-60 flex items-center gap-1.5">
                                     <Thermometer className="h-3 w-3" />
                                     Temperatura
                                 </label>
@@ -686,13 +686,13 @@ export function AgentDetailPage() {
                                     }}
                                 />
                                 <div className="flex justify-between mt-1.5 px-0.5">
-                                    <span className="text-[9px] text-text-secondary/40 font-mono">
+                                    <span className="text-[9px] text-content-quiet font-mono">
                                         0.0 Preciso
                                     </span>
-                                    <span className="text-[9px] text-text-secondary/40 font-mono">
+                                    <span className="text-[9px] text-content-quiet font-mono">
                                         1.0 Balanceado
                                     </span>
-                                    <span className="text-[9px] text-text-secondary/40 font-mono">
+                                    <span className="text-[9px] text-content-quiet font-mono">
                                         2.0 Creativo
                                     </span>
                                 </div>
@@ -701,7 +701,7 @@ export function AgentDetailPage() {
 
                         {/* Model Selector */}
                         <div className="space-y-1.5">
-                            <label className="text-[10px] text-text-secondary uppercase tracking-widest font-mono block ml-1 opacity-60 flex items-center gap-1.5">
+                            <label className="text-[10px] text-content-muted uppercase tracking-widest font-mono block ml-1 opacity-60 flex items-center gap-1.5">
                                 <Cpu className="h-3 w-3" />
                                 Modelo
                             </label>
@@ -714,7 +714,7 @@ export function AgentDetailPage() {
                                             "px-4 py-3 rounded-xl border text-sm font-mono transition-all text-left",
                                             model === m
                                                 ? "border-electric-cyan/40 bg-electric-cyan/10 text-electric-cyan"
-                                                : "border-white/5 bg-midnight/50 text-text-secondary hover:border-white/10 hover:text-text-primary"
+                                                : "border-white/5 bg-midnight/50 text-content-muted hover:border-white/10 hover:text-content-strong"
                                         )}
                                     >
                                         <div className="flex items-center gap-2">
@@ -723,7 +723,7 @@ export function AgentDetailPage() {
                                                     "h-2 w-2 rounded-full transition-colors",
                                                     model === m
                                                         ? "bg-electric-cyan"
-                                                        : "bg-text-secondary/30"
+                                                        : "bg-content-muted"
                                                 )}
                                             />
                                             <span className="truncate">{m}</span>
@@ -750,7 +750,7 @@ export function AgentDetailPage() {
                     >
                         <div className="flex items-center gap-2 px-6 sm:px-8 pt-6 sm:pt-8 pb-2">
                             <BookOpen className="h-4 w-4 text-luxury-purple" />
-                            <h2 className="text-text-secondary text-xs sm:text-sm uppercase tracking-widest font-mono">
+                            <h2 className="text-content-muted text-xs sm:text-sm uppercase tracking-widest font-mono">
                                 Base de Conocimiento
                             </h2>
                         </div>
@@ -775,7 +775,7 @@ export function AgentDetailPage() {
                             </h2>
                         </div>
 
-                        <p className="text-xs text-text-secondary/60 leading-relaxed">
+                        <p className="text-xs text-content-quiet leading-relaxed">
                             Eliminar este agente es una acción irreversible. Se perderá toda la configuración,
                             el system prompt, la base de conocimiento y los datos asociados.
                         </p>

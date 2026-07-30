@@ -82,11 +82,11 @@ export function ProfilePage() {
             {/* Background Living Effect */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
                 <div
-                    className="aurora-blob w-[70%] h-[70%] top-[-20%] right-[-10%] animate-aurora"
+                    className="aurora-blob w-[70%] h-[70%] top-[-20%] right-[-10%]"
                     style={{ backgroundColor: 'rgba(30, 58, 95, 0.4)' }}
                 />
                 <div
-                    className="aurora-blob w-[50%] h-[50%] bottom-[-10%] left-[-5%] animate-aurora"
+                    className="aurora-blob w-[50%] h-[50%] bottom-[-10%] left-[-5%]"
                     style={{ backgroundColor: 'rgba(13, 74, 74, 0.35)', animationDelay: '-10s' }}
                 />
             </div>
@@ -94,10 +94,10 @@ export function ProfilePage() {
             {/* Header */}
             <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-surface flex items-center justify-between bg-midnight/90 backdrop-blur-md sticky top-0 z-10">
                 <div className="flex items-center gap-3 sm:gap-4">
-                    <Link to="/" className="p-2 hover:bg-surface rounded-full transition-colors text-text-secondary hover:text-text-primary">
+                    <Link to="/" className="p-2 hover:bg-surface rounded-full transition-colors text-content-muted hover:text-content-strong">
                         <ArrowLeft className="h-5 w-5" />
                     </Link>
-                    <h1 className="text-base sm:text-xl font-bold text-text-primary">Mi Perfil</h1>
+                    <h1 className="text-base sm:text-xl font-bold text-content-strong">Mi Perfil</h1>
                 </div>
                 <button
                     onClick={handleSave}
@@ -159,8 +159,8 @@ export function ProfilePage() {
                         </div>
 
                         <div className="space-y-1.5 sm:space-y-2">
-                            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-text-primary">{displayName || "—"}</h2>
-                            <p className="text-text-secondary font-mono text-[10px] sm:text-xs md:text-sm tracking-widest uppercase">{userEmail}</p>
+                            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-content-strong">{displayName || "—"}</h2>
+                            <p className="text-content-muted font-mono text-[10px] sm:text-xs md:text-sm tracking-widest uppercase">{userEmail}</p>
                             <div className="flex gap-2 justify-center pt-1 sm:pt-2 flex-wrap">
                                 <span className="px-2.5 sm:px-3 py-0.5 sm:py-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-full text-[10px] sm:text-xs">Online</span>
                             </div>
@@ -172,13 +172,13 @@ export function ProfilePage() {
 
                         {/* Account Settings */}
                         <div className="p-6 rounded-2xl bg-surface/30 border border-surface-highlight hover:border-electric-cyan/30 transition-colors space-y-4">
-                            <div className="flex items-center gap-3 text-text-primary font-semibold mb-4">
+                            <div className="flex items-center gap-3 text-content-strong font-semibold mb-4">
                                 <User className="h-5 w-5 text-electric-cyan" />
                                 <h3>Información Personal</h3>
                             </div>
                             <div className="space-y-4">
                                 <div>
-                                    <label className="text-[10px] uppercase font-mono text-text-secondary ml-1">Nombre Público</label>
+                                    <label className="text-[10px] uppercase font-mono text-content-muted ml-1">Nombre Público</label>
                                     <input
                                         type="text"
                                         value={displayName}
@@ -187,7 +187,7 @@ export function ProfilePage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-[10px] uppercase font-mono text-text-secondary ml-1">Email de Acceso</label>
+                                    <label className="text-[10px] uppercase font-mono text-content-muted ml-1">Email de Acceso</label>
                                     <input
                                         type="email"
                                         value={userEmail}
@@ -200,7 +200,7 @@ export function ProfilePage() {
 
                         {/* Security */}
                         <div className="p-6 rounded-2xl bg-surface/30 border border-surface-highlight hover:border-luxury-purple/30 transition-colors space-y-4">
-                            <div className="flex items-center gap-3 text-text-primary font-semibold mb-4">
+                            <div className="flex items-center gap-3 text-content-strong font-semibold mb-4">
                                 <Shield className="h-5 w-5 text-luxury-purple" />
                                 <h3>Seguridad</h3>
                             </div>
@@ -210,18 +210,18 @@ export function ProfilePage() {
                                     className="w-full flex items-center justify-between p-3 bg-midnight/50 rounded-xl hover:bg-surface-highlight transition-colors group"
                                 >
                                     <span className="text-sm">Configuración avanzada</span>
-                                    <ArrowLeft className="h-4 w-4 rotate-180 text-text-secondary group-hover:translate-x-1 transition-transform" />
+                                    <ArrowLeft className="h-4 w-4 rotate-180 text-content-muted group-hover:translate-x-1 transition-transform" />
                                 </Link>
                             </div>
                         </div>
 
                         {/* Notifications */}
                         <div className="p-6 rounded-2xl bg-surface/30 border border-surface-highlight space-y-4">
-                            <div className="flex items-center gap-3 text-text-primary font-semibold mb-4">
+                            <div className="flex items-center gap-3 text-content-strong font-semibold mb-4">
                                 <Bell className="h-5 w-5 text-amber-500" />
                                 <h3>Preferencias de Sistema</h3>
                             </div>
-                            <p className="text-xs text-text-secondary">
+                            <p className="text-xs text-content-muted">
                                 Configura notificaciones, tema e idioma en{" "}
                                 <Link to="/settings/profile" className="text-electric-cyan hover:underline">
                                     Ajustes → Perfil
@@ -235,7 +235,7 @@ export function ProfilePage() {
                                 <LogOut className="h-5 w-5" />
                                 <h3>Cerrar Sesión</h3>
                             </div>
-                            <p className="text-xs text-text-secondary">Desconectar de SPHERE y limpiar caché de sesión local.</p>
+                            <p className="text-xs text-content-muted">Desconectar de SPHERE y limpiar caché de sesión local.</p>
                             <button
                                 onClick={handleLogout}
                                 disabled={isLoggingOut}

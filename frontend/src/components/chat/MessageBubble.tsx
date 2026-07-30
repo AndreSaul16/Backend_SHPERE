@@ -53,7 +53,7 @@ function ThinkingBlock({ thinking, isStreaming, hasContent, hexColor, label }: {
     if (!hasThinking) {
         if (isThinkingNow) {
             return (
-                <div className="flex items-center gap-2 mb-2 text-[11px] text-text-secondary/70 italic">
+                <div className="flex items-center gap-2 mb-2 text-[11px] text-content-quiet italic">
                     <Brain className="h-3 w-3 animate-pulse" style={{ color: hexColor }} />
                     <span>{label || 'Pensando'}</span>
                     <span className="inline-flex gap-0.5">
@@ -75,7 +75,7 @@ function ThinkingBlock({ thinking, isStreaming, hasContent, hexColor, label }: {
             <button
                 type="button"
                 onClick={() => { setUserToggled(true); setOpen(!expanded); }}
-                className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-text-secondary/70 hover:text-text-secondary transition-colors"
+                className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-content-quiet hover:text-content-muted transition-colors"
             >
                 <Brain className="h-3 w-3" style={{ color: hexColor }} />
                 <span>{isThinkingNow ? 'Razonando…' : 'Razonamiento'}</span>
@@ -91,7 +91,7 @@ function ThinkingBlock({ thinking, isStreaming, hasContent, hexColor, label }: {
                         className="overflow-hidden"
                     >
                         <div
-                            className="mt-1.5 pl-3 border-l-2 text-[12px] leading-relaxed text-text-secondary/80 italic whitespace-pre-wrap [overflow-wrap:break-word]"
+                            className="mt-1.5 pl-3 border-l-2 text-[12px] leading-relaxed text-content-quiet italic whitespace-pre-wrap [overflow-wrap:break-word]"
                             style={{ borderColor: `${hexColor}40` }}
                         >
                             {thinking}
@@ -133,12 +133,12 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
     if (isSystem) {
         return (
             <div className="flex justify-center my-3 sm:my-4 px-2">
-                <div className="bg-midnight/90 border border-surface-highlight text-text-secondary text-[11px] sm:text-xs px-4 py-2 rounded-2xl shadow-md backdrop-blur-md max-w-[85%] text-left whitespace-pre-wrap">
+                <div className="bg-midnight/90 border border-surface-highlight text-content-muted text-[11px] sm:text-xs px-4 py-2 rounded-2xl shadow-md backdrop-blur-md max-w-[85%] text-left whitespace-pre-wrap">
                     <ReactMarkdown
                         rehypePlugins={[rehypeSanitize]}
                         components={{
                             p: ({ children }) => <span>{children}</span>,
-                            strong: ({ children }) => <strong className="text-text-primary font-semibold">{children}</strong>
+                            strong: ({ children }) => <strong className="text-content-strong font-semibold">{children}</strong>
                         }}
                     >
                         {message.content}
@@ -198,7 +198,7 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                         "[overflow-wrap:break-word] [word-break:break-word]",
                         isUser
                             ? "bg-user-bubble text-white rounded-tr-sm"
-                            : "bg-ai-bubble/95 text-text-primary rounded-tl-sm backdrop-blur-sm relative"
+                            : "bg-ai-bubble/95 text-content-strong rounded-tl-sm backdrop-blur-sm relative"
                     )}
                     style={isUser
                         ? { borderColor: '#22D3EE20' }
@@ -279,9 +279,9 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                                 },
                                 ul: ({ children }: any) => <ul className="list-disc pl-5 mb-3 space-y-1">{children}</ul>,
                                 ol: ({ children }: any) => <ol className="list-decimal pl-5 mb-3 space-y-1">{children}</ol>,
-                                li: ({ children }: any) => <li className="text-text-primary/90">{children}</li>,
+                                li: ({ children }: any) => <li className="text-content-strong">{children}</li>,
                                 blockquote: ({ children }: any) => (
-                                    <blockquote className="border-l-2 border-electric-cyan/30 pl-4 py-1 my-3 bg-electric-cyan/5 rounded-r text-text-secondary italic">
+                                    <blockquote className="border-l-2 border-electric-cyan/30 pl-4 py-1 my-3 bg-electric-cyan/5 rounded-r text-content-muted italic">
                                         {children}
                                     </blockquote>
                                 ),

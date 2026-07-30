@@ -89,7 +89,7 @@ export function ContactsSettings() {
     <div className="space-y-6">
       <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 flex gap-3 text-sm">
         <Shield className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
-        <div className="text-text-secondary">
+        <div className="text-content-muted">
           <strong className="text-amber-400">Whitelist obligatoria:</strong> los
           agentes solo pueden enviar mensajes o crear eventos a contactos que
           añadas aquí. Esto previene que un prompt malicioso dispare envíos no
@@ -105,14 +105,14 @@ export function ContactsSettings() {
 
       {/* Añadir contacto */}
       <section className="p-5 rounded-2xl bg-surface/30 border border-surface-highlight space-y-4">
-        <div className="flex items-center gap-3 text-text-primary font-semibold">
+        <div className="flex items-center gap-3 text-content-strong font-semibold">
           <Plus className="h-5 w-5 text-electric-cyan" />
           <h3>Añadir contacto</h3>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="text-[10px] uppercase font-mono text-text-secondary block mb-1">
+            <label className="text-[10px] uppercase font-mono text-content-muted block mb-1">
               Tipo
             </label>
             <select
@@ -128,7 +128,7 @@ export function ContactsSettings() {
             </select>
           </div>
           <div>
-            <label className="text-[10px] uppercase font-mono text-text-secondary block mb-1">
+            <label className="text-[10px] uppercase font-mono text-content-muted block mb-1">
               Valor
             </label>
             <input
@@ -148,7 +148,7 @@ export function ContactsSettings() {
         </div>
 
         <div>
-          <label className="text-[10px] uppercase font-mono text-text-secondary block mb-1">
+          <label className="text-[10px] uppercase font-mono text-content-muted block mb-1">
             Nombre (opcional)
           </label>
           <input
@@ -161,7 +161,7 @@ export function ContactsSettings() {
         </div>
 
         <div>
-          <label className="text-[10px] uppercase font-mono text-text-secondary block mb-2">
+          <label className="text-[10px] uppercase font-mono text-content-muted block mb-2">
             Autorizado para
           </label>
           <div className="flex flex-wrap gap-2">
@@ -173,7 +173,7 @@ export function ContactsSettings() {
                 className={`px-3 py-1 rounded-full text-xs border transition-colors ${
                   newPerms.includes(p)
                     ? "bg-electric-cyan/20 border-electric-cyan/50 text-electric-cyan"
-                    : "bg-midnight/50 border-surface-highlight text-text-secondary hover:border-electric-cyan/30"
+                    : "bg-midnight/50 border-surface-highlight text-content-muted hover:border-electric-cyan/30"
                 }`}
               >
                 {p}
@@ -194,15 +194,15 @@ export function ContactsSettings() {
 
       {/* Lista de contactos */}
       <section className="p-5 rounded-2xl bg-surface/30 border border-surface-highlight space-y-3">
-        <div className="flex items-center gap-3 text-text-primary font-semibold">
+        <div className="flex items-center gap-3 text-content-strong font-semibold">
           <Users className="h-5 w-5 text-luxury-purple" />
           <h3>Contactos autorizados ({contacts.length})</h3>
         </div>
 
         {loading ? (
-          <p className="text-text-secondary text-sm">Cargando...</p>
+          <p className="text-content-muted text-sm">Cargando...</p>
         ) : contacts.length === 0 ? (
-          <p className="text-text-secondary text-sm">
+          <p className="text-content-muted text-sm">
             Aún no tienes contactos. Añade al menos uno para que los agentes
             puedan enviar mensajes o crear eventos.
           </p>
@@ -215,14 +215,14 @@ export function ContactsSettings() {
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm text-text-primary truncate">
+                    <span className="text-sm text-content-strong truncate">
                       {c.display_name || c.value}
                     </span>
-                    <span className="px-2 py-0.5 bg-surface-highlight rounded-full text-[10px] text-text-secondary">
+                    <span className="px-2 py-0.5 bg-surface-highlight rounded-full text-[10px] text-content-muted">
                       {CONTACT_TYPES[c.type] || c.type}
                     </span>
                   </div>
-                  <div className="text-xs text-text-secondary font-mono mt-1 truncate">
+                  <div className="text-xs text-content-muted font-mono mt-1 truncate">
                     {c.value}
                   </div>
                   {c.authorized_for.length > 0 && (

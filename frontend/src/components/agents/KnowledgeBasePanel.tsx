@@ -366,7 +366,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                         <div className="relative">
                             <div className="absolute inset-0 bg-luxury-purple/20 blur-3xl rounded-full" />
                             <div className="relative h-24 w-24 rounded-[32px] bg-white/[0.03] border border-white/10 flex items-center justify-center shadow-2xl">
-                                <FilePlus className="h-10 w-10 text-gray-600 animate-pulse-slow" />
+                                <FilePlus className="h-10 w-10 text-gray-600" />
                             </div>
                         </div>
                         <div className="space-y-2 max-w-xs">

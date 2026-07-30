@@ -122,10 +122,10 @@ export function ChatSettingsPage() {
 
     if (!activeAgent || !currentSessionId || !currentSession) {
         return (
-            <div className="flex items-center justify-center h-full text-text-secondary">
+            <div className="flex items-center justify-center h-full text-content-muted">
                 <div className="text-center space-y-3">
                     <p className="text-lg font-medium">Sin chat activo</p>
-                    <p className="text-sm text-text-secondary/60">Selecciona o crea un chat primero para acceder a su configuración.</p>
+                    <p className="text-sm text-content-quiet">Selecciona o crea un chat primero para acceder a su configuración.</p>
                     <button
                         onClick={() => navigate('/')}
                         className="mt-2 px-4 py-2 bg-electric-cyan/10 text-electric-cyan rounded-xl hover:bg-electric-cyan/20 transition-all text-sm font-medium"
@@ -222,11 +222,11 @@ export function ChatSettingsPage() {
             {/* Background Living Effect */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
                 <div
-                    className="aurora-blob w-[60%] h-[60%] top-[-15%] left-[-10%] animate-aurora"
+                    className="aurora-blob w-[60%] h-[60%] top-[-15%] left-[-10%]"
                     style={{ backgroundColor: 'rgba(30, 58, 95, 0.5)' }}
                 />
                 <div
-                    className="aurora-blob w-[45%] h-[45%] bottom-[-10%] right-[-5%] animate-aurora"
+                    className="aurora-blob w-[45%] h-[45%] bottom-[-10%] right-[-5%]"
                     style={{ backgroundColor: 'rgba(13, 74, 74, 0.4)', animationDelay: '-6s' }}
                 />
             </div>
@@ -236,11 +236,11 @@ export function ChatSettingsPage() {
                 <div className="flex items-center gap-3 sm:gap-4">
                     <button
                         onClick={() => navigate(-1)}
-                        className="p-2 hover:bg-surface rounded-full transition-colors text-text-secondary hover:text-text-primary"
+                        className="p-2 hover:bg-surface rounded-full transition-colors text-content-muted hover:text-content-strong"
                     >
                         <ArrowLeft className="h-5 w-5" />
                     </button>
-                    <h1 className="text-base sm:text-xl font-bold text-text-primary">Configuración</h1>
+                    <h1 className="text-base sm:text-xl font-bold text-content-strong">Configuración</h1>
                 </div>
                 <button
                     onClick={() => navigate(-1)}
@@ -257,7 +257,7 @@ export function ChatSettingsPage() {
 
                     {/* Agent Avatar & Identity Section */}
                     <section className="flex flex-col items-center gap-4 sm:gap-6 p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-surface/60 border border-surface-highlight backdrop-blur-sm text-center">
-                        <h2 className="text-text-secondary text-xs sm:text-sm uppercase tracking-widest font-mono">
+                        <h2 className="text-content-muted text-xs sm:text-sm uppercase tracking-widest font-mono">
                             {isGroupChat ? 'Identidad del Grupo' : 'Identidad del Agente'}
                         </h2>
 
@@ -289,7 +289,7 @@ export function ChatSettingsPage() {
 
                         <div className="w-full max-w-sm space-y-4">
                             <div className="space-y-1.5">
-                                <label className="text-[10px] text-text-secondary uppercase tracking-widest font-mono block text-left ml-1 opacity-60">
+                                <label className="text-[10px] text-content-muted uppercase tracking-widest font-mono block text-left ml-1 opacity-60">
                                     {isGroupChat ? 'Nombre del Grupo' : 'Nombre del Agente'}
                                 </label>
                                 <div className="relative group/input">
@@ -297,10 +297,10 @@ export function ChatSettingsPage() {
                                         type="text"
                                         value={localName}
                                         onChange={(e) => handleNameInput(e.target.value)}
-                                        className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-3 text-lg font-bold text-text-primary focus:outline-none focus:border-electric-cyan/50 focus:ring-1 focus:ring-electric-cyan/20 transition-all text-center"
+                                        className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-3 text-lg font-bold text-content-strong focus:outline-none focus:border-electric-cyan/50 focus:ring-1 focus:ring-electric-cyan/20 transition-all text-center"
                                         placeholder={isGroupChat ? "Junta Directiva" : "Ej: Oberon"}
                                     />
-                                    <Pencil className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/30 group-focus-within/input:text-electric-cyan transition-colors" />
+                                    <Pencil className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-content-quiet group-focus-within/input:text-electric-cyan transition-colors" />
                                 </div>
                             </div>
 
@@ -311,15 +311,15 @@ export function ChatSettingsPage() {
                                             {roleLabel}
                                         </span>
                                     )}
-                                    <h3 className="text-sm font-medium text-text-secondary">
+                                    <h3 className="text-sm font-medium text-content-muted">
                                         {isGroupChat ? 'Orquestación' : 'Nivel de Cargo'}
                                     </h3>
                                 </div>
-                                <p className="text-text-secondary/60 text-xs italic">{activeAgent.description}</p>
+                                <p className="text-content-quiet text-xs italic">{activeAgent.description}</p>
                             </div>
                         </div>
 
-                        <p className="text-[10px] text-text-secondary/40 max-w-[280px]">
+                        <p className="text-[10px] text-content-quiet max-w-[280px]">
                             {isGroupChat
                                 ? "La identidad del grupo se comparte con todos los miembros."
                                 : "La personalización es única para esta conversación."}
@@ -330,7 +330,7 @@ export function ChatSettingsPage() {
                     <section className="p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-surface/60 border border-surface-highlight backdrop-blur-sm space-y-4 sm:space-y-6">
                         <div className="flex items-center gap-2">
                             <Zap className="h-4 w-4 text-electric-cyan" />
-                            <h2 className="text-text-secondary text-xs sm:text-sm uppercase tracking-widest font-mono">
+                            <h2 className="text-content-muted text-xs sm:text-sm uppercase tracking-widest font-mono">
                                 {isGroupChat ? 'Paleta de Grupo' : 'Frecuencia del Experto (Color)'}
                             </h2>
                         </div>
@@ -405,18 +405,18 @@ export function ChatSettingsPage() {
                                     </div>
                                     <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-midnight border border-surface-highlight rounded-xl shadow-2xl pointer-events-none flex items-center gap-2 min-w-[100px] justify-center">
                                         <div className="h-2 w-2 rounded-full" style={{ backgroundColor: sessionColor }} />
-                                        <span className="text-[10px] font-bold font-mono uppercase tracking-widest text-text-primary">
+                                        <span className="text-[10px] font-bold font-mono uppercase tracking-widest text-content-strong">
                                             {sessionColor}
                                         </span>
                                     </div>
                                 </div>
-                                <p className="text-[10px] sm:text-xs text-text-secondary/60 italic text-center max-w-[240px] leading-relaxed">
+                                <p className="text-[10px] sm:text-xs text-content-quiet italic text-center max-w-[240px] leading-relaxed">
                                     Haz clic en el icono para abrir la rueda de colores y sintonizar la firma espectral del experto.
                                 </p>
                             </div>
                         )}
 
-                        <p className="text-[10px] sm:text-xs text-text-secondary/40 leading-relaxed text-center">
+                        <p className="text-[10px] sm:text-xs text-content-quiet leading-relaxed text-center">
                             {isGroupChat
                                 ? "La paleta define los colores de burbujas de todos los miembros."
                                 : "Personaliza el color de los mensajes de este agente."}
@@ -428,12 +428,12 @@ export function ChatSettingsPage() {
                         <section className="p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-surface/60 border border-surface-highlight backdrop-blur-sm space-y-4">
                             <div className="flex items-center gap-2">
                                 <Users className="h-4 w-4 text-purple-400" />
-                                <h2 className="text-text-secondary text-xs sm:text-sm uppercase tracking-widest font-mono">Board Meeting</h2>
+                                <h2 className="text-content-muted text-xs sm:text-sm uppercase tracking-widest font-mono">Board Meeting</h2>
                             </div>
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-text-primary">Debate entre agentes</p>
-                                    <p className="text-[10px] text-text-secondary mt-0.5">Los agentes discuten entre sí antes de responderte (consume más tokens)</p>
+                                    <p className="text-sm font-medium text-content-strong">Debate entre agentes</p>
+                                    <p className="text-[10px] text-content-muted mt-0.5">Los agentes discuten entre sí antes de responderte (consume más tokens)</p>
                                 </div>
                                 <button
                                     onClick={toggleBoardMeeting}
@@ -445,7 +445,7 @@ export function ChatSettingsPage() {
                                     )}
                                 >
                                     {boardLoading ? (
-                                        <Loader2 className="h-4 w-4 animate-spin mx-auto text-text-secondary" />
+                                        <Loader2 className="h-4 w-4 animate-spin mx-auto text-content-muted" />
                                     ) : (
                                         <span className={cn(
                                             "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
@@ -467,7 +467,7 @@ export function ChatSettingsPage() {
                         <section className="p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-surface/60 border border-surface-highlight backdrop-blur-sm space-y-4 sm:space-y-6">
                             <div className="flex items-center gap-2">
                                 <span className="text-lg">👥</span>
-                                <h2 className="text-text-secondary text-xs sm:text-sm uppercase tracking-widest font-mono">Miembros del Grupo</h2>
+                                <h2 className="text-content-muted text-xs sm:text-sm uppercase tracking-widest font-mono">Miembros del Grupo</h2>
                             </div>
 
                             <div className="space-y-2">
@@ -491,8 +491,8 @@ export function ChatSettingsPage() {
                                                 <span className={cn("text-sm font-bold", member.color)}>{member.avatar}</span>
                                             </div>
                                             <div className="flex-1 text-left">
-                                                <p className="text-sm font-medium text-text-primary">{memberName}</p>
-                                                <p className="text-[10px] text-text-secondary/60 font-mono">{member.description}</p>
+                                                <p className="text-sm font-medium text-content-strong">{memberName}</p>
+                                                <p className="text-[10px] text-content-quiet font-mono">{member.description}</p>
                                             </div>
                                             <span
                                                 className="px-2 py-1 rounded text-[10px] font-bold font-mono border"
@@ -509,7 +509,7 @@ export function ChatSettingsPage() {
                                 })}
                             </div>
 
-                            <p className="text-[10px] sm:text-xs text-text-secondary/40 leading-relaxed text-center">
+                            <p className="text-[10px] sm:text-xs text-content-quiet leading-relaxed text-center">
                                 Haz clic en un miembro para personalizar su nombre y color.
                             </p>
                         </section>
@@ -526,26 +526,26 @@ export function ChatSettingsPage() {
                                     className="bg-surface border border-surface-highlight rounded-2xl p-6 max-w-sm mx-4 space-y-5 w-full"
                                 >
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-lg font-semibold text-text-primary">Editar miembro</h3>
-                                        <button onClick={() => setEditingMember(null)} className="p-1.5 hover:bg-surface-highlight rounded-lg text-text-secondary hover:text-text-primary transition-colors">
+                                        <h3 className="text-lg font-semibold text-content-strong">Editar miembro</h3>
+                                        <button onClick={() => setEditingMember(null)} className="p-1.5 hover:bg-surface-highlight rounded-lg text-content-muted hover:text-content-strong transition-colors">
                                             <X className="h-4 w-4" />
                                         </button>
                                     </div>
 
                                     <div className="space-y-4">
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] text-text-secondary uppercase tracking-widest font-mono">Nombre</label>
+                                            <label className="text-[10px] text-content-muted uppercase tracking-widest font-mono">Nombre</label>
                                             <input
                                                 type="text"
                                                 value={editName}
                                                 onChange={(e) => setEditName(e.target.value)}
-                                                className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm text-text-primary focus:outline-none focus:border-electric-cyan/50 transition-all"
+                                                className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm text-content-strong focus:outline-none focus:border-electric-cyan/50 transition-all"
                                                 placeholder="Ej: Hernesto"
                                             />
                                         </div>
 
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] text-text-secondary uppercase tracking-widest font-mono">Color</label>
+                                            <label className="text-[10px] text-content-muted uppercase tracking-widest font-mono">Color</label>
                                             <div className="flex items-center gap-3">
                                                 <div
                                                     className="h-10 w-10 rounded-xl border-2 cursor-pointer relative overflow-hidden"
@@ -585,7 +585,7 @@ export function ChatSettingsPage() {
                                     <div className="flex gap-3 pt-2">
                                         <button
                                             onClick={() => setEditingMember(null)}
-                                            className="flex-1 py-2.5 bg-surface/50 text-text-secondary border border-surface-highlight rounded-xl hover:text-text-primary transition-all text-sm"
+                                            className="flex-1 py-2.5 bg-surface/50 text-content-muted border border-surface-highlight rounded-xl hover:text-content-strong transition-all text-sm"
                                         >
                                             Cancelar
                                         </button>

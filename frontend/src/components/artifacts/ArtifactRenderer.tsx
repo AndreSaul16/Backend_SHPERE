@@ -37,8 +37,8 @@ export function ArtifactRenderer({ artifact }: ArtifactRendererProps) {
         default:
             return (
                 <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center p-6">
-                    <FileQuestion className="h-12 w-12 text-text-secondary" />
-                    <p className="text-text-secondary">Tipo de artefacto no soportado</p>
+                    <FileQuestion className="h-12 w-12 text-content-muted" />
+                    <p className="text-content-muted">Tipo de artefacto no soportado</p>
                     <code className="text-xs text-luxury-purple">{artifact.type}</code>
                 </div>
             );

@@ -183,7 +183,7 @@ export function IntegrationsSettings() {
     }
   };
 
-  if (loading && !data) return <p className="text-text-secondary">Cargando...</p>;
+  if (loading && !data) return <p className="text-content-muted">Cargando...</p>;
 
   const providers = data?.available || Object.keys(PROVIDER_META);
   const appByProvider = new Map((apps?.apps || []).map((a) => [a.provider, a]));
@@ -204,7 +204,7 @@ export function IntegrationsSettings() {
         </div>
       )}
 
-      <p className="text-sm text-text-secondary">
+      <p className="text-sm text-content-muted">
         Cada integración usa <strong>tu propia OAuth app</strong>: créala en el
         proveedor, registra aquí su <em>Client ID</em> y <em>Client Secret</em> (se
         cifran en reposo) y luego conecta tu cuenta. Los tokens se usan cuando los
@@ -233,7 +233,7 @@ export function IntegrationsSettings() {
             >
               {/* Header */}
               <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3 text-text-primary">
+                <div className="flex items-center gap-3 text-content-strong">
                   {meta.icon}
                   <div>
                     <h3 className="font-semibold flex items-center gap-2">
@@ -249,7 +249,7 @@ export function IntegrationsSettings() {
                         </span>
                       )}
                     </h3>
-                    <p className="text-xs text-text-secondary mt-1">
+                    <p className="text-xs text-content-muted mt-1">
                       {meta.description}
                     </p>
                   </div>
@@ -259,7 +259,7 @@ export function IntegrationsSettings() {
               {!registered ? (
                 /* ---- Paso 1: registrar la OAuth app ---- */
                 <div className="space-y-3 border-t border-surface-highlight pt-3">
-                  <div className="text-xs text-text-secondary space-y-2">
+                  <div className="text-xs text-content-muted space-y-2">
                     <p className="flex items-center gap-1.5">
                       <KeyRound className="h-3.5 w-3.5" />
                       Crea tu OAuth app:
@@ -279,12 +279,12 @@ export function IntegrationsSettings() {
                           Usa esta <strong>Authorization callback URL</strong>:
                         </span>
                         <div className="flex items-center gap-2">
-                          <code className="flex-1 px-2 py-1.5 bg-surface/60 border border-surface-highlight rounded-lg text-[11px] text-text-primary break-all">
+                          <code className="flex-1 px-2 py-1.5 bg-surface/60 border border-surface-highlight rounded-lg text-[11px] text-content-strong break-all">
                             {callbackUrl}
                           </code>
                           <button
                             onClick={() => copyCallback(p, callbackUrl)}
-                            className="p-1.5 rounded-lg border border-surface-highlight hover:border-electric-cyan/50 text-text-secondary hover:text-electric-cyan transition-all"
+                            className="p-1.5 rounded-lg border border-surface-highlight hover:border-electric-cyan/50 text-content-muted hover:text-electric-cyan transition-all"
                             title="Copiar"
                           >
                             {copied === p ? (
@@ -300,7 +300,7 @@ export function IntegrationsSettings() {
 
                   <div className="space-y-2">
                     <div>
-                      <label className="block text-xs text-text-secondary mb-1">
+                      <label className="block text-xs text-content-muted mb-1">
                         Client ID
                       </label>
                       <input
@@ -310,11 +310,11 @@ export function IntegrationsSettings() {
                           setClientIds((prev) => ({ ...prev, [p]: e.target.value }))
                         }
                         placeholder="Tu Client ID"
-                        className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-text-primary text-sm focus:outline-none focus:border-electric-cyan/50 placeholder:text-text-secondary/50"
+                        className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-content-strong text-sm focus:outline-none focus:border-electric-cyan/50 placeholder:text-content-quiet"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-text-secondary mb-1">
+                      <label className="block text-xs text-content-muted mb-1">
                         Client Secret
                       </label>
                       <input
@@ -324,7 +324,7 @@ export function IntegrationsSettings() {
                           setClientSecrets((prev) => ({ ...prev, [p]: e.target.value }))
                         }
                         placeholder="Tu Client Secret"
-                        className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-text-primary text-sm focus:outline-none focus:border-electric-cyan/50 placeholder:text-text-secondary/50"
+                        className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-content-strong text-sm focus:outline-none focus:border-electric-cyan/50 placeholder:text-content-quiet"
                       />
                     </div>
                   </div>
@@ -341,9 +341,9 @@ export function IntegrationsSettings() {
               ) : (
                 /* ---- Paso 2: conectar / desconectar + gestionar la app ---- */
                 <div className="space-y-3 border-t border-surface-highlight pt-3">
-                  <p className="text-xs text-text-secondary">
+                  <p className="text-xs text-content-muted">
                     Client ID:{" "}
-                    <code className="text-text-primary">{registered.client_id}</code>
+                    <code className="text-content-strong">{registered.client_id}</code>
                   </p>
 
                   {isConnected ? (
@@ -369,7 +369,7 @@ export function IntegrationsSettings() {
                   <button
                     onClick={() => handleDeleteApp(p)}
                     disabled={isWorking}
-                    className="w-full flex items-center justify-center gap-1.5 py-1.5 text-text-secondary hover:text-red-400 transition-all text-xs disabled:opacity-50"
+                    className="w-full flex items-center justify-center gap-1.5 py-1.5 text-content-muted hover:text-red-400 transition-all text-xs disabled:opacity-50"
                     title="Elimina el client_id/secret y revoca los tokens emitidos"
                   >
                     <Trash2 className="h-3.5 w-3.5" />

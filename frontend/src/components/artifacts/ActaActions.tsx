@@ -80,7 +80,7 @@ export function ActaActions({ title, content }: ActaActionsProps) {
                 <button
                     onClick={handleNotion}
                     disabled={notionStatus === "loading"}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-surface-highlight hover:bg-electric-cyan/10 text-text-secondary hover:text-electric-cyan border border-transparent hover:border-electric-cyan/20 transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-surface-highlight hover:bg-electric-cyan/10 text-content-muted hover:text-electric-cyan border border-transparent hover:border-electric-cyan/20 transition-colors disabled:opacity-50"
                 >
                     {notionStatus === "loading" ? (
                         <Loader2 className="h-3 w-3 animate-spin" />
@@ -93,7 +93,7 @@ export function ActaActions({ title, content }: ActaActionsProps) {
                 {/* GitHub */}
                 <button
                     onClick={() => setShowGithubModal((v) => !v)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-surface-highlight hover:bg-luxury-purple/10 text-text-secondary hover:text-luxury-purple border border-transparent hover:border-luxury-purple/20 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-surface-highlight hover:bg-luxury-purple/10 text-content-muted hover:text-luxury-purple border border-transparent hover:border-luxury-purple/20 transition-colors"
                 >
                     <Github className="h-3 w-3" />
                     Crear issues en GitHub
@@ -132,7 +132,7 @@ export function ActaActions({ title, content }: ActaActionsProps) {
                         </p>
                     ) : (
                         <>
-                            <p className="text-[11px] text-text-secondary">
+                            <p className="text-[11px] text-content-muted">
                                 Se crearán {parsedIssues.length} issues en el repositorio indicado.
                             </p>
                             <div className="flex gap-2">
@@ -141,14 +141,14 @@ export function ActaActions({ title, content }: ActaActionsProps) {
                                     placeholder="owner"
                                     value={ghRepo.owner}
                                     onChange={(e) => setGhRepo((r) => ({ ...r, owner: e.target.value }))}
-                                    className="flex-1 min-w-0 bg-midnight border border-surface-highlight rounded-lg px-2.5 py-1.5 text-xs text-text-primary focus:outline-none focus:border-luxury-purple/50"
+                                    className="flex-1 min-w-0 bg-midnight border border-surface-highlight rounded-lg px-2.5 py-1.5 text-xs text-content-strong focus:outline-none focus:border-luxury-purple/50"
                                 />
                                 <input
                                     aria-label="repo"
                                     placeholder="repo"
                                     value={ghRepo.repo}
                                     onChange={(e) => setGhRepo((r) => ({ ...r, repo: e.target.value }))}
-                                    className="flex-1 min-w-0 bg-midnight border border-surface-highlight rounded-lg px-2.5 py-1.5 text-xs text-text-primary focus:outline-none focus:border-luxury-purple/50"
+                                    className="flex-1 min-w-0 bg-midnight border border-surface-highlight rounded-lg px-2.5 py-1.5 text-xs text-content-strong focus:outline-none focus:border-luxury-purple/50"
                                 />
                             </div>
                             <button

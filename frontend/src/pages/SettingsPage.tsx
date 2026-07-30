@@ -57,11 +57,11 @@ export function SettingsPage() {
       <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-surface flex items-center gap-3 bg-midnight/90 backdrop-blur-md sticky top-0 z-10">
         <Link
           to="/"
-          className="p-2 hover:bg-surface rounded-full transition-colors text-text-secondary hover:text-text-primary"
+          className="p-2 hover:bg-surface rounded-full transition-colors text-content-muted hover:text-content-strong"
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <h1 className="text-base sm:text-xl font-bold text-text-primary">
+        <h1 className="text-base sm:text-xl font-bold text-content-strong">
           Configuración
         </h1>
       </div>
@@ -78,7 +78,7 @@ export function SettingsPage() {
                 className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors ${
                   isActive
                     ? "bg-electric-cyan/10 text-electric-cyan border border-electric-cyan/30"
-                    : "text-text-secondary hover:text-text-primary hover:bg-surface/40 border border-transparent"
+                    : "text-content-muted hover:text-content-strong hover:bg-surface/40 border border-transparent"
                 }`}
               >
                 {tab.icon}
@@ -99,7 +99,7 @@ export function SettingsPage() {
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors ${
                   isActive
                     ? "bg-electric-cyan/10 text-electric-cyan border border-electric-cyan/30"
-                    : "text-text-secondary hover:text-text-primary border border-surface-highlight"
+                    : "text-content-muted hover:text-content-strong border border-surface-highlight"
                 }`}
               >
                 {tab.icon}
@@ -112,7 +112,7 @@ export function SettingsPage() {
         {/* Content */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 pt-14 sm:pt-6 scrollbar-thin scrollbar-thumb-surface-highlight">
           <div className="max-w-3xl mx-auto">
-            <h2 className="text-xl font-bold text-text-primary mb-6 hidden sm:block">
+            <h2 className="text-xl font-bold text-content-strong mb-6 hidden sm:block">
               {active.label}
             </h2>
             {active.render()}

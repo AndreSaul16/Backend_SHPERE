@@ -31,8 +31,8 @@ function SectionHeader({
         {icon}
       </div>
       <div>
-        <h3 className="text-base font-semibold text-text-primary">{title}</h3>
-        <p className="text-xs text-text-secondary">{subtitle}</p>
+        <h3 className="text-base font-semibold text-content-strong">{title}</h3>
+        <p className="text-xs text-content-muted">{subtitle}</p>
       </div>
     </div>
   );

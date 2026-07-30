@@ -169,15 +169,15 @@ export function ServiceCredentialsSettings() {
     }
   };
 
-  if (loading && !data) return <p className="text-text-secondary">Cargando...</p>;
+  if (loading && !data) return <p className="text-content-muted">Cargando...</p>;
 
   return (
     <div className="space-y-6">
       {/* Security notice */}
       <div className="flex items-start gap-3 p-4 rounded-xl bg-electric-cyan/5 border border-electric-cyan/20">
         <Shield className="h-5 w-5 text-electric-cyan mt-0.5 flex-shrink-0" />
-        <div className="text-sm text-text-secondary">
-          <p className="font-medium text-text-primary mb-1">Seguridad de credenciales</p>
+        <div className="text-sm text-content-muted">
+          <p className="font-medium text-content-strong mb-1">Seguridad de credenciales</p>
           <p>
             Todas las API keys se cifran con Fernet (AES-128-CBC) antes de almacenarse.
             Se inyectan en los payloads de n8n solo cuando los agentes ejecutan acciones
@@ -210,23 +210,23 @@ export function ServiceCredentialsSettings() {
             {/* Header */}
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <div className={SERVICE_COLORS[svc.service] || "text-text-primary"}>
+                <div className={SERVICE_COLORS[svc.service] || "text-content-strong"}>
                   {SERVICE_ICONS[svc.service] || <Key className="h-5 w-5" />}
                 </div>
                 <div className="min-w-0">
-                  <h3 className="font-semibold text-text-primary">{svc.label}</h3>
-                  <p className="text-xs text-text-secondary mt-1">{svc.description}</p>
+                  <h3 className="font-semibold text-content-strong">{svc.label}</h3>
+                  <p className="text-xs text-content-muted mt-1">{svc.description}</p>
                   {svc.tools && svc.tools.length > 0 && (
                     <div className="relative group/tools inline-block mt-2">
-                      <span className="px-2 py-0.5 bg-surface-highlight/70 text-text-secondary border border-surface-highlight rounded-full text-[10px] font-medium cursor-default">
+                      <span className="px-2 py-0.5 bg-surface-highlight/70 text-content-muted border border-surface-highlight rounded-full text-[10px] font-medium cursor-default">
                         {svc.tools.length} herramienta{svc.tools.length !== 1 ? "s" : ""}
                       </span>
                       <div className="absolute bottom-full left-0 mb-2 opacity-0 invisible group-hover/tools:opacity-100 group-hover/tools:visible transition-all duration-200 z-50 pointer-events-none">
                         <div className="bg-surface border border-surface-highlight rounded-xl p-3 shadow-2xl min-w-[200px]">
-                          <p className="text-[10px] text-text-secondary/60 uppercase tracking-widest mb-2">Herramientas disponibles</p>
+                          <p className="text-[10px] text-content-quiet uppercase tracking-widest mb-2">Herramientas disponibles</p>
                           <ul className="space-y-1">
                             {svc.tools.map((t) => (
-                              <li key={t} className="text-xs text-text-primary font-mono">{t}</li>
+                              <li key={t} className="text-xs text-content-strong font-mono">{t}</li>
                             ))}
                           </ul>
                         </div>
@@ -246,7 +246,7 @@ export function ServiceCredentialsSettings() {
             <div className="space-y-3">
               {/* API Key / Token input */}
               <div>
-                <label className="block text-xs text-text-secondary mb-1">
+                <label className="block text-xs text-content-muted mb-1">
                   {svc.credential_type === "oauth_token" ? "Access Token" : "API Key"}
                 </label>
                 <input
@@ -260,14 +260,14 @@ export function ServiceCredentialsSettings() {
                       ? "••••••••••••••••••••••••"
                       : `Ingresa tu ${svc.credential_type === "oauth_token" ? "token" : "API key"}`
                   }
-                  className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-text-primary text-sm focus:outline-none focus:border-electric-cyan/50 placeholder:text-text-secondary/50"
+                  className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-content-strong text-sm focus:outline-none focus:border-electric-cyan/50 placeholder:text-content-quiet"
                 />
               </div>
 
               {/* Metadata fields */}
               {svc.service === "whatsapp" && (
                 <div>
-                  <label className="block text-xs text-text-secondary mb-1">
+                  <label className="block text-xs text-content-muted mb-1">
                     Phone Number ID
                   </label>
                   <input
@@ -283,14 +283,14 @@ export function ServiceCredentialsSettings() {
                       }))
                     }
                     placeholder="123456789012345"
-                    className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-text-primary text-sm focus:outline-none focus:border-electric-cyan/50 placeholder:text-text-secondary/50"
+                    className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-content-strong text-sm focus:outline-none focus:border-electric-cyan/50 placeholder:text-content-quiet"
                   />
                 </div>
               )}
 
               {svc.service === "google_calendar" && (
                 <div>
-                  <label className="block text-xs text-text-secondary mb-1">
+                  <label className="block text-xs text-content-muted mb-1">
                     Calendar ID (opcional)
                   </label>
                   <input
@@ -306,14 +306,14 @@ export function ServiceCredentialsSettings() {
                       }))
                     }
                     placeholder="primary"
-                    className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-text-primary text-sm focus:outline-none focus:border-electric-cyan/50 placeholder:text-text-secondary/50"
+                    className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-content-strong text-sm focus:outline-none focus:border-electric-cyan/50 placeholder:text-content-quiet"
                   />
                 </div>
               )}
 
               {svc.service === "instagram" && (
                 <div>
-                  <label className="block text-xs text-text-secondary mb-1">
+                  <label className="block text-xs text-content-muted mb-1">
                     Instagram Account ID
                   </label>
                   <input
@@ -329,7 +329,7 @@ export function ServiceCredentialsSettings() {
                       }))
                     }
                     placeholder="17841400123456789"
-                    className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-text-primary text-sm focus:outline-none focus:border-electric-cyan/50 placeholder:text-text-secondary/50"
+                    className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-content-strong text-sm focus:outline-none focus:border-electric-cyan/50 placeholder:text-content-quiet"
                   />
                 </div>
               )}
@@ -373,7 +373,7 @@ export function ServiceCredentialsSettings() {
                   <button
                     onClick={() => handleTest(svc.service)}
                     disabled={testing === svc.service}
-                    className="flex items-center gap-2 px-4 py-2 bg-surface/50 text-text-secondary border border-surface-highlight rounded-xl hover:text-text-primary transition-all text-sm disabled:opacity-50"
+                    className="flex items-center gap-2 px-4 py-2 bg-surface/50 text-content-muted border border-surface-highlight rounded-xl hover:text-content-strong transition-all text-sm disabled:opacity-50"
                   >
                     {testing === svc.service ? (
                       <Loader2 className="h-4 w-4 animate-spin" />

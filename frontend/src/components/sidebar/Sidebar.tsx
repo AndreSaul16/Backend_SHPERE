@@ -155,13 +155,13 @@ export function Sidebar() {
         <div className="flex flex-col h-full bg-transparent">
             {/* Header / Search */}
             <div className="p-3 sm:p-4 border-b border-surface-highlight backdrop-blur-md sticky top-0 bg-midnight/80 z-10">
-                <h2 className="text-lg sm:text-xl font-bold text-text-primary mb-3 sm:mb-4 tracking-tight">SPHERE</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-content-strong mb-3 sm:mb-4 tracking-tight">SPHERE</h2>
                 <div className="relative group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary group-focus-within:text-electric-cyan transition-colors" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-content-muted group-focus-within:text-electric-cyan transition-colors" />
                     <input
                         type="text"
                         placeholder="Buscar..."
-                        className="w-full bg-surface border border-surface-highlight rounded-xl py-2 pl-9 pr-4 text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-electric-cyan/50 focus:ring-1 focus:ring-electric-cyan/50 transition-all shadow-inner"
+                        className="w-full bg-surface border border-surface-highlight rounded-xl py-2 pl-9 pr-4 text-sm text-content-strong placeholder:text-content-quiet focus:outline-none focus:border-electric-cyan/50 focus:ring-1 focus:ring-electric-cyan/50 transition-all shadow-inner"
                     />
                 </div>
             </div>
@@ -185,7 +185,7 @@ export function Sidebar() {
                 {/* Section: Historial (Sessions) */}
                 {sessions.length > 0 && (
                     <div>
-                        <h3 className="px-4 text-[10px] font-bold text-text-secondary/40 uppercase tracking-widest mb-2">
+                        <h3 className="px-4 text-[10px] font-bold text-content-quiet uppercase tracking-widest mb-2">
                             Historial
                         </h3>
                         <div className="space-y-0.5 sm:space-y-1">
@@ -201,7 +201,7 @@ export function Sidebar() {
                                                 : "border-transparent"
                                         )}
                                     >
-                                        <div className="h-8 w-8 rounded-full bg-surface border border-surface-highlight flex items-center justify-center flex-shrink-0 text-text-secondary group-hover:text-electric-cyan transition-colors overflow-hidden">
+                                        <div className="h-8 w-8 rounded-full bg-surface border border-surface-highlight flex items-center justify-center flex-shrink-0 text-content-muted group-hover:text-electric-cyan transition-colors overflow-hidden">
                                             {(() => {
                                                 const avatarUrl = session.visual_config?.avatar;
                                                 if (avatarUrl) return <img src={avatarUrl} alt="" className="h-full w-full object-cover" />;
@@ -213,7 +213,7 @@ export function Sidebar() {
                                         <div className="text-left flex-1 min-w-0">
                                             <p className={cn(
                                                 "text-sm font-medium truncate flex items-center gap-2",
-                                                currentSessionId === session.session_id ? "text-text-primary" : "text-text-secondary group-hover:text-text-primary"
+                                                currentSessionId === session.session_id ? "text-content-strong" : "text-content-muted group-hover:text-content-strong"
                                             )}>
                                                 {session.title}
                                                 {streamingSessionIds.includes(session.session_id) && (
@@ -224,7 +224,7 @@ export function Sidebar() {
                                                     </span>
                                                 )}
                                             </p>
-                                            <p className="text-[10px] text-text-secondary/50 truncate">
+                                            <p className="text-[10px] text-content-quiet truncate">
                                                 {new Date(session.created_at).toLocaleDateString()}
                                             </p>
                                         </div>
@@ -233,8 +233,8 @@ export function Sidebar() {
                                         <button
                                             onClick={(e) => toggleMenu(e, session.session_id)}
                                             className={cn(
-                                                "p-1 rounded-lg hover:bg-surface-highlight text-text-secondary/0 group-hover/item:text-text-secondary hover:text-text-primary transition-all",
-                                                activeMenuId === session.session_id && "text-text-secondary bg-surface-highlight"
+                                                "p-1 rounded-lg hover:bg-surface-highlight text-content-quiet/0 group-hover/item:text-content-muted hover:text-content-strong transition-all",
+                                                activeMenuId === session.session_id && "text-content-muted bg-surface-highlight"
                                             )}
                                         >
                                             <MoreVertical className="h-4 w-4" />
@@ -263,7 +263,7 @@ export function Sidebar() {
                                                             </button>
                                                             <button
                                                                 onClick={(e) => { e.preventDefault(); setConfirmDeleteId(null); }}
-                                                                className="flex-1 bg-surface-highlight hover:bg-surface-highlight/80 text-text-secondary py-1 rounded-lg text-[10px] font-bold transition-colors"
+                                                                className="flex-1 bg-surface-highlight hover:bg-surface-highlight/80 text-content-muted py-1 rounded-lg text-[10px] font-bold transition-colors"
                                                             >
                                                                 No
                                                             </button>
@@ -274,7 +274,7 @@ export function Sidebar() {
                                                         <button
                                                             onClick={(e) => handleShare(e, session.session_id)}
                                                             disabled={sharingId === session.session_id}
-                                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-text-secondary hover:text-text-primary hover:bg-surface-highlight rounded-lg transition-colors disabled:opacity-50"
+                                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-content-muted hover:text-content-strong hover:bg-surface-highlight rounded-lg transition-colors disabled:opacity-50"
                                                         >
                                                             <Share2 className="h-3.5 w-3.5" />
                                                             {copiedId === session.session_id
@@ -332,10 +332,10 @@ export function Sidebar() {
                             )}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-text-primary group-hover:text-electric-cyan transition-colors truncate">
+                            <p className="text-sm font-medium text-content-strong group-hover:text-electric-cyan transition-colors truncate">
                                 {user.displayName || user.email || "Usuario"}
                             </p>
-                            <p className="text-[11px] sm:text-xs text-text-secondary truncate">
+                            <p className="text-[11px] sm:text-xs text-content-muted truncate">
                                 {user.email || ""}
                             </p>
                         </div>
@@ -346,14 +346,14 @@ export function Sidebar() {
                             ?
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-text-secondary truncate">No autenticado</p>
+                            <p className="text-sm font-medium text-content-muted truncate">No autenticado</p>
                         </div>
                     </div>
                 )}
                 <Link
                     to="/billing"
                     onClick={() => toggleSidebar(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface/40 border border-transparent hover:border-surface-highlight transition-all text-sm"
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-content-muted hover:text-content-strong hover:bg-surface/40 border border-transparent hover:border-surface-highlight transition-all text-sm"
                 >
                     <CreditCard className="h-4 w-4 shrink-0" />
                     <span className="flex-1">Facturación</span>
@@ -373,7 +373,7 @@ export function Sidebar() {
                 <Link
                     to="/settings"
                     onClick={() => toggleSidebar(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface/40 border border-transparent hover:border-surface-highlight transition-all text-sm"
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-content-muted hover:text-content-strong hover:bg-surface/40 border border-transparent hover:border-surface-highlight transition-all text-sm"
                 >
                     <Settings className="h-4 w-4" />
                     <span>Configuración</span>
@@ -382,7 +382,7 @@ export function Sidebar() {
                     <Link
                         to="/admin"
                         onClick={() => toggleSidebar(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface/40 border border-transparent hover:border-surface-highlight transition-all text-sm"
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-content-muted hover:text-content-strong hover:bg-surface/40 border border-transparent hover:border-surface-highlight transition-all text-sm"
                     >
                         <ShieldCheck className="h-4 w-4" />
                         <span>Admin</span>

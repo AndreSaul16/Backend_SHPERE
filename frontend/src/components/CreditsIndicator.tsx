@@ -51,7 +51,7 @@ export function CreditsIndicator({ className = "", refreshMs = 60_000 }: Props) 
       data-testid="credits-indicator"
     >
       <Zap className={`h-4 w-4 ${color} shrink-0`} />
-      <span className="text-xs font-mono text-text-secondary whitespace-nowrap">
+      <span className="text-xs font-mono text-content-muted whitespace-nowrap">
         {isZero ? (
           <span className="text-rose-400 font-medium">0 — Recargar</span>
         ) : (
@@ -63,7 +63,7 @@ export function CreditsIndicator({ className = "", refreshMs = 60_000 }: Props) 
           </>
         )}
         {" "}
-        <span className={cn("text-[10px] uppercase tracking-wider", isLow ? "text-red-400/60" : "text-text-secondary/40")}>
+        <span className={cn("text-[10px] uppercase tracking-wider", isLow ? "text-red-400/60" : "text-content-quiet")}>
           {planLabel}
         </span>
       </span>

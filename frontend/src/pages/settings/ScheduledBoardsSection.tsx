@@ -113,8 +113,8 @@ export function ScheduledBoardsSection() {
                 <div className="flex items-center gap-2">
                     <CalendarClock className="h-5 w-5 text-electric-cyan" />
                     <div>
-                        <h3 className="font-semibold text-text-primary">Juntas programadas</h3>
-                        <p className="text-xs text-text-secondary mt-0.5">
+                        <h3 className="font-semibold text-content-strong">Juntas programadas</h3>
+                        <p className="text-xs text-content-muted mt-0.5">
                             Ejecuta un debate del board de forma recurrente. Cada junta consume{" "}
                             <strong className="text-yellow-400">5 créditos</strong>.
                         </p>
@@ -131,10 +131,10 @@ export function ScheduledBoardsSection() {
             </div>
 
             {error && <p className="text-xs text-rose-400">{error}</p>}
-            {loading && <Loader2 className="h-4 w-4 animate-spin text-text-secondary" />}
+            {loading && <Loader2 className="h-4 w-4 animate-spin text-content-muted" />}
 
             {!loading && boards.length === 0 && !showForm && (
-                <p className="text-xs text-text-secondary">
+                <p className="text-xs text-content-muted">
                     No tienes juntas programadas. Crea una para recibir análisis del board automáticamente.
                 </p>
             )}
@@ -147,13 +147,13 @@ export function ScheduledBoardsSection() {
                         className="flex items-start justify-between gap-3 p-3 rounded-xl bg-midnight/40 border border-surface-highlight"
                     >
                         <div className="min-w-0">
-                            <p className="text-sm text-text-primary truncate">{b.query}</p>
-                            <p className="text-[11px] text-text-secondary">
+                            <p className="text-sm text-content-strong truncate">{b.query}</p>
+                            <p className="text-[11px] text-content-muted">
                                 {describe(b)} · {b.channel === "none" ? "sin notificación" : b.channel}
                                 {!b.enabled && " · (pausada)"}
                             </p>
                             {b.last_status && (
-                                <p className="text-[10px] text-text-secondary/70 mt-0.5">
+                                <p className="text-[10px] text-content-quiet mt-0.5">
                                     Último: {b.last_status}
                                 </p>
                             )}
@@ -161,14 +161,14 @@ export function ScheduledBoardsSection() {
                         <div className="flex items-center gap-1 shrink-0">
                             <button
                                 onClick={() => openEdit(b)}
-                                className="p-1.5 rounded-lg text-text-secondary hover:text-electric-cyan hover:bg-surface-highlight transition-colors"
+                                className="p-1.5 rounded-lg text-content-muted hover:text-electric-cyan hover:bg-surface-highlight transition-colors"
                                 aria-label="Editar"
                             >
                                 <Pencil className="h-3.5 w-3.5" />
                             </button>
                             <button
                                 onClick={() => remove(b.id)}
-                                className="p-1.5 rounded-lg text-text-secondary hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                                className="p-1.5 rounded-lg text-content-muted hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
                                 aria-label="Eliminar"
                             >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -187,10 +187,10 @@ export function ScheduledBoardsSection() {
                         value={form.query}
                         onChange={(e) => setForm((f) => ({ ...f, query: e.target.value }))}
                         rows={2}
-                        className="w-full bg-surface border border-surface-highlight rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-electric-cyan/50"
+                        className="w-full bg-surface border border-surface-highlight rounded-lg px-3 py-2 text-sm text-content-strong focus:outline-none focus:border-electric-cyan/50"
                     />
                     <div className="flex flex-wrap gap-3">
-                        <label className="text-xs text-text-secondary space-y-1">
+                        <label className="text-xs text-content-muted space-y-1">
                             <span className="block">Cadencia</span>
                             <select
                                 aria-label="Cadencia"
@@ -198,14 +198,14 @@ export function ScheduledBoardsSection() {
                                 onChange={(e) =>
                                     setForm((f) => ({ ...f, cadence: e.target.value as "daily" | "weekly" }))
                                 }
-                                className="bg-surface border border-surface-highlight rounded-lg px-2 py-1.5 text-text-primary"
+                                className="bg-surface border border-surface-highlight rounded-lg px-2 py-1.5 text-content-strong"
                             >
                                 <option value="daily">Diaria</option>
                                 <option value="weekly">Semanal</option>
                             </select>
                         </label>
                         {form.cadence === "weekly" && (
-                            <label className="text-xs text-text-secondary space-y-1">
+                            <label className="text-xs text-content-muted space-y-1">
                                 <span className="block">Día</span>
                                 <select
                                     aria-label="Día"
@@ -213,7 +213,7 @@ export function ScheduledBoardsSection() {
                                     onChange={(e) =>
                                         setForm((f) => ({ ...f, weekday: Number(e.target.value) }))
                                     }
-                                    className="bg-surface border border-surface-highlight rounded-lg px-2 py-1.5 text-text-primary"
+                                    className="bg-surface border border-surface-highlight rounded-lg px-2 py-1.5 text-content-strong"
                                 >
                                     {WEEKDAYS.map((d, i) => (
                                         <option key={i} value={i}>{d}</option>
@@ -221,7 +221,7 @@ export function ScheduledBoardsSection() {
                                 </select>
                             </label>
                         )}
-                        <label className="text-xs text-text-secondary space-y-1">
+                        <label className="text-xs text-content-muted space-y-1">
                             <span className="block">Hora (UTC)</span>
                             <input
                                 aria-label="Hora UTC"
@@ -232,10 +232,10 @@ export function ScheduledBoardsSection() {
                                 onChange={(e) =>
                                     setForm((f) => ({ ...f, hour_utc: Number(e.target.value) }))
                                 }
-                                className="w-20 bg-surface border border-surface-highlight rounded-lg px-2 py-1.5 text-text-primary"
+                                className="w-20 bg-surface border border-surface-highlight rounded-lg px-2 py-1.5 text-content-strong"
                             />
                         </label>
-                        <label className="text-xs text-text-secondary space-y-1">
+                        <label className="text-xs text-content-muted space-y-1">
                             <span className="block">Canal</span>
                             <select
                                 aria-label="Canal"
@@ -246,7 +246,7 @@ export function ScheduledBoardsSection() {
                                         channel: e.target.value as "none" | "slack" | "whatsapp",
                                     }))
                                 }
-                                className="bg-surface border border-surface-highlight rounded-lg px-2 py-1.5 text-text-primary"
+                                className="bg-surface border border-surface-highlight rounded-lg px-2 py-1.5 text-content-strong"
                             >
                                 <option value="none">Ninguno</option>
                                 <option value="slack">Slack</option>
@@ -260,13 +260,13 @@ export function ScheduledBoardsSection() {
                             placeholder={form.channel === "slack" ? "#canal o ID" : "teléfono / grupo"}
                             value={form.channel_target ?? ""}
                             onChange={(e) => setForm((f) => ({ ...f, channel_target: e.target.value }))}
-                            className="w-full bg-surface border border-surface-highlight rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-electric-cyan/50"
+                            className="w-full bg-surface border border-surface-highlight rounded-lg px-3 py-2 text-sm text-content-strong focus:outline-none focus:border-electric-cyan/50"
                         />
                     )}
                     <div className="flex gap-2 justify-end">
                         <button
                             onClick={() => setShowForm(false)}
-                            className="px-3 py-1.5 rounded-lg text-xs text-text-secondary hover:text-text-primary border border-surface-highlight"
+                            className="px-3 py-1.5 rounded-lg text-xs text-content-muted hover:text-content-strong border border-surface-highlight"
                         >
                             Cancelar
                         </button>

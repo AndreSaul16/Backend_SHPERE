@@ -93,15 +93,15 @@ export function ArtifactCard({ content, language, artifactType, title: propsTitl
                             {isActa ? <Gavel className="h-4 w-4" /> : getIcon(artifactType, language)}
                         </div>
                         <div className="min-w-0">
-                            <p className="text-xs font-mono text-text-primary truncate">
+                            <p className="text-xs font-mono text-content-strong truncate">
                                 {title}
                             </p>
                             <div className="flex items-center gap-2">
-                                <p className="text-[10px] text-text-secondary uppercase tracking-tight opacity-60">
+                                <p className="text-[10px] text-content-muted uppercase tracking-tight opacity-60">
                                     {language || artifactType || 'document'}
                                 </p>
-                                <span className="text-[10px] text-text-secondary opacity-40">•</span>
-                                <p className="text-[10px] text-text-secondary font-mono opacity-60">
+                                <span className="text-[10px] text-content-muted opacity-40">•</span>
+                                <p className="text-[10px] text-content-muted font-mono opacity-60">
                                     {size}
                                 </p>
                             </div>
@@ -111,14 +111,14 @@ export function ArtifactCard({ content, language, artifactType, title: propsTitl
                     <div className="flex items-center gap-2 flex-shrink-0">
                         <button
                             onClick={handleView}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-highlight hover:bg-electric-cyan/10 text-text-secondary hover:text-electric-cyan rounded-lg text-[11px] font-medium transition-colors border border-transparent hover:border-electric-cyan/20"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-highlight hover:bg-electric-cyan/10 text-content-muted hover:text-electric-cyan rounded-lg text-[11px] font-medium transition-colors border border-transparent hover:border-electric-cyan/20"
                         >
                             <ExternalLink className="h-3 w-3" />
                             {isActa ? 'Ver acta' : 'Ver Código'}
                         </button>
                         <button
                             onClick={handleDownload}
-                            className="p-1.5 bg-surface-highlight hover:bg-luxury-purple/10 text-text-secondary hover:text-luxury-purple rounded-lg transition-colors border border-transparent hover:border-luxury-purple/20"
+                            className="p-1.5 bg-surface-highlight hover:bg-luxury-purple/10 text-content-muted hover:text-luxury-purple rounded-lg transition-colors border border-transparent hover:border-luxury-purple/20"
                             title="Descargar"
                         >
                             <Download className="h-3.5 w-3.5" />

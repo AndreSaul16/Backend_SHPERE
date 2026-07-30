@@ -80,11 +80,11 @@ export function AgentOverridesSettings() {
     }
   };
 
-  if (loading) return <p className="text-text-secondary">Cargando...</p>;
+  if (loading) return <p className="text-content-muted">Cargando...</p>;
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-text-secondary">
+      <p className="text-sm text-content-muted">
         Personaliza el comportamiento de los agentes base. Tu override se
         concatena al prompt del sistema (overlay pattern) — si mejoramos el
         prompt base, se propaga a ti salvo en los campos que hayas modificado.
@@ -107,7 +107,7 @@ export function AgentOverridesSettings() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 font-semibold">
                 <Bot className={`h-5 w-5 ${role.color}`} />
-                <h3 className="text-text-primary">{role.name}</h3>
+                <h3 className="text-content-strong">{role.name}</h3>
                 {hasOverride && (
                   <span className="px-2 py-0.5 bg-electric-cyan/10 text-electric-cyan rounded-full text-[10px]">
                     Customizado
@@ -118,7 +118,7 @@ export function AgentOverridesSettings() {
                 <button
                   onClick={() => handleReset(role.id)}
                   disabled={saving === role.id}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-midnight/50 text-text-secondary hover:text-red-400 hover:bg-red-500/10 border border-surface-highlight rounded-lg text-xs transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-midnight/50 text-content-muted hover:text-red-400 hover:bg-red-500/10 border border-surface-highlight rounded-lg text-xs transition-colors"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
                   Restaurar default
@@ -127,7 +127,7 @@ export function AgentOverridesSettings() {
             </div>
 
             <div>
-              <label className="text-[10px] uppercase font-mono text-text-secondary block mb-1">
+              <label className="text-[10px] uppercase font-mono text-content-muted block mb-1">
                 Instrucciones adicionales
               </label>
               <textarea
@@ -142,7 +142,7 @@ export function AgentOverridesSettings() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[10px] uppercase font-mono text-text-secondary block mb-1">
+                <label className="text-[10px] uppercase font-mono text-content-muted block mb-1">
                   Temperatura (creatividad)
                 </label>
                 <input
@@ -163,7 +163,7 @@ export function AgentOverridesSettings() {
                 />
               </div>
               <div>
-                <label className="text-[10px] uppercase font-mono text-text-secondary block mb-1">
+                <label className="text-[10px] uppercase font-mono text-content-muted block mb-1">
                   Modelo override
                 </label>
                 <input

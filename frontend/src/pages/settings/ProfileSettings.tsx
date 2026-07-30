@@ -56,7 +56,7 @@ export function ProfileSettings() {
     }
   };
 
-  if (loading) return <p className="text-text-secondary">Cargando perfil...</p>;
+  if (loading) return <p className="text-content-muted">Cargando perfil...</p>;
   if (error && !profile)
     return <p className="text-red-400">Error: {error}</p>;
   if (!profile) return null;
@@ -292,7 +292,7 @@ const inputCls =
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="text-[10px] uppercase font-mono text-text-secondary ml-1 block mb-1">
+      <label className="text-[10px] uppercase font-mono text-content-muted ml-1 block mb-1">
         {label}
       </label>
       {children}
@@ -313,11 +313,11 @@ function Section({
 }) {
   return (
     <section className="p-5 rounded-2xl bg-surface/30 border border-surface-highlight space-y-3">
-      <div className="flex items-center gap-3 text-text-primary font-semibold">
+      <div className="flex items-center gap-3 text-content-strong font-semibold">
         {icon}
         <h3>{title}</h3>
       </div>
-      {hint && <p className="text-xs text-text-secondary">{hint}</p>}
+      {hint && <p className="text-xs text-content-muted">{hint}</p>}
       <div className="space-y-3">{children}</div>
     </section>
   );
