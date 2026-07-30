@@ -642,10 +642,41 @@ export const profileService = {
     getStorage: () => req<StorageUsage>("/me/storage"),
 };
 
+export interface ServiceDefinition {
+    service: string;
+    label: string;
+    description: string;
+    credential_type: string;
+    connected: boolean;
+    metadata: Record<string, string>;
+    created_at: string | null;
+    tools?: string[];
+}
+
+export interface ServiceCredentialsResponse {
+    services: ServiceDefinition[];
+    available: string[];
+}
+
+/**
+ * D38: `ServiceCredentialsSettings` llamaba con `fetch` a una ruta absoluta de
+ * la API escrita a mano, o sea que ignoraba `VITE_API_URL` y sólo funcionaba si
+ * el frontend se servía desde el mismo origen que la API. Además se fabricaba su propio
+ * `getAuthToken`, con lo que el manejo de 401/402 de `errorHandler` no corría.
+ */
 export const serviceCredentialsService = {
-    list: () =>
-        req<{ services: Array<{ service: string; connected: boolean }>; available: string[] }>(
-            "/me/service-credentials"
+    list: () => req<ServiceCredentialsResponse>("/me/service-credentials"),
+    save: (service: string, api_key: string, metadata: Record<string, string>) =>
+        req<{ status: string }>("/me/service-credentials", {
+            method: "POST",
+            json: { service, api_key, metadata },
+        }),
+    remove: (service: string) =>
+        req<void>(`/me/service-credentials/${service}`, { method: "DELETE" }),
+    test: (service: string) =>
+        req<{ success: boolean; message: string }>(
+            `/me/service-credentials/${service}/test`,
+            { method: "POST" }
         ),
 };
 

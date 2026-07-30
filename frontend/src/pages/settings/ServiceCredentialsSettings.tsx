@@ -4,6 +4,10 @@
  * Las credenciales se cifran con Fernet y se inyectan en los payloads de n8n.
  */
 import { useEffect, useState, useCallback } from "react";
+import { serviceCredentialsService } from "@/services/api";
+import type { ServiceCredentialsResponse } from "@/services/api";
+import { reasonOf } from "@/lib/toastBus";
+import { PasswordField, TextField } from "@/components/ui/Field";
 import {
   Key,
   Calendar,
@@ -20,22 +24,6 @@ import {
   TestTube2,
   TrendingUp,
 } from "lucide-react";
-
-interface ServiceDefinition {
-  service: string;
-  label: string;
-  description: string;
-  credential_type: string;
-  connected: boolean;
-  metadata: Record<string, string>;
-  created_at: string | null;
-  tools?: string[];
-}
-
-interface ServiceCredentialsResponse {
-  services: ServiceDefinition[];
-  available: string[];
-}
 
 const SERVICE_ICONS: Record<string, React.ReactNode> = {
   google_calendar: <Calendar className="h-5 w-5" />,
@@ -72,15 +60,9 @@ export function ServiceCredentialsSettings() {
     setLoading(true);
     setError(null);
     try {
-      const token = await getAuthToken();
-      const resp = await fetch("/api/v1/me/service-credentials", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!resp.ok) throw new Error("Error cargando credenciales");
-      const result = await resp.json();
-      setData(result);
+      setData(await serviceCredentialsService.list());
     } catch (e) {
-      setError(String(e));
+      setError(reasonOf(e) ?? "No se pudieron cargar las credenciales.");
     } finally {
       setLoading(false);
     }
@@ -90,40 +72,21 @@ export function ServiceCredentialsSettings() {
     load();
   }, [load]);
 
-  const getAuthToken = async () => {
-    const { getAuth } = await import("firebase/auth");
-    const user = getAuth().currentUser;
-    if (!user) throw new Error("No autenticado");
-    return user.getIdToken();
-  };
-
   const handleSave = async (service: string) => {
     setSaving(service);
     setError(null);
     setSuccess(null);
     try {
-      const token = await getAuthToken();
-      const resp = await fetch("/api/v1/me/service-credentials", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          service,
-          api_key: apiKeys[service] || "",
-          metadata: metadataFields[service] || {},
-        }),
-      });
-      if (!resp.ok) {
-        const err = await resp.json();
-        throw new Error(err.detail || "Error guardando credencial");
-      }
+      await serviceCredentialsService.save(
+        service,
+        apiKeys[service] || "",
+        metadataFields[service] || {},
+      );
       setSuccess(`${service} configurado correctamente`);
       setApiKeys((prev) => ({ ...prev, [service]: "" }));
       await load();
     } catch (e) {
-      setError(String(e));
+      setError(reasonOf(e) ?? "No se pudo guardar la credencial.");
     } finally {
       setSaving(null);
     }
@@ -133,16 +96,11 @@ export function ServiceCredentialsSettings() {
     setSaving(service);
     setError(null);
     try {
-      const token = await getAuthToken();
-      const resp = await fetch(`/api/v1/me/service-credentials/${service}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!resp.ok) throw new Error("Error eliminando credencial");
+      await serviceCredentialsService.remove(service);
       setSuccess(`${service} eliminado correctamente`);
       await load();
     } catch (e) {
-      setError(String(e));
+      setError(reasonOf(e) ?? "No se pudo eliminar la credencial.");
     } finally {
       setSaving(null);
     }
@@ -152,17 +110,15 @@ export function ServiceCredentialsSettings() {
     setTesting(service);
     setTestResults((prev) => ({ ...prev, [service]: undefined as any }));
     try {
-      const token = await getAuthToken();
-      const resp = await fetch(`/api/v1/me/service-credentials/${service}/test`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const result = await resp.json();
+      const result = await serviceCredentialsService.test(service);
       setTestResults((prev) => ({ ...prev, [service]: result }));
     } catch (e) {
       setTestResults((prev) => ({
         ...prev,
-        [service]: { success: false, message: String(e) },
+        [service]: {
+          success: false,
+          message: reasonOf(e) ?? "No se pudo probar la credencial.",
+        },
       }));
     } finally {
       setTesting(null);
@@ -187,15 +143,17 @@ export function ServiceCredentialsSettings() {
       </div>
 
       {/* Success/Error banners */}
+      {/* §12.6: el resultado de guardar se anuncia. Antes cambiaba el DOM en
+          silencio y quien no ve la pantalla no sabía si había funcionado. */}
       {success && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
-          <CheckCircle2 className="h-4 w-4" />
+        <div role="status" className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+          <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
           {success}
         </div>
       )}
       {error && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400">
-          <XCircle className="h-4 w-4" />
+        <div role="alert" className="flex items-center gap-2 p-3 rounded-xl bg-dissent/10 border border-dissent/30 text-dissent">
+          <XCircle className="h-4 w-4" aria-hidden="true" />
           {error}
         </div>
       )}
@@ -218,12 +176,12 @@ export function ServiceCredentialsSettings() {
                   <p className="text-xs text-content-muted mt-1">{svc.description}</p>
                   {svc.tools && svc.tools.length > 0 && (
                     <div className="relative group/tools inline-block mt-2">
-                      <span className="px-2 py-0.5 bg-surface-highlight/70 text-content-muted border border-surface-highlight rounded-full text-[10px] font-medium cursor-default">
+                      <span className="px-2 py-0.5 bg-surface-highlight/70 text-content-muted border border-surface-highlight rounded-full text-micro font-medium cursor-default">
                         {svc.tools.length} herramienta{svc.tools.length !== 1 ? "s" : ""}
                       </span>
                       <div className="absolute bottom-full left-0 mb-2 opacity-0 invisible group-hover/tools:opacity-100 group-hover/tools:visible transition-all duration-200 z-50 pointer-events-none">
                         <div className="bg-surface border border-surface-highlight rounded-xl p-3 shadow-2xl min-w-[200px]">
-                          <p className="text-[10px] text-content-quiet uppercase tracking-widest mb-2">Herramientas disponibles</p>
+                          <p className="text-micro text-content-muted uppercase mb-2">Herramientas disponibles</p>
                           <ul className="space-y-1">
                             {svc.tools.map((t) => (
                               <li key={t} className="text-xs text-content-strong font-mono">{t}</li>
@@ -236,7 +194,7 @@ export function ServiceCredentialsSettings() {
                 </div>
               </div>
               {svc.connected && (
-                <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full text-[10px] flex-shrink-0">
+                <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full text-micro flex-shrink-0">
                   Configurado
                 </span>
               )}
@@ -244,100 +202,77 @@ export function ServiceCredentialsSettings() {
 
             {/* Input fields */}
             <div className="space-y-3">
-              {/* API Key / Token input */}
-              <div>
-                <label className="block text-xs text-content-muted mb-1">
-                  {svc.credential_type === "oauth_token" ? "Access Token" : "API Key"}
-                </label>
-                <input
-                  type="password"
-                  value={apiKeys[svc.service] || ""}
-                  onChange={(e) =>
-                    setApiKeys((prev) => ({ ...prev, [svc.service]: e.target.value }))
-                  }
-                  placeholder={
-                    svc.connected
-                      ? "••••••••••••••••••••••••"
-                      : `Ingresa tu ${svc.credential_type === "oauth_token" ? "token" : "API key"}`
-                  }
-                  className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-content-strong text-sm focus:outline-none focus:border-electric-cyan/50 placeholder:text-content-quiet"
-                />
-              </div>
+              {/* §9.2: la clave se escribe con conmutador de visibilidad. */}
+              <PasswordField
+                label={svc.credential_type === "oauth_token" ? "Access Token" : "API Key"}
+                value={apiKeys[svc.service] || ""}
+                onChange={(e) =>
+                  setApiKeys((prev) => ({ ...prev, [svc.service]: e.target.value }))
+                }
+                placeholder={
+                  svc.connected
+                    ? "••••••••••••••••••••••••"
+                    : `Escribe tu ${svc.credential_type === "oauth_token" ? "token" : "API key"}`
+                }
+              />
 
               {/* Metadata fields */}
               {svc.service === "whatsapp" && (
-                <div>
-                  <label className="block text-xs text-content-muted mb-1">
-                    Phone Number ID
-                  </label>
-                  <input
-                    type="text"
-                    value={metadataFields[svc.service]?.phone_number_id || ""}
-                    onChange={(e) =>
-                      setMetadataFields((prev) => ({
-                        ...prev,
-                        [svc.service]: {
-                          ...prev[svc.service],
-                          phone_number_id: e.target.value,
-                        },
-                      }))
-                    }
-                    placeholder="123456789012345"
-                    className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-content-strong text-sm focus:outline-none focus:border-electric-cyan/50 placeholder:text-content-quiet"
-                  />
-                </div>
+                <TextField
+                  label="Phone Number ID"
+                  value={metadataFields[svc.service]?.phone_number_id || ""}
+                  onChange={(e) =>
+                    setMetadataFields((prev) => ({
+                      ...prev,
+                      [svc.service]: {
+                        ...prev[svc.service],
+                        phone_number_id: e.target.value,
+                      },
+                    }))
+                  }
+                  placeholder="123456789012345"
+                />
               )}
 
               {svc.service === "google_calendar" && (
-                <div>
-                  <label className="block text-xs text-content-muted mb-1">
-                    Calendar ID (opcional)
-                  </label>
-                  <input
-                    type="text"
-                    value={metadataFields[svc.service]?.calendar_id || ""}
-                    onChange={(e) =>
-                      setMetadataFields((prev) => ({
-                        ...prev,
-                        [svc.service]: {
-                          ...prev[svc.service],
-                          calendar_id: e.target.value,
-                        },
-                      }))
-                    }
-                    placeholder="primary"
-                    className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-content-strong text-sm focus:outline-none focus:border-electric-cyan/50 placeholder:text-content-quiet"
-                  />
-                </div>
+                <TextField
+                  label="Calendar ID (opcional)"
+                  value={metadataFields[svc.service]?.calendar_id || ""}
+                  onChange={(e) =>
+                    setMetadataFields((prev) => ({
+                      ...prev,
+                      [svc.service]: {
+                        ...prev[svc.service],
+                        calendar_id: e.target.value,
+                      },
+                    }))
+                  }
+                  placeholder="primary"
+                />
               )}
 
               {svc.service === "instagram" && (
-                <div>
-                  <label className="block text-xs text-content-muted mb-1">
-                    Instagram Account ID
-                  </label>
-                  <input
-                    type="text"
-                    value={metadataFields[svc.service]?.instagram_account_id || ""}
-                    onChange={(e) =>
-                      setMetadataFields((prev) => ({
-                        ...prev,
-                        [svc.service]: {
-                          ...prev[svc.service],
-                          instagram_account_id: e.target.value,
-                        },
-                      }))
-                    }
-                    placeholder="17841400123456789"
-                    className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-content-strong text-sm focus:outline-none focus:border-electric-cyan/50 placeholder:text-content-quiet"
-                  />
-                </div>
+                <TextField
+                  label="Instagram Account ID"
+                  value={metadataFields[svc.service]?.instagram_account_id || ""}
+                  onChange={(e) =>
+                    setMetadataFields((prev) => ({
+                      ...prev,
+                      [svc.service]: {
+                        ...prev[svc.service],
+                        instagram_account_id: e.target.value,
+                      },
+                    }))
+                  }
+                  placeholder="17841400123456789"
+                />
               )}
             </div>
 
             {/* Test result */}
             {testResults[svc.service] && (
               <div
+                role="status"
                 className={`flex items-center gap-2 p-2 rounded-lg text-xs ${
                   testResults[svc.service].success
                     ? "bg-emerald-500/10 text-emerald-400"
