@@ -10,17 +10,22 @@
 # deploys SKIPPED en 1867ff4, y la configuración de Railway no se puede verificar
 # desde el repo. Dejando master intacto, el comportamiento de deploy no cambia y
 # el problema histórico no puede reproducirse. El gate se obtiene igual:
-#   - pull_request contra master  -> puerta de merge (no dispara deploy de prod)
-#   - push a ramas feat/**        -> verificación continua durante el desarrollo
+#   - pull_request contra master        -> puerta de merge (no dispara deploy de prod)
+#   - push a ramas feat/** y redesign/** -> verificación continua durante el desarrollo
 # Si algún día se quiere el check también en push a master, primero confirmar en
 # el dashboard de Railway que el servicio no espera a los checks de GitHub.
+#
+# `redesign/**` se añadió para el rediseño visual v3: vive en una rama larga
+# (`redesign/visual-identity-v3`) y sin este patrón el pipeline seguiría sin
+# ejecutarse nunca durante las ~24-31 jornadas de la refactorización, que es
+# exactamente el agujero que la tarea 0.0 del plan viene a tapar.
 name: CI
 
 on:
   pull_request:
     branches: [master]
   push:
-    branches: ['feat/**']
+    branches: ['feat/**', 'redesign/**']
 
 jobs:
   test-backend:
