@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { chatService, authHeaders } from '@/services/api';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -112,10 +113,10 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
     // ---- Fetch documents ----
     const fetchDocuments = useCallback(async () => {
         try {
-            const res = await fetch(`${API_BASE}/agents/${agentId}/documents`);
-            if (!res.ok) throw new Error(`Error ${res.status}`);
-            const data: AgentDocument[] = await res.json();
-            setDocuments(data);
+            // El endpoint exige Depends(get_current_user) y responde
+            // DocumentListResponse ({documents, total_count}), no un array.
+            const data = await chatService.getAgentDocuments(agentId);
+            setDocuments(Array.isArray(data?.documents) ? data.documents : []);
             setFetchError(null);
         } catch (err) {
             setFetchError((err as Error).message);
@@ -164,8 +165,11 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
     }, []);
 
     // ---- Upload a single file via XHR ----
+    // Se mantiene XHR propio (y no chatService.uploadAgentDocument) porque este
+    // registra el xhr en xhrMapRef y el efecto de desmontaje lo aborta; el del
+    // servicio no es abortable y dejaria subidas huerfanas llamando a setState.
     const uploadFile = useCallback(
-        (file: File) => {
+        async (file: File) => {
             const ext = getFileExtension(file.name);
             if (!ALLOWED_EXTENSIONS.includes(ext)) {
                 return;
@@ -221,7 +225,18 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
             const formData = new FormData();
             formData.append('file', file);
 
+            // El endpoint exige Depends(get_current_user). Solo se propaga
+            // Authorization: el Content-Type lo pone el navegador con el
+            // boundary de multipart, y fijarlo a mano rompe la subida.
+            const auth = (await authHeaders())['Authorization'];
+
+            // El await de arriba cede el hilo: si el componente se desmonto
+            // mientras tanto, el efecto de limpieza ya saco este xhr del mapa.
+            // Abrir y enviar entonces seria una peticion huerfana.
+            if (xhrMapRef.current.get(id) !== xhr) return;
+
             xhr.open('POST', `${API_BASE}/agents/${agentId}/documents`);
+            if (auth) xhr.setRequestHeader('Authorization', auth);
             xhr.send(formData);
         },
         [agentId, fetchDocuments],
@@ -240,11 +255,8 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
     const deleteDocument = useCallback(
         async (fileId: string) => {
             try {
-                const res = await fetch(
-                    `${API_BASE}/agents/${agentId}/documents/${fileId}`,
-                    { method: 'DELETE' },
-                );
-                if (!res.ok) throw new Error(`Error ${res.status}`);
+                // El endpoint exige Depends(get_current_user).
+                await chatService.deleteAgentDocument(agentId, fileId);
                 setDocuments((prev) => prev.filter((d) => d.id !== fileId));
             } catch (err) {
                 console.error('Failed to delete document:', err);
