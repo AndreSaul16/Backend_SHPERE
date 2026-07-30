@@ -21,6 +21,7 @@ import { PaywallModal } from "@/components/modals/PaywallModal";
 import { BillingPage } from "@/pages/BillingPage";
 import { SharedSessionPage } from "@/pages/SharedSessionPage";
 import { AdminPage } from "@/pages/AdminPage";
+import { ToastProvider } from "@/components/ui/Toast";
 
 function AuthenticatedApp() {
   const { fetchSessions, fetchCustomAgents } = useChatStore();
@@ -148,6 +149,9 @@ function App() {
         <ErrorOverlay />
         <AgentSelectorModal />
         <PaywallModal />
+        {/* DESIGN §9.5: la región de avisos vive en la raíz y está SIEMPRE en el
+            DOM, para que un `aria-live` no se monte junto a su contenido. */}
+        <ToastProvider />
         <AuthenticatedApp />
       </div>
     </AuthProvider>
