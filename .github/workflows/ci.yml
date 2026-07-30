@@ -1,16 +1,26 @@
 # CI de SPHERE — tests de backend (pytest con Mongo/Redis reales) y frontend (tsc + vitest).
 #
-# Reincorporado el 2026-07-12 (se retiró "temporalmente" en 1867ff4 porque Railway
-# marcaba los deploys como SKIPPED esperando estos checks). Antes de hacer push,
-# confirmar que el servicio de Railway NO espera a CI para desplegar, o marcar
-# estos checks como no requeridos en la protección de rama.
+# Historia: se retiró en 1867ff4 porque Railway marcaba los deploys como SKIPPED
+# esperando estos checks, y se reincorporó el 2026-07-12 apuntando a `main`. Pero
+# la única rama del repo es `master` (origin/HEAD -> origin/master), así que el
+# workflow no se ha ejecutado nunca: el refactor visual iba a llegar a producción
+# sin ningún gate automático.
+#
+# Por qué NO se dispara en push a master: es exactamente lo que provocó los
+# deploys SKIPPED en 1867ff4, y la configuración de Railway no se puede verificar
+# desde el repo. Dejando master intacto, el comportamiento de deploy no cambia y
+# el problema histórico no puede reproducirse. El gate se obtiene igual:
+#   - pull_request contra master  -> puerta de merge (no dispara deploy de prod)
+#   - push a ramas feat/**        -> verificación continua durante el desarrollo
+# Si algún día se quiere el check también en push a master, primero confirmar en
+# el dashboard de Railway que el servicio no espera a los checks de GitHub.
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
-    branches: [main]
+    branches: [master]
+  push:
+    branches: ['feat/**']
 
 jobs:
   test-backend:
@@ -67,12 +77,17 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
+      # `tsc --noEmit` es un no-op aquí: tsconfig.json es solution-style
+      # ("files": [] + references), así que sin -b comprueba CERO ficheros y
+      # sale 0 siempre. El -b recorre tsconfig.app.json y tsconfig.node.json.
       - name: Typecheck
         working-directory: frontend
-        run: npx tsc --noEmit
+        run: npx tsc -b --noEmit
+      # vitest directo en vez de `npm test`: corepack puede redirigir npm a pnpm
+      # y romper el paso por un motivo ajeno a los tests.
       - name: Run tests
         working-directory: frontend
-        run: npm test
+        run: npx vitest run
 
   lint:
     runs-on: ubuntu-latest
