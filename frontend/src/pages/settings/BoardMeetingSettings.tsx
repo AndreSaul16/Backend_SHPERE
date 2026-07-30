@@ -6,11 +6,11 @@ import { useEffect, useState, useCallback } from "react";
 import {
   Users,
   AlertTriangle,
-  Loader2,
   CheckCircle2,
   XCircle,
 } from "lucide-react";
 import { ScheduledBoardsSection } from "./ScheduledBoardsSection";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
@@ -191,55 +191,29 @@ export function BoardMeetingSettings() {
       {/* Juntas programadas (F3) */}
       <ScheduledBoardsSection />
 
-      {/* Warning modal */}
-      {showWarning && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-surface border border-surface-highlight rounded-2xl p-6 max-w-md mx-4 space-y-4">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="h-6 w-6 text-yellow-400" />
-              <h3 className="text-lg font-semibold text-content-strong">
-                Activar Board Meeting
-              </h3>
-            </div>
-
-            <div className="text-sm text-content-muted space-y-2">
-              <p>
-                Al activar Board Meeting, cada mensaje en la Junta Directiva
-                será procesado por <strong>todos los agentes</strong> (CEO, CTO, CFO, CMO).
-              </p>
-              <p>
-                Esto consume <strong>más tokens</strong> que el modo normal
-                (donde solo responde un agente).
-              </p>
-              <p>
-                Todos los agentes participan en una sola ronda de análisis:
-                CEO abre la discusión, CTO, CFO y CMO aportan sus perspectivas,
-                y el CEO concluye con una síntesis ejecutiva.
-              </p>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowWarning(false)}
-                className="flex-1 py-2 bg-surface/50 text-content-muted border border-surface-highlight rounded-xl hover:text-content-strong transition-all text-sm"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmEnable}
-                disabled={saving}
-                className="flex-1 py-2 bg-electric-cyan/10 text-electric-cyan border border-electric-cyan/30 rounded-xl hover:bg-electric-cyan hover:text-midnight transition-all text-sm font-medium"
-              >
-                {saving ? (
-                  <Loader2 className="h-4 w-4 animate-spin mx-auto" />
-                ) : (
-                  "Activar"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* §9.4: era un <div> sin role="dialog", sin trampa de foco y sin Escape.
+          `destructive={false}` porque activar el debate no destruye nada: es una
+          confirmación de coste (§P4), así que el botón es primario, no oxblood. */}
+      <ConfirmDialog
+        open={showWarning}
+        onClose={() => setShowWarning(false)}
+        onConfirm={confirmEnable}
+        question="¿Activar el debate de la"
+        objectName="Junta Directiva"
+        consequence={
+          <>
+            Cada mensaje a la Junta Directiva lo procesan{" "}
+            <strong className="text-content-strong">los cuatro directores</strong> (CEO, CTO,
+            CFO y CMO) en una ronda: el CEO abre, CTO, CFO y CMO aportan su
+            perspectiva y el CEO cierra con una síntesis. Consume más créditos que
+            el modo normal, donde responde un solo agente.
+          </>
+        }
+        confirmLabel="Activar"
+        confirmLoadingLabel="Activando"
+        loading={saving}
+        destructive={false}
+      />
     </div>
   );
 }

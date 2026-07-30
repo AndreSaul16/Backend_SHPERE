@@ -1,10 +1,12 @@
 import { useRef, useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Save, Camera, Zap, Pencil, X, Users, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Camera, Zap, Pencil, Users, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useChatStore, getGroupMembers } from "@/store/useChatStore";
 import { cn } from "@/lib/utils";
 import { TextField } from "@/components/ui/Field";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
@@ -518,89 +520,77 @@ export function ChatSettingsPage() {
                         </section>
                     )}
 
-                    {/* Member Edit Modal */}
-                    <AnimatePresence>
-                        {editingMember && (
-                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.95 }}
-                                    className="bg-surface border border-surface-highlight rounded-2xl p-6 max-w-sm mx-4 space-y-5 w-full"
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="text-lg font-semibold text-content-strong">Editar miembro</h3>
-                                        <button onClick={() => setEditingMember(null)} className="p-1.5 hover:bg-surface-highlight rounded-lg text-content-muted hover:text-content-strong transition-colors">
-                                            <X className="h-4 w-4" />
-                                        </button>
-                                    </div>
+                    {/* Member Edit Modal — §9.4. Era un <div> sin role="dialog",
+                        sin trampa de foco y sin Escape. */}
+                    <Modal
+                        open={editingMember !== null}
+                        onClose={() => setEditingMember(null)}
+                        size="sm"
+                        title="Editar miembro"
+                        footer={
+                            <div className="flex w-full items-center justify-end gap-3">
+                                <Button variant="ghost" onClick={() => setEditingMember(null)}>
+                                    Cancelar
+                                </Button>
+                                <Button variant="primary" onClick={saveMemberEdit}>
+                                    Guardar cambios
+                                </Button>
+                            </div>
+                        }
+                    >
+                        <div className="space-y-4">
+                            <TextField
+                                label="Nombre"
+                                id="member-name"
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                                placeholder="Ej: Hernesto"
+                            />
 
-                                    <div className="space-y-4">
-                                        <TextField
-                                            label="Nombre"
-                                            id="member-name"
-                                            value={editName}
-                                            onChange={(e) => setEditName(e.target.value)}
-                                            placeholder="Ej: Hernesto"
+                            <div className="space-y-1.5">
+                                <label htmlFor="member-color" className="text-micro text-content-muted uppercase font-mono">Color</label>
+                                <div className="flex items-center gap-3">
+                                    <div
+                                        className="h-10 w-10 rounded-sm border-2 relative overflow-hidden"
+                                        style={{ borderColor: editColor, backgroundColor: `${editColor}20` }}
+                                    >
+                                        <input
+                                            id="member-color"
+                                            type="color"
+                                            value={editColor}
+                                            onChange={(e) => setEditColor(e.target.value)}
+                                            className="absolute inset-0 opacity-0 cursor-pointer"
                                         />
-
-                                        <div className="space-y-1.5">
-                                            <label htmlFor="member-color" className="text-micro text-content-muted uppercase font-mono">Color</label>
-                                            <div className="flex items-center gap-3">
-                                                <div
-                                                    className="h-10 w-10 rounded-xl border-2 cursor-pointer relative overflow-hidden"
-                                                    style={{ borderColor: editColor, backgroundColor: `${editColor}20` }}
-                                                >
-                                                    <input
-                                                        id="member-color"
-                                                        type="color"
-                                                        value={editColor}
-                                                        onChange={(e) => setEditColor(e.target.value)}
-                                                        className="absolute inset-0 opacity-0 cursor-pointer"
-                                                    />
-                                                    <div className="h-full w-full flex items-center justify-center">
-                                                        <div className="h-3 w-3 rounded-full" style={{ backgroundColor: editColor }} />
-                                                    </div>
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    {['#8A63D2', '#00C1B3', '#E34A95', '#6B8AFD', '#00F0C8'].map(c => (
-                                                        <button
-                                                            key={c}
-                                                            onClick={() => setEditColor(c)}
-                                                            className={cn(
-                                                                "h-7 w-7 rounded-lg border-2 transition-all",
-                                                                editColor === c ? "scale-110 shadow-lg" : "border-transparent opacity-60 hover:opacity-100"
-                                                            )}
-                                                            style={{ backgroundColor: `${c}30`, borderColor: editColor === c ? c : 'transparent' }}
-                                                        >
-                                                            <div className="h-full w-full flex items-center justify-center">
-                                                                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: c }} />
-                                                            </div>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
+                                        <div className="h-full w-full flex items-center justify-center">
+                                            <div className="h-3 w-3 rounded-full" style={{ backgroundColor: editColor }} />
                                         </div>
                                     </div>
-
-                                    <div className="flex gap-3 pt-2">
-                                        <button
-                                            onClick={() => setEditingMember(null)}
-                                            className="flex-1 py-2.5 bg-surface/50 text-content-muted border border-surface-highlight rounded-xl hover:text-content-strong transition-all text-sm"
-                                        >
-                                            Cancelar
-                                        </button>
-                                        <button
-                                            onClick={saveMemberEdit}
-                                            className="flex-1 py-2.5 bg-electric-cyan/10 text-electric-cyan border border-electric-cyan/30 rounded-xl hover:bg-electric-cyan hover:text-midnight transition-all text-sm font-medium"
-                                        >
-                                            Guardar
-                                        </button>
+                                    {/* §9.9: el estado activo de un chip no puede ser
+                                        sólo cromático — de ahí `aria-pressed`. */}
+                                    <div className="flex gap-2" role="group" aria-label="Colores sugeridos">
+                                        {['#8A63D2', '#00C1B3', '#E34A95', '#6B8AFD', '#00F0C8'].map(c => (
+                                            <button
+                                                key={c}
+                                                type="button"
+                                                onClick={() => setEditColor(c)}
+                                                aria-pressed={editColor === c}
+                                                aria-label={`Color ${c}`}
+                                                className={cn(
+                                                    "h-9 w-9 rounded-sm border-2 transition-all",
+                                                    editColor === c ? "scale-110 shadow-e2" : "border-transparent hover:scale-105"
+                                                )}
+                                                style={{ backgroundColor: `${c}30`, borderColor: editColor === c ? c : 'transparent' }}
+                                            >
+                                                <div className="h-full w-full flex items-center justify-center">
+                                                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: c }} />
+                                                </div>
+                                            </button>
+                                        ))}
                                     </div>
-                                </motion.div>
+                                </div>
                             </div>
-                        )}
-                    </AnimatePresence>
+                        </div>
+                    </Modal>
                 </div>
             </div>
         </div>

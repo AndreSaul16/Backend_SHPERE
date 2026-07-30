@@ -57,11 +57,14 @@ describe('AgentSelectorModal - Comportamiento de UI', () => {
             </MemoryRouter>
         );
 
-        fireEvent.click(screen.getByText('Crear Nuevo Agente'));
+        fireEvent.click(screen.getByText('Crear agente nuevo'));
 
         // El botón abre el AgentCreationWizard (paso 0: "Elegir método").
-        // El wizard muestra su cabecera "Crear Agente" y la opción "Crear desde cero".
-        expect(await screen.findByRole('heading', { name: 'Crear Agente' })).toBeDefined();
+        // Desde 1.8 el asistente es un <Modal>, así que su cabecera es el
+        // título del diálogo: se comprueba por el nombre accesible del rol
+        // `dialog`, que es lo que de verdad oye un lector de pantalla.
+        expect(await screen.findByRole('heading', { name: 'Crear agente' })).toBeDefined();
+        expect(screen.getAllByRole('dialog').some((d) => d.getAttribute('aria-modal') === 'true')).toBe(true);
         expect(screen.getByText('Crear desde cero')).toBeDefined();
         expect(screen.getByText(/o usa una plantilla/i)).toBeDefined();
     });

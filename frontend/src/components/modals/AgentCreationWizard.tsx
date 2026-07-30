@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
 import {
-    X,
     ChevronRight,
     ChevronLeft,
     Sparkles,
@@ -462,51 +463,53 @@ export function AgentCreationWizard({ isOpen, onClose, onAgentCreated }: AgentCr
     // -----------------------------------------------------------------------
 
     return (
-        <AnimatePresence>
-            {isOpen && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center overflow-hidden">
-                    {/* Backdrop */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.25 }}
-                        onClick={onClose}
-                        className="absolute inset-0 bg-midnight/90 backdrop-blur-2xl"
-                    />
+        <Modal
+            open={isOpen}
+            onClose={onClose}
+            size="lg"
+            // Un asistente de cuatro pasos puede tener trabajo del usuario
+            // dentro: §9.4 sólo autoriza cerrar con el velo si no se pierde
+            // nada, así que aquí no.
+            dismissOnBackdrop={false}
+            title="Crear agente"
+            description={`${STEPS[step].label} — Paso ${step + 1} de ${STEPS.length}`}
+            bodyClassName="px-0 py-0"
+            footer={
+                <div className="flex w-full items-center justify-between gap-3">
+                    <Button variant="secondary" onClick={step === 0 ? onClose : handleBack}>
+                        {step === 0 ? (
+                            <>Cancelar</>
+                        ) : (
+                            <>
+                                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                                Atrás
+                            </>
+                        )}
+                    </Button>
 
-                    {/* Modal Shell */}
-                    <motion.div
-                        initial={{ scale: 0.92, opacity: 0, y: 30 }}
-                        animate={{ scale: 1, opacity: 1, y: 0 }}
-                        exit={{ scale: 0.92, opacity: 0, y: 30 }}
-                        transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-                        className="glass-panel relative z-10 w-full max-w-3xl mx-4 rounded-3xl overflow-hidden flex flex-col max-h-[92vh] shadow-[0_0_80px_rgba(0,0,0,0.6)]"
-                    >
-                        {/* ---- Header ---- */}
-                        <div className="px-8 pt-7 pb-5 border-b border-white/5 bg-white/[0.02] flex items-center justify-between shrink-0">
-                            <div className="flex items-center gap-4">
-                                <div className="p-2.5 bg-electric-cyan/10 rounded-xl">
-                                    <Sparkles className="h-6 w-6 text-electric-cyan" />
-                                </div>
-                                <div>
-                                    <h2 className="text-xl font-bold text-white">Crear Agente</h2>
-                                    <p className="text-sm text-gray-500 mt-0.5">
-                                        {STEPS[step].label} &mdash; Paso {step + 1} de {STEPS.length}
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={onClose}
-                                className="p-2.5 rounded-full hover:bg-white/5 transition-colors text-gray-400 hover:text-white active-scale"
-                            >
-                                <X className="h-5 w-5" />
-                            </button>
-                        </div>
-
+                    {step < 3 ? (
+                        <Button variant="primary" onClick={handleNext} disabled={!canProceed()}>
+                            Siguiente
+                            <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                        </Button>
+                    ) : (
+                        <Button
+                            variant="primary"
+                            onClick={handleSubmit}
+                            loading={isSubmitting}
+                            loadingLabel="Creando"
+                        >
+                            <Sparkles className="h-4 w-4" aria-hidden="true" />
+                            Crear agente
+                        </Button>
+                    )}
+                </div>
+            }
+        >
+                    <div className="flex flex-col">
                         {/* ---- Progress Bar ---- */}
-                        <div className="px-8 pt-5 pb-2 shrink-0">
-                            <div className="flex items-center gap-2">
+                        <div className="px-5 pt-4 pb-2 shrink-0">
+                            <div className="flex items-center gap-2" role="group" aria-label="Pasos del asistente">
                                 {STEPS.map((s, i) => {
                                     const StepIcon = s.icon;
                                     const isActive = i === step;
@@ -514,8 +517,10 @@ export function AgentCreationWizard({ isOpen, onClose, onAgentCreated }: AgentCr
                                     return (
                                         <div key={i} className="flex items-center gap-2 flex-1">
                                             <button
+                                                type="button"
                                                 onClick={() => i < step && goTo(i as WizardStep)}
                                                 disabled={i > step}
+                                                aria-current={isActive ? 'step' : undefined}
                                                 className={cn(
                                                     'flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all',
                                                     isActive && 'bg-electric-cyan/10 text-electric-cyan',
@@ -539,7 +544,7 @@ export function AgentCreationWizard({ isOpen, onClose, onAgentCreated }: AgentCr
                         </div>
 
                         {/* ---- Content ---- */}
-                        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 relative">
+                        <div className="relative">
                             <AnimatePresence mode="wait" custom={direction}>
                                 {step === 0 && (
                                     <StepChooseMethod
@@ -611,60 +616,8 @@ export function AgentCreationWizard({ isOpen, onClose, onAgentCreated }: AgentCr
                             </AnimatePresence>
                         </div>
 
-                        {/* ---- Footer Navigation ---- */}
-                        <div className="px-8 py-5 border-t border-white/5 bg-white/[0.02] flex items-center justify-between shrink-0">
-                            <button
-                                onClick={step === 0 ? onClose : handleBack}
-                                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white/5 text-gray-300 font-semibold hover:bg-white/10 transition-colors text-sm"
-                            >
-                                {step === 0 ? (
-                                    <>Cancelar</>
-                                ) : (
-                                    <>
-                                        <ChevronLeft className="h-4 w-4" />
-                                        Atras
-                                    </>
-                                )}
-                            </button>
-
-                            {step < 3 ? (
-                                <button
-                                    onClick={handleNext}
-                                    disabled={!canProceed()}
-                                    className={cn(
-                                        'flex items-center gap-2 px-6 py-2.5 rounded-2xl font-bold text-sm transition-all',
-                                        canProceed()
-                                            ? 'bg-electric-cyan text-midnight hover:brightness-110 active-scale'
-                                            : 'bg-white/5 text-gray-600 cursor-not-allowed',
-                                    )}
-                                >
-                                    Siguiente
-                                    <ChevronRight className="h-4 w-4" />
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={handleSubmit}
-                                    disabled={isSubmitting}
-                                    className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-electric-cyan text-midnight font-bold text-sm hover:brightness-110 active-scale transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isSubmitting ? (
-                                        <>
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                            Creando...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Sparkles className="h-4 w-4" />
-                                            Crear Agente
-                                        </>
-                                    )}
-                                </button>
-                            )}
-                        </div>
-                    </motion.div>
-                </div>
-            )}
-        </AnimatePresence>
+                    </div>
+        </Modal>
     );
 }
 

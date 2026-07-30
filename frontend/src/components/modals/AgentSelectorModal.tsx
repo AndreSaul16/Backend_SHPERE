@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Search, X, Zap, Crown, Monitor, TrendingUp, Briefcase, Plus, Users, Cpu, Trash2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Search, Zap, Crown, Monitor, TrendingUp, Briefcase, Plus, Users, Trash2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useChatStore } from '@/store/useChatStore';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -8,6 +8,8 @@ import type { Role } from '@/types';
 import { AgentCreationWizard } from './AgentCreationWizard';
 import { BoardActivationModal } from './BoardActivationModal';
 import { chatService } from '@/services/api';
+import { Modal } from '@/components/ui/Modal';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 const getRoleIcon = (role: Role) => {
     switch (role) {
@@ -36,6 +38,8 @@ export function AgentSelectorModal() {
     const [isLoadingSession, setIsLoadingSession] = useState(false);
     // Board activation modal: al elegir "Junta Directiva" sin debate activado.
     const [boardModalOpen, setBoardModalOpen] = useState(false);
+    // D18 (1.9): borrar un agente propio era un clic sin vuelta atrás.
+    const [confirmDeleteAgent, setConfirmDeleteAgent] = useState<{ id: string; name: string } | null>(null);
 
     useEffect(() => {
         if (isAgentModalOpen) {
@@ -105,55 +109,21 @@ export function AgentSelectorModal() {
 
     return (
         <>
-        <AnimatePresence>
-            {isAgentModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-hidden">
-                    {/* Backdrop */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => toggleAgentModal(false)}
-                        className="absolute inset-0 bg-midnight/80 backdrop-blur-xl"
-                    />
-
-                    {/* Modal Content */}
-                    <motion.div
-                        initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                        animate={{ scale: 1, opacity: 1, y: 0 }}
-                        exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                        className="glass-panel w-full max-w-2xl rounded-[32px] overflow-hidden flex flex-col max-h-[90vh] relative z-10 shadow-[0_0_50px_rgba(0,0,0,0.5)]"
-                    >
-                        {/* Header */}
-                        <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
-                            <div>
-                                <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                                    <div className="p-2 bg-electric-cyan/10 rounded-xl">
-                                        <Cpu className="h-6 w-6 text-electric-cyan" />
-                                    </div>
-                                    Nuevo Chat
-                                </h2>
-                                <p className="text-sm text-gray-400 mt-2">
-                                    Elige un modo de trabajo para iniciar una nueva conversación.
-                                </p>
-                            </div>
-                            <button
-                                onClick={() => toggleAgentModal(false)}
-                                className="p-2.5 rounded-full hover:bg-white/5 transition-colors text-gray-400 hover:text-white active-scale"
-                            >
-                                <X className="h-6 w-6" />
-                            </button>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
+        <Modal
+            open={isAgentModalOpen}
+            onClose={() => toggleAgentModal(false)}
+            size="lg"
+            title="Nuevo chat"
+            description="Elige un modo de trabajo para iniciar una nueva conversación."
+        >
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                className="p-8 pt-4 space-y-8"
+                                className="space-y-8"
                             >
                                 {/* Search Area */}
                                 <div className="relative group">
-                                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500 group-focus-within:text-electric-cyan transition-colors" />
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-content-muted group-focus-within:text-accent transition-colors" aria-hidden="true" />
                                     <input
                                         id="agent-search"
                                         aria-label="Buscar agente o grupo"
@@ -161,7 +131,7 @@ export function AgentSelectorModal() {
                                         placeholder="Buscar agente o grupo..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full glass-input rounded-2xl py-4 pl-14 pr-6 text-base text-white placeholder:text-gray-600"
+                                        className="w-full glass-input rounded-sm py-3 pl-12 pr-5 text-base text-content placeholder:text-content-quiet"
                                     />
                                 </div>
 
@@ -169,27 +139,24 @@ export function AgentSelectorModal() {
                                     {/* ── SECTION 1: CHATS GRUPALES ── */}
                                     {showGroupChat && groupChat && (
                                         <section>
-                                            <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                                <Users className="h-3.5 w-3.5" /> Chats Grupales
+                                            <h3 className="text-micro font-bold text-content-muted uppercase mb-3 flex items-center gap-2">
+                                                <Users className="h-3.5 w-3.5" aria-hidden="true" /> Chats grupales
                                             </h3>
-                                            <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-                                                Un orquestador analiza tu consulta y delega al experto más adecuado. Al entrar podrás activar el <strong className="text-electric-cyan">Board Meeting</strong> con un clic para que todos los agentes debatan entre sí.
+                                            <p className="text-xs text-content-muted mb-4 leading-relaxed">
+                                                Un orquestador analiza tu consulta y delega al experto más adecuado. Al entrar podrás activar el <strong className="text-accent">debate de la junta</strong> con un clic para que todos los directores debatan entre sí.
                                             </p>
                                             <motion.button
-                                                whileHover={{ y: -4, scale: 1.02 }}
-                                                whileTap={{ scale: 0.98 }}
+                                                type="button"
+                                                whileTap={{ scale: 0.985 }}
                                                 onClick={() => handleSelectAgent(groupChat.id)}
-                                                className="w-full flex items-center gap-4 p-5 rounded-3xl bg-gradient-to-r from-electric-cyan/[0.04] to-luxury-purple/[0.04] border border-white/5 hover:border-electric-cyan/40 hover:bg-white/[0.07] transition-all text-left relative overflow-hidden group shadow-lg"
+                                                className="w-full flex items-center gap-4 p-5 rounded-md bg-surface-2 border border-stroke-edge hover:border-brass-600 transition-colors text-left relative overflow-hidden group"
                                             >
-                                                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-electric-cyan/20 to-luxury-purple/20 border border-white/10 flex items-center justify-center shadow-inner">
-                                                    <span className="text-2xl">🏛️</span>
+                                                <div className="h-14 w-14 rounded-sm bg-brass-600/20 border border-brass-400/40 flex items-center justify-center">
+                                                    <span className="text-2xl" role="img" aria-label="Junta">🏛️</span>
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="font-bold text-white group-hover:text-electric-cyan transition-colors">Junta Directiva</p>
-                                                    <p className="text-xs text-gray-500 mt-1">Orquestación multi-agente — CEO, CTO, CMO y CFO colaboran en tus consultas.</p>
-                                                </div>
-                                                <div className="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Zap className="h-3 w-3 text-electric-cyan" />
+                                                    <p className="font-bold text-content-strong group-hover:text-accent transition-colors">Junta Directiva</p>
+                                                    <p className="text-xs text-content-muted mt-1">Orquestación multi-agente — CEO, CTO, CMO y CFO colaboran en tus consultas.</p>
                                                 </div>
                                             </motion.button>
                                         </section>
@@ -197,36 +164,39 @@ export function AgentSelectorModal() {
 
                                     {/* ── SECTION 2: MIS EXPERTOS ── */}
                                     <section>
-                                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                            <Crown className="h-3.5 w-3.5" /> Mis Expertos
+                                        <h3 className="text-micro font-bold text-content-muted uppercase mb-3 flex items-center gap-2">
+                                            <Crown className="h-3.5 w-3.5" aria-hidden="true" /> Mis expertos
                                         </h3>
-                                        <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+                                        <p className="text-xs text-content-muted mb-4 leading-relaxed">
                                             Chats individuales con un experto específico. Respuestas rápidas y enfocadas.
                                         </p>
+                                        {filteredCoreExperts.length === 0 && filteredCustomExperts.length === 0 && searchQuery && (
+                                            /* §9.14: la búsqueda sin resultados dice qué falta y qué hacer. */
+                                            <p className="mb-4 text-xs text-content-muted">
+                                                Ningún experto se llama así. Borra la búsqueda o crea uno nuevo.
+                                            </p>
+                                        )}
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             {/* Core experts: CEO, CTO, CMO, CFO */}
                                             {filteredCoreExperts.map((agent: any) => {
                                                 const Icon = getRoleIcon(agent.role);
                                                 return (
                                                     <motion.button
-                                                        whileHover={{ y: -4, scale: 1.02 }}
-                                                        whileTap={{ scale: 0.98 }}
+                                                        type="button"
+                                                        whileTap={{ scale: 0.985 }}
                                                         key={agent.id}
                                                         onClick={() => handleSelectAgent(agent.id)}
-                                                        className="flex items-center gap-4 p-5 rounded-3xl bg-white/[0.03] border border-white/5 hover:border-electric-cyan/40 hover:bg-white/[0.07] transition-all text-left relative overflow-hidden group shadow-lg"
+                                                        className="flex items-center gap-4 p-5 rounded-md bg-surface-2 border border-stroke-edge hover:border-brass-600 transition-colors text-left relative overflow-hidden group"
                                                     >
                                                         <div className={cn(
-                                                            "h-14 w-14 rounded-2xl flex items-center justify-center border shadow-inner bg-white/[0.05] border-white/5",
+                                                            "h-14 w-14 rounded-sm flex items-center justify-center border border-stroke-edge bg-surface-3",
                                                             agent.color
                                                         )}>
-                                                            <Icon className="h-7 w-7" />
+                                                            <Icon className="h-7 w-7" aria-hidden="true" />
                                                         </div>
                                                         <div className="flex-1 min-w-0">
-                                                            <p className="font-bold text-white group-hover:text-electric-cyan transition-colors">{agent.name}</p>
-                                                            <p className="text-xs text-gray-500 mt-1 line-clamp-1">{agent.description}</p>
-                                                        </div>
-                                                        <div className="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <Zap className="h-3 w-3 text-electric-cyan" />
+                                                            <p className="font-bold text-content-strong group-hover:text-accent transition-colors">{agent.name}</p>
+                                                            <p className="text-xs text-content-muted mt-1 line-clamp-1">{agent.description}</p>
                                                         </div>
                                                     </motion.button>
                                                 );
@@ -234,58 +204,67 @@ export function AgentSelectorModal() {
 
                                             {/* Custom experts */}
                                             {filteredCustomExperts.map((agent: any) => (
-                                                <motion.div
-                                                    key={agent.id}
-                                                    whileHover={{ y: -4, scale: 1.02 }}
-                                                    className="relative group"
-                                                >
+                                                <div key={agent.id} className="relative group" data-row>
                                                     <button
+                                                        type="button"
                                                         onClick={() => handleSelectAgent(agent.id)}
-                                                        className="w-full flex items-center gap-4 p-5 rounded-3xl bg-white/[0.03] border border-white/5 hover:border-luxury-purple/40 hover:bg-white/[0.07] transition-all text-left shadow-lg"
+                                                        className="w-full flex items-center gap-4 p-5 pe-14 rounded-md bg-surface-2 border border-stroke-edge hover:border-brass-600 transition-colors text-left"
                                                     >
-                                                        <div className="h-14 w-14 rounded-2xl bg-white/[0.05] border border-white/5 flex items-center justify-center font-bold text-luxury-purple shadow-inner">
+                                                        <div className="h-14 w-14 rounded-sm bg-surface-3 border border-stroke-edge flex items-center justify-center font-bold text-accent">
                                                             {agent.avatar}
                                                         </div>
                                                         <div className="flex-1 min-w-0">
-                                                            <p className="font-bold text-white group-hover:text-luxury-purple transition-colors truncate">{agent.name}</p>
-                                                            <p className="text-xs text-gray-500 mt-1 line-clamp-1 truncate">{agent.description}</p>
+                                                            <p className="font-bold text-content-strong group-hover:text-accent transition-colors truncate">{agent.name}</p>
+                                                            <p className="text-xs text-content-muted mt-1 line-clamp-1 truncate">{agent.description}</p>
                                                         </div>
                                                     </button>
+                                                    {/* El borrado de un agente propio es destructivo: pasa por <ConfirmDialog> (1.9). */}
                                                     <button
-                                                        onClick={(e) => { e.stopPropagation(); deleteCustomAgent(agent.id); }}
-                                                        className="absolute top-3 right-3 p-2 opacity-0 group-hover:opacity-100 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-all active-scale"
+                                                        type="button"
+                                                        onClick={() => setConfirmDeleteAgent({ id: agent.id, name: agent.name })}
+                                                        aria-label={`Eliminar el agente ${agent.name}`}
+                                                        data-row-actions
+                                                        className="absolute top-1/2 end-2 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-sm text-dissent hover:bg-dissent/10 transition-colors"
                                                     >
-                                                        <Trash2 className="h-4 w-4" />
+                                                        <Trash2 className="h-4 w-4" aria-hidden="true" />
                                                     </button>
-                                                </motion.div>
+                                                </div>
                                             ))}
 
                                             {/* Create new agent button */}
                                             <motion.button
-                                                whileHover={{ scale: 1.02, backgroundColor: "rgba(255,255,255,0.05)" }}
-                                                whileTap={{ scale: 0.98 }}
+                                                type="button"
+                                                whileTap={{ scale: 0.985 }}
                                                 onClick={() => setIsWizardOpen(true)}
-                                                className="flex flex-col items-center justify-center gap-3 p-5 rounded-3xl border-2 border-dashed border-white/5 hover:border-electric-cyan/30 transition-all font-medium text-gray-500 hover:text-electric-cyan"
+                                                className="flex flex-col items-center justify-center gap-3 p-5 rounded-md border-2 border-dashed border-stroke-edge hover:border-brass-600 transition-colors font-medium text-content-muted hover:text-accent"
                                             >
-                                                <div className="p-3 bg-white/5 rounded-2xl group-hover:bg-electric-cyan/10 transition-colors">
-                                                    <Plus className="h-6 w-6" />
+                                                <div className="p-3 bg-surface-3 rounded-sm">
+                                                    <Plus className="h-6 w-6" aria-hidden="true" />
                                                 </div>
-                                                <span className="text-sm">Crear Nuevo Agente</span>
+                                                <span className="text-sm">Crear agente nuevo</span>
                                             </motion.button>
                                         </div>
                                     </section>
                                 </div>
                             </motion.div>
-                        </div>
-                    </motion.div>
-                </div>
-            )}
-        </AnimatePresence>
+        </Modal>
 
         <AgentCreationWizard
             isOpen={isWizardOpen}
             onClose={() => setIsWizardOpen(false)}
             onAgentCreated={handleAgentCreated}
+        />
+        <ConfirmDialog
+            open={confirmDeleteAgent !== null}
+            onClose={() => setConfirmDeleteAgent(null)}
+            onConfirm={async () => {
+                if (!confirmDeleteAgent) return;
+                await deleteCustomAgent(confirmDeleteAgent.id);
+                setConfirmDeleteAgent(null);
+            }}
+            question="¿Eliminar el agente"
+            objectName={confirmDeleteAgent?.name ?? ''}
+            consequence="Se borran su configuración y su base de conocimiento. No se puede deshacer."
         />
         <BoardActivationModal
             open={boardModalOpen}

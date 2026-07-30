@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
     ArrowLeft,
     Save,
@@ -10,14 +10,14 @@ import {
     Cpu,
     Trash2,
     AlertTriangle,
-    Check,
-    X,
     Loader2,
     BookOpen,
     Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TextAreaField, TextField } from "@/components/ui/Field";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { reasonOf, toast } from "@/lib/toastBus";
 import { KnowledgeBasePanel } from "@/components/agents/KnowledgeBasePanel";
 
 // ---------------------------------------------------------------------------
@@ -71,137 +71,6 @@ interface AgentDetailAPI {
 }
 
 // ---------------------------------------------------------------------------
-// Toast
-// ---------------------------------------------------------------------------
-
-type ToastVariant = "success" | "error";
-
-interface Toast {
-    id: number;
-    message: string;
-    variant: ToastVariant;
-}
-
-let toastCounter = 0;
-
-function ToastContainer({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: number) => void }) {
-    return (
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none">
-            <AnimatePresence mode="popLayout">
-                {toasts.map((t) => (
-                    <motion.div
-                        key={t.id}
-                        layout
-                        initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                        transition={{ duration: 0.25 }}
-                        className={cn(
-                            "pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border backdrop-blur-md shadow-2xl text-sm font-medium",
-                            t.variant === "success" &&
-                                "bg-emerald-500/10 border-emerald-500/30 text-emerald-400",
-                            t.variant === "error" &&
-                                "bg-red-500/10 border-red-500/30 text-red-400"
-                        )}
-                    >
-                        {t.variant === "success" ? (
-                            <Check className="h-4 w-4 shrink-0" />
-                        ) : (
-                            <X className="h-4 w-4 shrink-0" />
-                        )}
-                        <span>{t.message}</span>
-                        <button
-                            onClick={() => onDismiss(t.id)}
-                            className="ml-2 p-0.5 hover:bg-white/10 rounded transition-colors"
-                        >
-                            <X className="h-3 w-3" />
-                        </button>
-                    </motion.div>
-                ))}
-            </AnimatePresence>
-        </div>
-    );
-}
-
-// ---------------------------------------------------------------------------
-// Confirmation Modal
-// ---------------------------------------------------------------------------
-
-function DeleteConfirmationModal({
-    agentName,
-    onConfirm,
-    onCancel,
-    isDeleting,
-}: {
-    agentName: string;
-    onConfirm: () => void;
-    onCancel: () => void;
-    isDeleting: boolean;
-}) {
-    return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-            onClick={onCancel}
-        >
-            <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-md bg-surface border border-red-500/20 rounded-2xl p-6 space-y-5 shadow-2xl"
-            >
-                <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-red-500/10 rounded-xl">
-                        <AlertTriangle className="h-5 w-5 text-red-500" />
-                    </div>
-                    <div>
-                        <h3 className="text-lg font-bold text-content-strong">Eliminar Agente</h3>
-                        <p className="text-xs text-content-muted mt-0.5">Esta acción no se puede deshacer</p>
-                    </div>
-                </div>
-
-                <p className="text-sm text-content-muted leading-relaxed">
-                    Vas a eliminar permanentemente al agente{" "}
-                    <span className="font-semibold text-red-400">{agentName}</span>.
-                    Se perdera toda su configuracion, base de conocimiento y datos asociados.
-                </p>
-
-                <div className="flex gap-3 pt-1">
-                    <button
-                        onClick={onCancel}
-                        disabled={isDeleting}
-                        className="flex-1 py-2.5 bg-surface border border-white/5 rounded-xl text-sm font-medium text-content-muted hover:bg-surface-highlight transition-colors disabled:opacity-50"
-                    >
-                        Cancelar
-                    </button>
-                    <button
-                        onClick={onConfirm}
-                        disabled={isDeleting}
-                        className="flex-1 py-2.5 bg-red-500/10 border border-red-500/30 rounded-xl text-sm font-bold text-red-400 hover:bg-red-500 hover:text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                        {isDeleting ? (
-                            <>
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Eliminando...
-                            </>
-                        ) : (
-                            <>
-                                <Trash2 className="h-4 w-4" />
-                                Eliminar definitivamente
-                            </>
-                        )}
-                    </button>
-                </div>
-            </motion.div>
-        </motion.div>
-    );
-}
-
-// ---------------------------------------------------------------------------
 // Main Page Component
 // ---------------------------------------------------------------------------
 
@@ -213,20 +82,10 @@ export function AgentDetailPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [fetchError, setFetchError] = useState<string | null>(null);
 
-    // ── Toasts ───────────────────────────────────────────────────────────
-    const [toasts, setToasts] = useState<Toast[]>([]);
-
-    const pushToast = useCallback((message: string, variant: ToastVariant) => {
-        const id = ++toastCounter;
-        setToasts((prev) => [...prev, { id, message, variant }]);
-        setTimeout(() => {
-            setToasts((prev) => prev.filter((t) => t.id !== id));
-        }, 4000);
-    }, []);
-
-    const dismissToast = useCallback((id: number) => {
-        setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, []);
+    // Los avisos van al <ToastProvider> de la raíz (§9.5). Esta página tenía su
+    // propio sistema de toasts, con su propio contador, sus propios colores y sin
+    // `role`/`aria-live`: nadie lo oía, y era el segundo sistema de avisos de la
+    // app. Ahora hay uno.
 
     // ── Form State ───────────────────────────────────────────────────────
     const [name, setName] = useState("");
@@ -335,9 +194,9 @@ export function AgentDetailPage() {
             if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
 
             setOriginalHash(computeHash());
-            pushToast("Agente actualizado correctamente", "success");
+            toast.success("Agente actualizado");
         } catch (err: any) {
-            pushToast(err.message ?? "Error al guardar", "error");
+            toast.error("No se pudo guardar el agente", reasonOf(err) ?? "Tus cambios siguen en el formulario.");
         } finally {
             setIsSaving(false);
         }
@@ -355,11 +214,11 @@ export function AgentDetailPage() {
                 headers,
             });
             if (!res.ok) throw new Error(`Error ${res.status}`);
-            pushToast("Agente eliminado", "success");
+            toast.success("Agente eliminado");
             // Small delay so the user can see the toast
             setTimeout(() => navigate("/chat"), 400);
         } catch (err: any) {
-            pushToast(err.message ?? "Error al eliminar", "error");
+            toast.error("No se pudo eliminar el agente", reasonOf(err) ?? "El agente sigue en tu lista.");
             setIsDeleting(false);
         }
     };
@@ -789,20 +648,18 @@ export function AgentDetailPage() {
                 </div>
             </div>
 
-            {/* ── Toasts ────────────────────────────────────────────── */}
-            <ToastContainer toasts={toasts} onDismiss={dismissToast} />
-
-            {/* ── Delete Confirmation Modal ──────────────────────── */}
-            <AnimatePresence>
-                {showDeleteModal && (
-                    <DeleteConfirmationModal
-                        agentName={name || "este agente"}
-                        onConfirm={handleDelete}
-                        onCancel={() => setShowDeleteModal(false)}
-                        isDeleting={isDeleting}
-                    />
-                )}
-            </AnimatePresence>
+            {/* ── Confirmación de borrado (§9.4 / §11) ─────────────── */}
+            <ConfirmDialog
+                open={showDeleteModal}
+                onClose={() => setShowDeleteModal(false)}
+                onConfirm={handleDelete}
+                question="¿Eliminar el agente"
+                objectName={name || "este agente"}
+                consequence="Se pierden su configuración, su base de conocimiento y sus datos asociados. No se puede deshacer."
+                confirmLabel="Eliminar definitivamente"
+                confirmLoadingLabel="Eliminando"
+                loading={isDeleting}
+            />
         </div>
     );
 }

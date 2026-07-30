@@ -1,35 +1,46 @@
 import React from 'react';
 import { useBillingStore } from '../../store/useBillingStore';
+import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
 
+/**
+ * Tarea 1.8: pasa a `<Modal>`. Antes era un `<div>` sin `role="dialog"`, sin
+ * trampa de foco y sin `Escape`: el paywall aparecía en medio de la pantalla y
+ * el foco se quedaba en el botón de la página de detrás, que además seguía
+ * siendo tabulable.
+ */
 export const PaywallModal: React.FC = () => {
     const { paywall, closePaywall } = useBillingStore();
 
-    if (!paywall.open) return null;
-
-    let message = "Has agotado tus créditos. Compra un pack de recarga para continuar.";
-    if (paywall.reason === 'rag_full') message = "Has alcanzado el límite de almacenamiento de documentos.";
-    if (paywall.reason === 'agents_full') message = "Has alcanzado el límite de agentes personalizados.";
+    let message = 'Has agotado tus créditos. Compra un pack de recarga para continuar.';
+    if (paywall.reason === 'rag_full')
+        message = 'Has alcanzado el límite de almacenamiento de documentos.';
+    if (paywall.reason === 'agents_full')
+        message = 'Has alcanzado el límite de agentes personalizados.';
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-slate-900 border border-slate-700/50 rounded-xl p-6 w-full max-w-md shadow-2xl relative">
-                <h3 className="text-xl font-bold text-white mb-2">Límite Alcanzado</h3>
-                <p className="text-slate-300 mb-6">{message}</p>
-                <div className="flex gap-3 justify-end">
-                    <button 
-                        onClick={closePaywall}
-                        className="px-4 py-2 text-slate-300 hover:text-white transition-colors"
-                    >
+        <Modal
+            open={paywall.open}
+            onClose={closePaywall}
+            size="sm"
+            title="Límite Alcanzado"
+            footer={
+                <div className="flex w-full items-center justify-end gap-3">
+                    <Button variant="ghost" onClick={closePaywall}>
                         Cancelar
-                    </button>
-                    <button 
-                        onClick={() => window.location.href = '/billing'}
-                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors font-medium"
+                    </Button>
+                    <Button
+                        variant="primary"
+                        onClick={() => {
+                            window.location.href = '/billing';
+                        }}
                     >
                         Comprar créditos
-                    </button>
+                    </Button>
                 </div>
-            </div>
-        </div>
+            }
+        >
+            <p className="text-sm text-content">{message}</p>
+        </Modal>
     );
 };
