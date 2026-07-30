@@ -10,11 +10,13 @@
     "preview": "vite preview",
     "start": "vite preview --port $PORT --host 0.0.0.0",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "verify:lock": "node scripts/verify-lock-sync.mjs"
   },
   "dependencies": {
     "@types/react-syntax-highlighter": "^15.5.13",
     "clsx": "^2.1.1",
+    "dompurify": "^3.4.12",
     "firebase": "^12.12.0",
     "framer-motion": "^12.29.2",
     "lucide-react": "^0.563.0",
