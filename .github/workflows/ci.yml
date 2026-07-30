@@ -93,6 +93,15 @@ jobs:
       - name: Run tests
         working-directory: frontend
         run: npx vitest run
+      # En Tailwind v4 una clase que el compilador no reconoce no genera CSS y
+      # no avisa: se queda en el HTML sin efecto. Así acumuló este repo 326
+      # declaraciones de color inertes sin que nada fallara nunca. El detector
+      # compila src/index.css con el PostCSS del proyecto y diffea los nombres
+      # de clase emitidos contra los tokens de clase de src/**. No compila el
+      # bundle: sólo procesa CSS.
+      - name: Clases muertas
+        working-directory: frontend
+        run: node scripts/check-dead-classes.mjs
 
   lint:
     runs-on: ubuntu-latest
