@@ -183,7 +183,7 @@ export function ProfilePage() {
                                         type="text"
                                         value={displayName}
                                         onChange={(e) => setDisplayName(e.target.value)}
-                                        className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-electric-cyan/50 transition-all mt-1"
+                                        className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm focus:border-electric-cyan/50 transition-all mt-1"
                                     />
                                 </div>
                                 <div>
@@ -192,7 +192,7 @@ export function ProfilePage() {
                                         type="email"
                                         value={userEmail}
                                         readOnly
-                                        className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-all mt-1 opacity-60 cursor-not-allowed"
+                                        className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm transition-all mt-1 opacity-60 cursor-not-allowed"
                                     />
                                 </div>
                             </div>

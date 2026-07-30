@@ -518,7 +518,7 @@ export function AgentDetailPage() {
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 placeholder="Ej: Nexus, Oberon..."
-                                className="w-full bg-midnight/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-content-strong focus:outline-none focus:border-electric-cyan/50 focus:ring-1 focus:ring-electric-cyan/20 transition-all placeholder:text-content-quiet"
+                                className="w-full bg-midnight/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-content-strong focus:border-electric-cyan/50 focus:ring-1 focus:ring-electric-cyan/20 transition-all placeholder:text-content-quiet"
                             />
                         </div>
 
@@ -532,7 +532,7 @@ export function AgentDetailPage() {
                                 onChange={(e) => setDescription(e.target.value)}
                                 rows={2}
                                 placeholder="Breve descripcion del propósito del agente..."
-                                className="w-full bg-midnight/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-content-strong focus:outline-none focus:border-electric-cyan/50 focus:ring-1 focus:ring-electric-cyan/20 transition-all resize-none placeholder:text-content-quiet"
+                                className="w-full bg-midnight/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-content-strong focus:border-electric-cyan/50 focus:ring-1 focus:ring-electric-cyan/20 transition-all resize-none placeholder:text-content-quiet"
                             />
                         </div>
 
@@ -568,7 +568,7 @@ export function AgentDetailPage() {
                                             if (/^#[0-9A-Fa-f]{0,6}$/.test(val)) setColor(val);
                                         }}
                                         maxLength={7}
-                                        className="w-full bg-midnight/50 border border-white/5 rounded-xl pl-10 pr-4 py-2.5 text-sm font-mono text-content-strong uppercase focus:outline-none focus:border-electric-cyan/50 transition-all"
+                                        className="w-full bg-midnight/50 border border-white/5 rounded-xl pl-10 pr-4 py-2.5 text-sm font-mono text-content-strong uppercase focus:border-electric-cyan/50 transition-all"
                                         placeholder="#00F0C8"
                                     />
                                 </div>
@@ -621,7 +621,7 @@ export function AgentDetailPage() {
                                 onChange={(e) => setSystemPrompt(e.target.value)}
                                 rows={10}
                                 placeholder="Eres un asistente experto en..."
-                                className="w-full bg-midnight/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-content-strong font-mono leading-relaxed focus:outline-none focus:border-electric-cyan/50 focus:ring-1 focus:ring-electric-cyan/20 transition-all resize-y min-h-[160px] placeholder:text-content-quiet"
+                                className="w-full bg-midnight/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-content-strong font-mono leading-relaxed focus:border-electric-cyan/50 focus:ring-1 focus:ring-electric-cyan/20 transition-all resize-y min-h-[160px] placeholder:text-content-quiet"
                             />
                             <p className="text-[10px] text-content-quiet ml-1">
                                 {systemPrompt.length} caracteres

@@ -247,7 +247,6 @@ export function Modal({
                             'relative z-10 flex max-h-[85dvh] w-full flex-col overflow-hidden',
                             'rounded-t-lg sm:rounded-lg',
                             'border border-stroke-control bg-surface-3 shadow-e4',
-                            'focus-visible:outline-none',
                             SIZE_CLASS[size],
                             className,
                         )}

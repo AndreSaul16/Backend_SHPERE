@@ -287,7 +287,7 @@ export function ProfileSettings() {
 }
 
 const inputCls =
-  "w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-electric-cyan/50 transition-all";
+  "w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm focus:border-electric-cyan/50 transition-all";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

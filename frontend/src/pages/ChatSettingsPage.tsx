@@ -297,7 +297,7 @@ export function ChatSettingsPage() {
                                         type="text"
                                         value={localName}
                                         onChange={(e) => handleNameInput(e.target.value)}
-                                        className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-3 text-lg font-bold text-content-strong focus:outline-none focus:border-electric-cyan/50 focus:ring-1 focus:ring-electric-cyan/20 transition-all text-center"
+                                        className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-3 text-lg font-bold text-content-strong focus:border-electric-cyan/50 focus:ring-1 focus:ring-electric-cyan/20 transition-all text-center"
                                         placeholder={isGroupChat ? "Junta Directiva" : "Ej: Oberon"}
                                     />
                                     <Pencil className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-content-quiet group-focus-within/input:text-electric-cyan transition-colors" />
@@ -539,7 +539,7 @@ export function ChatSettingsPage() {
                                                 type="text"
                                                 value={editName}
                                                 onChange={(e) => setEditName(e.target.value)}
-                                                className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm text-content-strong focus:outline-none focus:border-electric-cyan/50 transition-all"
+                                                className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm text-content-strong focus:border-electric-cyan/50 transition-all"
                                                 placeholder="Ej: Hernesto"
                                             />
                                         </div>

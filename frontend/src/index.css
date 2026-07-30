@@ -336,8 +336,17 @@
   /* §12.2 Foco visible en todo lo accionable, sin excepción.
      Va con :where() (especificidad 0) a propósito: cualquier regla de
      componente lo puede ajustar, pero NADIE debe ponerle `outline: none` sin
-     sustituto. Hoy hay 32 `outline-none` y 0 `focus-visible`; los retira 1.6. */
-  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible{
+     sustituto. La tarea 1.6 retiró los 26 `focus:outline-none` que quedaban en
+     `src` y ahora esta regla es la única que decide el foco.
+
+     `[tabindex="-1"]` queda EXCLUIDO (ajuste de la tarea 1.6): un elemento
+     fuera del orden de tabulación no es accionable — es un destino de foco
+     programático, como el panel de `<Modal>`, al que se le da el foco al abrir
+     para que la trampa tenga dónde empezar. Con `[tabindex]` a secas, abrir un
+     modal con el teclado dibujaba un anillo de latón alrededor de TODO el panel,
+     y la salida obvia era un `outline-none` en el sitio de uso, que es
+     exactamente lo que esta fase viene a erradicar. */
+  :where(a, button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible{
     outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
     border-radius: var(--radius-xs);

@@ -401,7 +401,7 @@ export function ChatPanel() {
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Buscar en esta conversación..."
-                                className="flex-1 bg-transparent text-white text-sm placeholder:text-gray-600 focus:outline-none"
+                                className="flex-1 bg-transparent text-white text-sm placeholder:text-gray-600"
                                 autoFocus
                             />
                             {searchQuery && (

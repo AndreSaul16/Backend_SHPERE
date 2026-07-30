@@ -310,7 +310,7 @@ export function IntegrationsSettings() {
                           setClientIds((prev) => ({ ...prev, [p]: e.target.value }))
                         }
                         placeholder="Tu Client ID"
-                        className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-content-strong text-sm focus:outline-none focus:border-electric-cyan/50 placeholder:text-content-quiet"
+                        className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-content-strong text-sm focus:border-electric-cyan/50 placeholder:text-content-quiet"
                       />
                     </div>
                     <div>
@@ -324,7 +324,7 @@ export function IntegrationsSettings() {
                           setClientSecrets((prev) => ({ ...prev, [p]: e.target.value }))
                         }
                         placeholder="Tu Client Secret"
-                        className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-content-strong text-sm focus:outline-none focus:border-electric-cyan/50 placeholder:text-content-quiet"
+                        className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-content-strong text-sm focus:border-electric-cyan/50 placeholder:text-content-quiet"
                       />
                     </div>
                   </div>

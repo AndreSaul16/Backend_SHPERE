@@ -187,7 +187,7 @@ export function ScheduledBoardsSection() {
                         value={form.query}
                         onChange={(e) => setForm((f) => ({ ...f, query: e.target.value }))}
                         rows={2}
-                        className="w-full bg-surface border border-surface-highlight rounded-lg px-3 py-2 text-sm text-content-strong focus:outline-none focus:border-electric-cyan/50"
+                        className="w-full bg-surface border border-surface-highlight rounded-lg px-3 py-2 text-sm text-content-strong focus:border-electric-cyan/50"
                     />
                     <div className="flex flex-wrap gap-3">
                         <label className="text-xs text-content-muted space-y-1">
@@ -260,7 +260,7 @@ export function ScheduledBoardsSection() {
                             placeholder={form.channel === "slack" ? "#canal o ID" : "teléfono / grupo"}
                             value={form.channel_target ?? ""}
                             onChange={(e) => setForm((f) => ({ ...f, channel_target: e.target.value }))}
-                            className="w-full bg-surface border border-surface-highlight rounded-lg px-3 py-2 text-sm text-content-strong focus:outline-none focus:border-electric-cyan/50"
+                            className="w-full bg-surface border border-surface-highlight rounded-lg px-3 py-2 text-sm text-content-strong focus:border-electric-cyan/50"
                         />
                     )}
                     <div className="flex gap-2 justify-end">

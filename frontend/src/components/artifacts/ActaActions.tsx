@@ -141,14 +141,14 @@ export function ActaActions({ title, content }: ActaActionsProps) {
                                     placeholder="owner"
                                     value={ghRepo.owner}
                                     onChange={(e) => setGhRepo((r) => ({ ...r, owner: e.target.value }))}
-                                    className="flex-1 min-w-0 bg-midnight border border-surface-highlight rounded-lg px-2.5 py-1.5 text-xs text-content-strong focus:outline-none focus:border-luxury-purple/50"
+                                    className="flex-1 min-w-0 bg-midnight border border-surface-highlight rounded-lg px-2.5 py-1.5 text-xs text-content-strong focus:border-luxury-purple/50"
                                 />
                                 <input
                                     aria-label="repo"
                                     placeholder="repo"
                                     value={ghRepo.repo}
                                     onChange={(e) => setGhRepo((r) => ({ ...r, repo: e.target.value }))}
-                                    className="flex-1 min-w-0 bg-midnight border border-surface-highlight rounded-lg px-2.5 py-1.5 text-xs text-content-strong focus:outline-none focus:border-luxury-purple/50"
+                                    className="flex-1 min-w-0 bg-midnight border border-surface-highlight rounded-lg px-2.5 py-1.5 text-xs text-content-strong focus:border-luxury-purple/50"
                                 />
                             </div>
                             <button

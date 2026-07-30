@@ -131,7 +131,7 @@ export function AgentOverridesSettings() {
                 Instrucciones adicionales
               </label>
               <textarea
-                className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-electric-cyan/50 transition-all min-h-[90px] resize-y"
+                className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm focus:border-electric-cyan/50 transition-all min-h-[90px] resize-y"
                 placeholder={`Ej: "Siempre responde con ejemplos en TypeScript" o "Enfócate en startups B2B europeas"`}
                 value={ov?.system_prompt_addition || ""}
                 onChange={(e) =>
@@ -150,7 +150,7 @@ export function AgentOverridesSettings() {
                   min={0}
                   max={2}
                   step={0.1}
-                  className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-electric-cyan/50"
+                  className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm focus:border-electric-cyan/50"
                   placeholder="default"
                   value={ov?.temperature_override ?? ""}
                   onChange={(e) =>
@@ -168,7 +168,7 @@ export function AgentOverridesSettings() {
                 </label>
                 <input
                   type="text"
-                  className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-electric-cyan/50"
+                  className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm focus:border-electric-cyan/50"
                   placeholder="deepseek-v4-pro"
                   value={ov?.model_override || ""}
                   onChange={(e) =>

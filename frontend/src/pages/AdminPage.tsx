@@ -129,7 +129,7 @@ export function AdminPage() {
                                 placeholder="Buscar por email o UID…"
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
-                                className="w-full bg-surface border border-surface-highlight rounded-xl py-2 pl-9 pr-4 text-sm text-content-strong focus:outline-none focus:border-electric-cyan/50"
+                                className="w-full bg-surface border border-surface-highlight rounded-xl py-2 pl-9 pr-4 text-sm text-content-strong focus:border-electric-cyan/50"
                             />
                         </form>
 
