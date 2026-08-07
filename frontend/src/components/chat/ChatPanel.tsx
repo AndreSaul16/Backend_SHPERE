@@ -302,7 +302,10 @@ export function ChatPanel() {
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6, ease: "easeOut" }}
-                        className="flex flex-col items-center text-center space-y-8 max-w-md"
+                        // `w-full` además de `max-w-md`: sin él la columna toma su
+                        // ancho del contenido y a 390px se salía del padding, que
+                        // `overflow-hidden` recortaba en silencio (§4.3).
+                        className="flex w-full flex-col items-center text-center space-y-8 max-w-md"
                     >
                         {/* §10: glifo de línea, no emoji; §2.3: el latón es el filete,
                             no el campo — el único elemento macizo será el primario. */}

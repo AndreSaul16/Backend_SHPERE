@@ -207,6 +207,22 @@ const createGreeting = (agentId: string, agents: Agent[]): Message => {
 // Helpers
 export const getGroupMembers = (agents: Agent[]) => agents.filter(a => a.id !== 'group-chat');
 
+/**
+ * Estado inicial de la barra lateral.
+ *
+ * Nacía en `true` siempre, y eso sólo es correcto en `lg+`, donde la barra es
+ * FIJA y «abierta» significa «visible en su columna». Por debajo de `lg` es un
+ * cajón sobre velo (§9.13), así que nacer abierta hacía que en móvil el usuario
+ * aterrizara en el menú —con la aplicación entera tapada— en TODAS las rutas.
+ * Con tráfico mayoritario móvil (§4.3) eso es la primera pantalla del producto.
+ *
+ * `lg` = 64rem = 1024px (§4.3). Se lee `innerWidth` y no `matchMedia` porque el
+ * breakpoint que importa es el mismo que Tailwind aplica al layout, y así el
+ * estado del store y la clase `lg:` no pueden discrepar.
+ */
+export const initialSidebarOpen = (): boolean =>
+    typeof window === 'undefined' || window.innerWidth >= 1024;
+
 export const useChatStore = create<ChatState>((set, get) => ({
     // D28: los retoques de nombre/color de los directores se guardan y se
     // recuperan al arrancar. Antes vivían sólo en memoria y se perdían al
@@ -222,7 +238,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     abortController: null,
     isAgentModalOpen: false,
     isArtifactPanelOpen: false,
-    isSidebarOpen: true,
+    isSidebarOpen: initialSidebarOpen(),
     artifacts: [],
     activeArtifactId: null,
     streamingArtifactBySession: {},

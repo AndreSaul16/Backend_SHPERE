@@ -61,6 +61,22 @@ export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayo
         setPanelWidth(Math.min(MAX_PANEL_WIDTH, Math.max(MIN_PANEL_WIDTH, next)));
     }, [panelWidth]);
 
+    // §9.13: «por debajo de lg es un cajón: … Escape cierra». El cajón tapa la
+    // aplicación entera tras un velo, así que sin esta salida por teclado la
+    // única forma de recuperar el producto es acertar con el dedo en el velo.
+    useEffect(() => {
+        if (!isSidebarOpen) return;
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key !== 'Escape') return;
+            // En lg+ la barra es fija y «abierta» es su estado normal: cerrarla
+            // con Escape sería quitar de en medio algo que nadie ha invocado.
+            if (window.innerWidth >= 1024) return;
+            toggleSidebar(false);
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [isSidebarOpen, toggleSidebar]);
+
     // Attach/detach global mouse listeners for drag
     useEffect(() => {
         if (isResizing) {
@@ -88,17 +104,20 @@ export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayo
             {/* Mobile Menu Button - Dynamic Position */}
             <button
                 onClick={() => toggleSidebar()}
+                aria-label={isSidebarOpen ? "Cerrar el menú" : "Abrir el menú"}
+                aria-expanded={isSidebarOpen}
+                aria-controls="app-sidebar"
                 className={cn(
-                    "lg:hidden fixed top-3.5 z-50 p-2.5 bg-surface/80 backdrop-blur-md border border-white/5 rounded-xl text-white hover:bg-surface transition-all duration-300 shadow-xl",
+                    "lg:hidden fixed top-3.5 z-50 p-2.5 bg-surface-1 border border-stroke-edge rounded-sm text-content-strong hover:bg-surface-2 transition-colors duration-(--duration-tap) shadow-e3",
                     isSidebarOpen ? "left-[240px]" : "left-4"
                 )}
             >
-                {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                {isSidebarOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
             </button>
 
             {/* Left Sidebar - Responsive */}
-            <aside className={cn(
-                "fixed lg:relative inset-y-0 left-0 z-40 w-[280px] lg:w-[320px] h-full border-r border-white/5 flex-shrink-0 glass-panel transform transition-transform duration-300 ease-in-out",
+            <aside id="app-sidebar" className={cn(
+                "fixed lg:relative inset-y-0 left-0 z-40 w-[280px] lg:w-[320px] h-full border-r border-stroke-hairline flex-shrink-0 bg-surface-1 transform transition-transform duration-(--duration-panel) ease-(--ease-travel)",
                 isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
             )}>
                 {sidebar}
@@ -109,7 +128,7 @@ export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayo
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="lg:hidden fixed inset-0 z-30 bg-midnight/60 backdrop-blur-sm"
+                    className="lg:hidden fixed inset-0 z-30 bg-baize-950/72 backdrop-blur-[3px]"
                     onClick={() => toggleSidebar(false)}
                 />
             )}
@@ -125,7 +144,7 @@ export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayo
             {artifactPanel && (
                 <aside
                     className={cn(
-                        "h-full border-l border-white/5 glass-panel shadow-2xl transition-all",
+                        "h-full border-l border-stroke-hairline bg-surface-1 shadow-e3 transition-all",
                         "fixed inset-0 z-[60] xl:relative xl:inset-auto xl:z-20",
                         isArtifactPanelOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none xl:hidden",
                         isResizing ? "transition-none" : "duration-300"
