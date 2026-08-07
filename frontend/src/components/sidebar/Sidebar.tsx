@@ -61,15 +61,19 @@ export function Sidebar() {
     const menuRef = useRef<HTMLDivElement | null>(null);
     const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
-    // Admin: fetch perezoso — solo mostramos el link si /admin/users NO devuelve 403.
+    // Admin: sonda perezosa — solo mostramos el link si el backend concede el
+    // panel. F1: esto llamaba a `adminService.users()`, cuya respuesta normal
+    // (403 «no eres admin») entraba en `handleError` y abría el paywall «Has
+    // agotado tus créditos» en CADA carga a todo usuario no administrador.
+    // `isAdmin()` es la misma pregunta sin efecto global (ver `api.ts`).
     const [isAdmin, setIsAdmin] = useState(false);
 
     useEffect(() => {
         let active = true;
         import("@/services/api")
-            .then(({ adminService }) => adminService.users())
-            .then(() => { if (active) setIsAdmin(true); })
-            .catch(() => { /* 403 o error: no es admin, no mostramos el link */ });
+            .then(({ adminService }) => adminService.isAdmin())
+            .then((admin) => { if (active) setIsAdmin(admin); })
+            .catch(() => { /* la sonda ya no lanza; red caída = no hay link */ });
         return () => { active = false; };
     }, []);
 

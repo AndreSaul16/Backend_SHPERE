@@ -610,20 +610,35 @@ export interface AgentOverride {
     updated_at?: string;
 }
 
+/**
+ * `skipGlobalHandler`: no pasar el fallo por `handleError`.
+ *
+ * Reservado a las peticiones cuyo error es un RESULTADO ESPERADO y no un
+ * incidente — una **sonda**: se pregunta al backend si el usuario puede hacer
+ * algo y el «no» llega como 403. `handleError` traduce todo 403 a
+ * `perm.plan_not_allowed` y abre el paywall, así que una sonda enrutada por ahí
+ * le enseña «Has agotado tus créditos» a quien no ha gastado nada (F1).
+ *
+ * El error se sigue construyendo y lanzando igual: lo que se salta es el EFECTO
+ * GLOBAL, no el aviso al llamante.
+ */
+type ReqInit = RequestInit & { json?: any; skipGlobalHandler?: boolean };
+
 async function req<T = any>(
     path: string,
-    init?: RequestInit & { json?: any }
+    init?: ReqInit
 ): Promise<T> {
     const headers = await authHeaders();
-    const { json, ...rest } = init || {};
+    const { json, skipGlobalHandler, ...rest } = init || {};
     const response = await fetch(`${API_URL}${path}`, {
         ...rest,
         headers: { ...headers, ...(rest.headers as any) },
         body: json !== undefined ? JSON.stringify(json) : rest.body,
     });
     if (!response.ok) {
-        const { handleResponseError } = await import('./errorHandler');
-        const err = await handleResponseError(response);
+        const { parseError, handleError } = await import('./errorHandler');
+        const err = await parseError(response);
+        if (!skipGlobalHandler) handleError(err);
         throw new Error(`${err.status} ${err.code}: ${err.message}`);
     }
     if (response.status === 204) return undefined as unknown as T;
@@ -802,6 +817,27 @@ export interface AdminMetrics {
 }
 
 export const adminService = {
+    /**
+     * F1 — ¿tiene esta cuenta panel de administración?
+     *
+     * Es una SONDA, no una consulta: para el 99% de las cuentas la respuesta es
+     * «no» y llega como 403. Ese 403 es el resultado esperado, así que no puede
+     * atravesar el manejador global de errores (`skipGlobalHandler`): antes lo
+     * hacía —la sidebar llamaba a `users()` a pelo— y `handleError` abría el
+     * modal «Has agotado tus créditos» a todo usuario no administrador, en cada
+     * carga de la aplicación.
+     *
+     * Devuelve un booleano y nunca lanza: quien pregunta sólo quiere saber si
+     * pinta el enlace.
+     */
+    isAdmin: async (): Promise<boolean> => {
+        try {
+            await req<AdminUser[]>("/admin/users", { skipGlobalHandler: true });
+            return true;
+        } catch {
+            return false;
+        }
+    },
     users: (q?: string) =>
         req<AdminUser[]>(`/admin/users${q ? `?q=${encodeURIComponent(q)}` : ""}`),
     adjust: (uid: string, delta: number, reason: string) =>
