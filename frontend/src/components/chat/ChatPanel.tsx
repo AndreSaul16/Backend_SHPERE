@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from "react";
-import { Send, Square, Paperclip, MoreVertical, Zap, ShieldCheck, Search, X, Download, Pin, Hand } from "lucide-react";
+import { Send, Square, Paperclip, MoreVertical, Zap, ShieldCheck, Search, X, Download, Pin, Hand, Landmark } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore, getGroupMembers } from "@/store/useChatStore";
@@ -16,6 +16,7 @@ import { DebateTemplates } from "./DebateTemplates";
 import { useLiveAnnouncement } from "@/hooks/useLiveAnnouncement";
 import { reasonOf, toast } from "@/lib/toastBus";
 import { AvatarImage } from "@/components/ui/AvatarImage";
+import { Button } from "@/components/ui/Button";
 
 export function ChatPanel() {
     const navigate = useNavigate();
@@ -211,7 +212,7 @@ export function ChatPanel() {
 
     const getAvatarContent = () => {
         const placa = isGroupChat
-            ? <span className="text-xl">🏛️</span>
+            ? <Landmark className="h-5 w-5 text-accent" aria-hidden="true" />
             : <span className={cn("font-black text-xl", activeAgent?.color)}>{activeAgent?.avatar || 'S'}</span>;
         return (
             <AvatarImage
@@ -303,46 +304,36 @@ export function ChatPanel() {
                         transition={{ duration: 0.6, ease: "easeOut" }}
                         className="flex flex-col items-center text-center space-y-8 max-w-md"
                     >
-                        {/* Logo / Icono central */}
-                        <div className="relative">
-                            <div className="absolute inset-0 bg-electric-cyan/10 blur-[60px] rounded-full animate-pulse" />
-                            <div className="absolute inset-0 bg-luxury-purple/10 blur-[80px] rounded-full animate-pulse [animation-delay:1s]" />
-                            <motion.div
-                                animate={{ rotate: [0, 5, -5, 0] }}
-                                transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
-                                className="relative h-28 w-28 rounded-[36px] bg-gradient-to-br from-electric-cyan/10 to-luxury-purple/10 border border-white/10 flex items-center justify-center shadow-2xl backdrop-blur-sm"
-                            >
-                                <span className="text-5xl">⚡</span>
-                            </motion.div>
+                        {/* §10: glifo de línea, no emoji; §2.3: el latón es el filete,
+                            no el campo — el único elemento macizo será el primario. */}
+                        <div className="flex h-14 w-14 items-center justify-center rounded-sm border border-brass-600 bg-accent/12 text-accent">
+                            <Landmark className="h-7 w-7" aria-hidden="true" />
                         </div>
 
                         {/* Texto principal */}
                         <div className="space-y-3">
-                            <h1 className="text-white font-black text-2xl tracking-tight">
-                                SPHERE <span className="text-electric-cyan">Intelligence</span>
+                            <h1 className="text-2xl font-semibold tracking-tight text-content-strong">
+                                Tu junta directiva, reunida
                             </h1>
-                            <p className="text-gray-400 text-sm leading-relaxed max-w-sm">
-                                Tu equipo directivo de IA está listo. CEO, CTO, CMO, CFO — todos los expertos
-                                trabajando en sincronía para darte respuestas de nivel ejecutivo.
+                            <p className="max-w-sm text-sm leading-relaxed text-content-muted">
+                                CEO, CTO, CMO y CFO deliberan tu decisión y la dejan por escrito.
+                                Convoca una sesión y verás quién vota qué, y con cuánta confianza.
                             </p>
                         </div>
 
                         {/* Onboarding first-run: checklist de 3 pasos */}
                         <OnboardingChecklist onPrimaryAction={() => toggleAgentModal(true)} />
 
-                        {/* CTA */}
-                        <motion.button
-                            whileHover={{ scale: 1.03 }}
-                            whileTap={{ scale: 0.97 }}
+                        {/* §9.1: el primario es relleno macizo de latón con texto
+                            `baize-950` (8.96:1). No lleva degradado ni sombra
+                            precisamente porque es lo único macizo de la pantalla. */}
+                        <Button
+                            variant="primary"
+                            className="w-full"
                             onClick={() => toggleAgentModal(true)}
-                            className="w-full py-4 rounded-2xl bg-gradient-to-r from-electric-cyan to-luxury-purple text-white font-bold text-sm uppercase tracking-widest shadow-[0_0_40px_rgba(0,240,200,0.15)] hover:shadow-[0_0_60px_rgba(0,240,200,0.25)] transition-all duration-500"
                         >
-                            Iniciar Nuevo Chat
-                        </motion.button>
-
-                        <p className="text-micro text-content-quiet font-mono uppercase">
-                            Powered by SPHERE Neuro-Link v2.0
-                        </p>
+                            Iniciar nuevo chat
+                        </Button>
                     </motion.div>
                 </div>
             </div>
@@ -352,38 +343,36 @@ export function ChatPanel() {
     return (
         <div className="flex flex-col h-full bg-transparent relative overflow-hidden">
             {/* Header */}
-            <header className="h-20 pl-14 lg:pl-8 pr-6 border-b border-white/5 flex items-center justify-between bg-midnight/40 backdrop-blur-xl z-20">
+            <header className="h-20 pl-14 lg:pl-8 pr-6 border-b border-stroke-hairline flex items-center justify-between bg-surface-1 z-20">
                 <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
                     <div className="relative">
+                        {/* §9.10 la placa: radio corto, filete, sin degradado ni sombra. */}
                         <motion.div
                             layoutId="active-agent-avatar"
                             onClick={() => navigate('/chat/settings')}
-                            className={cn(
-                                "h-11 w-11 rounded-2xl flex items-center justify-center shadow-2xl overflow-hidden border border-white/10 cursor-pointer hover:border-white/30 transition-colors",
-                                isGroupChat ? "bg-gradient-to-tr from-luxury-purple via-electric-cyan to-blue-500" : "bg-white/5"
-                            )}
+                            className="h-11 w-11 rounded-sm flex items-center justify-center overflow-hidden border border-stroke-edge bg-surface-2 cursor-pointer hover:border-brass-600 transition-colors"
                         >
                             {getAvatarContent()}
                         </motion.div>
                         <motion.div
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
-                            className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-emerald-500 border-2 border-midnight shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                            className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full bg-success border-2 border-surface-1"
                         />
                     </div>
 
                     <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                            <h3 className="font-bold text-white text-lg tracking-tight truncate">
+                            <h3 className="font-semibold text-content-strong text-lg tracking-tight truncate">
                                 {isGroupChat ? activeAgent?.name : baseName}
                             </h3>
-                            <span className="px-2 py-0.5 bg-white/5 text-content-muted rounded-lg text-micro font-black uppercase border border-white/5">
+                            <span className="px-2 py-0.5 bg-stroke-hairline text-content-muted rounded-xs text-micro font-semibold uppercase border border-stroke-hairline">
                                 {role}
                             </span>
                         </div>
                         <div className="flex items-center gap-2 mt-0.5 min-w-0">
-                            <ShieldCheck className="h-3 w-3 text-emerald-500/50 shrink-0" aria-hidden="true" />
-                            <p className="text-micro text-content-muted font-mono uppercase truncate">
+                            <ShieldCheck className="h-3 w-3 text-content-muted shrink-0" aria-hidden="true" />
+                            <p className="text-micro text-content-muted uppercase truncate">
                                 {isGroupChat
                                     ? `${groupMembers.length} Expertos Activos`
                                     : "Canal Encriptado de Extremo a Extremo"}
@@ -397,16 +386,16 @@ export function ChatPanel() {
                     <div className="hidden lg:flex mr-2">
                         <CreditsIndicator />
                     </div>
-                    <button onClick={() => setIsSearchOpen(v => !v)} className={cn("p-2 rounded-xl hover:bg-white/5 transition-all active-scale", isSearchOpen ? "text-accent" : "text-content-muted hover:text-content-strong")} title="Buscar">
+                    <button onClick={() => setIsSearchOpen(v => !v)} className={cn("p-2 rounded-sm hover:bg-stroke-hairline transition-all active-scale", isSearchOpen ? "text-accent" : "text-content-muted hover:text-content-strong")} title="Buscar">
                         <Search className="h-4 w-4" />
                     </button>
-                    <button onClick={() => setShowPinnedOnly(v => !v)} className={cn("p-2 rounded-xl hover:bg-white/5 transition-all active-scale", showPinnedOnly ? "text-warning" : "text-content-muted hover:text-content-strong")} title="Solo pinneados">
+                    <button onClick={() => setShowPinnedOnly(v => !v)} className={cn("p-2 rounded-sm hover:bg-stroke-hairline transition-all active-scale", showPinnedOnly ? "text-warning" : "text-content-muted hover:text-content-strong")} title="Solo pinneados">
                         <Pin className="h-4 w-4" />
                     </button>
-                    <button onClick={handleExport} className="p-2 rounded-xl hover:bg-white/5 transition-all text-content-muted hover:text-content-strong active-scale" title="Exportar">
+                    <button onClick={handleExport} className="p-2 rounded-sm hover:bg-stroke-hairline transition-all text-content-muted hover:text-content-strong active-scale" title="Exportar">
                         <Download className="h-4 w-4" />
                     </button>
-                    <button onClick={() => navigate('/chat/settings')} className="p-2 rounded-xl hover:bg-white/5 transition-all text-content-muted hover:text-content-strong active-scale">
+                    <button onClick={() => navigate('/chat/settings')} className="p-2 rounded-sm hover:bg-stroke-hairline transition-all text-content-muted hover:text-content-strong active-scale">
                         <MoreVertical className="h-4 w-4" />
                     </button>
                 </div>
@@ -426,7 +415,7 @@ export function ChatPanel() {
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="border-b border-white/5 bg-midnight/60 backdrop-blur-xl px-6 overflow-hidden"
+                        className="border-b border-stroke-hairline bg-surface-1 px-6 overflow-hidden"
                     >
                         <div className="flex items-center gap-3 py-3 max-w-4xl mx-auto">
                             <Search className="h-4 w-4 text-content-muted flex-shrink-0" aria-hidden="true" />
@@ -445,7 +434,7 @@ export function ChatPanel() {
                                     {filteredMessages.filter(m => m.role !== 'system').length} resultados
                                 </span>
                             )}
-                            <button onClick={() => { setSearchQuery(''); setIsSearchOpen(false); }} className="p-1 hover:bg-white/10 rounded text-content-muted hover:text-content-strong">
+                            <button onClick={() => { setSearchQuery(''); setIsSearchOpen(false); }} className="p-1 hover:bg-stroke-hairline rounded-xs text-content-muted hover:text-content-strong">
                                 <X className="h-4 w-4" />
                             </button>
                         </div>
@@ -466,14 +455,12 @@ export function ChatPanel() {
                             animate={{ opacity: 1, y: 0 }}
                             className="flex flex-col items-center justify-center py-20 text-center space-y-6"
                         >
-                            <div className="relative">
-                                <div className="absolute inset-0 bg-luxury-purple/20 blur-3xl rounded-full animate-pulse" />
-                                <div className="relative h-20 w-20 rounded-[32px] bg-white/[0.03] border border-white/10 flex items-center justify-center shadow-2xl">
-                                    <Zap className="h-10 w-10 text-luxury-purple" />
-                                </div>
+                            {/* §9.14: glifo de línea de 32px, sin bucle ni resplandor. */}
+                            <div className="flex h-14 w-14 items-center justify-center rounded-sm border border-brass-600 bg-accent/12 text-accent">
+                                <Landmark className="h-7 w-7" aria-hidden="true" />
                             </div>
                             <div className="space-y-2">
-                                <h2 className="text-white font-bold text-xl uppercase tracking-widest">Listo para empezar</h2>
+                                <h2 className="text-content-strong font-semibold text-xl tracking-tight">Listo para empezar</h2>
                                 <p className="text-content-muted text-sm max-w-xs leading-relaxed">
                                     {isGroupChat
                                         ? "Plantea una decisión y tu junta debatirá para darte una recomendación."
@@ -513,12 +500,12 @@ export function ChatPanel() {
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         exit={{ opacity: 0 }}
-                                        className="flex items-center gap-3 text-content-muted text-micro font-mono uppercase ml-14"
+                                        className="flex items-center gap-3 text-content-muted text-micro uppercase ml-14"
                                     >
                                         <div className="flex gap-1">
-                                            <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.5 }} className="h-1 w-1 rounded-full bg-electric-cyan" />
-                                            <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.5, delay: 0.2 }} className="h-1 w-1 rounded-full bg-electric-cyan" />
-                                            <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.5, delay: 0.4 }} className="h-1 w-1 rounded-full bg-electric-cyan" />
+                                            <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.5 }} className="h-1 w-1 rounded-full bg-accent" />
+                                            <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.5, delay: 0.2 }} className="h-1 w-1 rounded-full bg-accent" />
+                                            <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.5, delay: 0.4 }} className="h-1 w-1 rounded-full bg-accent" />
                                         </div>
                                         <span aria-hidden="true">{typingLabel}</span>
                                     </motion.div>
@@ -554,7 +541,7 @@ export function ChatPanel() {
             </div>
 
             {/* Input Section */}
-            <div className="p-6 bg-gradient-to-t from-midnight/80 to-transparent z-10">
+            <div className="p-6 z-10">
                 <div className="max-w-4xl mx-auto">
                     {/* Banner de intervención durante el debate */}
                     <AnimatePresence>
@@ -563,7 +550,7 @@ export function ChatPanel() {
                                 initial={{ opacity: 0, y: 6 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0 }}
-                                className="flex items-center gap-2 px-4 mb-2 text-micro font-mono uppercase text-electric-cyan/80"
+                                className="flex items-center gap-2 px-4 mb-2 text-micro uppercase text-accent"
                             >
                                 <Hand className="h-3 w-3" />
                                 {interveneState === 'sent'
@@ -576,9 +563,11 @@ export function ChatPanel() {
                         initial={false}
                         animate={(isTyping && !canIntervene) ? { opacity: 0.5, y: 10 } : { opacity: 1, y: 0 }}
                         className={cn(
-                            "glass-panel rounded-[24px] border border-white/10 p-2 flex items-end gap-2 group transition-all duration-500",
-                            canIntervene && "focus-within:border-electric-cyan/40 focus-within:shadow-[0_0_30px_rgba(0,245,212,0.15)]",
-                            !isTyping && "focus-within:border-luxury-purple/40 focus-within:shadow-[0_0_30px_rgba(157,133,255,0.15)] shadow-2xl"
+                            // §9.2: filete de control y filete de latón al foco. Los
+                            // dos resplandores de 30px que había aquí son el glow que
+                            // §0 rechaza por nombre.
+                            "rounded-md border border-stroke-control bg-surface-1 p-2 flex items-end gap-2 group transition-colors duration-(--duration-tap)",
+                            "focus-within:border-brass-400"
                         )}
                     >
                         <input
@@ -606,9 +595,9 @@ export function ChatPanel() {
                             className={cn(
                                 "p-3.5 transition-all disabled:text-content-quiet disabled:cursor-not-allowed active-scale",
                                 uploadState === 'done'
-                                    ? "text-emerald-400"
+                                    ? "text-success"
                                     : uploadState === 'error'
-                                    ? "text-red-400"
+                                    ? "text-danger"
                                     : "text-content-muted hover:text-content-strong"
                             )}
                         >
@@ -634,10 +623,10 @@ export function ChatPanel() {
                                 disabled={!inputValue.trim() || interveneState === 'sending'}
                                 title="Intervenir en el debate"
                                 className={cn(
-                                    "p-3.5 rounded-xl transition-all duration-300",
+                                    "p-3.5 rounded-sm transition-colors duration-(--duration-tap)",
                                     inputValue.trim()
-                                        ? "bg-electric-cyan/80 text-midnight shadow-[0_0_20px_rgba(0,245,212,0.4)] hover:scale-105"
-                                        : "bg-white/5 text-content-quiet cursor-not-allowed"
+                                        ? "bg-accent-fill text-accent-on-fill hover:bg-accent-hover"
+                                        : "bg-surface-inset text-content-quiet cursor-not-allowed"
                                 )}
                             >
                                 <Hand className="h-5 w-5" />
@@ -647,7 +636,7 @@ export function ChatPanel() {
                         {isTyping ? (
                             <button
                                 onClick={stopGeneration}
-                                className="p-3.5 rounded-xl transition-all duration-300 bg-red-500/80 text-white shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:bg-red-500 hover:scale-105 animate-pulse"
+                                className="p-3.5 rounded-sm transition-colors duration-(--duration-tap) border border-oxblood-500 text-danger hover:bg-oxblood-500/12"
                                 title="Detener generación"
                             >
                                 <Square className="h-5 w-5" />
@@ -657,10 +646,10 @@ export function ChatPanel() {
                                 onClick={handleSendMessage}
                                 disabled={!inputValue.trim()}
                                 className={cn(
-                                    "p-3.5 rounded-xl transition-all duration-300",
+                                    "p-3.5 rounded-sm transition-colors duration-(--duration-tap)",
                                     inputValue.trim()
-                                        ? "bg-luxury-purple text-white shadow-[0_0_20px_rgba(157,133,255,0.4)] hover:scale-105"
-                                        : "bg-white/5 text-content-quiet cursor-not-allowed"
+                                        ? "bg-accent-fill text-accent-on-fill hover:bg-accent-hover"
+                                        : "bg-surface-inset text-content-quiet cursor-not-allowed"
                                 )}
                             >
                                 <Send className="h-5 w-5" />
@@ -672,16 +661,13 @@ export function ChatPanel() {
                         <div className="flex items-center gap-4">
                             {/* Chip de coste de la acción: board grupal ≈5⚡ (o 3 si el triage reduce), directo 1⚡ */}
                             <span
-                                className="flex items-center gap-1 text-micro font-mono text-content-muted uppercase"
+                                className="flex items-center gap-1 text-micro text-content-muted uppercase tnum"
                                 title={isGroupChat ? "Un debate de la junta cuesta hasta 5 créditos (3 si el triage reduce los participantes)" : "Un mensaje cuesta 1 crédito"}
                             >
-                                <Zap className="h-3 w-3 text-electric-cyan/70" />
+                                <Zap className="h-3 w-3 text-accent" aria-hidden="true" />
                                 {isGroupChat ? `${boardSession?.cost ?? 5} por debate` : "1 por mensaje"}
                             </span>
                         </div>
-                        <p className="text-micro text-content-quiet font-mono uppercase">
-                            Powered by SPHERE Neuro-Link v2.0
-                        </p>
                     </div>
                 </div>
             </div>
