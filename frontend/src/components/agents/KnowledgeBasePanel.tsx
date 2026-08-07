@@ -494,11 +494,14 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                         un input que no está pintado.
 
                         El arrastrar y soltar se queda donde estaba: es un ATAJO de
-                        ratón sobre el mismo contenedor, no el único camino. */}
+                        ratón sobre el mismo contenedor, no el único camino. Los
+                        tres manejadores de arrastre viven en el propio <button>
+                        —que lo llena entero— y no en el <div> de alrededor: un
+                        elemento estático con manejadores de puntero es
+                        exactamente lo que prohíbe la regla de jsx-a11y sobre
+                        interacciones en elementos estáticos, y el botón ya es un
+                        elemento interactivo nativo. */}
                     <div
-                        onDragOver={handleDragOver}
-                        onDragLeave={handleDragLeave}
-                        onDrop={handleDrop}
                         className={cn(
                             'relative rounded-2xl border-2 border-dashed transition-all duration-300',
                             isDragOver
@@ -508,10 +511,16 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                     >
                         <button
                             type="button"
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                            onDrop={handleDrop}
                             onClick={() => fileInputRef.current?.click()}
                             className="flex w-full flex-col items-center justify-center gap-3 p-6 rounded-2xl cursor-pointer"
                         >
-                            <div
+                            {/* <span>, no <div>: el modelo de contenido de
+                                <button> es contenido de frase, y un <div>
+                                dentro es HTML inválido (§12.8). */}
+                            <span
                                 className={cn(
                                     'p-3 rounded-2xl transition-colors',
                                     isDragOver ? 'bg-accent/10' : 'bg-surface-3',
@@ -524,8 +533,8 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                                     )}
                                     aria-hidden="true"
                                 />
-                            </div>
-                            <div className="text-center">
+                            </span>
+                            <span className="text-center">
                                 <span
                                     className={cn(
                                         'block text-sm font-medium transition-colors',
@@ -542,7 +551,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                                 <span className="block text-micro text-content-muted mt-1">
                                     También puedes arrastrarlos aquí.
                                 </span>
-                            </div>
+                            </span>
                         </button>
 
                         <input

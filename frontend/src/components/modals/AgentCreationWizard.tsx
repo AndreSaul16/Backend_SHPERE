@@ -1089,46 +1089,69 @@ function StepKnowledge({
                 </div>
             )}
 
-            {/* Drop zone */}
-            <div
-                ref={dropRef}
-                onDrop={onDrop}
-                onDragOver={onDragOver}
-                onDragLeave={onDragLeave}
-                onClick={() => fileInputRef.current?.click()}
-                className={cn(
-                    'flex flex-col items-center justify-center gap-4 p-10 rounded-2xl border-2 border-dashed cursor-pointer transition-all',
-                    isDragOver
-                        ? 'border-electric-cyan/60 bg-electric-cyan/5'
-                        : 'border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]',
-                )}
-            >
-                <div className={cn(
-                    'p-4 rounded-2xl transition-colors',
-                    isDragOver ? 'bg-electric-cyan/20' : 'bg-white/5',
-                )}>
-                    <Upload className={cn(
-                        'h-8 w-8 transition-colors',
-                        isDragOver ? 'text-electric-cyan' : 'text-gray-500',
-                    )} />
-                </div>
-                <div className="text-center">
-                    <p className={cn(
-                        'text-sm font-semibold transition-colors',
-                        isDragOver ? 'text-electric-cyan' : 'text-gray-300',
+            {/* Zona de subida — D14 (1.10), segunda de las dos.
+                Era un <div onClick> con el <input type="file"> en `hidden`: sin
+                ratón no había forma de adjuntar un documento, porque el div no
+                recibe foco y el input oculto tampoco está en el árbol de
+                accesibilidad. Mismo patrón que `KnowledgeBasePanel`:
+
+                  · el disparador es un <button type="button"> real, que trae
+                    foco, Enter y Espacio de serie;
+                  · el input pasa de `hidden` a `sr-only`, porque `display:none`
+                    lo saca del árbol de accesibilidad y además algunos
+                    navegadores se niegan a abrir el selector de un input que no
+                    está pintado;
+                  · arrastrar y soltar se conserva como ATAJO DE RATÓN sobre el
+                    mismo contenedor —el botón lo llena entero—, nunca como
+                    único camino. */}
+            <div ref={dropRef} className="relative">
+                <button
+                    type="button"
+                    onDrop={onDrop}
+                    onDragOver={onDragOver}
+                    onDragLeave={onDragLeave}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={cn(
+                        'flex w-full flex-col items-center justify-center gap-4 p-10 rounded-2xl border-2 border-dashed cursor-pointer transition-all',
+                        isDragOver
+                            ? 'border-accent/60 bg-accent/5'
+                            : 'border-stroke-edge bg-surface-2 hover:border-brass-600 hover:bg-surface-3',
+                    )}
+                >
+                    <span className={cn(
+                        'p-4 rounded-2xl transition-colors',
+                        isDragOver ? 'bg-accent/20' : 'bg-surface-3',
                     )}>
-                        {isDragOver ? 'Suelta los archivos aqui' : 'Arrastra archivos o haz clic para seleccionar'}
-                    </p>
-                    <p className="text-xs text-gray-600 mt-1">
-                        PDF, TXT, DOCX, CSV, MD - Max 50MB por archivo
-                    </p>
-                </div>
+                        <Upload
+                            className={cn(
+                                'h-8 w-8 transition-colors',
+                                isDragOver ? 'text-accent' : 'text-content-muted',
+                            )}
+                            aria-hidden="true"
+                        />
+                    </span>
+                    <span className="text-center">
+                        <span className={cn(
+                            'block text-sm font-semibold transition-colors',
+                            isDragOver ? 'text-accent' : 'text-content',
+                        )}>
+                            {isDragOver ? 'Suelta los archivos aquí' : 'Adjuntar documentos'}
+                        </span>
+                        <span className="block text-xs text-content-muted mt-1">
+                            PDF, TXT, DOCX, CSV, MD — Máx 50 MB por archivo
+                        </span>
+                        <span className="block text-xs text-content-muted mt-1">
+                            También puedes arrastrarlos aquí.
+                        </span>
+                    </span>
+                </button>
                 <input
                     ref={fileInputRef}
                     type="file"
                     multiple
                     accept=".pdf,.txt,.docx,.csv,.md,.doc,.xlsx,.json"
-                    className="hidden"
+                    aria-label="Adjuntar documentos a la base de conocimiento del agente"
+                    className="sr-only"
                     onChange={(e) => {
                         if (e.target.files?.length) {
                             onAddFiles(e.target.files);
