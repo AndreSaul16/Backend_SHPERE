@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { TextField } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import { AvatarImage } from "@/components/ui/AvatarImage";
 import { notify, reasonOf } from "@/lib/toastBus";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
@@ -315,11 +316,11 @@ export function ChatSettingsPage() {
                                 aria-label={isGroupChat ? 'Cambiar la imagen del grupo' : 'Cambiar la imagen del agente'}
                                 className="relative h-24 w-24 sm:h-32 sm:w-32 rounded-2xl sm:rounded-3xl bg-surface border border-surface-highlight flex items-center justify-center text-3xl sm:text-4xl font-bold shadow-2xl transition-transform group-hover:scale-105 cursor-pointer overflow-hidden"
                             >
-                                {avatarUrl ? (
-                                    <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
-                                ) : (
-                                    <span style={{ color: sessionColor }}>{activeAgent.avatar}</span>
-                                )}
+                                <AvatarImage
+                                    src={avatarUrl}
+                                    className="h-full w-full object-cover"
+                                    fallback={<span style={{ color: sessionColor }}>{activeAgent.avatar}</span>}
+                                />
                             </button>
                             <span
                                 aria-hidden="true"

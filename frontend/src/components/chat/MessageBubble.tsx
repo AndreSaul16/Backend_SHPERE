@@ -13,6 +13,7 @@ import { ToolExecutionCard } from './ToolExecutionCard';
 import { useChatStore } from '@/store/useChatStore';
 import { useUserAvatar } from '@/hooks/useUserAvatar';
 import { notify, reasonOf } from '@/lib/toastBus';
+import { AvatarImage } from '@/components/ui/AvatarImage';
 
 /**
  * Acción de la fila del turno (§9.11 «acciones»). Un solo sitio para las cinco:
@@ -196,13 +197,16 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                         )}
                         style={{ borderColor: `${activeHexColor}40` }}
                     >
-                        {sessionAvatar ? (
-                            <img src={sessionAvatar} alt={agent?.name} className="h-full w-full object-cover" />
-                        ) : agent ? (
-                            <span className={cn("text-micro sm:text-xs font-bold", agent.color)}>{agent.avatar}</span>
-                        ) : (
-                            <span className="text-micro sm:text-xs">🤖</span>
-                        )}
+                        <AvatarImage
+                            src={sessionAvatar}
+                            alt={agent?.name}
+                            className="h-full w-full object-cover"
+                            fallback={
+                                agent
+                                    ? <span className={cn("text-micro sm:text-xs font-bold", agent.color)}>{agent.avatar}</span>
+                                    : <span className="text-micro sm:text-xs">🤖</span>
+                            }
+                        />
                     </motion.div>
                 )}
 
@@ -213,11 +217,13 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                         animate={{ opacity: 1, scale: 1 }}
                         className="h-7 w-7 sm:h-8 sm:w-8 rounded-full flex items-center justify-center flex-shrink-0 border border-cyan-500/30 shadow-sm mt-1 bg-gradient-to-br from-indigo-500 to-purple-600 overflow-hidden"
                     >
-                        {userAvatar ? (
-                            <img src={userAvatar} alt="You" className="h-full w-full object-cover" />
-                        ) : (
-                            <span className="text-micro sm:text-xs font-bold text-white">S</span>
-                        )}
+                        {/* `alt` en español: §11 «Un idioma». Decía "You". */}
+                        <AvatarImage
+                            src={userAvatar}
+                            alt="Tú"
+                            className="h-full w-full object-cover"
+                            fallback={<span className="text-micro sm:text-xs font-bold text-white">S</span>}
+                        />
                     </motion.div>
                 )}
 

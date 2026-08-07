@@ -15,6 +15,7 @@ import { capture, ANALYTICS_EVENTS } from "@/lib/analytics";
 import { DebateTemplates } from "./DebateTemplates";
 import { useLiveAnnouncement } from "@/hooks/useLiveAnnouncement";
 import { reasonOf, toast } from "@/lib/toastBus";
+import { AvatarImage } from "@/components/ui/AvatarImage";
 
 export function ChatPanel() {
     const navigate = useNavigate();
@@ -209,13 +210,17 @@ export function ChatPanel() {
     const { baseName, role } = getAgentDisplayInfo(activeAgent);
 
     const getAvatarContent = () => {
-        if (sessionAvatar) {
-            return <img src={sessionAvatar} alt={activeAgent?.name} className="h-full w-full object-cover" />;
-        }
-        if (isGroupChat) {
-            return <span className="text-xl">🏛️</span>;
-        }
-        return <span className={cn("font-black text-xl", activeAgent?.color)}>{activeAgent?.avatar || 'S'}</span>;
+        const placa = isGroupChat
+            ? <span className="text-xl">🏛️</span>
+            : <span className={cn("font-black text-xl", activeAgent?.color)}>{activeAgent?.avatar || 'S'}</span>;
+        return (
+            <AvatarImage
+                src={sessionAvatar}
+                alt={activeAgent?.name}
+                className="h-full w-full object-cover"
+                fallback={placa}
+            />
+        );
     };
 
     const handleSendMessage = async () => {

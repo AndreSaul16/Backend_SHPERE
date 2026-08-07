@@ -5,6 +5,7 @@ import { useUserAvatar, saveUserAvatar } from "@/hooks/useUserAvatar";
 import { profileService } from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { TextField } from "@/components/ui/Field";
+import { AvatarImage } from "@/components/ui/AvatarImage";
 
 export function ProfilePage() {
     const avatarUrl = useUserAvatar();
@@ -153,11 +154,11 @@ export function ProfilePage() {
                                 aria-label="Cambiar tu imagen de perfil"
                                 className="h-24 w-24 sm:h-28 sm:w-28 md:h-32 md:w-32 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-2xl sm:text-3xl md:text-4xl shadow-2xl transition-transform group-hover:scale-105 cursor-pointer overflow-hidden"
                             >
-                                {avatarUrl ? (
-                                    <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
-                                ) : (
-                                    avatarInitial
-                                )}
+                                <AvatarImage
+                                    src={avatarUrl}
+                                    className="h-full w-full object-cover"
+                                    fallback={avatarInitial}
+                                />
                             </button>
                             <span
                                 aria-hidden="true"

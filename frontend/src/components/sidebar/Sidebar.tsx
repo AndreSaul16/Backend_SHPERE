@@ -9,6 +9,7 @@ import { useUserAvatar } from "@/hooks/useUserAvatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { TextField } from "@/components/ui/Field";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { AvatarImage } from "@/components/ui/AvatarImage";
 import { reasonOf, toast } from "@/lib/toastBus";
 
 /**
@@ -286,11 +287,17 @@ export function Sidebar() {
                                     >
                                         <div className="h-8 w-8 rounded-full bg-surface border border-surface-highlight flex items-center justify-center flex-shrink-0 text-content-muted group-hover:text-accent transition-colors overflow-hidden">
                                             {(() => {
-                                                const avatarUrl = session.visual_config?.avatar;
-                                                if (avatarUrl) return <img src={avatarUrl} alt="" className="h-full w-full object-cover" />;
                                                 const baseAgent = allAgents.find(a => a.id === session.base_agent_id);
-                                                if (baseAgent?.avatar) return <span className="text-sm">{baseAgent.avatar}</span>;
-                                                return <span className="text-micro" role="img" aria-label="Conversación">💬</span>;
+                                                const placa = baseAgent?.avatar
+                                                    ? <span className="text-sm">{baseAgent.avatar}</span>
+                                                    : <span className="text-micro" role="img" aria-label="Conversación">💬</span>;
+                                                return (
+                                                    <AvatarImage
+                                                        src={session.visual_config?.avatar}
+                                                        className="h-full w-full object-cover"
+                                                        fallback={placa}
+                                                    />
+                                                );
                                             })()}
                                         </div>
                                         <div className="text-left flex-1 min-w-0">
@@ -411,13 +418,22 @@ export function Sidebar() {
                         className="flex items-center gap-2.5 sm:gap-3 p-2 rounded-xl border border-transparent hover:border-surface-highlight hover:bg-surface/40 transition-all duration-300 group shadow-lg hover:shadow-electric-cyan/5"
                     >
                         <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-lg group-hover:scale-105 transition-transform overflow-hidden">
-                            {userAvatar ? (
-                                <img src={userAvatar} alt="Avatar" className="h-full w-full object-cover" />
-                            ) : user.photoURL ? (
-                                <img src={user.photoURL} alt="Avatar" className="h-full w-full object-cover" />
-                            ) : (
-                                getInitials(user.displayName, user.email)
-                            )}
+                            {/* La cadena de respaldo se conserva anidando: si la
+                                imagen guardada no carga se prueba la de la
+                                cuenta, y si esa tampoco, las iniciales. */}
+                            <AvatarImage
+                                src={userAvatar}
+                                alt="Avatar"
+                                className="h-full w-full object-cover"
+                                fallback={
+                                    <AvatarImage
+                                        src={user.photoURL}
+                                        alt="Avatar"
+                                        className="h-full w-full object-cover"
+                                        fallback={getInitials(user.displayName, user.email)}
+                                    />
+                                }
+                            />
                         </div>
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-content-strong group-hover:text-electric-cyan transition-colors truncate">
