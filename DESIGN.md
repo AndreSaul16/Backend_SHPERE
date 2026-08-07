@@ -674,13 +674,15 @@ Anatomía: `[icono 16px] [etiqueta Archivo sm/550] [afijo]`, `--radius-sm`, alto
 
 | Estado | primary | secondary | ghost | destructive |
 |---|---|---|---|---|
-| default | relleno `brass-500`, texto `baize-950` (**8.96:1**) | transparente, filete `--stroke-control`, texto `ink-100` | transparente, texto `ink-300` | transparente, filete `oxblood-500`, texto `oxblood-400` |
-| hover | relleno `brass-400` | fondo `--stroke-hairline`, filete `brass-600` | fondo `--stroke-hairline`, texto `ink-50` | fondo `oxblood-500` a 12%, texto `oxblood-400` |
+| default | relleno `brass-500`, texto `baize-950` (**8.96:1**) | transparente, filete `--stroke-control`, texto `ink-100` | transparente, texto `ink-300` | transparente, filete `oxblood-500`, texto **`--danger`** (§2.7) |
+| hover | relleno `brass-400` | fondo `--stroke-hairline`, filete `brass-600` | fondo `--stroke-hairline`, texto `ink-50` | fondo `oxblood-500` a 12%, texto **`--danger`** |
 | active | relleno `brass-600`, `scale(.985)` | + `scale(.985)` | + `scale(.985)` | + `scale(.985)` |
 | focus-visible | `outline: 2px --focus-ring; offset: 2px` — idéntico en las cinco variantes | | | |
 | disabled | relleno `baize-700`, texto `ink-500` (3.04:1 sobre su relleno — exento de WCAG por deshabilitado; la cifra real es esta, no el 4.59 de la escala, que es contra `baize-900`), `cursor: not-allowed`, **`title` prohibido como única explicación**: el motivo va en texto adyacente o `aria-describedby` | | | |
 | loading | ancho **congelado**, etiqueta sustituida por `Loader2` en `animate-spin` + texto en gerundio, `aria-busy="true"`, `disabled` | | | |
 | error | no es un estado de botón: el error vive en el formulario | | | |
+
+*(el color del texto de la variante `destructive` está **corregido por la auditoría de la Fase 2**, y es exactamente el mismo defecto que §9.2 ya corrigió para el mensaje de error de campo: la versión anterior prescribía `oxblood-400` (`#E15955`), que sobre las cuatro superficies del tema oscuro mide **5,33:1 en e0 `baize-950` ✓ · 4,98:1 en e1 `baize-900` ✓ · 4,57:1 en e2 `baize-850` ✓ · 4,11:1 en e3 `baize-800` ✗ — por debajo de AA**. Y e3 no es un fondo excéntrico para este botón: es **su fondo canónico**. `<Modal>` es `bg-surface-3` (= e3), §9.4 obliga a que `<ConfirmDialog>` se construya sobre `<Modal>`, y el propio §9.4 manda que las **8 acciones destructivas** de la app pasen por `<ConfirmDialog>` — o sea que el contrato colocaba por escrito el botón destructivo sobre precisamente la superficie donde su texto no cumple AA. `--danger` (`#F97770`) da **5,63:1 sobre e3** y pasa en las cuatro superficies. Segundo motivo, independiente: `--danger` es un **semántico que cambia con el tema**, mientras que `oxblood-400` es un valor fijo de la escala — en el tema claro se queda en 3,52:1 sobre `paper-50` frente a los 4,85:1 de `--danger`. El filete del botón sigue en `oxblood-500`: es borde y no texto, y su requisito es el 3:1 de 1.4.11, no el 4.5:1 de 1.4.3. El velo de hover sigue siendo `oxblood-500` al 12%, que no mueve el contraste del texto de forma apreciable)*.
 
 **Prohibido:** botón deshabilitado a `opacity-40` sin más (≈2.5:1, hoy en `ActaActions.tsx:157`); ancho que salta al entrar en loading; `title` como único motivo de deshabilitación.
 

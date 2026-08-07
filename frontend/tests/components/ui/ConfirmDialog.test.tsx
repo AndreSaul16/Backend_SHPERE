@@ -112,4 +112,31 @@ describe('ConfirmDialog (DESIGN §9.4/§11)', () => {
         expect(confirm.className).toContain('bg-accent-fill');
         expect(confirm.className).not.toContain('text-oxblood-400');
     });
+
+    /**
+     * §9.1 corregido — el mismo defecto de contraste que §9.2 ya corrigió.
+     *
+     * `text-oxblood-400` mide 4,11:1 sobre e3 (`baize-800`) y no llega a AA. Y
+     * e3 es el fondo canónico de ESTE botón: `<Modal>` es `bg-surface-3` = e3 y
+     * §9.4 obliga a que `<ConfirmDialog>` se construya encima. `--danger` da
+     * 5,63:1 sobre e3 y cambia con el tema.
+     */
+    it('el botón destructivo pinta su texto en --danger, no en oxblood-400 (§9.1)', () => {
+        render(
+            <ConfirmDialog
+                open
+                onClose={vi.fn()}
+                onConfirm={vi.fn()}
+                question="¿Eliminar"
+                objectName="Precios 2026"
+                consequence="Se borran el debate y su acta."
+            />,
+        );
+        const confirm = screen.getByRole('button', { name: 'Eliminar' });
+        expect(confirm.className).toContain('text-danger');
+        expect(confirm.className).not.toContain('text-oxblood-400');
+        // El filete se queda en oxblood-500: es borde, no texto (1.4.11 pide
+        // 3:1, y oxblood-500 da 3,66:1 sobre paño).
+        expect(confirm.className).toContain('border-oxblood-500');
+    });
 });

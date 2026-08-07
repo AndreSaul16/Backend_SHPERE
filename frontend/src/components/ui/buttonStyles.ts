@@ -32,8 +32,12 @@ const VARIANT: Record<ButtonVariant, string> = {
         'hover:bg-stroke-hairline hover:text-content-strong',
         'disabled:text-content-quiet',
     ),
+    // §9.1 corregido: el texto va en `--danger` (5.63:1 sobre e3), no en
+    // `oxblood-400` (4.11:1 sobre e3, por debajo de AA). `<ConfirmDialog>` vive
+    // dentro de `<Modal>`, que es `bg-surface-3` = e3: ése es el fondo canónico
+    // de este botón. El filete se queda en `oxblood-500` — es borde, no texto.
     destructive: cn(
-        'border border-oxblood-500 text-oxblood-400',
+        'border border-oxblood-500 text-danger',
         'hover:bg-oxblood-500/12',
         'disabled:border-stroke-hairline disabled:text-content-quiet',
     ),
