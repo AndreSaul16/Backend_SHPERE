@@ -404,9 +404,14 @@ export function ChatPanel() {
                 </div>
             </header>
 
-            {/* Board V2 war-room: directores en sesión, fases y votos en vivo */}
+            {/* Board V2 war-room: directores en sesión, fases y votos.
+                F2: la condición era `boardSession?.active`, o sea que la mesa
+                sólo existía mientras el debate estaba EN VUELO y desaparecía en
+                cuanto terminaba —y al reabrir la junta ya no volvía nunca—. La
+                mesa es de la sesión, no del stream: se monta siempre que haya
+                junta con debate (`loadSession` la reconstruye del historial). */}
             <AnimatePresence>
-                {isGroupChat && boardSession?.active && (
+                {isGroupChat && boardSession && (
                     <BoardWarRoom board={boardSession} agents={agents} />
                 )}
             </AnimatePresence>

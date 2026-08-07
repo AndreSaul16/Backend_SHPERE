@@ -237,6 +237,102 @@ const createGreeting = (agentId: string, agents: Agent[]): Message => {
 // Helpers
 export const getGroupMembers = (agents: Agent[]) => agents.filter(a => a.id !== 'group-chat');
 
+/** El identificador de la junta. Es un valor legítimo, nunca un centinela. */
+export const GROUP_CHAT_ID = 'group-chat';
+
+/**
+ * F2 (P0) — qué agente identifica a una sesión que se reabre.
+ *
+ * El código anterior escribía `session?.base_agent_id || 'group-chat'` y acto
+ * seguido `if (detectedAgentId === 'group-chat') { …inferir del primer turno… }`.
+ * O sea que `'group-chat'` hacía DOS papeles a la vez: centinela de «no hay
+ * valor» y valor legítimo —el que identifica a una junta—. Resultado: la única
+ * sesión que sí traía identidad de grupo era precisamente la que la perdía, y
+ * al recargar una junta se volvía un chat 1-a-1 con el CEO (`isGroupChat`
+ * falso → sin mesa de directores, coste «1 por mensaje», y todas las burbujas
+ * con el color del CEO).
+ *
+ * Aquí «ausente» es `undefined`/`''`, y `'group-chat'` es un valor como
+ * cualquier otro. Sólo se infiere de los mensajes cuando la sesión no dice nada.
+ */
+export function resolveSessionAgentId(
+    session: Pick<ChatSession, 'base_agent_id' | 'type'> | undefined,
+    messages: Message[],
+): string {
+    const base = session?.base_agent_id;
+    if (typeof base === 'string' && base.trim() !== '') return base;
+
+    // Sin `base_agent_id`: el tipo de sesión sigue siendo prueba de junta.
+    if (session?.type === 'group') return GROUP_CHAT_ID;
+
+    const agentIds = messages
+        .filter(m => m.agentId && m.agentId !== 'system')
+        .map(m => m.agentId as string);
+    return agentIds.length > 0 ? agentIds[0] : GROUP_CHAT_ID;
+}
+
+/**
+ * F2 (segunda mitad) — reconstruir el war-room de un debate ya terminado.
+ *
+ * `boardSession` sólo lo escribían los eventos SSE del stream, así que al
+ * reabrir una junta no había de dónde sacar la mesa: la banda no volvía a
+ * aparecer nunca, ni siquiera con la sesión bien identificada.
+ *
+ * Todo lo que la banda necesita ya viaja persistido en los mensajes
+ * (`additional_kwargs.board_vote`, `board_phase`, `agent_role`), que es lo que
+ * `loadSession` acaba de mapear. Lo único que NO se puede reconstruir es el
+ * coste real del debate —3 o 5 créditos, lo decide el triage y no se guarda en
+ * el historial—; se deja en el precio de catálogo (5) y **si se quiere exacto
+ * hace falta que el backend persista `board_cost` en la sesión**.
+ *
+ * Devuelve `null` si la sesión no tiene rastro de debate, para no pintar una
+ * mesa vacía sobre un chat normal.
+ */
+export function rebuildBoardSession(messages: Message[]): BoardSessionState | null {
+    const turnos = messages.filter(m => m.role !== 'user' && m.role !== 'system');
+    if (turnos.length === 0) return null;
+
+    const votes: Record<string, BoardVote> = {};
+    const statusByRole: Record<string, BoardAgentStatus> = {};
+    const participants: string[] = [];
+    let devil = false;
+    let phase: BoardPhase | null = null;
+
+    for (const m of turnos) {
+        const role = m.role as string;
+        if (role === 'DEVIL') devil = true;
+        else if (!participants.includes(role)) participants.push(role);
+        statusByRole[role] = 'done';
+        if (m.vote) votes[role] = m.vote;
+        if (m.phase) phase = m.phase;
+    }
+
+    // Rastro de junta: o votó alguien, o hubo fases, o hablaron ≥2 directores.
+    const esDebate = Object.keys(votes).length > 0 || phase !== null || participants.length > 1 || devil;
+    if (!esDebate) return null;
+
+    const tally = Object.values(votes).reduce<Record<string, number>>((acc, v) => {
+        acc[v.decision] = (acc[v.decision] ?? 0) + 1;
+        return acc;
+    }, {});
+
+    return {
+        // `active` significa «hay un debate EN VUELO», y este ya terminó: la
+        // banda se monta igual (ver `ChatPanel`), pero nada la trata como viva.
+        active: false,
+        phase,
+        participants,
+        statusByRole,
+        votes,
+        tally: Object.keys(tally).length > 0 ? tally : null,
+        unanimous: Object.keys(tally).length === 1 && Object.keys(votes).length > 1,
+        earlyExit: false,
+        cost: 5,
+        devil,
+        lastIntervention: null,
+    };
+}
+
 /**
  * Estado inicial de la barra lateral.
  *
@@ -447,15 +543,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }));
 
         if (messagesBySession[sessionId] && messagesBySession[sessionId].length > 0) {
-            // Detectar el agentId de la sesión en caché
+            // Volver a una sesión ya cacheada. F2: esta rama ignoraba
+            // `base_agent_id` por completo y se quedaba con el agente del primer
+            // turno, así que perdía la identidad de junta igual que la otra.
             const cachedMessages = messagesBySession[sessionId];
-            const agentIds = cachedMessages
-                .filter(m => m.agentId && m.agentId !== 'system')
-                .map(m => m.agentId);
-            const detectedAgentId = agentIds.length > 0 ? agentIds[0] : 'group-chat';
+            const session = get().sessions.find(s => s.session_id === sessionId);
+            const detectedAgentId = resolveSessionAgentId(session, cachedMessages);
+            const esJunta = detectedAgentId === GROUP_CHAT_ID;
 
-            if (import.meta.env.DEV) console.log('📦 [loadSession] Cache:', { sessionId, detectedAgentId, agentIds });
-            set({ currentSessionId: sessionId, selectedAgentId: detectedAgentId });
+            if (import.meta.env.DEV) console.log('📦 [loadSession] Cache:', { sessionId, detectedAgentId });
+            set({
+                currentSessionId: sessionId,
+                selectedAgentId: detectedAgentId,
+                // El war-room pertenece a la sesión que se está mirando: si no
+                // es una junta se retira, y si lo es se reconstruye del historial.
+                boardSession: esJunta ? rebuildBoardSession(cachedMessages) : null,
+            });
             return;
         }
 
@@ -545,25 +648,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
             });
 
             set((state) => {
-                // Priorizar base_agent_id de la sesión si existe
+                // La identidad la manda la sesión; los mensajes sólo se miran
+                // cuando la sesión no dice nada (F2, ver `resolveSessionAgentId`).
                 const session = state.sessions.find(s => s.session_id === sessionId);
-                let detectedAgentId = session?.base_agent_id || 'group-chat';
-
-                // Solo si no hay base_agent_id, intentamos inferirlo de los mensajes
-                if (detectedAgentId === 'group-chat' || !detectedAgentId) {
-                    const agentIds = mappedMessages
-                        .filter(m => m.agentId && m.agentId !== 'system')
-                        .map(m => m.agentId);
-                    if (agentIds.length > 0) {
-                        detectedAgentId = agentIds[0] as string;
-                    }
-                }
+                const detectedAgentId = resolveSessionAgentId(session, mappedMessages);
+                const esJunta = detectedAgentId === GROUP_CHAT_ID;
 
                 if (import.meta.env.DEV) console.log('🌐 [loadSession] Servidor:', { sessionId, detectedAgentId, sessionBaseAgent: session?.base_agent_id });
 
                 return {
                     currentSessionId: sessionId,
                     selectedAgentId: detectedAgentId,
+                    // El war-room de un debate terminado se reconstruye del
+                    // historial: hasta ahora sólo lo escribía el stream, así que
+                    // al reabrir una junta la mesa no volvía a montarse jamás.
+                    boardSession: esJunta ? rebuildBoardSession(mappedMessages) : null,
                     artifacts: [...state.artifacts, ...sessionArtifacts],
                     messagesBySession: {
                         ...state.messagesBySession,
