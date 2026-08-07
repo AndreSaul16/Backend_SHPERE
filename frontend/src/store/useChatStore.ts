@@ -20,6 +20,7 @@ export interface BoardSessionState {
 import { v4 as uuidv4 } from 'uuid';
 import { chatService } from '../services/api';
 import { NetworkError, SessionError, type ErrorContext } from '../lib/errors';
+import { notify, reasonOf } from '../lib/toastBus';
 
 interface ChatState {
     coreAgents: Agent[];
@@ -65,6 +66,39 @@ interface ChatState {
     // Selector
     getCurrentMessages: () => Message[];
     getArtifacts: () => Artifact[];
+}
+
+/**
+ * Quién avisa de qué (tarea 1.13).
+ *
+ * Regla: **un error, un aviso**. Cuando una acción de usuario atraviesa store y
+ * componente, avisa el que sabe QUÉ intentaba hacer el usuario, que es el
+ * componente; el store se limita a relanzar. Por eso `deleteSession` y
+ * `updateSessionMetadata` de aquí abajo no emiten nada: lo hacen `Sidebar` y
+ * `ChatSettingsPage`, que sí pueden nombrar la junta o el campo. Si el store
+ * avisara además, el mismo fallo saldría dos veces.
+ *
+ * Este módulo sólo avisa donde es el ÚNICO que se entera: los manejadores del
+ * stream, que no tienen componente detrás.
+ */
+
+/**
+ * Fallo AL PINTAR un evento del stream que sí llegó (`onBoardStart`,
+ * `onBoardAgent`, `onThinking`). No es un fallo de red: el debate se queda a
+ * medias y nadie se entera, porque hasta ahora esto sólo se veía en la consola
+ * y encima sólo en desarrollo.
+ *
+ * Es `warning`, no `error`: lo ya escrito sigue en el hilo y no hay nada que
+ * reintentar. Y lleva `dedupeKey` fijo porque `onThinking` corre por token: sin
+ * él, un debate roto apilaría un aviso por pieza de texto.
+ */
+function reportStreamGlitch(evento: string, e: unknown): void {
+    notify({
+        title: 'Se ha perdido parte del debate',
+        detail: `${reasonOf(e) ?? `Un turno no se pudo pintar (${evento})`}. Lo ya escrito sigue en el hilo.`,
+        variant: 'warning',
+        dedupeKey: 'stream-glitch',
+    });
 }
 
 // Saludos personalizados por agente (sin gastar tokens)
@@ -213,8 +247,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
             const sessions = await chatService.getSessions();
             set({ sessions });
         } catch (error: any) {
-            console.error('Error fetching sessions:', error);
-            const sphereError = new NetworkError('Error al obtener sesiones', 'fetch_agents', error);
+            // Sin aviso a propósito: este fallo ya tiene canal visible. El
+            // `errorStates.fetch_agents` que se escribe aquí abajo lo pinta
+            // `ErrorOverlay`, que está montado en `App`. Un toast encima sería
+            // el mismo error contado dos veces.
+            const sphereError = new NetworkError('No se pudo cargar tu historial de juntas', 'fetch_agents', error);
             set((state) => ({ errorStates: { ...state.errorStates, fetch_agents: sphereError.message } }));
         }
     },
@@ -271,13 +308,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
     },
 
+    // Sin `catch`: antes se tragaba el fallo aquí, así que el agente seguía en
+    // la lista, el diálogo se cerraba igual y borrar era indistinguible de no
+    // borrar. Ahora el rechazo llega a quien abrió el diálogo
+    // (`AgentSelectorModal`), que es el único que sabe qué agente era.
     deleteCustomAgent: async (id) => {
-        try {
-            await chatService.deleteCustomAgent(id);
-            set(state => ({ customAgents: state.customAgents.filter(a => a.id !== id) }));
-        } catch (error) {
-            console.error('Error deleting custom agent:', error);
-        }
+        await chatService.deleteCustomAgent(id);
+        set(state => ({ customAgents: state.customAgents.filter(a => a.id !== id) }));
     },
 
     createNewSession: async (agentId) => {
@@ -698,7 +735,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                                 };
                             });
                         } catch (e) {
-                            if (import.meta.env.DEV) console.error('onBoardStart error:', e);
+                            reportStreamGlitch('onBoardStart', e);
                         }
                     },
                     onBoardPlan: (data) => {
@@ -827,7 +864,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                                     : state.boardSession,
                             }));
                         } catch (e) {
-                            if (import.meta.env.DEV) console.error('onBoardAgent error:', e);
+                            reportStreamGlitch('onBoardAgent', e);
                         }
                     },
                     onThinking: (piece, role) => {
@@ -846,7 +883,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                                 },
                             }));
                         } catch (e) {
-                            if (import.meta.env.DEV) console.error('onThinking error:', e);
+                            reportStreamGlitch('onThinking', e);
                         }
                     },
                     onArtifactOpen: (data) => {
@@ -947,7 +984,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
                                 ...state.messagesBySession,
                                 [targetSessionId]: (state.messagesBySession[targetSessionId] || []).map(msg =>
                                     msg.id === activeBotMsgId
-                                        ? { ...msg, content: msg.content + '\n\n⚠️ **Error de conexión.**' }
+                                        // §11: el error dice qué pasó y qué se
+                                        // conservó. Va aquí, en el propio hilo,
+                                        // que es donde está mirando el usuario:
+                                        // por eso `streamChat` ya no avisa
+                                        // aparte (sería el mismo error dos
+                                        // veces).
+                                        ? { ...msg, content: msg.content + '\n\n⚠️ **Se cortó la respuesta.** Lo escrito hasta aquí se conserva. Vuelve a enviar el mensaje para retomarlo.' }
                                         : msg
                                 ),
                             },
@@ -1019,46 +1062,43 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
     }),
 
+    // Sin `catch`: el rechazo sube tal cual y avisa `ChatSettingsPage`, que es
+    // la única que sabe si lo que no se ha guardado era el nombre, el color o
+    // el avatar. Avisar también desde aquí sería el mismo error dos veces.
     updateSessionMetadata: async (sessionId: string, updates: { title?: string; visual_config?: any; members?: string[] }) => {
-        try {
-            const updatedSession = await chatService.updateSession(sessionId, updates);
+        const updatedSession = await chatService.updateSession(sessionId, updates);
 
-            set((state) => ({
-                sessions: state.sessions.map(s =>
-                    s.session_id === sessionId ? { ...s, ...updatedSession } : s
-                )
-            }));
+        set((state) => ({
+            sessions: state.sessions.map(s =>
+                s.session_id === sessionId ? { ...s, ...updatedSession } : s
+            )
+        }));
 
-            if (import.meta.env.DEV) console.log('✅ [updateSessionMetadata] Success:', updatedSession);
-        } catch (error) {
-            if (import.meta.env.DEV) console.error('❌ [updateSessionMetadata] Error:', error);
-            throw error;
-        }
+        if (import.meta.env.DEV) console.log('✅ [updateSessionMetadata] Success:', updatedSession);
     },
 
+    // Sin `catch`: el rechazo sube tal cual y avisa `Sidebar.handleDelete`, que
+    // es quien tiene el título de la junta. Emitir también desde aquí
+    // duplicaría el aviso — es el fallo que rompió el primer intento de esta
+    // tarea.
     deleteSession: async (sessionId: string) => {
-        try {
-            await chatService.deleteSession(sessionId);
-            const { currentSessionId, messagesBySession } = get();
+        await chatService.deleteSession(sessionId);
+        const { currentSessionId, messagesBySession } = get();
 
-            // Limpiar mensajes del mapa
-            const newMessages = { ...messagesBySession };
-            delete newMessages[sessionId];
+        // Limpiar mensajes del mapa
+        const newMessages = { ...messagesBySession };
+        delete newMessages[sessionId];
 
-            set({
-                sessions: get().sessions.filter(s => s.session_id !== sessionId),
-                messagesBySession: newMessages,
-                // Si era la sesión activa, limpiar → Welcome Screen
-                ...(currentSessionId === sessionId ? {
-                    currentSessionId: null,
-                    selectedAgentId: null,
-                } : {}),
-            });
+        set({
+            sessions: get().sessions.filter(s => s.session_id !== sessionId),
+            messagesBySession: newMessages,
+            // Si era la sesión activa, limpiar → Welcome Screen
+            ...(currentSessionId === sessionId ? {
+                currentSessionId: null,
+                selectedAgentId: null,
+            } : {}),
+        });
 
-            if (import.meta.env.DEV) console.log('🗑️ [deleteSession] Sesión eliminada:', sessionId);
-        } catch (error) {
-            if (import.meta.env.DEV) console.error('❌ [deleteSession] Error:', error);
-            throw error;
-        }
+        if (import.meta.env.DEV) console.log('🗑️ [deleteSession] Sesión eliminada:', sessionId);
     },
 }));

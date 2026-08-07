@@ -42,9 +42,12 @@ export function MermaidDiagram({ artifact }: MermaidDiagramProps) {
                 const id = `mermaid-${artifact.id.replace(/-/g, '_')}`;
                 const { svg } = await mermaid.render(id, artifact.content);
                 setSvgContent(svg);
-            } catch (err) {
-                console.error('Mermaid render error:', err);
-                setError('ERROR EN SINTAXIS DE DIAGRAMA');
+            } catch {
+                // Sin aviso: el fallo ya ocupa el hueco del propio diagrama, y
+                // no es una acción del usuario que haya fallado sino texto que
+                // el modelo escribió mal. El motivo de mermaid no se enseña:
+                // no hay nada que el usuario pueda hacer con él.
+                setError('No se pudo dibujar el diagrama: el texto no es Mermaid válido');
             }
         };
 

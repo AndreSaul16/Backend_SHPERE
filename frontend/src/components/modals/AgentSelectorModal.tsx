@@ -10,6 +10,7 @@ import { BoardActivationModal } from './BoardActivationModal';
 import { chatService } from '@/services/api';
 import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { reasonOf, toast } from '@/lib/toastBus';
 
 const getRoleIcon = (role: Role) => {
     switch (role) {
@@ -259,8 +260,18 @@ export function AgentSelectorModal() {
             onClose={() => setConfirmDeleteAgent(null)}
             onConfirm={async () => {
                 if (!confirmDeleteAgent) return;
-                await deleteCustomAgent(confirmDeleteAgent.id);
-                setConfirmDeleteAgent(null);
+                try {
+                    await deleteCustomAgent(confirmDeleteAgent.id);
+                    toast.success(`Agente «${confirmDeleteAgent.name}» eliminado`);
+                    setConfirmDeleteAgent(null);
+                } catch (error) {
+                    // El diálogo se queda abierto: el agente sigue existiendo,
+                    // así que cerrarlo daría a entender que se ha borrado.
+                    toast.error(
+                        `No se pudo eliminar «${confirmDeleteAgent.name}»`,
+                        reasonOf(error) ?? 'El agente sigue en tu lista.',
+                    );
+                }
             }}
             question="¿Eliminar el agente"
             objectName={confirmDeleteAgent?.name ?? ''}

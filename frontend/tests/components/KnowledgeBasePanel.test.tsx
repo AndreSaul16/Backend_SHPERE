@@ -21,6 +21,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '../setup';
 import { KnowledgeBasePanel } from '../../src/components/agents/KnowledgeBasePanel';
+import { __resetToastBus, subscribeToasts, type ToastRecord } from '../../src/lib/toastBus';
 
 // El token viaja por authHeaders() -> getAuthToken(), que hace
 // `await import("firebase/auth")`. vi.mock también intercepta el import dinámico.
@@ -55,6 +56,7 @@ const listResponse = (documents: unknown[]) =>
 describe('KnowledgeBasePanel — regresión P0 (b7452be)', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        __resetToastBus();
     });
 
     // ---------------------------------------------------------------------
@@ -181,25 +183,40 @@ describe('KnowledgeBasePanel — regresión P0 (b7452be)', () => {
         expect(screen.getByText('contrato.docx')).toBeInTheDocument();
     });
 
-    it('mantiene la fila si el borrado falla', async () => {
+    /**
+     * Tarea 1.13. Antes esto sólo comprobaba que se había llamado a
+     * `console.error`: el borrado fallaba, la fila se quedaba y el usuario no
+     * tenía forma de enterarse salvo abriendo las herramientas del navegador.
+     *
+     * El `toHaveLength(1)` no es cosmético. Es la parte del test que caza el
+     * fallo del primer intento de esta tarea: cablear un aviso nuevo sin
+     * retirar el que ya emitía otra capa, y sacar el mismo error dos veces.
+     */
+    it('un borrado que falla emite exactamente un aviso, con su motivo, y deja la fila', async () => {
         server.use(
             http.get(LIST_URL, () => listResponse([doc({ filename: 'informe.pdf' })])),
             http.delete(DELETE_URL, () =>
                 HttpResponse.json({ detail: 'Not authenticated' }, { status: 401 }),
             ),
         );
-        const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const seen: ToastRecord[] = [];
+        const unsubscribe = subscribeToasts((t) => seen.push(t));
 
         render(<KnowledgeBasePanel agentId={AGENT_ID} />);
         await screen.findByText('informe.pdf');
 
         fireEvent.click(screen.getByRole('button', { name: 'Eliminar el documento informe.pdf' }));
 
-        await waitFor(() => expect(consoleError).toHaveBeenCalled());
+        await waitFor(() => expect(seen).toHaveLength(1));
+        expect(seen[0].variant).toBe('error');
+        expect(seen[0].title).toBe('No se pudo eliminar el documento');
+        // §9.5: un error siempre lleva acción o motivo. Aquí, el motivo.
+        expect(seen[0].detail).toBeTruthy();
+
         // No hay borrado optimista: si el backend rechaza, la fila sigue.
         expect(screen.getByText('informe.pdf')).toBeInTheDocument();
 
-        consoleError.mockRestore();
+        unsubscribe();
     });
 
     it('no pinta el botón de borrar en modo readOnly', async () => {

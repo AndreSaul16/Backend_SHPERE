@@ -1,17 +1,16 @@
 /**
  * Bus de avisos. Es la mitad no-React de `<Toast>` (DESIGN §9.5).
  *
- * Existe porque los 24 `console.error` que la tarea 1.13 viene a cablear NO
- * están todos dentro de componentes: nueve viven en `useChatStore`, uno en
- * `api.ts` y otro en `errorHandler.ts`, que además ya lo admite por escrito
- * («Si no hay sistema de toast aún, se queda como console.warn»). Un contexto
- * de React no llega ahí. Un bus de módulo, sí, y encima se puede probar sin
- * montar nada.
+ * Existe porque los fallos que la tarea 1.13 vino a cablear NO están todos
+ * dentro de componentes: nueve vivían en `useChatStore`, uno en `api.ts` y otro
+ * en `errorHandler.ts`, que además ya lo admite por escrito («Si no hay sistema
+ * de toast aún, se queda como console.warn»). Un contexto de React no llega
+ * ahí. Un bus de módulo, sí, y encima se puede probar sin montar nada.
  *
  * El `<ToastProvider>` se suscribe y pinta. Si nadie se ha suscrito todavía los
  * avisos se guardan en cola (hasta 10) y se entregan al primer suscriptor: un
- * error durante el arranque no se pierde en silencio, que es justo lo que hace
- * hoy `console.error`.
+ * error durante el arranque no se pierde en silencio, que es justo lo que hacía
+ * el registro por consola al que esto sustituye.
  */
 export type ToastVariant = 'success' | 'info' | 'warning' | 'error';
 

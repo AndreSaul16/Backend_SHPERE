@@ -16,6 +16,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { chatService, authHeaders } from '@/services/api';
+import { reasonOf, toast } from '@/lib/toastBus';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -259,7 +260,13 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                 await chatService.deleteAgentDocument(agentId, fileId);
                 setDocuments((prev) => prev.filter((d) => d.id !== fileId));
             } catch (err) {
-                console.error('Failed to delete document:', err);
+                // El borrado no es optimista: la fila sigue en la lista. Sin
+                // aviso, «he pulsado borrar y no ha pasado nada» era
+                // indistinguible de un botón que no responde.
+                toast.error(
+                    'No se pudo eliminar el documento',
+                    reasonOf(err) ?? 'Sigue en la base de conocimiento del agente.',
+                );
             }
         },
         [agentId],

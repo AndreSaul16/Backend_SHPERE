@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { TextField } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import { notify, reasonOf } from "@/lib/toastBus";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
@@ -101,9 +102,11 @@ export function ChatSettingsPage() {
             } else {
                 setBoardError("No se pudo guardar el cambio. Inténtalo de nuevo.");
             }
-        } catch (e) {
-            console.error("Error toggling board meeting:", e);
-            setBoardError("Error de conexión al guardar el cambio. Inténtalo de nuevo.");
+        } catch {
+            // Sin aviso: el mensaje sale pegado al propio interruptor, que es
+            // donde está mirando quien acaba de pulsarlo. Un toast repetiría lo
+            // que ya se lee ahí mismo.
+            setBoardError("No se pudo guardar el cambio. El debate sigue como estaba.");
         } finally {
             setBoardLoading(false);
         }
@@ -148,12 +151,22 @@ export function ChatSettingsPage() {
             const reader = new FileReader();
             reader.onloadend = () => {
                 const base64 = reader.result as string;
-                // Persistir SOLO en visual_config de la sesión (atómico, aislado)
+                // Persistir SOLO en visual_config de la sesión (atómico, aislado).
+                // El `.catch` no es decorativo: `updateSessionMetadata` relanza,
+                // y sin él esto era una promesa rechazada sin dueño — el avatar
+                // se veía cambiado hasta recargar y luego volvía al anterior.
                 updateSessionMetadata(currentSessionId, {
                     visual_config: {
                         ...currentSession?.visual_config,
                         avatar: base64
                     }
+                }).catch((error) => {
+                    notify({
+                        title: 'No se pudo guardar el avatar',
+                        detail: reasonOf(error) ?? 'La sesión mantiene la imagen anterior.',
+                        variant: 'error',
+                        dedupeKey: 'session-avatar',
+                    });
                 });
             };
             reader.readAsDataURL(file);
@@ -193,7 +206,18 @@ export function ChatSettingsPage() {
                 }
             });
         } catch (error) {
-            console.error("Failed to update session name:", error);
+            // Avisa la página, no el store: `updateSessionMetadata` sirve a
+            // nombre, color y avatar por igual, y sólo aquí se sabe cuál de los
+            // tres se ha quedado sin guardar.
+            //
+            // `dedupeKey` porque el guardado va con rebote de 500ms al teclear:
+            // con el backend caído, cada pausa al escribir apilaría un aviso.
+            notify({
+                title: 'No se pudo guardar el nombre',
+                detail: reasonOf(error) ?? 'Tu texto sigue en el campo. Vuelve a intentarlo.',
+                variant: 'error',
+                dedupeKey: 'session-name',
+            });
         }
     };
 
@@ -216,7 +240,12 @@ export function ChatSettingsPage() {
         try {
             await updateSessionMetadata(currentSessionId, updates);
         } catch (error) {
-            console.error("Failed to update session color:", error);
+            notify({
+                title: 'No se pudo guardar el color',
+                detail: reasonOf(error) ?? 'La sesión mantiene el color anterior.',
+                variant: 'error',
+                dedupeKey: 'session-color',
+            });
         }
     };
 

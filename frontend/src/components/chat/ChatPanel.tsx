@@ -14,6 +14,7 @@ import { useBillingStore } from "@/store/useBillingStore";
 import { capture, ANALYTICS_EVENTS } from "@/lib/analytics";
 import { DebateTemplates } from "./DebateTemplates";
 import { useLiveAnnouncement } from "@/hooks/useLiveAnnouncement";
+import { reasonOf, toast } from "@/lib/toastBus";
 
 export function ChatPanel() {
     const navigate = useNavigate();
@@ -132,8 +133,11 @@ export function ChatPanel() {
             await chatService.uploadAgentDocument(selectedAgentId, file);
             setUploadState('done');
             setTimeout(() => setUploadState('idle'), 2500);
-        } catch (err) {
-            console.error('Upload error:', err);
+        } catch {
+            // Sin aviso: la subida ya tiene canal visible propio y en su sitio
+            // —el clip cambia de estado, el `title` dice qué pasó y la región
+            // viva anuncia «No se pudo subir el documento»—. Un toast encima
+            // sería el mismo fallo dos veces.
             setUploadState('error');
             setTimeout(() => setUploadState('idle'), 3000);
         }
@@ -154,7 +158,13 @@ export function ChatPanel() {
                 setPinnedMessages(prev => [...prev, messageId]);
             }
         } catch (e) {
-            console.error('No se pudo actualizar el pin:', e);
+            // El estado no se toca hasta que el backend confirma (A5), así que
+            // el pin se queda como estaba y hay que decirlo: si no, el clic
+            // parece no haber hecho nada.
+            toast.error(
+                isPinned ? 'No se pudo desanclar el mensaje' : 'No se pudo anclar el mensaje',
+                reasonOf(e) ?? 'El mensaje sigue como estaba. Vuelve a intentarlo.',
+            );
         }
     }, [currentSessionId, pinnedMessages]);
 
@@ -164,7 +174,10 @@ export function ChatPanel() {
             await chatService.rateMessage(currentSessionId, messageId, rating);
             setRatings(prev => ({ ...prev, [messageId]: rating }));
         } catch (e) {
-            console.error('No se pudo guardar la valoración:', e);
+            toast.error(
+                'No se pudo guardar tu valoración',
+                reasonOf(e) ?? 'No se ha registrado. Vuelve a votar en unos segundos.',
+            );
         }
     }, [currentSessionId]);
 

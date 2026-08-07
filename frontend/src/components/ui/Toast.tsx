@@ -1,8 +1,8 @@
 /**
  * <ToastProvider> — DESIGN §9.5.
  *
- * «No existe hoy», dice §9.5, y por eso hay 24 `console.error` que son fallos
- * invisibles para el usuario. Esto es la mitad visible; la otra es
+ * «No existe hoy», dice §9.5, y por eso había 24 registros de consola que eran
+ * fallos invisibles para el usuario. Esto es la mitad visible; la otra es
  * `lib/toastBus.ts`, para que también puedan avisar el store y los servicios.
  *
  * Reglas de §9.5 implementadas aquí, en el orden en que las enumera:

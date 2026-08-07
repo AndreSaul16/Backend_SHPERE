@@ -127,9 +127,11 @@ export const BillingPage: React.FC = () => {
             } else {
                 setActionError('Respuesta inesperada del servidor de pagos.');
             }
-        } catch (err) {
-            console.error('Checkout error:', err);
-            setActionError('Error de conexión al procesar el pago.');
+        } catch {
+            // Sin aviso: el mensaje sale bajo los planes, a un palmo del botón
+            // que se acaba de pulsar. §11 pide decir además qué se conservó, y
+            // en un pago lo que importa es que no se ha cobrado nada.
+            setActionError('No se pudo abrir la pasarela de pago. No se te ha cobrado nada; vuelve a intentarlo.');
         } finally {
             setPendingPlan(null);
         }

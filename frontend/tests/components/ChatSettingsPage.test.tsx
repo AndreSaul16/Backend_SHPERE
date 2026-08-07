@@ -12,10 +12,11 @@
  * sesión → segundo render. Con el bug presente, el segundo render lanza.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ChatSettingsPage } from '../../src/pages/ChatSettingsPage';
 import { useChatStore } from '../../src/store/useChatStore';
+import { __resetToastBus, subscribeToasts, type ToastRecord } from '../../src/lib/toastBus';
 import type { ChatSession } from '../../src/types';
 
 vi.mock('firebase/auth', () => ({
@@ -124,5 +125,74 @@ describe('ChatSettingsPage — Rules of Hooks (D03)', () => {
         }).not.toThrow();
 
         expect(screen.getByText('Sin chat activo')).toBeInTheDocument();
+    });
+});
+
+/**
+ * Tarea 1.13 — la otra mitad del contrato «un error, un aviso».
+ *
+ * `updateSessionMetadata` relanza sin avisar (ver `tests/store/avisos.test.ts`)
+ * precisamente para que avise esta página, que es la única que sabe si lo que
+ * no se ha guardado era el nombre, el color o el avatar. El `toHaveLength(1)`
+ * verifica que sólo avisa una de las dos capas: con las dos, este número sería
+ * 2 y el usuario vería el mismo fallo repetido.
+ */
+describe('ChatSettingsPage — avisos de guardado (1.13)', () => {
+    beforeEach(() => {
+        __resetToastBus();
+        const session = makeSession();
+        useChatStore.setState({
+            sessions: [session],
+            currentSessionId: session.session_id,
+            selectedAgentId: 'cto-1',
+        });
+    });
+
+    afterEach(() => {
+        useChatStore.setState({
+            sessions: [],
+            currentSessionId: null,
+            selectedAgentId: 'group-chat',
+        });
+    });
+
+    it('un fallo al guardar el color emite un aviso de error con su motivo', async () => {
+        useChatStore.setState({
+            updateSessionMetadata: vi.fn(() => Promise.reject(new Error('502 upstream'))),
+        } as never);
+        const seen: ToastRecord[] = [];
+        const unsubscribe = subscribeToasts((t) => seen.push(t));
+
+        renderPage();
+        fireEvent.change(screen.getByLabelText('Color de la sesión'), {
+            target: { value: '#ff0000' },
+        });
+
+        await waitFor(() => expect(seen).toHaveLength(1));
+        expect(seen[0].variant).toBe('error');
+        expect(seen[0].title).toBe('No se pudo guardar el color');
+        expect(seen[0].detail).toBe('502 upstream');
+
+        unsubscribe();
+    });
+
+    it('el guardado con rebote no apila un aviso por pulsación', async () => {
+        useChatStore.setState({
+            updateSessionMetadata: vi.fn(() => Promise.reject(new Error('502 upstream'))),
+        } as never);
+        const seen: ToastRecord[] = [];
+        const unsubscribe = subscribeToasts((t) => seen.push(t));
+
+        renderPage();
+        const picker = screen.getByLabelText('Color de la sesión');
+        fireEvent.change(picker, { target: { value: '#ff0000' } });
+        fireEvent.change(picker, { target: { value: '#00ff00' } });
+        fireEvent.change(picker, { target: { value: '#0000ff' } });
+
+        await waitFor(() => expect(seen.length).toBeGreaterThan(0));
+        // Se emiten varios, pero todos con la misma `dedupeKey`: el
+        // `<ToastProvider>` sustituye el anterior en vez de apilarlos, así que
+        // en pantalla sólo hay uno. §9.5.
+        expect(new Set(seen.map((t) => t.dedupeKey))).toEqual(new Set(['session-color']));
     });
 });

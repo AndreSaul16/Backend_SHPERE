@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
+import { notify, reasonOf } from '../lib/toastBus';
 
 // Modelo solo-créditos: el único plan es "free". Lo de pago son compras
 // puntuales de créditos (packs + top-ups), no planes.
@@ -142,8 +143,23 @@ export const useBillingStore = create<BillingState>()(
           }
         }
 
-        // Todos los intentos fallaron
-        console.error('Failed to refresh billing state after all retries', lastError);
+        // Todos los intentos fallaron.
+        //
+        // El `error` de abajo sólo lo pinta `BillingPage`; desde la sidebar o
+        // el indicador de créditos este fallo era invisible y dejaba el saldo
+        // congelado en una cifra vieja, que es con la que el usuario decide si
+        // convoca una junta. De ahí el aviso.
+        //
+        // `warning`, no `error`: no se ha perdido nada ni ha fallado ninguna
+        // acción suya, sólo la cifra puede estar desfasada. Y `dedupeKey`
+        // porque esto se reintenta al volver a la pestaña y tras cada stream.
+        notify({
+            title: 'Tu saldo de créditos puede no estar al día',
+            detail: reasonOf(lastError) ?? 'No se ha podido consultar el saldo.',
+            variant: 'warning',
+            dedupeKey: 'billing-refresh',
+            action: { label: 'Reintentar', onClick: () => { void get().refresh(); } },
+        });
         set({
           isLoading: false,
           loaded: false,

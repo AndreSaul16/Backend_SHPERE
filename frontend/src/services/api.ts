@@ -232,7 +232,12 @@ export const chatService = {
                 console.log("SSE: Request aborted by user navigation");
                 return;
             }
-            console.error("🔥 Error en streamChat:", error);
+            // Sin aviso desde aquí: `api.ts` es transporte y no sabe en qué
+            // hilo estaba el usuario. El fallo se propaga por
+            // `callbacks.onError` y lo escribe `useChatStore` en la propia
+            // burbuja del turno, que es donde se está mirando. Avisar también
+            // aquí sería el mismo corte contado dos veces.
+            //
             // A4: reconciliar el balance con el backend también en error. Si el
             // envío falló, el backend reembolsó (o nunca cobró), así que el
             // decremento optimista debe corregirse YA, no esperar al polling.
