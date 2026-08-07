@@ -4,12 +4,34 @@ import type { Agent } from "@/types";
 import { getBoardAgentByRole, type BoardSessionState } from "@/store/useChatStore";
 import { cn } from "@/lib/utils";
 
-const PHASE_LABELS: { key: string; label: string }[] = [
+/**
+ * D34 — las CINCO fases de `BoardPhase`, en el orden del grafo del backend
+ * (`board_v2.py`: opening → analysis → rebuttal → devil → synthesis).
+ *
+ * `devil` faltaba aquí. Como la barra se pinta comparando contra
+ * `findIndex(p.key === board.phase)`, mientras hablaba el Abogado del Diablo el
+ * índice era -1 y NINGUNA fase quedaba marcada como pasada ni como actual: las
+ * cinco se pintaban en `text-content-quiet`, o sea todas futuras, justo en el
+ * momento más tenso del debate. Y la región viva anunciaba «Fase: en curso».
+ */
+const ALL_PHASES: { key: string; label: string }[] = [
     { key: "opening", label: "Apertura" },
     { key: "analysis", label: "Análisis" },
     { key: "rebuttal", label: "Réplicas" },
+    { key: "devil", label: "Objeción" },
     { key: "synthesis", label: "Síntesis" },
 ];
+
+/**
+ * El asiento del Abogado del Diablo es opcional (`board_devil` en el backend),
+ * así que su fase sólo entra en la barra cuando va a ocurrir de verdad: o
+ * porque la junta lo lleva sentado, o porque ya está hablando. Anunciar una
+ * fase que nunca llegará sería mentir sobre el orden del día.
+ */
+function phasesFor(board: Pick<BoardSessionState, "devil" | "phase">) {
+    const conDevil = board.devil || board.phase === "devil";
+    return conDevil ? ALL_PHASES : ALL_PHASES.filter((p) => p.key !== "devil");
+}
 
 const VOTE_GLYPH: Record<string, string> = { SI: "✓", NO: "✗", CONDICIONAL: "~" };
 
@@ -23,7 +45,8 @@ export function BoardWarRoom({ board, agents }: { board: BoardSessionState; agen
     const roles = ["CEO", ...board.participants.filter((r) => r !== "CEO")];
     if (board.devil) roles.push("DEVIL");
 
-    const phaseIndex = PHASE_LABELS.findIndex((p) => p.key === board.phase);
+    const phases = phasesFor(board);
+    const phaseIndex = phases.findIndex((p) => p.key === board.phase);
 
     const tallyText = (() => {
         if (!board.tally) return null;
@@ -98,7 +121,7 @@ export function BoardWarRoom({ board, agents }: { board: BoardSessionState; agen
 
                     {/* Barra de fases */}
                     <div className="hidden sm:flex items-center gap-1.5 text-micro font-mono uppercase">
-                        {PHASE_LABELS.map((p, i) => (
+                        {phases.map((p, i) => (
                             <div key={p.key} className="flex items-center gap-1.5">
                                 <span
                                     className={cn(
@@ -108,7 +131,7 @@ export function BoardWarRoom({ board, agents }: { board: BoardSessionState; agen
                                 >
                                     {p.label}
                                 </span>
-                                {i < PHASE_LABELS.length - 1 && <span className="text-content-quiet" aria-hidden="true">▸</span>}
+                                {i < phases.length - 1 && <span className="text-content-quiet" aria-hidden="true">▸</span>}
                             </div>
                         ))}
                     </div>
@@ -143,7 +166,7 @@ export function BoardWarRoom({ board, agents }: { board: BoardSessionState; agen
                     la vez que su contenido. */}
                 <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="live-tally">
                     {tallyText
-                        ? `${tallyText}${board.earlyExit ? ' — consenso, debate abreviado' : ''}. Fase: ${PHASE_LABELS[phaseIndex]?.label ?? 'en curso'}.`
+                        ? `${tallyText}${board.earlyExit ? ' — consenso, debate abreviado' : ''}. Fase: ${phases[phaseIndex]?.label ?? 'en curso'}.`
                         : ''}
                 </p>
             </div>
