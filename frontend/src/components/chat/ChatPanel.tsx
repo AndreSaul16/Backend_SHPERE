@@ -488,7 +488,18 @@ export function ChatPanel() {
                                         key={msg.id}
                                         message={msg}
                                         agent={msgAgent}
-                                        agentColor={effectiveBubbleColor}
+                                        /* F5 · §2.8 — en una junta manda la
+                                           identidad del director, no el color
+                                           de la sesión. Pasando siempre
+                                           `effectiveBubbleColor` los cinco
+                                           directores salían del mismo latón en
+                                           el transcript (el color de sesión
+                                           gana en `MessageBubble`), así que el
+                                           debate se leía sin saber de un
+                                           vistazo quién dice qué. En un chat
+                                           1-a-1 el color de sesión sí manda:
+                                           ahí lo ha elegido el usuario. */
+                                        agentColor={isGroupChat ? msgAgent?.hexColor : effectiveBubbleColor}
                                         sessionAvatar={sessionAvatar}
                                         isTyping={isTyping}
                                         isLast={idx === filteredMessages.length - 1}
