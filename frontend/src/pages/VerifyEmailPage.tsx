@@ -1,12 +1,16 @@
 /**
- * Pantalla de verificación de email. Las cuentas email/password no reciben créditos
- * ni pueden usar /stream hasta verificar (gate del backend). Aquí pueden reenviar el
+ * Pantalla de verificación de correo — DESIGN §0, §9.1, §4.3.
+ *
+ * Las cuentas de correo y contraseña no reciben créditos ni pueden usar
+ * `/stream` hasta verificar (gate del backend). Aquí se puede reenviar el
  * correo y comprobar el estado.
  */
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { MailCheck, RefreshCw, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { AuthAlert, AuthNotice, AuthShell } from "@/components/auth/AuthShell";
 
 export function VerifyEmailPage() {
     const { user, resendVerification, reloadUser, signOut } = useAuth();
@@ -49,7 +53,7 @@ export function VerifyEmailPage() {
         } catch (e: any) {
             setError(e?.code === "auth/too-many-requests"
                 ? "Demasiados intentos. Espera unos minutos."
-                : "No se pudo reenviar. Intenta de nuevo.");
+                : "No se pudo reenviar. Inténtalo de nuevo.");
         }
     };
 
@@ -59,56 +63,60 @@ export function VerifyEmailPage() {
         try {
             const ok = await reloadUser();
             if (ok) navigate("/", { replace: true });
-            else setError("Aún no detectamos la verificación. Revisa tu correo (y spam).");
+            else setError("Aún no detectamos la verificación. Revisa tu correo (y la carpeta de spam).");
         } finally {
             setChecking(false);
         }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 px-4">
-            <div className="w-full max-w-md">
-                <div className="text-center mb-8">
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">SPHERE</h1>
+        <AuthShell title="Verifica tu correo" centered>
+            <div className="text-center">
+                {/* §10: glifo de línea, no emoji; §2.3: el latón es el filete. */}
+                <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-sm border border-brass-600 bg-accent/12 text-accent">
+                    <MailCheck className="h-6 w-6" aria-hidden="true" />
                 </div>
-                <div className="bg-gray-800/60 backdrop-blur-xl rounded-2xl p-8 shadow-2xl border border-gray-700/50 text-center">
-                    <div className="h-16 w-16 mx-auto rounded-2xl bg-electric-cyan/10 border border-electric-cyan/30 flex items-center justify-center mb-5">
-                        <MailCheck className="h-8 w-8 text-electric-cyan" />
-                    </div>
-                    <h2 className="text-xl font-semibold text-white mb-2">Verifica tu correo</h2>
-                    <p className="text-sm text-gray-400 leading-relaxed mb-6">
-                        Te enviamos un enlace de verificación a <strong className="text-white">{user?.email}</strong>.
-                        Ábrelo para activar tu cuenta y recibir tus <strong className="text-white">30 créditos</strong> gratis.
-                    </p>
 
-                    {resent && <div className="mb-4 p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-emerald-400 text-xs">Correo reenviado ✓</div>}
-                    {error && <div className="mb-4 p-2.5 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs">{error}</div>}
+                <p className="mb-6 text-sm leading-relaxed text-content-muted">
+                    Te hemos enviado un enlace de verificación a{" "}
+                    <strong className="text-content-strong">{user?.email}</strong>. Ábrelo para
+                    activar tu cuenta y recibir tus{" "}
+                    <strong className="text-content-strong">30 créditos</strong> gratuitos.
+                </p>
 
-                    <div className="space-y-3">
-                        <button
-                            onClick={handleCheck}
-                            disabled={checking}
-                            className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium rounded-lg hover:from-purple-500 hover:to-pink-500 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                        >
-                            <RefreshCw className={`h-4 w-4 ${checking ? "animate-spin" : ""}`} />
-                            Ya verifiqué mi correo
-                        </button>
-                        <button
-                            onClick={handleResend}
-                            disabled={cooldown > 0}
-                            className="w-full py-3 bg-gray-700/50 hover:bg-gray-700 text-white rounded-lg transition-colors disabled:opacity-50 text-sm"
-                        >
-                            {cooldown > 0 ? `Reenviar en ${cooldown}s` : "Reenviar correo de verificación"}
-                        </button>
-                        <button
-                            onClick={() => { signOut(); navigate("/login", { replace: true }); }}
-                            className="w-full py-2 text-content-muted hover:text-content-strong text-xs transition-colors flex items-center justify-center gap-1.5"
-                        >
-                            <LogOut className="h-3 w-3" /> Cerrar sesión
-                        </button>
-                    </div>
+                {resent && <AuthNotice>Correo reenviado.</AuthNotice>}
+                {error && <AuthAlert>{error}</AuthAlert>}
+
+                <div className="space-y-3">
+                    <Button
+                        variant="primary"
+                        className="w-full"
+                        onClick={handleCheck}
+                        loading={checking}
+                        loadingLabel="Comprobando…"
+                    >
+                        <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                        Ya he verificado mi correo
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        className="w-full"
+                        onClick={handleResend}
+                        disabled={cooldown > 0}
+                    >
+                        {cooldown > 0 ? `Reenviar en ${cooldown} s` : "Reenviar correo de verificación"}
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => { signOut(); navigate("/login", { replace: true }); }}
+                    >
+                        <LogOut className="h-4 w-4" aria-hidden="true" />
+                        Cerrar sesión
+                    </Button>
                 </div>
             </div>
-        </div>
+        </AuthShell>
     );
 }
