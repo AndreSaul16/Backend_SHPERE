@@ -215,14 +215,14 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                     <motion.div
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="h-7 w-7 sm:h-8 sm:w-8 rounded-full flex items-center justify-center flex-shrink-0 border border-cyan-500/30 shadow-sm mt-1 bg-gradient-to-br from-indigo-500 to-purple-600 overflow-hidden"
+                        className="h-7 w-7 sm:h-8 sm:w-8 rounded-full flex items-center justify-center flex-shrink-0 border border-agent-user/40 bg-agent-user/12 mt-1 overflow-hidden"
                     >
                         {/* `alt` en español: §11 «Un idioma». Decía "You". */}
                         <AvatarImage
                             src={userAvatar}
                             alt="Tú"
                             className="h-full w-full object-cover"
-                            fallback={<span className="text-micro sm:text-xs font-bold text-white">S</span>}
+                            fallback={<span className="text-micro sm:text-xs font-semibold text-agent-user">S</span>}
                         />
                     </motion.div>
                 )}

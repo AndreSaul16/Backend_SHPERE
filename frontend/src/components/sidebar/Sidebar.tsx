@@ -417,7 +417,7 @@ export function Sidebar() {
                         onClick={() => toggleSidebar(false)}
                         className="flex items-center gap-2.5 sm:gap-3 p-2 rounded-xl border border-transparent hover:border-surface-highlight hover:bg-surface/40 transition-all duration-300 group shadow-lg hover:shadow-electric-cyan/5"
                     >
-                        <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-lg group-hover:scale-105 transition-transform overflow-hidden">
+                        <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-sm border border-agent-user/40 bg-agent-user/12 flex items-center justify-center text-agent-user font-semibold text-sm overflow-hidden">
                             {/* La cadena de respaldo se conserva anidando: si la
                                 imagen guardada no carga se prueba la de la
                                 cuenta, y si esa tampoco, las iniciales. */}

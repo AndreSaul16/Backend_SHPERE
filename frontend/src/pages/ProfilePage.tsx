@@ -129,10 +129,6 @@ export function ProfilePage() {
 
                     {/* Hero Profile Section */}
                     <section className="flex flex-col items-center gap-4 sm:gap-6 p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl bg-surface/60 border border-surface-highlight backdrop-blur-sm relative overflow-hidden text-center">
-                        <div className="absolute top-0 right-0 p-4 opacity-10 hidden sm:block">
-                            <User className="h-20 sm:h-32 w-20 sm:w-32" />
-                        </div>
-
                         {/* Avatar with Upload */}
                         <div className="relative group">
                             <input
@@ -152,7 +148,7 @@ export function ProfilePage() {
                                 type="button"
                                 onClick={triggerFileInput}
                                 aria-label="Cambiar tu imagen de perfil"
-                                className="h-24 w-24 sm:h-28 sm:w-28 md:h-32 md:w-32 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-2xl sm:text-3xl md:text-4xl shadow-2xl transition-transform group-hover:scale-105 cursor-pointer overflow-hidden"
+                                className="h-24 w-24 sm:h-28 sm:w-28 md:h-32 md:w-32 rounded-sm border border-agent-user/40 bg-agent-user/12 flex items-center justify-center text-agent-user font-semibold text-2xl sm:text-3xl md:text-4xl shadow-e2 cursor-pointer overflow-hidden"
                             >
                                 <AvatarImage
                                     src={avatarUrl}
