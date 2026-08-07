@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect } from "react";
 import { ArrowLeft, Save, Camera, Zap, Pencil, Users, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -9,8 +9,8 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { AvatarImage } from "@/components/ui/AvatarImage";
 import { notify, reasonOf } from "@/lib/toastBus";
+import { useBoardSettingsStore } from "@/store/useBoardSettingsStore";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
 export function ChatSettingsPage() {
     const navigate = useNavigate();
@@ -31,10 +31,16 @@ export function ChatSettingsPage() {
     const [editName, setEditName] = useState("");
     const [editColor, setEditColor] = useState("");
 
-    // Board Meeting state
-    const [boardEnabled, setBoardEnabled] = useState(false);
-    const [boardLoading, setBoardLoading] = useState(false);
-    const [boardError, setBoardError] = useState<string | null>(null);
+    // D47 — el ajuste de debate NO tiene estado local aquí. Es el mismo que
+    // pinta `BoardMeetingSettings`, y con un `useState` en cada pantalla las
+    // dos podían enseñar posiciones contrarias del mismo interruptor.
+    const {
+        enabled: boardEnabled,
+        saving: boardSaving,
+        error: boardError,
+        load: loadBoardSettings,
+        setEnabled: setBoardEnabled,
+    } = useBoardSettingsStore();
 
     // Nombre base derivado de la sesión/agente. Se calcula ANTES de cualquier
     // return condicional porque `localName` y su efecto de sincronización son
@@ -54,64 +60,30 @@ export function ChatSettingsPage() {
     // Input controlado con debounce para el nombre
     const [localName, setLocalName] = useState(baseName);
 
-    // Sincronizar cuando cambia la sesión (o cuando llega por primera vez)
-    useEffect(() => {
+    // Sincronizar cuando cambia la sesión (o cuando llega por primera vez).
+    //
+    // Se ajusta DURANTE EL RENDER y no en un `useEffect`: es el patrón que
+    // React documenta para «reiniciar estado cuando cambia una prop». Con el
+    // efecto había un render intermedio pintando el nombre viejo, y `useState`
+    // + `setState` en efecto es además lo que el compilador marca. Se guarda de
+    // qué sesión y de qué nombre base viene el valor actual, así que el ajuste
+    // corre una sola vez por cambio real y no pisa lo que el usuario escribe.
+    const [sincronizadoDe, setSincronizadoDe] = useState({ sessionId: currentSessionId, baseName });
+    if (sincronizadoDe.sessionId !== currentSessionId || sincronizadoDe.baseName !== baseName) {
+        setSincronizadoDe({ sessionId: currentSessionId, baseName });
         setLocalName(baseName);
-    }, [currentSessionId, baseName]);
-
-    const getAuthToken = useCallback(async () => {
-        const { getAuth } = await import("firebase/auth");
-        const user = getAuth().currentUser;
-        if (!user) throw new Error("No autenticado");
-        return user.getIdToken();
-    }, []);
+    }
 
     // Load board meeting status for group chats
     useEffect(() => {
         if (!isGroupChat) return;
-        (async () => {
-            try {
-                const token = await getAuthToken();
-                const resp = await fetch(`${API_URL}/me/board-settings`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                if (resp.ok) {
-                    const data = await resp.json();
-                    setBoardEnabled(data.board_meeting_enabled);
-                } else {
-                    setBoardError("No se pudo cargar el estado del Board Meeting.");
-                }
-            } catch {
-                setBoardError("No se pudo cargar el estado del Board Meeting.");
-            }
-        })();
-    }, [isGroupChat, getAuthToken]);
+        loadBoardSettings();
+    }, [isGroupChat, loadBoardSettings]);
 
-    const toggleBoardMeeting = async () => {
-        setBoardLoading(true);
-        setBoardError(null);
-        try {
-            const token = await getAuthToken();
-            const resp = await fetch(`${API_URL}/me/board-settings`, {
-                method: "PATCH",
-                headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-                body: JSON.stringify({ board_meeting_enabled: !boardEnabled }),
-            });
-            if (resp.ok) {
-                const data = await resp.json();
-                setBoardEnabled(data.board_meeting_enabled);
-            } else {
-                setBoardError("No se pudo guardar el cambio. Inténtalo de nuevo.");
-            }
-        } catch {
-            // Sin aviso: el mensaje sale pegado al propio interruptor, que es
-            // donde está mirando quien acaba de pulsarlo. Un toast repetiría lo
-            // que ya se lee ahí mismo.
-            setBoardError("No se pudo guardar el cambio. El debate sigue como estaba.");
-        } finally {
-            setBoardLoading(false);
-        }
-    };
+    // Sin aviso: el mensaje de fallo sale pegado al propio interruptor, que es
+    // donde está mirando quien acaba de pulsarlo. Un toast repetiría lo que ya
+    // se lee ahí mismo.
+    const toggleBoardMeeting = () => setBoardEnabled(!boardEnabled);
 
     const openMemberEdit = (member: typeof groupMembers[0]) => {
         const match = member.name.match(/^(.+?)\s*\(([A-Z]+)\)$/);
@@ -486,16 +458,17 @@ export function ChatSettingsPage() {
                                     role="switch"
                                     aria-checked={boardEnabled}
                                     aria-label="Debate entre agentes antes de responder"
-                                    aria-busy={boardLoading}
-                                    onClick={toggleBoardMeeting}
-                                    disabled={boardLoading}
+                                    aria-busy={boardSaving}
+                                    data-testid="board-toggle-chat"
+                                    onClick={() => void toggleBoardMeeting()}
+                                    disabled={boardSaving}
                                     className={cn(
                                         "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
                                         boardEnabled ? "bg-electric-cyan" : "bg-surface-highlight",
-                                        boardLoading && "opacity-50"
+                                        boardSaving && "opacity-50"
                                     )}
                                 >
-                                    {boardLoading ? (
+                                    {boardSaving ? (
                                         <Loader2 className="h-4 w-4 animate-spin mx-auto text-content-muted" aria-hidden="true" />
                                     ) : (
                                         <span className={cn(
@@ -513,7 +486,7 @@ export function ChatSettingsPage() {
                             {/* §12.6: el resultado de guardar se anuncia. El
                                 mensaje de error de arriba aparecía en silencio. */}
                             <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="live-board-save">
-                                {boardLoading
+                                {boardSaving
                                     ? "Guardando la preferencia de debate…"
                                     : boardError
                                         ? boardError

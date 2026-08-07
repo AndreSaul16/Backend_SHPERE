@@ -1,8 +1,14 @@
 /**
  * Sección Board Meeting: configurar si los agentes discuten entre sí
  * antes de responder. Activar/desactivar, seleccionar iteraciones.
+ *
+ * D47: el ajuste NO vive aquí. Vive en `useBoardSettingsStore`, que es el único
+ * dueño del valor, porque `ChatSettingsPage` pinta el mismo interruptor y con
+ * dos estados locales las dos pantallas podían enseñar posiciones contrarias
+ * del mismo ajuste. Aquí sólo queda lo que es de esta pantalla: la advertencia
+ * de coste y el rótulo de «guardado».
  */
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import {
   Users,
   AlertTriangle,
@@ -11,99 +17,43 @@ import {
 } from "lucide-react";
 import { ScheduledBoardsSection } from "./ScheduledBoardsSection";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
-
-interface BoardSettings {
-  board_meeting_enabled: boolean;
-  board_iterations: number;
-}
+import { useBoardSettingsStore } from "@/store/useBoardSettingsStore";
 
 export function BoardMeetingSettings() {
-  const [settings, setSettings] = useState<BoardSettings>({
-    board_meeting_enabled: false,
-    board_iterations: 1,
-  });
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { enabled, loaded, loading, saving, error, load, setEnabled } =
+    useBoardSettingsStore();
   const [success, setSuccess] = useState<string | null>(null);
   const [showWarning, setShowWarning] = useState(false);
-
-  const getAuthToken = async () => {
-    const { getAuth } = await import("firebase/auth");
-    const user = getAuth().currentUser;
-    if (!user) throw new Error("No autenticado");
-    return user.getIdToken();
-  };
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const token = await getAuthToken();
-      const resp = await fetch(`${API_URL}/me/board-settings`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!resp.ok) throw new Error("Error cargando configuración");
-      const result = await resp.json();
-      setSettings(result);
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
     load();
   }, [load]);
 
   const handleToggle = async () => {
-    if (!settings.board_meeting_enabled) {
+    if (!enabled) {
       // Activando: mostrar advertencia
       setShowWarning(true);
       return;
     }
 
     // Desactivando directamente
-    await updateSettings({ board_meeting_enabled: false });
+    await guardar(false);
   };
 
   const confirmEnable = async () => {
     setShowWarning(false);
-    await updateSettings({ board_meeting_enabled: true });
+    await guardar(true);
   };
 
-  const updateSettings = async (updates: Partial<BoardSettings>) => {
-    setSaving(true);
-    setError(null);
+  const guardar = async (valor: boolean) => {
     setSuccess(null);
-    try {
-      const token = await getAuthToken();
-      const resp = await fetch(`${API_URL}/me/board-settings`, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updates),
-      });
-      if (!resp.ok) {
-        const err = await resp.json();
-        throw new Error(err.detail || "Error actualizando configuración");
-      }
-      const result = await resp.json();
-      setSettings(result);
-      setSuccess("Configuración actualizada");
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setSaving(false);
-    }
+    // §11: éxito en pasado, corto, sin exclamación.
+    if (await setEnabled(valor)) setSuccess("Configuración guardada");
   };
 
-  if (loading) return <p className="text-content-muted">Cargando...</p>;
+  // Sólo el primer arranque muestra «Cargando»: un refresco posterior no puede
+  // borrar de la pantalla un ajuste que ya se sabe.
+  if (loading && !loaded) return <p className="text-content-muted">Cargando...</p>;
 
   return (
     <div className="space-y-6">
@@ -147,27 +97,30 @@ export function BoardMeetingSettings() {
               Los agentes discutirán entre sí antes de darte una respuesta
             </p>
           </div>
+          {/* §12.7: un interruptor es `role="switch"` con `aria-checked`. */}
           <button
+            type="button"
+            role="switch"
+            aria-checked={enabled}
+            aria-label="Debate entre agentes antes de responder"
+            aria-busy={saving}
             onClick={handleToggle}
             disabled={saving}
+            data-testid="board-toggle-settings"
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              settings.board_meeting_enabled
-                ? "bg-electric-cyan"
-                : "bg-surface-highlight"
+              enabled ? "bg-electric-cyan" : "bg-surface-highlight"
             } ${saving ? "opacity-50" : ""}`}
           >
             <span
               className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                settings.board_meeting_enabled
-                  ? "translate-x-6"
-                  : "translate-x-1"
+                enabled ? "translate-x-6" : "translate-x-1"
               }`}
             />
           </button>
         </div>
 
         {/* Token cost info — solo cuando está activado */}
-        {settings.board_meeting_enabled && (
+        {enabled && (
           <div className="pt-3 border-t border-surface-highlight">
             <div className="flex items-start gap-2 p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/20">
               <AlertTriangle className="h-4 w-4 text-yellow-400 mt-0.5 flex-shrink-0" />

@@ -7,10 +7,10 @@ import { cn } from '@/lib/utils';
 import type { Role } from '@/types';
 import { AgentCreationWizard } from './AgentCreationWizard';
 import { BoardActivationModal } from './BoardActivationModal';
-import { chatService } from '@/services/api';
 import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { reasonOf, toast } from '@/lib/toastBus';
+import { useBoardSettingsStore } from '@/store/useBoardSettingsStore';
 
 const getRoleIcon = (role: Role) => {
     switch (role) {
@@ -33,6 +33,8 @@ export function AgentSelectorModal() {
         fetchCustomAgents,
         deleteCustomAgent
     } = useChatStore();
+    const loadBoardSettings = useBoardSettingsStore((s) => s.load);
+    const setBoardEnabled = useBoardSettingsStore((s) => s.setEnabled);
 
     const [searchQuery, setSearchQuery] = useState("");
     const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -83,22 +85,24 @@ export function AgentSelectorModal() {
         // activado, ofrecemos activarlo en 1 clic (con su coste) en vez de obligar
         // a ir a Configuración.
         if (agentId === 'group-chat') {
-            try {
-                const settings = await chatService.getBoardSettings();
-                if (!settings.board_meeting_enabled) {
-                    setBoardModalOpen(true);
-                    return;
-                }
-            } catch { /* si falla, seguimos al chat igualmente */ }
+            // D47: por el store, no por `chatService` directamente. Este modal
+            // es el TERCER sitio que tocaba el mismo ajuste, y activarlo desde
+            // aquí no se veía en ninguna de las dos pantallas de configuración
+            // hasta recargar.
+            await loadBoardSettings();
+            if (!useBoardSettingsStore.getState().enabled) {
+                setBoardModalOpen(true);
+                return;
+            }
         }
         await openSession(agentId);
     };
 
     const handleActivateBoard = async (devil: boolean) => {
         setIsLoadingSession(true);
-        try {
-            await chatService.updateBoardSettings({ board_meeting_enabled: true, board_devils_advocate: devil });
-        } catch { /* continuamos aunque el PATCH falle */ }
+        // Continuamos aunque el PATCH falle: el store deja el aviso puesto y el
+        // interruptor sin mover.
+        await setBoardEnabled(true, devil);
         setBoardModalOpen(false);
         await openSession('group-chat');
     };

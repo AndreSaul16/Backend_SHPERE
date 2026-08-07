@@ -7,6 +7,7 @@
  */
 import { useChatStore } from '../store/useChatStore';
 import { useBillingStore } from '../store/useBillingStore';
+import { useBoardSettingsStore } from '../store/useBoardSettingsStore';
 
 export function clearUserStores(): void {
   try {
@@ -16,6 +17,13 @@ export function clearUserStores(): void {
   }
   try {
     useBillingStore.getState().reset();
+  } catch {
+    /* idem */
+  }
+  try {
+    // El ajuste de debate es por cuenta: sin esto, el siguiente usuario vería
+    // el interruptor del anterior hasta que resolviera su primer `load()`.
+    useBoardSettingsStore.getState().reset();
   } catch {
     /* idem */
   }
