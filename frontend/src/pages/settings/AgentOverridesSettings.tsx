@@ -110,7 +110,7 @@ export function AgentOverridesSettings() {
                 <Bot className={`h-5 w-5 ${role.color}`} />
                 <h3 className="text-content-strong">{role.name}</h3>
                 {hasOverride && (
-                  <span className="px-2 py-0.5 bg-electric-cyan/10 text-electric-cyan rounded-full text-[10px]">
+                  <span className="px-2 py-0.5 bg-electric-cyan/10 text-electric-cyan rounded-full text-micro">
                     Customizado
                   </span>
                 )}

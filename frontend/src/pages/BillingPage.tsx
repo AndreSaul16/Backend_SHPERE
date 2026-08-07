@@ -246,7 +246,7 @@ export const BillingPage: React.FC = () => {
                                 <div className="h-2.5 bg-midnight/50 rounded-full overflow-hidden border border-surface-highlight">
                                     <div className={`h-full rounded-full transition-all ${barColor(storagePct)}`} style={{ width: `${storagePct}%` }} />
                                 </div>
-                                <div className="flex items-center gap-2 text-[11px] text-content-muted">
+                                <div className="flex items-center gap-2 text-xs text-content-muted">
                                     <FileText className="h-3.5 w-3.5" />
                                     {storage.file_count} {storage.file_count === 1 ? 'documento' : 'documentos'} en tus agentes
                                 </div>
@@ -291,7 +291,7 @@ export const BillingPage: React.FC = () => {
                                     }`}
                                 >
                                     {pack.popular && (
-                                        <div className="absolute top-0 right-0 bg-luxury-purple text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg tracking-wide">
+                                        <div className="absolute top-0 right-0 bg-luxury-purple text-white text-micro font-bold px-3 py-1 rounded-bl-lg">
                                             POPULAR
                                         </div>
                                     )}

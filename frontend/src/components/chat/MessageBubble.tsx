@@ -62,7 +62,7 @@ function ThinkingBlock({ thinking, isStreaming, hasContent, hexColor, label }: {
     if (!hasThinking) {
         if (isThinkingNow) {
             return (
-                <div className="flex items-center gap-2 mb-2 text-[11px] text-content-muted italic">
+                <div className="flex items-center gap-2 mb-2 text-xs text-content-muted italic">
                     <Brain className="h-3 w-3 animate-pulse" style={{ color: hexColor }} />
                     <span>{label || 'Pensando'}</span>
                     <span className="inline-flex gap-0.5">
@@ -84,7 +84,7 @@ function ThinkingBlock({ thinking, isStreaming, hasContent, hexColor, label }: {
             <button
                 type="button"
                 onClick={() => { setUserToggled(true); setOpen(!expanded); }}
-                className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-content-muted hover:text-content-strong transition-colors"
+                className="flex items-center gap-1.5 text-micro uppercase text-content-muted hover:text-content-strong transition-colors"
             >
                 <Brain className="h-3 w-3" style={{ color: hexColor }} />
                 <span>{isThinkingNow ? 'Razonando…' : 'Razonamiento'}</span>
@@ -142,7 +142,7 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
     if (isSystem) {
         return (
             <div className="flex justify-center my-3 sm:my-4 px-2">
-                <div className="bg-midnight/90 border border-surface-highlight text-content-muted text-[11px] sm:text-xs px-4 py-2 rounded-2xl shadow-md backdrop-blur-md max-w-[85%] text-left whitespace-pre-wrap">
+                <div className="bg-midnight/90 border border-surface-highlight text-content-muted text-xs px-4 py-2 rounded-2xl shadow-md backdrop-blur-md max-w-[85%] text-left whitespace-pre-wrap">
                     <ReactMarkdown
                         rehypePlugins={[rehypeSanitize]}
                         components={{
@@ -174,9 +174,9 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                         {sessionAvatar ? (
                             <img src={sessionAvatar} alt={agent?.name} className="h-full w-full object-cover" />
                         ) : agent ? (
-                            <span className={cn("text-[10px] sm:text-xs font-bold", agent.color)}>{agent.avatar}</span>
+                            <span className={cn("text-micro sm:text-xs font-bold", agent.color)}>{agent.avatar}</span>
                         ) : (
-                            <span className="text-[10px] sm:text-xs">🤖</span>
+                            <span className="text-micro sm:text-xs">🤖</span>
                         )}
                     </motion.div>
                 )}
@@ -191,7 +191,7 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                         {userAvatar ? (
                             <img src={userAvatar} alt="You" className="h-full w-full object-cover" />
                         ) : (
-                            <span className="text-[10px] sm:text-xs font-bold text-white">S</span>
+                            <span className="text-micro sm:text-xs font-bold text-white">S</span>
                         )}
                     </motion.div>
                 )}
@@ -222,12 +222,12 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                     {!isUser && (
                         <motion.div
                             animate={{ color: activeHexColor }}
-                            className="text-[9px] sm:text-[10px] font-bold mb-1 uppercase tracking-widest opacity-80 flex items-center gap-1.5"
+                            className="text-micro font-bold mb-1 uppercase opacity-80 flex items-center gap-1.5"
                         >
                             <span className="h-1 w-1 rounded-full bg-current animate-pulse" />
                             {agent ? agent.name.split(' ')[0] : (message.role && !['user', 'system'].includes(message.role) ? message.role : 'SPHERE')}
                             {message.isConclusion && (
-                                <span className="px-1.5 py-0.5 rounded bg-current/10 text-current text-[8px] tracking-wider not-italic">
+                                <span className="px-1.5 py-0.5 rounded bg-current/10 text-current text-micro not-italic">
                                     · CONCLUSIÓN
                                 </span>
                             )}
@@ -446,12 +446,12 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                     {isPinned && (
                         <div className="flex items-center gap-1 mt-1">
                             <Pin className="h-3 w-3 text-yellow-500" />
-                            <span className="text-[9px] text-yellow-500/70 uppercase tracking-wider">Pinned</span>
+                            <span className="text-micro text-yellow-500/70 uppercase">Pinned</span>
                         </div>
                     )}
 
                     {/* Action buttons + timestamp footer */}
-                    <div className="flex items-center justify-between gap-2 mt-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mt-2">
                         {/* Acciones del turno — D16 (1.11) · DESIGN §9.11 «acciones»
                             y P5. Eran `opacity-0 group-hover:opacity-100`: copiar,
                             anclar, valorar, regenerar y borrar quedaban
@@ -525,7 +525,7 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                         <div className="flex items-center gap-2">
                             {!isUser && message.vote && (
                                 <span
-                                    className="px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-bold font-mono tracking-wider border"
+                                    className="px-2 py-0.5 rounded-full text-micro font-bold font-mono border"
                                     style={{
                                         color: activeHexColor,
                                         borderColor: `${activeHexColor}40`,
@@ -536,7 +536,7 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                                     {message.vote.decision === 'SI' ? '✓ A FAVOR' : message.vote.decision === 'NO' ? '✗ EN CONTRA' : '~ CONDICIONAL'} · {message.vote.confidence}%
                                 </span>
                             )}
-                            <span className="text-[9px] sm:text-[10px] text-content-muted">
+                            <span className="text-xs text-content-muted">
                                 {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                         </div>

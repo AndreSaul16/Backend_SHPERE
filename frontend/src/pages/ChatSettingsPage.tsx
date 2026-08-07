@@ -347,7 +347,7 @@ export function ChatSettingsPage() {
                             <div className="flex flex-col items-center gap-1">
                                 <div className="flex items-center gap-2">
                                     {activeAgent.role !== 'system' && (
-                                        <span className="px-2 py-0.5 bg-electric-cyan/10 text-electric-cyan rounded text-[10px] font-mono border border-electric-cyan/20">
+                                        <span className="px-2 py-0.5 bg-electric-cyan/10 text-electric-cyan rounded text-micro font-mono border border-electric-cyan/20">
                                             {roleLabel}
                                         </span>
                                     )}
@@ -359,7 +359,7 @@ export function ChatSettingsPage() {
                             </div>
                         </div>
 
-                        <p className="text-[10px] text-content-quiet max-w-[280px]">
+                        <p className="text-xs text-content-quiet max-w-[280px]">
                             {isGroupChat
                                 ? "La identidad del grupo se comparte con todos los miembros."
                                 : "La personalización es única para esta conversación."}
@@ -377,7 +377,7 @@ export function ChatSettingsPage() {
 
                         {isGroupChat ? (
                             /* Presets for Group Chat */
-                            <div className="grid grid-cols-5 gap-3 sm:gap-4">
+                            <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 sm:gap-4">
                                 {[
                                     { name: 'Cyan', hex: '#00F0C8' },
                                     { name: 'Teal', hex: '#00C1B3' },
@@ -408,7 +408,7 @@ export function ChatSettingsPage() {
                                                 <div className="h-2 w-2 rounded-full" style={{ backgroundColor: c.hex }} />
                                             </div>
                                         </div>
-                                        <span className="text-[8px] sm:text-[10px] font-mono uppercase tracking-tighter opacity-50">{c.name}</span>
+                                        <span className="text-micro font-mono uppercase opacity-50">{c.name}</span>
 
                                         {sessionColor === c.hex && (
                                             <motion.div
@@ -447,18 +447,18 @@ export function ChatSettingsPage() {
                                     </div>
                                     <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-midnight border border-surface-highlight rounded-xl shadow-2xl pointer-events-none flex items-center gap-2 min-w-[100px] justify-center">
                                         <div className="h-2 w-2 rounded-full" style={{ backgroundColor: sessionColor }} />
-                                        <span className="text-[10px] font-bold font-mono uppercase tracking-widest text-content-strong">
+                                        <span className="text-micro font-bold font-mono uppercase text-content-strong">
                                             {sessionColor}
                                         </span>
                                     </div>
                                 </div>
-                                <p className="text-[10px] sm:text-xs text-content-quiet italic text-center max-w-[240px] leading-relaxed">
+                                <p className="text-xs text-content-quiet italic text-center max-w-[240px] leading-relaxed">
                                     Haz clic en el icono para abrir la rueda de colores y sintonizar la firma espectral del experto.
                                 </p>
                             </div>
                         )}
 
-                        <p className="text-[10px] sm:text-xs text-content-quiet leading-relaxed text-center">
+                        <p className="text-xs text-content-quiet leading-relaxed text-center">
                             {isGroupChat
                                 ? "La paleta define los colores de burbujas de todos los miembros."
                                 : "Personaliza el color de los mensajes de este agente."}
@@ -475,7 +475,7 @@ export function ChatSettingsPage() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm font-medium text-content-strong">Debate entre agentes</p>
-                                    <p className="text-[10px] text-content-muted mt-0.5">Los agentes discuten entre sí antes de responderte (consume más tokens)</p>
+                                    <p className="text-xs text-content-muted mt-0.5">Los agentes discuten entre sí antes de responderte (consume más tokens)</p>
                                 </div>
                                 {/* §12.7: un interruptor es `role="switch"` con
                                     `aria-checked`; hasta ahora su estado era sólo
@@ -553,10 +553,10 @@ export function ChatSettingsPage() {
                                             </div>
                                             <div className="flex-1 text-left">
                                                 <p className="text-sm font-medium text-content-strong">{memberName}</p>
-                                                <p className="text-[10px] text-content-quiet font-mono">{member.description}</p>
+                                                <p className="text-xs text-content-quiet font-mono">{member.description}</p>
                                             </div>
                                             <span
-                                                className="px-2 py-1 rounded text-[10px] font-bold font-mono border"
+                                                className="px-2 py-1 rounded text-micro font-bold font-mono border"
                                                 style={{
                                                     color: member.hexColor,
                                                     borderColor: `${member.hexColor}40`,
@@ -570,7 +570,7 @@ export function ChatSettingsPage() {
                                 })}
                             </div>
 
-                            <p className="text-[10px] sm:text-xs text-content-quiet leading-relaxed text-center">
+                            <p className="text-xs text-content-quiet leading-relaxed text-center">
                                 Haz clic en un miembro para personalizar su nombre y color.
                             </p>
                         </section>

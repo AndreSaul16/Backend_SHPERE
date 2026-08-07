@@ -52,7 +52,7 @@ export function DataGrid({ artifact }: DataGridProps) {
             <div className="flex items-center justify-between px-6 py-3 bg-white/[0.02] border-b border-white/5">
                 <div className="flex items-center gap-3">
                     <TableIcon className="h-4 w-4 text-content-muted" aria-hidden="true" />
-                    <span className="text-[10px] font-mono text-content-muted uppercase tracking-widest">
+                    <span className="text-micro font-mono text-content-muted uppercase">
                         Data Analysis View
                     </span>
                 </div>
@@ -73,7 +73,7 @@ export function DataGrid({ artifact }: DataGridProps) {
                             {headers.map((header, i) => (
                                 <th
                                     key={i}
-                                    className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-tight border-b border-white/5"
+                                    className="px-6 py-4 text-left text-micro font-bold text-gray-400 uppercase border-b border-white/5"
                                 >
                                     {header}
                                 </th>
@@ -106,7 +106,7 @@ export function DataGrid({ artifact }: DataGridProps) {
 
             {/* Footer Summary */}
             <div className="px-6 py-3 bg-white/[0.01] border-t border-white/5">
-                <p className="text-[9px] text-content-muted font-mono uppercase">
+                <p className="text-micro text-content-muted font-mono uppercase">
                     REC: {rows.length} · COLS: {headers.length} · SOURCE: SPHERE_ENGINE_V2
                 </p>
             </div>

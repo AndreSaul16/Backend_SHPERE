@@ -80,14 +80,14 @@ export function BoardWarRoom({ board, agents }: { board: BoardSessionState; agen
                                     </div>
                                     {vote ? (
                                         <span
-                                            className="text-[9px] font-mono font-bold leading-none"
+                                            className="text-micro font-mono font-bold leading-none tabular-nums"
                                             style={{ color: hex }}
                                             title={`${vote.decision} · ${vote.confidence}%`}
                                         >
                                             {VOTE_GLYPH[vote.decision] || "·"} {vote.confidence}%
                                         </span>
                                     ) : (
-                                        <span className="text-[8px] font-mono uppercase tracking-tight text-content-muted leading-none truncate w-full text-center">
+                                        <span className="text-micro font-mono uppercase text-content-muted leading-none truncate w-full text-center">
                                             {status === "speaking" ? "hablando" : role}
                                         </span>
                                     )}
@@ -97,7 +97,7 @@ export function BoardWarRoom({ board, agents }: { board: BoardSessionState; agen
                     </div>
 
                     {/* Barra de fases */}
-                    <div className="hidden sm:flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-widest">
+                    <div className="hidden sm:flex items-center gap-1.5 text-micro font-mono uppercase">
                         {PHASE_LABELS.map((p, i) => (
                             <div key={p.key} className="flex items-center gap-1.5">
                                 <span

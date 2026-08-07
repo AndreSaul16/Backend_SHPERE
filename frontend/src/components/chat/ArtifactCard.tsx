@@ -97,11 +97,11 @@ export function ArtifactCard({ content, language, artifactType, title: propsTitl
                                 {title}
                             </p>
                             <div className="flex items-center gap-2">
-                                <p className="text-[10px] text-content-muted uppercase tracking-tight opacity-60">
+                                <p className="text-micro text-content-muted uppercase opacity-60">
                                     {language || artifactType || 'document'}
                                 </p>
-                                <span className="text-[10px] text-content-muted opacity-40">•</span>
-                                <p className="text-[10px] text-content-muted font-mono opacity-60">
+                                <span className="text-micro text-content-muted opacity-40">•</span>
+                                <p className="text-micro text-content-muted font-mono opacity-60">
                                     {size}
                                 </p>
                             </div>
@@ -111,7 +111,7 @@ export function ArtifactCard({ content, language, artifactType, title: propsTitl
                     <div className="flex items-center gap-2 flex-shrink-0">
                         <button
                             onClick={handleView}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-highlight hover:bg-electric-cyan/10 text-content-muted hover:text-electric-cyan rounded-lg text-[11px] font-medium transition-colors border border-transparent hover:border-electric-cyan/20"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-highlight hover:bg-electric-cyan/10 text-content-muted hover:text-electric-cyan rounded-lg text-sm font-medium transition-colors border border-transparent hover:border-electric-cyan/20"
                         >
                             <ExternalLink className="h-3 w-3" />
                             {isActa ? 'Ver acta' : 'Ver Código'}

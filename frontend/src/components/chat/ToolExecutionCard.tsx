@@ -152,14 +152,14 @@ export const ToolExecutionCard: React.FC<ToolExecutionCardProps> = ({
             {isFailed && (
                 <div className="mt-2 space-y-2">
                     {error && (
-                        <p className="text-[11px] text-red-300/80 leading-relaxed break-words">
+                        <p className="text-xs text-red-300/80 leading-relaxed break-words">
                             {error}
                         </p>
                     )}
                     <button
                         onClick={handleRetry}
                         disabled={isStreaming}
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-red-500/30 text-red-300 hover:bg-red-500/10 transition-colors text-[11px] font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-red-500/30 text-red-300 hover:bg-red-500/10 transition-colors text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
                         title={isStreaming ? 'Espera a que termine la respuesta actual' : 'Pedir al agente que reintente'}
                     >
                         <RotateCcw className="h-3 w-3" />

@@ -318,7 +318,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                         <h3 className="text-sm font-bold text-white uppercase tracking-widest">
                             Knowledge Base
                         </h3>
-                        <p className="text-[10px] text-content-muted font-mono mt-0.5">
+                        <p className="text-micro text-content-muted font-mono mt-0.5">
                             {totalFiles} {totalFiles === 1 ? 'DOCUMENTO' : 'DOCUMENTOS'} INDEXADOS
                         </p>
                     </div>
@@ -340,7 +340,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                             <Icon className="h-4 w-4 text-electric-cyan shrink-0" />
                             <div className="min-w-0">
                                 <p className="text-xs font-bold text-white truncate">{value}</p>
-                                <p className="text-[10px] text-content-muted uppercase tracking-wider">
+                                <p className="text-micro text-content-muted uppercase">
                                     {label}
                                 </p>
                             </div>
@@ -448,26 +448,26 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                                     {doc.filename}
                                 </p>
                                 <div className="flex items-center gap-3 mt-1">
-                                    <span className="text-[10px] text-content-muted font-mono uppercase">
+                                    <span className="text-micro text-content-muted font-mono uppercase">
                                         {formatFileSize(doc.file_size)}
                                     </span>
                                     {doc.status === 'completed' && doc.chunks_count > 0 && (
-                                        <span className="text-[10px] text-electric-cyan/70 font-mono">
+                                        <span className="text-micro text-electric-cyan/70 font-mono tabular-nums">
                                             {doc.chunks_count} chunks
                                         </span>
                                     )}
                                     {doc.status === 'failed' && (
-                                        <span className="text-[10px] text-red-400 font-mono uppercase">
+                                        <span className="text-micro text-red-400 font-mono uppercase">
                                             Error al procesar
                                         </span>
                                     )}
                                     {doc.status === 'processing' && (
-                                        <span className="text-[10px] text-electric-cyan font-mono uppercase">
+                                        <span className="text-micro text-electric-cyan font-mono uppercase">
                                             Procesando...
                                         </span>
                                     )}
                                     {doc.status === 'pending' && (
-                                        <span className="text-[10px] text-yellow-400/80 font-mono uppercase">
+                                        <span className="text-micro text-yellow-400/80 font-mono uppercase">
                                             En cola
                                         </span>
                                     )}

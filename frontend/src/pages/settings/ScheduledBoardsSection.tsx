@@ -149,12 +149,12 @@ export function ScheduledBoardsSection() {
                     >
                         <div className="min-w-0">
                             <p className="text-sm text-content-strong truncate">{b.query}</p>
-                            <p className="text-[11px] text-content-muted">
+                            <p className="text-xs text-content-muted">
                                 {describe(b)} · {b.channel === "none" ? "sin notificación" : b.channel}
                                 {!b.enabled && " · (pausada)"}
                             </p>
                             {b.last_status && (
-                                <p className="text-[10px] text-content-quiet mt-0.5">
+                                <p className="text-xs text-content-quiet mt-0.5">
                                     Último: {b.last_status}
                                 </p>
                             )}

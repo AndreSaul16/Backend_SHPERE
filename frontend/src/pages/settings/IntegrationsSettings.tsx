@@ -240,12 +240,12 @@ export function IntegrationsSettings() {
                     <h3 className="font-semibold flex items-center gap-2">
                       {meta.label}
                       {isConnected && (
-                        <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full text-[10px]">
+                        <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full text-micro">
                           Conectado
                         </span>
                       )}
                       {registered && !isConnected && (
-                        <span className="px-2 py-0.5 bg-sky-500/10 text-sky-400 border border-sky-500/30 rounded-full text-[10px]">
+                        <span className="px-2 py-0.5 bg-sky-500/10 text-sky-400 border border-sky-500/30 rounded-full text-micro">
                           App registrada
                         </span>
                       )}
@@ -280,7 +280,7 @@ export function IntegrationsSettings() {
                           Usa esta <strong>Authorization callback URL</strong>:
                         </span>
                         <div className="flex items-center gap-2">
-                          <code className="flex-1 px-2 py-1.5 bg-surface/60 border border-surface-highlight rounded-lg text-[11px] text-content-strong break-all">
+                          <code className="flex-1 px-2 py-1.5 bg-surface/60 border border-surface-highlight rounded-lg text-xs text-content-strong break-all">
                             {callbackUrl}
                           </code>
                           <button

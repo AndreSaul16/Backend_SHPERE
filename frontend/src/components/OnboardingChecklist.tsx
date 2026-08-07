@@ -82,8 +82,8 @@ export function OnboardingChecklist({ onPrimaryAction }: Props) {
             className="w-full rounded-2xl bg-white/[0.02] border border-white/10 p-4 space-y-2.5 text-left"
         >
             <div className="flex items-center justify-between">
-                <p className="text-[10px] font-mono uppercase tracking-widest text-electric-cyan">Primeros pasos</p>
-                <span className="text-[10px] font-mono text-content-muted">
+                <p className="text-micro font-mono uppercase text-electric-cyan">Primeros pasos</p>
+                <span className="text-xs font-mono text-content-muted tabular-nums">
                     {steps.filter((s) => s.done).length}/{steps.length}
                 </span>
             </div>
@@ -117,7 +117,7 @@ export function OnboardingChecklist({ onPrimaryAction }: Props) {
                             <p className={cn("text-xs font-semibold", step.done ? "text-gray-400 line-through" : "text-white")}>
                                 {step.label}
                             </p>
-                            <p className="text-[10px] text-content-muted truncate">{step.desc}</p>
+                            <p className="text-xs text-content-muted truncate">{step.desc}</p>
                         </div>
                     </button>
                 );

@@ -148,7 +148,7 @@ export function AdminPage() {
                                         }`}
                                     >
                                         <p className="text-sm text-content-strong truncate">{u.email || u.uid}</p>
-                                        <p className="text-[11px] text-content-muted font-mono">
+                                        <p className="text-xs text-content-muted font-mono">
                                             plan: {u.plan} · pro: {u.pro_messages_balance} · topup: {u.topup_messages_balance}
                                         </p>
                                     </button>
@@ -166,7 +166,7 @@ export function AdminPage() {
                             <>
                                 <div className="p-4 rounded-xl bg-surface/40 border border-surface-highlight space-y-3">
                                     <h3 className="text-sm font-semibold text-content-strong">Ajustar créditos</h3>
-                                    <p className="text-[11px] text-content-muted">{selected.email || selected.uid}</p>
+                                    <p className="text-xs text-content-muted">{selected.email || selected.uid}</p>
                                     <div className="flex gap-2">
                                         <input
                                             aria-label="Delta de créditos"
@@ -197,7 +197,7 @@ export function AdminPage() {
                                     <h3 className="text-sm font-semibold text-content-strong mb-2">Transacciones</h3>
                                     <div className="space-y-1 max-h-80 overflow-y-auto">
                                         {txs.map((t, i) => (
-                                            <div key={i} className="flex items-center justify-between text-[11px] font-mono">
+                                            <div key={i} className="flex items-center justify-between gap-3 text-xs font-mono tabular-nums">
                                                 <span className="text-content-muted truncate">{t.reason}</span>
                                                 <span className={t.delta < 0 ? "text-rose-400" : "text-emerald-400"}>
                                                     {t.delta > 0 ? "+" : ""}{t.delta}
@@ -223,7 +223,7 @@ export function AdminPage() {
 function StatCard({ label, value }: { label: string; value: string | number }) {
     return (
         <div className="p-4 rounded-xl bg-surface/40 border border-surface-highlight">
-            <p className="text-[11px] uppercase tracking-widest text-content-quiet">{label}</p>
+            <p className="text-micro uppercase text-content-quiet">{label}</p>
             <p className="text-xl font-bold text-content-strong mt-1">{value}</p>
         </div>
     );

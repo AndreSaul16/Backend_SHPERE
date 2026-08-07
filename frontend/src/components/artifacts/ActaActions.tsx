@@ -80,7 +80,7 @@ export function ActaActions({ title, content }: ActaActionsProps) {
                 <button
                     onClick={handleNotion}
                     disabled={notionStatus === "loading"}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-surface-highlight hover:bg-electric-cyan/10 text-content-muted hover:text-electric-cyan border border-transparent hover:border-electric-cyan/20 transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-surface-highlight hover:bg-electric-cyan/10 text-content-muted hover:text-electric-cyan border border-transparent hover:border-electric-cyan/20 transition-colors disabled:opacity-50"
                 >
                     {notionStatus === "loading" ? (
                         <Loader2 className="h-3 w-3 animate-spin" />
@@ -93,12 +93,12 @@ export function ActaActions({ title, content }: ActaActionsProps) {
                 {/* GitHub */}
                 <button
                     onClick={() => setShowGithubModal((v) => !v)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-surface-highlight hover:bg-luxury-purple/10 text-content-muted hover:text-luxury-purple border border-transparent hover:border-luxury-purple/20 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-surface-highlight hover:bg-luxury-purple/10 text-content-muted hover:text-luxury-purple border border-transparent hover:border-luxury-purple/20 transition-colors"
                 >
                     <Github className="h-3 w-3" />
                     Crear issues en GitHub
                     {parsedIssues.length > 0 && (
-                        <span className="ml-1 rounded-full bg-luxury-purple/20 px-1.5 text-[9px] font-bold text-luxury-purple">
+                        <span className="ml-1 rounded-full bg-luxury-purple/20 px-1.5 text-micro font-bold text-luxury-purple">
                             {parsedIssues.length}
                         </span>
                     )}
@@ -111,14 +111,14 @@ export function ActaActions({ title, content }: ActaActionsProps) {
                     href={notionUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-1.5 text-[11px] text-emerald-400 hover:underline"
+                    className="flex items-center gap-1.5 text-xs text-emerald-400 hover:underline"
                 >
                     <CheckCircle2 className="h-3 w-3" />
                     Página creada en Notion <ExternalLink className="h-3 w-3" />
                 </a>
             )}
             {notionStatus === "error" && (
-                <p className="flex items-center gap-1.5 text-[11px] text-rose-400">
+                <p className="flex items-center gap-1.5 text-xs text-rose-400">
                     <AlertCircle className="h-3 w-3" /> {notionError}
                 </p>
             )}
@@ -127,12 +127,12 @@ export function ActaActions({ title, content }: ActaActionsProps) {
             {showGithubModal && (
                 <div className="mt-2 rounded-xl border border-surface-highlight bg-surface/60 p-3 space-y-3">
                     {parsedIssues.length === 0 ? (
-                        <p className="text-[11px] text-amber-400">
+                        <p className="text-xs text-amber-400">
                             No se encontró la sección "Próximos pasos" con acciones en el acta.
                         </p>
                     ) : (
                         <>
-                            <p className="text-[11px] text-content-muted">
+                            <p className="text-xs text-content-muted">
                                 Se crearán {parsedIssues.length} issues en el repositorio indicado.
                             </p>
                             <div className="flex gap-2">
@@ -154,7 +154,7 @@ export function ActaActions({ title, content }: ActaActionsProps) {
                             <button
                                 onClick={handleGithubSubmit}
                                 disabled={ghStatus === "loading" || !ghRepo.owner.trim() || !ghRepo.repo.trim()}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-luxury-purple/20 hover:bg-luxury-purple/30 text-luxury-purple transition-colors disabled:opacity-40"
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold bg-luxury-purple/20 hover:bg-luxury-purple/30 text-luxury-purple transition-colors disabled:opacity-40"
                             >
                                 {ghStatus === "loading" && <Loader2 className="h-3 w-3 animate-spin" />}
                                 Crear issues
@@ -170,7 +170,7 @@ export function ActaActions({ title, content }: ActaActionsProps) {
                                     href={c.url}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="flex items-center gap-1.5 text-[11px] text-emerald-400 hover:underline"
+                                    className="flex items-center gap-1.5 text-xs text-emerald-400 hover:underline"
                                 >
                                     <CheckCircle2 className="h-3 w-3" /> {c.title} <ExternalLink className="h-3 w-3" />
                                 </a>
@@ -178,14 +178,14 @@ export function ActaActions({ title, content }: ActaActionsProps) {
                             {/* Éxito parcial: mostrar también los que fallaron para
                                 no dar por creados items de acción que se perdieron. */}
                             {ghFailed.map((f, i) => (
-                                <p key={`err-${i}`} className="flex items-center gap-1.5 text-[11px] text-rose-400">
+                                <p key={`err-${i}`} className="flex items-center gap-1.5 text-xs text-rose-400">
                                     <AlertCircle className="h-3 w-3" /> {f.title}: {f.error}
                                 </p>
                             ))}
                         </div>
                     )}
                     {ghStatus === "error" && (
-                        <p className="flex items-center gap-1.5 text-[11px] text-rose-400">
+                        <p className="flex items-center gap-1.5 text-xs text-rose-400">
                             <AlertCircle className="h-3 w-3" /> {ghError}
                         </p>
                     )}

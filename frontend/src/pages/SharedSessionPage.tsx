@@ -80,7 +80,7 @@ export function SharedSessionPage() {
                                     }
                                 >
                                     {m.role === "assistant" && m.agent_role && (
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-content-quiet mb-1.5">
+                                        <p className="text-micro font-bold uppercase text-content-quiet mb-1.5">
                                             {m.agent_role}
                                         </p>
                                     )}

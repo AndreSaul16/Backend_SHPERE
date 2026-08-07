@@ -298,7 +298,7 @@ export function AgentDetailPage() {
                                 {name || "Agente"}
                             </h1>
                             <span
-                                className="hidden sm:inline-flex px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border"
+                                className="hidden sm:inline-flex px-2 py-0.5 rounded text-micro font-mono font-bold uppercase border"
                                 style={{
                                     color: color,
                                     borderColor: `${color}30`,
@@ -541,13 +541,13 @@ export function AgentDetailPage() {
                                     }}
                                 />
                                 <div className="flex justify-between mt-1.5 px-0.5">
-                                    <span className="text-[9px] text-content-quiet font-mono">
+                                    <span className="text-micro text-content-quiet">
                                         0.0 Preciso
                                     </span>
-                                    <span className="text-[9px] text-content-quiet font-mono">
+                                    <span className="text-micro text-content-quiet">
                                         1.0 Balanceado
                                     </span>
-                                    <span className="text-[9px] text-content-quiet font-mono">
+                                    <span className="text-micro text-content-quiet">
                                         2.0 Creativo
                                     </span>
                                 </div>
@@ -585,7 +585,7 @@ export function AgentDetailPage() {
                                             />
                                             <span className="truncate">{m}</span>
                                         </div>
-                                        <p className="text-[10px] mt-1 opacity-50 ml-4">
+                                        <p className="text-xs mt-1 opacity-50 ml-4">
                                             {m === "deepseek-v4-pro"
                                                 ? "Razonamiento máximo (recomendado)"
                                                 : "Rápido y económico"}

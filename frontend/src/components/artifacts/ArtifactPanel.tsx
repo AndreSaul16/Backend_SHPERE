@@ -39,7 +39,7 @@ export function ArtifactPanel() {
                             Artifact Workspace
                         </h3>
                         {artifacts.length > 0 && (
-                            <p className="text-[10px] text-content-muted font-mono mt-0.5">
+                            <p className="text-micro text-content-muted font-mono mt-0.5">
                                 {artifacts.length} OBJETOS DETECTADOS
                             </p>
                         )}
@@ -84,7 +84,7 @@ export function ArtifactPanel() {
                                             <p className="text-xs font-bold truncate">
                                                 {artifact.title}
                                             </p>
-                                            <p className="text-[10px] uppercase tracking-tighter mt-0.5">
+                                            <p className="text-micro uppercase mt-0.5">
                                                 {artifact.language || artifact.type}
                                             </p>
                                         </div>

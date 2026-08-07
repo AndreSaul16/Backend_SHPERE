@@ -682,7 +682,7 @@ function StepChooseMethod({
             {/* Divider */}
             <div className="flex items-center gap-4">
                 <div className="flex-1 h-px bg-white/5" />
-                <span className="text-[10px] font-bold text-content-muted uppercase tracking-widest">
+                <span className="text-micro font-bold text-content-muted uppercase">
                     o usa una plantilla
                 </span>
                 <div className="flex-1 h-px bg-white/5" />
@@ -776,7 +776,7 @@ function StepChooseMethod({
                                             {template.tags.slice(0, 3).map((tag) => (
                                                 <span
                                                     key={tag}
-                                                    className="px-2 py-0.5 bg-white/5 text-content-muted rounded-md text-[10px] font-medium"
+                                                    className="px-2 py-0.5 bg-white/5 text-content-muted rounded-md text-micro font-medium"
                                                 >
                                                     {tag}
                                                 </span>
@@ -976,7 +976,7 @@ function StepConfigure({
                                 )} />
                                 <div className="min-w-0">
                                     <p className="text-xs font-bold">{opt.label}</p>
-                                    <p className="text-[10px] text-content-muted">{opt.description}</p>
+                                    <p className="text-xs text-content-muted">{opt.description}</p>
                                 </div>
                             </button>
                         ))}
@@ -1001,10 +1001,10 @@ function StepConfigure({
                     </p>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
-                    <span className="px-2 py-0.5 bg-white/5 text-content-muted rounded text-[10px] font-mono">
+                    <span className="px-2 py-0.5 bg-white/5 text-content-muted rounded text-micro font-mono">
                         {model}
                     </span>
-                    <span className="px-2 py-0.5 bg-white/5 text-content-muted rounded text-[10px] font-mono">
+                    <span className="px-2 py-0.5 bg-white/5 text-content-muted rounded text-micro font-mono">
                         t={temperature.toFixed(1)}
                     </span>
                 </div>
@@ -1164,7 +1164,7 @@ function StepKnowledge({
             {/* File list */}
             {files.length > 0 && (
                 <div className="space-y-2">
-                    <p className="text-[10px] font-bold text-content-muted uppercase tracking-widest ml-1">
+                    <p className="text-micro font-bold text-content-muted uppercase ml-1">
                         Archivos ({files.length})
                     </p>
                     <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
@@ -1181,14 +1181,14 @@ function StepKnowledge({
                                     <p className="text-xs font-medium text-white truncate">
                                         {entry.file.name}
                                     </p>
-                                    <p className="text-[10px] text-content-muted">
+                                    <p className="text-xs text-content-muted">
                                         {formatSize(entry.file.size)}
                                     </p>
                                 </div>
                                 {/* Status indicator */}
                                 <div className="shrink-0">
                                     {entry.status === 'pending' && (
-                                        <span className="text-[10px] text-content-muted font-medium">Listo</span>
+                                        <span className="text-xs text-content-muted font-medium">Listo</span>
                                     )}
                                     {entry.status === 'uploading' && (
                                         <div className="flex items-center gap-2">
@@ -1198,7 +1198,7 @@ function StepKnowledge({
                                                     style={{ width: `${entry.progress}%` }}
                                                 />
                                             </div>
-                                            <span className="text-[10px] text-electric-cyan font-mono">
+                                            <span className="text-xs text-electric-cyan font-mono tabular-nums">
                                                 {entry.progress}%
                                             </span>
                                         </div>
@@ -1297,7 +1297,7 @@ function StepReview({
             {/* Summary card */}
             <div className="rounded-2xl bg-white/[0.03] border border-white/5 overflow-hidden">
                 {/* Agent header */}
-                <div className="p-6 flex items-center gap-4 border-b border-white/5">
+                <div className="p-6 flex flex-wrap items-center gap-4 border-b border-white/5">
                     <div
                         className="h-14 w-14 rounded-2xl flex items-center justify-center text-white font-bold text-xl border border-white/10 shadow-lg"
                         style={{
@@ -1315,7 +1315,7 @@ function StepReview({
                         )}
                     </div>
                     {templateName && (
-                        <span className="px-3 py-1 bg-luxury-purple/10 text-luxury-purple border border-luxury-purple/20 rounded-xl text-[10px] font-bold shrink-0">
+                        <span className="px-3 py-1 bg-luxury-purple/10 text-luxury-purple border border-luxury-purple/20 rounded-xl text-micro font-bold shrink-0">
                             Plantilla: {templateName}
                         </span>
                     )}
@@ -1355,7 +1355,7 @@ function StepReview({
 
                 {/* System prompt preview */}
                 <div className="px-6 pb-6">
-                    <p className="text-[10px] font-bold text-content-muted uppercase tracking-widest mb-2">
+                    <p className="text-micro font-bold text-content-muted uppercase mb-2">
                         System Prompt
                     </p>
                     <div className="p-4 rounded-xl bg-midnight/60 border border-white/5 max-h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
@@ -1370,7 +1370,7 @@ function StepReview({
                 {/* File list preview */}
                 {files.length > 0 && (
                     <div className="px-6 pb-6">
-                        <p className="text-[10px] font-bold text-content-muted uppercase tracking-widest mb-2">
+                        <p className="text-micro font-bold text-content-muted uppercase mb-2">
                             Archivos a subir
                         </p>
                         <div className="flex flex-wrap gap-2">
@@ -1443,7 +1443,7 @@ function ReviewField({
 }) {
     return (
         <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-1.5">
-            <p className="text-[10px] font-bold text-content-muted uppercase tracking-widest flex items-center gap-1.5">
+            <p className="text-micro font-bold text-content-muted uppercase flex items-center gap-1.5">
                 {icon}
                 {label}
             </p>

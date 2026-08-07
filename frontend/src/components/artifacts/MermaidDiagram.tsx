@@ -72,7 +72,7 @@ export function MermaidDiagram({ artifact }: MermaidDiagramProps) {
             <div className="flex items-center justify-between px-6 py-3 bg-white/[0.02] border-b border-white/5">
                 <div className="flex items-center gap-3">
                     <GitBranch className="h-4 w-4 text-content-muted" aria-hidden="true" />
-                    <span className="text-[10px] font-mono text-content-muted uppercase tracking-widest">
+                    <span className="text-micro font-mono text-content-muted uppercase">
                         Architecture Preview
                     </span>
                 </div>
@@ -96,7 +96,7 @@ export function MermaidDiagram({ artifact }: MermaidDiagramProps) {
                             <p className="text-white font-bold text-sm uppercase tracking-wider">{error}</p>
                             <p className="text-content-muted text-xs mt-1">Revisa la estructura del código Mermaid generado.</p>
                         </div>
-                        <pre className="text-[10px] text-red-400 font-mono bg-black/40 p-4 rounded-2xl w-full text-left overflow-auto max-h-40 border border-red-500/5">
+                        <pre className="text-xs text-red-400 font-mono bg-black/40 p-4 rounded-2xl w-full text-left overflow-auto max-h-40 border border-red-500/5">
                             {artifact.content}
                         </pre>
                     </div>
@@ -111,7 +111,7 @@ export function MermaidDiagram({ artifact }: MermaidDiagramProps) {
 
             {/* Footer */}
             <div className="px-6 py-3 bg-white/[0.01] border-t border-white/5">
-                <p className="text-[9px] text-content-muted font-mono uppercase">
+                <p className="text-micro text-content-muted font-mono uppercase">
                     ENGINE: MERMAID_JS · RENDER: SVG_VECTOR · STATUS: DYNAMIC
                 </p>
             </div>

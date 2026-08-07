@@ -335,7 +335,7 @@ export function ChatPanel() {
                             Iniciar Nuevo Chat
                         </motion.button>
 
-                        <p className="text-[10px] text-content-quiet font-mono uppercase tracking-widest">
+                        <p className="text-micro text-content-quiet font-mono uppercase">
                             Powered by SPHERE Neuro-Link v2.0
                         </p>
                     </motion.div>
@@ -372,13 +372,13 @@ export function ChatPanel() {
                             <h3 className="font-bold text-white text-lg tracking-tight truncate">
                                 {isGroupChat ? activeAgent?.name : baseName}
                             </h3>
-                            <span className="px-2 py-0.5 bg-white/5 text-content-muted rounded-lg text-[9px] font-black uppercase tracking-widest border border-white/5">
+                            <span className="px-2 py-0.5 bg-white/5 text-content-muted rounded-lg text-micro font-black uppercase border border-white/5">
                                 {role}
                             </span>
                         </div>
                         <div className="flex items-center gap-2 mt-0.5 min-w-0">
                             <ShieldCheck className="h-3 w-3 text-emerald-500/50 shrink-0" aria-hidden="true" />
-                            <p className="text-[10px] text-content-muted font-mono uppercase tracking-tighter truncate">
+                            <p className="text-micro text-content-muted font-mono uppercase truncate">
                                 {isGroupChat
                                     ? `${groupMembers.length} Expertos Activos`
                                     : "Canal Encriptado de Extremo a Extremo"}
@@ -436,7 +436,7 @@ export function ChatPanel() {
                                 autoFocus
                             />
                             {searchQuery && (
-                                <span className="text-[10px] text-content-muted font-mono">
+                                <span className="text-xs text-content-muted font-mono">
                                     {filteredMessages.filter(m => m.role !== 'system').length} resultados
                                 </span>
                             )}
@@ -508,7 +508,7 @@ export function ChatPanel() {
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         exit={{ opacity: 0 }}
-                                        className="flex items-center gap-3 text-content-muted text-[10px] font-mono uppercase tracking-widest ml-14"
+                                        className="flex items-center gap-3 text-content-muted text-micro font-mono uppercase ml-14"
                                     >
                                         <div className="flex gap-1">
                                             <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.5 }} className="h-1 w-1 rounded-full bg-electric-cyan" />
@@ -558,7 +558,7 @@ export function ChatPanel() {
                                 initial={{ opacity: 0, y: 6 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0 }}
-                                className="flex items-center gap-2 px-4 mb-2 text-[10px] font-mono uppercase tracking-widest text-electric-cyan/80"
+                                className="flex items-center gap-2 px-4 mb-2 text-micro font-mono uppercase text-electric-cyan/80"
                             >
                                 <Hand className="h-3 w-3" />
                                 {interveneState === 'sent'
@@ -663,18 +663,18 @@ export function ChatPanel() {
                         )}
                     </motion.div>
 
-                    <div className="flex justify-between items-center px-4 mt-3">
+                    <div className="flex flex-wrap justify-between items-center gap-x-4 gap-y-1 px-4 mt-3">
                         <div className="flex items-center gap-4">
                             {/* Chip de coste de la acción: board grupal ≈5⚡ (o 3 si el triage reduce), directo 1⚡ */}
                             <span
-                                className="flex items-center gap-1 text-[9px] font-mono text-content-muted uppercase tracking-widest"
+                                className="flex items-center gap-1 text-micro font-mono text-content-muted uppercase"
                                 title={isGroupChat ? "Un debate de la junta cuesta hasta 5 créditos (3 si el triage reduce los participantes)" : "Un mensaje cuesta 1 crédito"}
                             >
                                 <Zap className="h-3 w-3 text-electric-cyan/70" />
                                 {isGroupChat ? `${boardSession?.cost ?? 5} por debate` : "1 por mensaje"}
                             </span>
                         </div>
-                        <p className="text-[9px] text-content-quiet font-mono uppercase tracking-tighter">
+                        <p className="text-micro text-content-quiet font-mono uppercase">
                             Powered by SPHERE Neuro-Link v2.0
                         </p>
                     </div>

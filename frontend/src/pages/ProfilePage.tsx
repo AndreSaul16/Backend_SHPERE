@@ -169,9 +169,9 @@ export function ProfilePage() {
 
                         <div className="space-y-1.5 sm:space-y-2">
                             <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-content-strong">{displayName || "—"}</h2>
-                            <p className="text-content-muted font-mono text-[10px] sm:text-xs md:text-sm tracking-widest uppercase">{userEmail}</p>
+                            <p className="text-content-muted font-mono text-micro sm:text-xs md:text-sm uppercase">{userEmail}</p>
                             <div className="flex gap-2 justify-center pt-1 sm:pt-2 flex-wrap">
-                                <span className="px-2.5 sm:px-3 py-0.5 sm:py-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-full text-[10px] sm:text-xs">Online</span>
+                                <span className="px-2.5 sm:px-3 py-0.5 sm:py-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-full text-micro sm:text-xs">Online</span>
                             </div>
                         </div>
                     </section>

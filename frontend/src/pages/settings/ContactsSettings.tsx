@@ -211,7 +211,7 @@ export function ContactsSettings() {
                     <span className="text-sm text-content-strong truncate">
                       {c.display_name || c.value}
                     </span>
-                    <span className="px-2 py-0.5 bg-surface-highlight rounded-full text-[10px] text-content-muted">
+                    <span className="px-2 py-0.5 bg-surface-highlight rounded-full text-micro text-content-muted">
                       {CONTACT_TYPES[c.type] || c.type}
                     </span>
                   </div>
@@ -223,7 +223,7 @@ export function ContactsSettings() {
                       {c.authorized_for.map((p) => (
                         <span
                           key={p}
-                          className="px-2 py-0.5 bg-electric-cyan/10 text-electric-cyan rounded text-[10px]"
+                          className="px-2 py-0.5 bg-electric-cyan/10 text-electric-cyan rounded text-micro"
                         >
                           {p}
                         </span>
