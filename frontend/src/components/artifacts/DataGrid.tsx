@@ -5,15 +5,74 @@ interface DataGridProps {
     artifact: Artifact;
 }
 
+/**
+ * Divide una fila por el separador `|`, respetando `\|` — un `|` literal
+ * dentro de una celda, que es como markdown lo escapa. `line.split('|')` a
+ * secas partía «Coste \| impuestos» en dos columnas y corría el resto de la
+ * fila una posición.
+ */
+function splitCells(line: string): string[] {
+    const cells: string[] = [];
+    let current = '';
+    for (let i = 0; i < line.length; i++) {
+        if (line[i] === '\\' && line[i + 1] === '|') {
+            current += '|';
+            i++;
+        } else if (line[i] === '|') {
+            cells.push(current);
+            current = '';
+        } else {
+            current += line[i];
+        }
+    }
+    cells.push(current);
+    return cells;
+}
+
+/**
+ * D35 — una fila de la tabla, celda a celda.
+ *
+ * Lo que hacía antes: `.filter(cell => cell !== '' && !cell.match(/^[-:]+$/))`.
+ * Eso no filtraba ruido, **borraba datos**: una celda vacía desaparecía y
+ * TODAS las de su derecha se corrían una columna a la izquierda, así que el
+ * usuario leía cifras bajo la cabecera equivocada. Y una celda cuyo contenido
+ * fuera `-` (la forma habitual de escribir «sin dato») desaparecía igual.
+ *
+ * Los únicos vacíos que sobran son los que producen los `|` de los extremos, y
+ * son exactamente uno por lado.
+ */
+function parseRow(line: string): string[] {
+    const cells = splitCells(line);
+    if (cells.length > 1 && cells[0].trim() === '') cells.shift();
+    if (cells.length > 1 && cells[cells.length - 1].trim() === '') cells.pop();
+    return cells.map(cell => cell.trim());
+}
+
+/** La fila de guiones de markdown: `---`, `:---`, `---:`, `:---:`. */
+function isSeparatorRow(cells: string[]): boolean {
+    return cells.length > 0 && cells.every(cell => /^:?-+:?$/.test(cell));
+}
+
 function parseMarkdownTable(content: string): { headers: string[]; rows: string[][] } {
     const lines = content.trim().split('\n').filter(line => line.trim());
     if (lines.length < 2) return { headers: [], rows: [] };
 
-    const parseRow = (line: string): string[] =>
-        line.split('|').map(cell => cell.trim()).filter(cell => cell !== '' && !cell.match(/^[-:]+$/));
-
     const headers = parseRow(lines[0]);
-    const rows = lines.slice(lines[1].includes('-') ? 2 : 1).map(parseRow);
+
+    // Antes: `lines[1].includes('-')`. Cualquier `-` en la segunda línea la
+    // daba por fila de guiones — un importe negativo, una fecha `2026-01-05` o
+    // una palabra con guion bastaban para que la PRIMERA fila de datos
+    // desapareciera. La fila de guiones es la que tiene *todas* sus celdas
+    // hechas de guiones.
+    const bodyStart = isSeparatorRow(parseRow(lines[1])) ? 2 : 1;
+
+    const rows = lines.slice(bodyStart).map(line => {
+        const cells = parseRow(line);
+        // Una fila más corta que la cabecera se rellena por la derecha: las
+        // celdas que sí vienen conservan su columna.
+        while (cells.length < headers.length) cells.push('');
+        return cells;
+    });
 
     return { headers, rows };
 }
