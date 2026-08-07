@@ -12,6 +12,7 @@ import { ArtifactCard } from './ArtifactCard';
 import { ToolExecutionCard } from './ToolExecutionCard';
 import { useChatStore } from '@/store/useChatStore';
 import { useUserAvatar } from '@/hooks/useUserAvatar';
+import { notify, reasonOf } from '@/lib/toastBus';
 
 /**
  * Acción de la fila del turno (§9.11 «acciones»). Un solo sitio para las cinco:
@@ -119,10 +120,34 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
     const artifacts = useChatStore(state => state.artifacts);
     const [copied, setCopied] = useState(false);
 
+    /**
+     * D36 — una copia que falla lo dice.
+     *
+     * `await navigator.clipboard.writeText(...)` + `setCopied(true)` sin
+     * `try/catch`. El portapapeles falla más de lo que parece: contexto no
+     * seguro (la app servida por http), permiso denegado, documento sin foco,
+     * o `navigator.clipboard` directamente ausente.
+     *
+     * El enunciado del hallazgo decía «muestra ✓ aunque falle»; medido, no es
+     * eso: el `await` va antes del `setCopied(true)`, así que con la promesa
+     * rechazada el ✓ no se pinta. Lo que pasaba era **nada** — ni cambio en el
+     * botón, ni aviso, y el rechazo quedaba como promesa sin dueño. Para quien
+     * pulsa, una copia fallida y una hecha se veían exactamente igual, y se
+     * llevaba lo que tuviera antes en el portapapeles.
+     */
     const handleCopy = async () => {
-        await navigator.clipboard.writeText(message.content);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        try {
+            await navigator.clipboard.writeText(message.content);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch (error) {
+            notify({
+                title: 'No se pudo copiar el mensaje',
+                detail: reasonOf(error) ?? 'Selecciona el texto y cópialo a mano: sigue en pantalla.',
+                variant: 'error',
+                dedupeKey: 'clipboard-message',
+            });
+        }
     };
 
     // HUD Colors: prioridad sesión > agente > fallback

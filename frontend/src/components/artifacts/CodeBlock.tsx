@@ -5,6 +5,7 @@ import { Copy, Check, Download, ExternalLink } from 'lucide-react';
 
 import { getDownloadExtension } from '@/types/artifact';
 import type { Artifact } from '@/types/artifact';
+import { notify, reasonOf } from '@/lib/toastBus';
 
 interface CodeBlockProps {
     artifact: Artifact;
@@ -13,10 +14,34 @@ interface CodeBlockProps {
 export function CodeBlock({ artifact }: CodeBlockProps) {
     const [copied, setCopied] = useState(false);
 
+    /**
+     * D36 — una copia que falla lo dice.
+     *
+     * `await navigator.clipboard.writeText(...)` + `setCopied(true)` sin
+     * `try/catch`. El portapapeles falla más de lo que parece: contexto no
+     * seguro (la app servida por http), permiso denegado, documento sin foco,
+     * o `navigator.clipboard` directamente ausente.
+     *
+     * El enunciado del hallazgo decía «muestra ✓ aunque falle»; medido, no es
+     * eso: el `await` va antes del `setCopied(true)`, así que con la promesa
+     * rechazada el ✓ no se pinta. Lo que pasaba era **nada** — ni cambio en el
+     * botón, ni aviso, y el rechazo quedaba como promesa sin dueño. Para quien
+     * pulsa, una copia fallida y una hecha se veían exactamente igual, y se
+     * llevaba lo que tuviera antes en el portapapeles.
+     */
     const handleCopy = async () => {
-        await navigator.clipboard.writeText(artifact.content);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        try {
+            await navigator.clipboard.writeText(artifact.content);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch (error) {
+            notify({
+                title: 'No se pudo copiar el código',
+                detail: reasonOf(error) ?? 'Selecciónalo y cópialo a mano: el texto sigue aquí.',
+                variant: 'error',
+                dedupeKey: 'clipboard-codeblock',
+            });
+        }
     };
 
     const handleDownload = () => {
