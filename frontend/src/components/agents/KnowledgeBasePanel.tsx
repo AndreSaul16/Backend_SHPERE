@@ -318,7 +318,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                         <h3 className="text-sm font-bold text-white uppercase tracking-widest">
                             Knowledge Base
                         </h3>
-                        <p className="text-[10px] text-gray-500 font-mono mt-0.5">
+                        <p className="text-[10px] text-content-muted font-mono mt-0.5">
                             {totalFiles} {totalFiles === 1 ? 'DOCUMENTO' : 'DOCUMENTOS'} INDEXADOS
                         </p>
                     </div>
@@ -340,7 +340,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                             <Icon className="h-4 w-4 text-electric-cyan shrink-0" />
                             <div className="min-w-0">
                                 <p className="text-xs font-bold text-white truncate">{value}</p>
-                                <p className="text-[10px] text-gray-500 uppercase tracking-wider">
+                                <p className="text-[10px] text-content-muted uppercase tracking-wider">
                                     {label}
                                 </p>
                             </div>
@@ -355,7 +355,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                 {isLoading && (
                     <div className="flex flex-col items-center justify-center py-16 gap-4">
                         <Loader2 className="h-8 w-8 text-electric-cyan animate-spin" />
-                        <p className="text-sm text-gray-500 font-mono">CARGANDO DOCUMENTOS...</p>
+                        <p className="text-sm text-content-muted font-mono">CARGANDO DOCUMENTOS...</p>
                     </div>
                 )}
 
@@ -373,12 +373,12 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                         <div className="relative">
                             <div className="absolute inset-0 bg-luxury-purple/20 blur-3xl rounded-full" />
                             <div className="relative h-24 w-24 rounded-[32px] bg-white/[0.03] border border-white/10 flex items-center justify-center shadow-2xl">
-                                <FilePlus className="h-10 w-10 text-gray-600" />
+                                <FilePlus className="h-10 w-10 text-content-muted" aria-hidden="true" />
                             </div>
                         </div>
                         <div className="space-y-2 max-w-xs">
                             <h4 className="text-white font-bold text-lg">Sin documentos</h4>
-                            <p className="text-gray-500 text-sm leading-relaxed">
+                            <p className="text-content-muted text-sm leading-relaxed">
                                 {readOnly
                                     ? 'Este agente no tiene documentos en su base de conocimiento.'
                                     : 'Sube archivos para que el agente pueda aprender de ellos y responder con contexto propio.'}
@@ -448,7 +448,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                                     {doc.filename}
                                 </p>
                                 <div className="flex items-center gap-3 mt-1">
-                                    <span className="text-[10px] text-gray-500 font-mono uppercase">
+                                    <span className="text-[10px] text-content-muted font-mono uppercase">
                                         {formatFileSize(doc.file_size)}
                                     </span>
                                     {doc.status === 'completed' && doc.chunks_count > 0 && (

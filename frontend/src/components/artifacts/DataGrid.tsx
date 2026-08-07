@@ -40,7 +40,7 @@ export function DataGrid({ artifact }: DataGridProps) {
 
     if (headers.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center h-full text-gray-500 font-mono text-xs">
+            <div className="flex flex-col items-center justify-center h-full text-content-muted font-mono text-xs">
                 DATOS INCOMPLETOS O MAL FORMATEADOS
             </div>
         );
@@ -51,8 +51,8 @@ export function DataGrid({ artifact }: DataGridProps) {
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-3 bg-white/[0.02] border-b border-white/5">
                 <div className="flex items-center gap-3">
-                    <TableIcon className="h-4 w-4 text-gray-500" />
-                    <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">
+                    <TableIcon className="h-4 w-4 text-content-muted" aria-hidden="true" />
+                    <span className="text-[10px] font-mono text-content-muted uppercase tracking-widest">
                         Data Analysis View
                     </span>
                 </div>
@@ -106,7 +106,7 @@ export function DataGrid({ artifact }: DataGridProps) {
 
             {/* Footer Summary */}
             <div className="px-6 py-3 bg-white/[0.01] border-t border-white/5">
-                <p className="text-[9px] text-gray-600 font-mono uppercase">
+                <p className="text-[9px] text-content-muted font-mono uppercase">
                     REC: {rows.length} · COLS: {headers.length} · SOURCE: SPHERE_ENGINE_V2
                 </p>
             </div>

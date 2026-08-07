@@ -12,7 +12,7 @@ interface DebateTemplatesProps {
 export function DebateTemplates({ onPick }: DebateTemplatesProps) {
     return (
         <div className="w-full max-w-2xl">
-            <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-3">
+            <p className="text-[10px] font-bold text-content-muted uppercase tracking-widest mb-3">
                 O empieza con una plantilla
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

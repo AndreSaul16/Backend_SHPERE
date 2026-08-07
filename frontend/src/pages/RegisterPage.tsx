@@ -156,7 +156,7 @@ export function RegisterPage() {
           {/* Divider */}
           <div className="my-6 flex items-center">
             <div className="flex-1 border-t border-gray-600"></div>
-            <span className="px-4 text-sm text-gray-500">o registrate con</span>
+            <span className="px-4 text-sm text-content-muted">o registrate con</span>
             <div className="flex-1 border-t border-gray-600"></div>
           </div>
 

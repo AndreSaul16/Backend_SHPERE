@@ -102,7 +102,7 @@ export function VerifyEmailPage() {
                         </button>
                         <button
                             onClick={() => { signOut(); navigate("/login", { replace: true }); }}
-                            className="w-full py-2 text-gray-500 hover:text-gray-300 text-xs transition-colors flex items-center justify-center gap-1.5"
+                            className="w-full py-2 text-content-muted hover:text-content-strong text-xs transition-colors flex items-center justify-center gap-1.5"
                         >
                             <LogOut className="h-3 w-3" /> Cerrar sesión
                         </button>

@@ -43,7 +43,7 @@ export function CodeBlock({ artifact }: CodeBlockProps) {
                         <div className="h-2.5 w-2.5 rounded-full bg-amber-500/40" />
                         <div className="h-2.5 w-2.5 rounded-full bg-emerald-500/40" />
                     </div>
-                    <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest ml-2 flex items-center gap-2">
+                    <span className="text-[10px] font-mono text-content-muted uppercase tracking-widest ml-2 flex items-center gap-2">
                         <ExternalLink className="h-3 w-3" />
                         {artifact.language || 'source-code'}
                     </span>
@@ -94,12 +94,12 @@ export function CodeBlock({ artifact }: CodeBlockProps) {
 
             {/* Status Bar */}
             <div className="px-6 py-2 border-t border-white/5 bg-white/[0.01] flex justify-between items-center">
-                <p className="text-[9px] text-gray-600 font-mono">
+                <p className="text-[9px] text-content-muted font-mono">
                     SIZE: {(artifact.content.length / 1024).toFixed(1)} KB · LINES: {artifact.content.split('\n').length}
                 </p>
                 <div className="flex items-center gap-2">
                     <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
-                    <span className="text-[9px] text-gray-500 font-mono uppercase tracking-tighter">Read Only Mode</span>
+                    <span className="text-[9px] text-content-muted font-mono uppercase tracking-tighter">Read Only Mode</span>
                 </div>
             </div>
         </div>

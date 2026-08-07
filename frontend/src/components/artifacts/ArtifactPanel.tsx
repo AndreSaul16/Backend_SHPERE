@@ -39,7 +39,7 @@ export function ArtifactPanel() {
                             Artifact Workspace
                         </h3>
                         {artifacts.length > 0 && (
-                            <p className="text-[10px] text-gray-500 font-mono mt-0.5">
+                            <p className="text-[10px] text-content-muted font-mono mt-0.5">
                                 {artifacts.length} OBJETOS DETECTADOS
                             </p>
                         )}
@@ -47,7 +47,7 @@ export function ArtifactPanel() {
                 </div>
                 <button
                     onClick={() => toggleArtifactPanel()}
-                    className="p-2 rounded-full hover:bg-white/5 transition-colors text-gray-500 hover:text-white active-scale"
+                    className="p-2 rounded-full hover:bg-white/5 transition-colors text-content-muted hover:text-content-strong active-scale"
                 >
                     <X className="h-5 w-5" />
                 </button>
@@ -71,7 +71,7 @@ export function ArtifactPanel() {
                                             "w-full p-3 rounded-2xl flex items-center gap-3 text-left transition-all group relative duration-300",
                                             isActive
                                                 ? "bg-luxury-purple/10 border border-luxury-purple/20 text-luxury-purple"
-                                                : "hover:bg-white/5 text-gray-500 hover:text-gray-300 border border-transparent"
+                                                : "hover:bg-white/5 text-content-muted hover:text-content-strong border border-transparent"
                                         )}
                                     >
                                         <div className={cn(
@@ -84,7 +84,7 @@ export function ArtifactPanel() {
                                             <p className="text-xs font-bold truncate">
                                                 {artifact.title}
                                             </p>
-                                            <p className="text-[10px] opacity-40 uppercase tracking-tighter mt-0.5">
+                                            <p className="text-[10px] uppercase tracking-tighter mt-0.5">
                                                 {artifact.language || artifact.type}
                                             </p>
                                         </div>
@@ -124,18 +124,18 @@ export function ArtifactPanel() {
                                 <div className="relative">
                                     <div className="absolute inset-0 bg-luxury-purple/20 blur-3xl rounded-full" />
                                     <div className="relative h-24 w-24 rounded-[32px] bg-white/[0.03] border border-white/10 flex items-center justify-center shadow-2xl">
-                                        <GitBranch className="h-10 w-10 text-gray-600 animate-pulse" />
+                                        <GitBranch className="h-10 w-10 text-content-muted animate-pulse" aria-hidden="true" />
                                     </div>
                                 </div>
                                 <div className="space-y-2 max-w-xs">
                                     <h4 className="text-white font-bold text-lg">Área de Visualización</h4>
-                                    <p className="text-gray-500 text-sm leading-relaxed">
+                                    <p className="text-content-muted text-sm leading-relaxed">
                                         Los objetos de código, diagramas y tablas generados por SPHERE aparecerán aquí para su inspección.
                                     </p>
                                 </div>
                             </div>
                         ) : (
-                            <div className="flex-1 flex items-center justify-center text-gray-500 text-sm font-mono h-full">
+                            <div className="flex-1 flex items-center justify-center text-content-muted text-sm font-mono h-full">
                                 SELECCIONA UN OBJETO PARA INSPECCIONAR
                             </div>
                         )}

@@ -524,8 +524,8 @@ export function AgentCreationWizard({ isOpen, onClose, onAgentCreated }: AgentCr
                                                 className={cn(
                                                     'flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all',
                                                     isActive && 'bg-electric-cyan/10 text-electric-cyan',
-                                                    isDone && 'bg-white/5 text-gray-300 hover:bg-white/10 cursor-pointer',
-                                                    !isActive && !isDone && 'text-gray-600 cursor-not-allowed',
+                                                    isDone && 'bg-white/5 text-content-muted hover:bg-white/10 cursor-pointer',
+                                                    !isActive && !isDone && 'text-content-quiet cursor-not-allowed',
                                                 )}
                                             >
                                                 <StepIcon className="h-3.5 w-3.5" />
@@ -672,17 +672,17 @@ function StepChooseMethod({
                     <p className="font-bold text-white text-lg group-hover:text-electric-cyan transition-colors">
                         Crear desde cero
                     </p>
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-content-muted mt-1">
                         Define cada aspecto de tu agente manualmente. Control total.
                     </p>
                 </div>
-                <ChevronRight className="h-5 w-5 text-gray-600 group-hover:text-electric-cyan transition-colors shrink-0 ml-auto" />
+                <ChevronRight className="h-5 w-5 text-content-muted group-hover:text-accent transition-colors shrink-0 ml-auto" aria-hidden="true" />
             </motion.button>
 
             {/* Divider */}
             <div className="flex items-center gap-4">
                 <div className="flex-1 h-px bg-white/5" />
-                <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">
+                <span className="text-[10px] font-bold text-content-muted uppercase tracking-widest">
                     o usa una plantilla
                 </span>
                 <div className="flex-1 h-px bg-white/5" />
@@ -697,7 +697,7 @@ function StepChooseMethod({
                             'px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border',
                             categoryFilter === null
                                 ? 'bg-electric-cyan/10 text-electric-cyan border-electric-cyan/30'
-                                : 'bg-white/[0.03] text-gray-500 border-white/5 hover:border-white/10 hover:text-gray-300',
+                                : 'bg-white/[0.03] text-content-muted border-white/5 hover:border-white/10 hover:text-content-strong',
                         )}
                     >
                         Todas
@@ -713,7 +713,7 @@ function StepChooseMethod({
                                     'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border',
                                     categoryFilter === cat
                                         ? 'bg-white/10 text-white border-white/20'
-                                        : 'bg-white/[0.03] text-gray-500 border-white/5 hover:border-white/10 hover:text-gray-300',
+                                        : 'bg-white/[0.03] text-content-muted border-white/5 hover:border-white/10 hover:text-content-strong',
                                 )}
                             >
                                 <CatIcon className="h-3 w-3" />
@@ -726,7 +726,7 @@ function StepChooseMethod({
 
             {/* Templates grid */}
             {templatesLoading && (
-                <div className="flex items-center justify-center py-12 gap-3 text-gray-500">
+                <div className="flex items-center justify-center py-12 gap-3 text-content-muted">
                     <Loader2 className="h-5 w-5 animate-spin" />
                     <span className="text-sm">Cargando plantillas...</span>
                 </div>
@@ -740,7 +740,7 @@ function StepChooseMethod({
             )}
 
             {!templatesLoading && !templatesError && templates.length === 0 && (
-                <div className="text-center py-12 text-gray-600 text-sm">
+                <div className="text-center py-12 text-content-muted text-sm">
                     No hay plantillas disponibles. Crea tu agente desde cero.
                 </div>
             )}
@@ -768,7 +768,7 @@ function StepChooseMethod({
                                     <p className="font-bold text-white text-sm group-hover:text-luxury-purple transition-colors truncate">
                                         {template.name}
                                     </p>
-                                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                                    <p className="text-xs text-content-muted mt-1 line-clamp-2">
                                         {template.description}
                                     </p>
                                     {template.tags.length > 0 && (
@@ -776,7 +776,7 @@ function StepChooseMethod({
                                             {template.tags.slice(0, 3).map((tag) => (
                                                 <span
                                                     key={tag}
-                                                    className="px-2 py-0.5 bg-white/5 text-gray-500 rounded-md text-[10px] font-medium"
+                                                    className="px-2 py-0.5 bg-white/5 text-content-muted rounded-md text-[10px] font-medium"
                                                 >
                                                     {tag}
                                                 </span>
@@ -921,11 +921,11 @@ function StepConfigure({
                     </label>
                     <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 space-y-3">
                         <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-500">Preciso</span>
+                            <span className="text-xs text-content-muted">Preciso</span>
                             <span className="text-sm font-mono font-bold text-electric-cyan">
                                 {temperature.toFixed(1)}
                             </span>
-                            <span className="text-xs text-gray-500">Creativo</span>
+                            <span className="text-xs text-content-muted">Creativo</span>
                         </div>
                         <input
                             id="wizard-temperature"
@@ -972,11 +972,11 @@ function StepConfigure({
                                     'h-3 w-3 rounded-full border-2 shrink-0',
                                     model === opt.value
                                         ? 'border-electric-cyan bg-electric-cyan'
-                                        : 'border-gray-600',
+                                        : 'border-stroke-control',
                                 )} />
                                 <div className="min-w-0">
                                     <p className="text-xs font-bold">{opt.label}</p>
-                                    <p className="text-[10px] text-gray-500">{opt.description}</p>
+                                    <p className="text-[10px] text-content-muted">{opt.description}</p>
                                 </div>
                             </button>
                         ))}
@@ -996,15 +996,15 @@ function StepConfigure({
                     <p className="text-sm font-bold text-white truncate">
                         {name.trim() || 'Nombre del agente'}
                     </p>
-                    <p className="text-xs text-gray-500 truncate">
+                    <p className="text-xs text-content-muted truncate">
                         {description.trim() || 'Sin descripcion'}
                     </p>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
-                    <span className="px-2 py-0.5 bg-white/5 text-gray-500 rounded text-[10px] font-mono">
+                    <span className="px-2 py-0.5 bg-white/5 text-content-muted rounded text-[10px] font-mono">
                         {model}
                     </span>
-                    <span className="px-2 py-0.5 bg-white/5 text-gray-500 rounded text-[10px] font-mono">
+                    <span className="px-2 py-0.5 bg-white/5 text-content-muted rounded text-[10px] font-mono">
                         t={temperature.toFixed(1)}
                     </span>
                 </div>
@@ -1064,7 +1064,7 @@ function StepKnowledge({
         >
             <div className="space-y-1">
                 <h3 className="text-base font-bold text-white">Base de Conocimiento</h3>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-content-muted">
                     Sube documentos para que tu agente tenga contexto especializado. Este paso es opcional.
                 </p>
             </div>
@@ -1164,7 +1164,7 @@ function StepKnowledge({
             {/* File list */}
             {files.length > 0 && (
                 <div className="space-y-2">
-                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">
+                    <p className="text-[10px] font-bold text-content-muted uppercase tracking-widest ml-1">
                         Archivos ({files.length})
                     </p>
                     <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
@@ -1181,14 +1181,14 @@ function StepKnowledge({
                                     <p className="text-xs font-medium text-white truncate">
                                         {entry.file.name}
                                     </p>
-                                    <p className="text-[10px] text-gray-600">
+                                    <p className="text-[10px] text-content-muted">
                                         {formatSize(entry.file.size)}
                                     </p>
                                 </div>
                                 {/* Status indicator */}
                                 <div className="shrink-0">
                                     {entry.status === 'pending' && (
-                                        <span className="text-[10px] text-gray-500 font-medium">Listo</span>
+                                        <span className="text-[10px] text-content-muted font-medium">Listo</span>
                                     )}
                                     {entry.status === 'uploading' && (
                                         <div className="flex items-center gap-2">
@@ -1240,7 +1240,7 @@ function StepKnowledge({
             {files.length === 0 && (
                 <button
                     onClick={onSkip}
-                    className="w-full flex items-center justify-center gap-2 py-3 text-sm text-gray-500 hover:text-gray-300 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 py-3 text-sm text-content-muted hover:text-content-strong transition-colors"
                 >
                     <SkipForward className="h-4 w-4" />
                     Saltar por ahora
@@ -1311,7 +1311,7 @@ function StepReview({
                     <div className="min-w-0 flex-1">
                         <p className="text-lg font-bold text-white truncate">{name}</p>
                         {description && (
-                            <p className="text-sm text-gray-500 truncate mt-0.5">{description}</p>
+                            <p className="text-sm text-content-muted truncate mt-0.5">{description}</p>
                         )}
                     </div>
                     {templateName && (
@@ -1355,7 +1355,7 @@ function StepReview({
 
                 {/* System prompt preview */}
                 <div className="px-6 pb-6">
-                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">
+                    <p className="text-[10px] font-bold text-content-muted uppercase tracking-widest mb-2">
                         System Prompt
                     </p>
                     <div className="p-4 rounded-xl bg-midnight/60 border border-white/5 max-h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
@@ -1370,7 +1370,7 @@ function StepReview({
                 {/* File list preview */}
                 {files.length > 0 && (
                     <div className="px-6 pb-6">
-                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">
+                        <p className="text-[10px] font-bold text-content-muted uppercase tracking-widest mb-2">
                             Archivos a subir
                         </p>
                         <div className="flex flex-wrap gap-2">
@@ -1405,7 +1405,7 @@ function StepReview({
                 <div className="space-y-2">
                     {files.map((f) => (
                         <div key={f.id} className="flex items-center gap-3">
-                            <span className="text-xs text-gray-500 truncate w-32">{f.file.name}</span>
+                            <span className="text-xs text-content-muted truncate w-32">{f.file.name}</span>
                             <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
                                 <div
                                     className={cn(
@@ -1443,7 +1443,7 @@ function ReviewField({
 }) {
     return (
         <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-1.5">
-            <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest flex items-center gap-1.5">
+            <p className="text-[10px] font-bold text-content-muted uppercase tracking-widest flex items-center gap-1.5">
                 {icon}
                 {label}
             </p>

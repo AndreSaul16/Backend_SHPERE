@@ -192,7 +192,7 @@ export const BillingPage: React.FC = () => {
                 {actionError && (
                     <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 mb-8 flex items-center justify-between gap-3">
                         <p className="text-red-400 text-sm">{actionError}</p>
-                        <button onClick={() => setActionError(null)} className="text-red-400/60 hover:text-red-400 text-sm">✕</button>
+                        <button onClick={() => setActionError(null)} className="text-red-400 hover:text-content-strong text-sm">✕</button>
                     </div>
                 )}
 
