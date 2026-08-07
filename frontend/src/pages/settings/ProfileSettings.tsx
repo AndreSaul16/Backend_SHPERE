@@ -224,7 +224,7 @@ export function ProfileSettings() {
         </div>
       </Section>
 
-      <Section icon={<Palette className="h-5 w-5 text-pink-400" />} title="Interfaz">
+      <Section icon={<Palette className="h-5 w-5 text-accent" aria-hidden="true" />} title="Interfaz">
         <div className="grid grid-cols-2 gap-3">
           <Field label="Tema">
             <select
@@ -341,7 +341,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="p-5 rounded-2xl bg-surface/30 border border-surface-highlight space-y-3">
+    <section className="p-5 rounded-md bg-surface/30 border border-surface-highlight space-y-3">
       <div className="flex items-center gap-3 text-content-strong font-semibold">
         {icon}
         <h3>{title}</h3>

@@ -34,15 +34,6 @@ const SERVICE_ICONS: Record<string, React.ReactNode> = {
   financial_api: <TrendingUp className="h-5 w-5" />,
 };
 
-const SERVICE_COLORS: Record<string, string> = {
-  google_calendar: "text-blue-400",
-  linkedin: "text-sky-400",
-  whatsapp: "text-emerald-400",
-  jules: "text-purple-400",
-  instagram: "text-pink-400",
-  financial_api: "text-amber-400",
-};
-
 export function ServiceCredentialsSettings() {
   const [data, setData] = useState<ServiceCredentialsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -163,12 +154,12 @@ export function ServiceCredentialsSettings() {
         {data?.services.map((svc) => (
           <div
             key={svc.service}
-            className="p-5 rounded-2xl bg-surface/30 border border-surface-highlight space-y-4"
+            className="p-5 rounded-md bg-surface/30 border border-surface-highlight space-y-4"
           >
             {/* Header */}
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <div className={SERVICE_COLORS[svc.service] || "text-content-strong"}>
+                <div className="text-accent">
                   {SERVICE_ICONS[svc.service] || <Key className="h-5 w-5" />}
                 </div>
                 <div className="min-w-0">

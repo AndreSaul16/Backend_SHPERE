@@ -3,10 +3,10 @@
  * `/verify-email`) — DESIGN §0, §9.1, §9.2, §9.3, §4.3.
  *
  * Por qué existe: las tres páginas eran el mismo marcado triplicado y las tres
- * eran el diseño viejo entero (`from-gray-900 via-purple-900`, wordmark
- * `from-purple-400 to-pink-400` en `bg-clip-text`, botón `from-purple-600 to
- * pink-600` y tarjeta `backdrop-blur-xl`). Son el primer pixel de toda carga en
- * frío, así que la dirección no se puede decidir tres veces: se decide aquí.
+ * eran el diseño viejo entero: fondo en degradado gris→violeta, wordmark
+ * rosa→morado sobre `bg-clip-text`, botón primario morado→magenta y tarjeta
+ * de glassmorphism. Son el primer pixel de toda carga en frío, así que la
+ * dirección no se puede decidir tres veces: se decide aquí.
  *
  * Decisiones que no son obvias:
  *

@@ -221,7 +221,7 @@ export function Sidebar() {
     return (
         <div className="flex flex-col h-full bg-transparent">
             {/* Header / Search */}
-            <div className="p-3 sm:p-4 border-b border-surface-highlight backdrop-blur-md sticky top-0 bg-midnight/80 z-10">
+            <div className="p-3 sm:p-4 border-b border-stroke-hairline sticky top-0 bg-surface-1 z-10">
                 <h2 className="text-lg sm:text-xl font-bold text-content-strong mb-3 sm:mb-4 tracking-tight">SPHERE</h2>
                 <div className="relative group">
                     <Search
@@ -249,7 +249,7 @@ export function Sidebar() {
                 <div className="px-3 sm:px-4 pt-2">
                     <button
                         onClick={() => toggleAgentModal(true)}
-                        className="w-full py-4 rounded-2xl bg-electric-cyan/10 border border-electric-cyan/30 hover:bg-electric-cyan/20 transition-all duration-300 group flex flex-col items-center justify-center gap-2 shadow-lg shadow-electric-cyan/5"
+                        className="w-full py-4 rounded-md bg-electric-cyan/10 border border-electric-cyan/30 hover:bg-electric-cyan/20 transition-all duration-300 group flex flex-col items-center justify-center gap-2 shadow-lg shadow-electric-cyan/5"
                     >
                         <div className="h-10 w-10 rounded-full bg-electric-cyan flex items-center justify-center shadow-lg shadow-electric-cyan/20 group-hover:scale-110 transition-transform">
                             <Plus className="h-6 w-6 text-accent-on-fill" aria-hidden="true" />

@@ -54,7 +54,7 @@ export function SettingsPage() {
   return (
     <div className="flex flex-col h-full bg-midnight/40 relative overflow-y-auto">
       {/* Header */}
-      <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-surface flex items-center gap-3 bg-midnight/90 backdrop-blur-md sticky top-0 z-10">
+      <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-surface flex items-center gap-3 bg-surface-0 sticky top-0 z-10">
         <Link
           to="/"
           className="p-2 hover:bg-surface rounded-full transition-colors text-content-muted hover:text-content-strong"
@@ -89,7 +89,7 @@ export function SettingsPage() {
         </nav>
 
         {/* Mobile tab bar */}
-        <div className="sm:hidden border-b border-surface overflow-x-auto flex gap-1 px-2 py-2 bg-midnight/60 backdrop-blur-md absolute top-14 left-0 right-0 z-10">
+        <div className="sm:hidden border-b border-surface overflow-x-auto flex gap-1 px-2 py-2 bg-surface-1 absolute top-14 left-0 right-0 z-10">
           {TABS.map((tab) => {
             const isActive = tab.id === activeId;
             return (

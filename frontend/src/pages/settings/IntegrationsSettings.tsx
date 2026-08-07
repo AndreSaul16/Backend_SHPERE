@@ -230,7 +230,7 @@ export function IntegrationsSettings() {
           return (
             <div
               key={p}
-              className="p-5 rounded-2xl bg-surface/30 border border-surface-highlight space-y-4"
+              className="p-5 rounded-md bg-surface/30 border border-surface-highlight space-y-4"
             >
               {/* Header */}
               <div className="flex items-start justify-between gap-3">

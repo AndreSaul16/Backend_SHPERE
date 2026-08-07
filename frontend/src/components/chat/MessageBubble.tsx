@@ -168,7 +168,7 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
     if (isSystem) {
         return (
             <div className="flex justify-center my-3 sm:my-4 px-2">
-                <div className="bg-midnight/90 border border-surface-highlight text-content-muted text-xs px-4 py-2 rounded-2xl shadow-md backdrop-blur-md max-w-[85%] text-left whitespace-pre-wrap">
+                <div className="bg-surface-1 border border-stroke-edge text-content-muted text-xs px-4 py-2 rounded-md shadow-e2 max-w-[85%] text-left whitespace-pre-wrap">
                     <ReactMarkdown
                         rehypePlugins={[rehypeSanitize]}
                         components={{
@@ -234,12 +234,12 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                     transition={{ duration: 0.4, ease: "easeOut" }}
                     data-row
                     className={cn(
-                        "group p-3 sm:p-4 rounded-2xl shadow-lg text-sm leading-relaxed border text-left",
+                        "group p-3 sm:p-4 rounded-md shadow-lg text-sm leading-relaxed border text-left",
                         "min-w-[80px] max-w-full overflow-hidden",
                         "[overflow-wrap:break-word] [word-break:break-word]",
                         isUser
                             ? "bg-user-bubble/12 text-content rounded-tr-sm"
-                            : "bg-ai-bubble/95 text-content-strong rounded-tl-sm backdrop-blur-sm relative"
+                            : "bg-ai-bubble text-content-strong rounded-tl-sm relative"
                     )}
                     style={isUser
                         ? { borderColor: '#22D3EE20' }

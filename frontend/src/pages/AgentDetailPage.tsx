@@ -242,7 +242,7 @@ export function AgentDetailPage() {
     if (fetchError) {
         return (
             <div className="flex flex-col items-center justify-center h-full gap-4 bg-midnight/40 px-4">
-                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-center space-y-3 max-w-md">
+                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-md text-center space-y-3 max-w-md">
                     <AlertTriangle className="h-8 w-8 text-red-400 mx-auto" />
                     <p className="text-sm text-red-400 font-medium">{fetchError}</p>
                     <button
@@ -272,7 +272,7 @@ export function AgentDetailPage() {
             </div>
 
             {/* ── Header ────────────────────────────────────────────── */}
-            <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-surface flex items-center justify-between bg-midnight/90 backdrop-blur-md sticky top-0 z-10">
+            <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-surface flex items-center justify-between bg-surface-0 sticky top-0 z-10">
                 <div className="flex items-center gap-3 sm:gap-4">
                     <button
                         onClick={() => navigate("/chat")}
@@ -344,7 +344,7 @@ export function AgentDetailPage() {
                         initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.05 }}
-                        className="p-6 sm:p-8 rounded-2xl bg-surface/60 border border-white/5 backdrop-blur-sm space-y-6"
+                        className="p-6 sm:p-8 rounded-md bg-surface-2 border border-stroke-edge space-y-6"
                     >
                         <div className="flex items-center gap-2">
                             <Sparkles className="h-4 w-4 text-luxury-purple" />
@@ -356,7 +356,7 @@ export function AgentDetailPage() {
                         {/* Avatar Preview */}
                         <div className="flex justify-center">
                             <div
-                                className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl flex items-center justify-center text-3xl sm:text-4xl font-bold border-2 shadow-2xl transition-all duration-500"
+                                className="h-20 w-20 sm:h-24 sm:w-24 rounded-md flex items-center justify-center text-3xl sm:text-4xl font-bold border-2 shadow-2xl transition-all duration-500"
                                 style={{
                                     backgroundColor: `${color}15`,
                                     borderColor: `${color}50`,
@@ -457,7 +457,7 @@ export function AgentDetailPage() {
                         initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        className="p-6 sm:p-8 rounded-2xl bg-surface/60 border border-white/5 backdrop-blur-sm space-y-6"
+                        className="p-6 sm:p-8 rounded-md bg-surface-2 border border-stroke-edge space-y-6"
                     >
                         <div className="flex items-center gap-2">
                             <Brain className="h-4 w-4 text-electric-cyan" />
@@ -603,7 +603,7 @@ export function AgentDetailPage() {
                         initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.15 }}
-                        className="rounded-2xl bg-surface/60 border border-white/5 backdrop-blur-sm overflow-hidden"
+                        className="rounded-md bg-surface-2 border border-stroke-edge overflow-hidden"
                     >
                         <div className="flex items-center gap-2 px-6 sm:px-8 pt-6 sm:pt-8 pb-2">
                             <BookOpen className="h-4 w-4 text-luxury-purple" />
@@ -623,7 +623,7 @@ export function AgentDetailPage() {
                         initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
-                        className="p-6 sm:p-8 rounded-2xl bg-red-500/5 border border-red-500/20 backdrop-blur-sm space-y-4"
+                        className="p-6 sm:p-8 rounded-md bg-oxblood-500/12 border border-oxblood-500 space-y-4"
                     >
                         <div className="flex items-center gap-2">
                             <AlertTriangle className="h-4 w-4 text-red-500" />

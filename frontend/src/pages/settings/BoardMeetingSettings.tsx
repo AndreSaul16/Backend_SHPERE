@@ -58,8 +58,8 @@ export function BoardMeetingSettings() {
   return (
     <div className="space-y-6">
       {/* Explanation */}
-      <div className="flex items-start gap-3 p-4 rounded-xl bg-purple-500/5 border border-purple-500/20">
-        <Users className="h-5 w-5 text-purple-400 mt-0.5 flex-shrink-0" />
+      <div className="flex items-start gap-3 p-4 rounded-md border border-stroke-edge bg-surface-2">
+        <Users className="h-5 w-5 text-accent mt-0.5 flex-shrink-0" aria-hidden="true" />
         <div className="text-sm text-content-muted">
           <p className="font-medium text-content-strong mb-1">Board Meeting Mode</p>
           <p>
@@ -89,7 +89,7 @@ export function BoardMeetingSettings() {
       )}
 
       {/* Toggle */}
-      <div className="p-5 rounded-2xl bg-surface/30 border border-surface-highlight space-y-4">
+      <div className="p-5 rounded-md bg-surface/30 border border-surface-highlight space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-semibold text-content-strong">Activar Board Meeting</h3>

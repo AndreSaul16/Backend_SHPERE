@@ -60,7 +60,7 @@ export function BoardWarRoom({ board, agents }: { board: BoardSessionState; agen
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="border-b border-white/5 bg-midnight/50 backdrop-blur-xl overflow-hidden z-10"
+            className="border-b border-white/5 bg-surface-1 overflow-hidden z-10"
         >
             <div className="max-w-4xl mx-auto px-6 py-3">
                 <div className="flex items-center justify-between gap-4">

@@ -94,7 +94,7 @@ export function ProfilePage() {
             </div>
 
             {/* Header */}
-            <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-surface flex items-center justify-between bg-midnight/90 backdrop-blur-md sticky top-0 z-10">
+            <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-surface flex items-center justify-between bg-surface-0 sticky top-0 z-10">
                 <div className="flex items-center gap-3 sm:gap-4">
                     <Link to="/" className="p-2 hover:bg-surface rounded-full transition-colors text-content-muted hover:text-content-strong">
                         <ArrowLeft className="h-5 w-5" />
@@ -128,7 +128,7 @@ export function ProfilePage() {
                 <div className="max-w-3xl mx-auto space-y-6 sm:space-y-8">
 
                     {/* Hero Profile Section */}
-                    <section className="flex flex-col items-center gap-4 sm:gap-6 p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl bg-surface/60 border border-surface-highlight backdrop-blur-sm relative overflow-hidden text-center">
+                    <section className="flex flex-col items-center gap-4 sm:gap-6 p-4 sm:p-6 md:p-8 rounded-md bg-surface-2 border border-stroke-edge relative overflow-hidden text-center">
                         {/* Avatar with Upload */}
                         <div className="relative group">
                             <input
@@ -177,7 +177,7 @@ export function ProfilePage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
 
                         {/* Account Settings */}
-                        <div className="p-6 rounded-2xl bg-surface/30 border border-surface-highlight hover:border-electric-cyan/30 transition-colors space-y-4">
+                        <div className="p-6 rounded-md bg-surface/30 border border-surface-highlight hover:border-electric-cyan/30 transition-colors space-y-4">
                             <div className="flex items-center gap-3 text-content-strong font-semibold mb-4">
                                 <User className="h-5 w-5 text-electric-cyan" />
                                 <h3>Información Personal</h3>
@@ -204,7 +204,7 @@ export function ProfilePage() {
                         </div>
 
                         {/* Security */}
-                        <div className="p-6 rounded-2xl bg-surface/30 border border-surface-highlight hover:border-luxury-purple/30 transition-colors space-y-4">
+                        <div className="p-6 rounded-md bg-surface/30 border border-surface-highlight hover:border-luxury-purple/30 transition-colors space-y-4">
                             <div className="flex items-center gap-3 text-content-strong font-semibold mb-4">
                                 <Shield className="h-5 w-5 text-luxury-purple" />
                                 <h3>Seguridad</h3>
@@ -221,7 +221,7 @@ export function ProfilePage() {
                         </div>
 
                         {/* Notifications */}
-                        <div className="p-6 rounded-2xl bg-surface/30 border border-surface-highlight space-y-4">
+                        <div className="p-6 rounded-md bg-surface/30 border border-surface-highlight space-y-4">
                             <div className="flex items-center gap-3 text-content-strong font-semibold mb-4">
                                 <Bell className="h-5 w-5 text-amber-500" />
                                 <h3>Preferencias de Sistema</h3>
@@ -235,7 +235,7 @@ export function ProfilePage() {
                         </div>
 
                         {/* Logout */}
-                        <div className="p-6 rounded-2xl bg-red-500/5 border border-red-500/20 space-y-4">
+                        <div className="p-6 rounded-md bg-red-500/5 border border-red-500/20 space-y-4">
                             <div className="flex items-center gap-3 text-red-500 font-semibold mb-4">
                                 <LogOut className="h-5 w-5" />
                                 <h3>Cerrar Sesión</h3>

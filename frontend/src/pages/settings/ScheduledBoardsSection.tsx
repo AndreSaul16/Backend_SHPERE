@@ -109,7 +109,7 @@ export function ScheduledBoardsSection() {
     };
 
     return (
-        <div className="p-5 rounded-2xl bg-surface/30 border border-surface-highlight space-y-4">
+        <div className="p-5 rounded-md bg-surface/30 border border-surface-highlight space-y-4">
             <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                     <CalendarClock className="h-5 w-5 text-electric-cyan" />

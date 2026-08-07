@@ -79,15 +79,18 @@ const STEPS = [
     { label: 'Revisar', icon: CheckCircle2 },
 ] as const;
 
+// §2: el latón es el único metal estructural. Los ocho colores crudos que
+// había aquí eran decoración: la categoría la distingue su glifo, que es el
+// segundo canal que pide P5.
 const CATEGORY_META: Record<string, { label: string; icon: typeof Scale; color: string }> = {
-    legal:     { label: 'Legal',      icon: Scale,        color: 'text-blue-400' },
-    health:    { label: 'Salud',      icon: HeartPulse,   color: 'text-green-400' },
-    finance:   { label: 'Finanzas',   icon: TrendingUp,   color: 'text-yellow-400' },
-    tech:      { label: 'Tecnologia', icon: Cpu,          color: 'text-electric-cyan' },
-    creative:  { label: 'Creativo',   icon: Pen,          color: 'text-pink-400' },
-    hr:        { label: 'RRHH',       icon: Users,        color: 'text-orange-400' },
-    sales:     { label: 'Ventas',     icon: ShoppingCart,  color: 'text-purple-400' },
-    education: { label: 'Educacion',  icon: GraduationCap, color: 'text-indigo-400' },
+    legal:     { label: 'Legal',      icon: Scale,         color: 'text-accent' },
+    health:    { label: 'Salud',      icon: HeartPulse,    color: 'text-accent' },
+    finance:   { label: 'Finanzas',   icon: TrendingUp,    color: 'text-accent' },
+    tech:      { label: 'Tecnologia', icon: Cpu,           color: 'text-accent' },
+    creative:  { label: 'Creativo',   icon: Pen,           color: 'text-accent' },
+    hr:        { label: 'RRHH',       icon: Users,         color: 'text-accent' },
+    sales:     { label: 'Ventas',     icon: ShoppingCart,  color: 'text-accent' },
+    education: { label: 'Educacion',  icon: GraduationCap, color: 'text-accent' },
 };
 
 const PRESET_COLORS = [
@@ -663,9 +666,9 @@ function StepChooseMethod({
                 whileHover={{ y: -2, scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
                 onClick={onStartFromScratch}
-                className="w-full flex items-center gap-5 p-6 rounded-3xl bg-white/[0.03] border-2 border-dashed border-white/10 hover:border-electric-cyan/40 hover:bg-white/[0.06] transition-all text-left group"
+                className="w-full flex items-center gap-5 p-6 rounded-md bg-white/[0.03] border-2 border-dashed border-white/10 hover:border-electric-cyan/40 hover:bg-white/[0.06] transition-all text-left group"
             >
-                <div className="p-4 bg-electric-cyan/10 rounded-2xl group-hover:bg-electric-cyan/20 transition-colors shrink-0">
+                <div className="p-4 bg-electric-cyan/10 rounded-md group-hover:bg-electric-cyan/20 transition-colors shrink-0">
                     <PenLine className="h-7 w-7 text-electric-cyan" />
                 </div>
                 <div className="min-w-0">
@@ -756,7 +759,7 @@ function StepChooseMethod({
                                 whileHover={{ y: -3, scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => onSelectTemplate(template)}
-                                className="flex items-start gap-4 p-5 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-luxury-purple/40 hover:bg-white/[0.06] transition-all text-left group"
+                                className="flex items-start gap-4 p-5 rounded-md bg-white/[0.03] border border-white/5 hover:border-luxury-purple/40 hover:bg-white/[0.06] transition-all text-left group"
                             >
                                 <div className={cn(
                                     'p-3 rounded-xl bg-white/[0.05] border border-white/5 shrink-0',
@@ -889,7 +892,7 @@ function StepConfigure({
                     <div
                         role="group"
                         aria-labelledby="wizard-color-label"
-                        className="flex flex-wrap gap-2 p-3 rounded-2xl bg-white/[0.03] border border-white/5"
+                        className="flex flex-wrap gap-2 p-3 rounded-md bg-white/[0.03] border border-white/5"
                     >
                         {PRESET_COLORS.map((c) => (
                             <button
@@ -919,7 +922,7 @@ function StepConfigure({
                         <Thermometer className="h-3 w-3" aria-hidden="true" />
                         Temperatura
                     </label>
-                    <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 space-y-3">
+                    <div className="p-3 rounded-md bg-white/[0.03] border border-white/5 space-y-3">
                         <div className="flex items-center justify-between">
                             <span className="text-xs text-content-muted">Preciso</span>
                             <span className="text-sm font-mono font-bold text-electric-cyan">
@@ -936,10 +939,9 @@ function StepConfigure({
                             value={temperature}
                             onChange={(e) => setTemperature(parseFloat(e.target.value))}
                             aria-valuetext={`${temperature.toFixed(1)} de 2`}
-                            className="w-full accent-electric-cyan h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer
+                            className="w-full accent-accent h-1.5 bg-surface-inset rounded-full appearance-none cursor-pointer
                                        [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4
-                                       [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-electric-cyan
-                                       [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(0,245,212,0.4)]
+                                       [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent-fill
                                        [&::-webkit-slider-thumb]:cursor-pointer"
                         />
                     </div>
@@ -985,7 +987,7 @@ function StepConfigure({
             </div>
 
             {/* Preview pill */}
-            <div className="flex items-center gap-3 p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+            <div className="flex items-center gap-3 p-4 rounded-md bg-white/[0.02] border border-white/5">
                 <div
                     className="h-10 w-10 rounded-xl flex items-center justify-center text-white font-bold text-sm border border-white/10"
                     style={{ backgroundColor: color + '30', borderColor: color + '50' }}
@@ -1071,7 +1073,7 @@ function StepKnowledge({
 
             {/* Suggested files hint */}
             {suggestedFiles.length > 0 && (
-                <div className="p-4 rounded-2xl bg-luxury-purple/5 border border-luxury-purple/20">
+                <div className="p-4 rounded-md bg-luxury-purple/5 border border-luxury-purple/20">
                     <p className="text-xs font-bold text-luxury-purple mb-2 flex items-center gap-1.5">
                         <Sparkles className="h-3 w-3" />
                         Archivos sugeridos por la plantilla
@@ -1112,14 +1114,14 @@ function StepKnowledge({
                     onDragLeave={onDragLeave}
                     onClick={() => fileInputRef.current?.click()}
                     className={cn(
-                        'flex w-full flex-col items-center justify-center gap-4 p-10 rounded-2xl border-2 border-dashed cursor-pointer transition-all',
+                        'flex w-full flex-col items-center justify-center gap-4 p-10 rounded-md border-2 border-dashed cursor-pointer transition-all',
                         isDragOver
                             ? 'border-accent/60 bg-accent/5'
                             : 'border-stroke-edge bg-surface-2 hover:border-brass-600 hover:bg-surface-3',
                     )}
                 >
                     <span className={cn(
-                        'p-4 rounded-2xl transition-colors',
+                        'p-4 rounded-md transition-colors',
                         isDragOver ? 'bg-accent/20' : 'bg-surface-3',
                     )}>
                         <Upload
@@ -1295,11 +1297,11 @@ function StepReview({
             className="p-8 space-y-6"
         >
             {/* Summary card */}
-            <div className="rounded-2xl bg-white/[0.03] border border-white/5 overflow-hidden">
+            <div className="rounded-md bg-white/[0.03] border border-white/5 overflow-hidden">
                 {/* Agent header */}
                 <div className="p-6 flex flex-wrap items-center gap-4 border-b border-white/5">
                     <div
-                        className="h-14 w-14 rounded-2xl flex items-center justify-center text-white font-bold text-xl border border-white/10 shadow-lg"
+                        className="h-14 w-14 rounded-md flex items-center justify-center text-white font-bold text-xl border border-white/10 shadow-lg"
                         style={{
                             backgroundColor: color + '25',
                             borderColor: color + '40',
@@ -1393,7 +1395,7 @@ function StepReview({
                 <motion.div
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-3 p-4 rounded-2xl bg-red-500/5 border border-red-500/20"
+                    className="flex items-center gap-3 p-4 rounded-md bg-red-500/5 border border-red-500/20"
                 >
                     <AlertCircle className="h-5 w-5 text-red-400 shrink-0" />
                     <p className="text-sm text-red-400">{submitError}</p>

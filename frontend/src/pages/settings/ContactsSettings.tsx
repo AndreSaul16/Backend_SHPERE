@@ -105,7 +105,7 @@ export function ContactsSettings() {
       )}
 
       {/* Añadir contacto */}
-      <section className="p-5 rounded-2xl bg-surface/30 border border-surface-highlight space-y-4">
+      <section className="p-5 rounded-md bg-surface/30 border border-surface-highlight space-y-4">
         <div className="flex items-center gap-3 text-content-strong font-semibold">
           <Plus className="h-5 w-5 text-electric-cyan" />
           <h3>Añadir contacto</h3>
@@ -186,7 +186,7 @@ export function ContactsSettings() {
       </section>
 
       {/* Lista de contactos */}
-      <section className="p-5 rounded-2xl bg-surface/30 border border-surface-highlight space-y-3">
+      <section className="p-5 rounded-md bg-surface/30 border border-surface-highlight space-y-3">
         <div className="flex items-center gap-3 text-content-strong font-semibold">
           <Users className="h-5 w-5 text-luxury-purple" />
           <h3>Contactos autorizados ({contacts.length})</h3>

@@ -71,8 +71,11 @@ export const AuroraBackground: React.FC = () => {
                 }}
             />
 
-            {/* Surface Overlay with Noise/Grain if possible but CSS is enough for now */}
-            <div className="absolute inset-0 bg-midnight/20 backdrop-blur-[120px]" />
+            {/* Aquí vivía un velo a pantalla completa con 120px de desenfoque.
+                Se retira: §P3 lo nombra literalmente como anti-patrón prohibido
+                y §8.5 dice que el grano del paño lo SUSTITUYE — y el grano ya
+                vive en `body`. Era una capa compuesta del tamaño del viewport
+                que no aportaba nada y difuminaba el grano del tejido. */}
         </div>
     );
 };

@@ -18,7 +18,7 @@ export function ErrorOverlay() {
                 exit={{ opacity: 0, scale: 0.95 }}
                 className="fixed bottom-6 right-6 z-[100] max-w-md w-full"
             >
-                <div className="bg-red-500/10 backdrop-blur-xl border border-red-500/20 rounded-2xl p-4 shadow-2xl flex items-start gap-3">
+                <div className="bg-oxblood-500/12 border border-oxblood-500 rounded-md p-4 shadow-2xl flex items-start gap-3">
                     <div className="p-2 bg-red-500/20 rounded-lg flex-shrink-0">
                         <AlertCircle className="h-5 w-5 text-red-500" />
                     </div>

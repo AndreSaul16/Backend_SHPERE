@@ -123,7 +123,7 @@ export function CodeBlock({ artifact }: CodeBlockProps) {
                     SIZE: {(artifact.content.length / 1024).toFixed(1)} KB · LINES: {artifact.content.split('\n').length}
                 </p>
                 <div className="flex items-center gap-2">
-                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
+                    <div className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
                     <span className="text-micro text-content-muted font-mono uppercase">Read Only Mode</span>
                 </div>
             </div>

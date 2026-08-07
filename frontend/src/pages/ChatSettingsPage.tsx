@@ -295,7 +295,7 @@ export function ChatSettingsPage() {
             </div>
 
             {/* Header */}
-            <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-surface flex items-center justify-between bg-midnight/90 backdrop-blur-md sticky top-0 z-10">
+            <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-surface flex items-center justify-between bg-surface-0 sticky top-0 z-10">
                 <div className="flex items-center gap-3 sm:gap-4">
                     <button
                         onClick={() => navigate(-1)}
@@ -327,7 +327,7 @@ export function ChatSettingsPage() {
                 <div className="max-w-xl mx-auto space-y-6 sm:space-y-8">
 
                     {/* Agent Avatar & Identity Section */}
-                    <section className="flex flex-col items-center gap-4 sm:gap-6 p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-surface/60 border border-surface-highlight backdrop-blur-sm text-center">
+                    <section className="flex flex-col items-center gap-4 sm:gap-6 p-6 sm:p-8 rounded-md bg-surface-2 border border-stroke-edge text-center">
                         <h2 className="text-content-muted text-xs sm:text-sm uppercase tracking-widest font-mono">
                             {isGroupChat ? 'Identidad del Grupo' : 'Identidad del Agente'}
                         </h2>
@@ -352,7 +352,7 @@ export function ChatSettingsPage() {
                                 type="button"
                                 onClick={triggerFileInput}
                                 aria-label={isGroupChat ? 'Cambiar la imagen del grupo' : 'Cambiar la imagen del agente'}
-                                className="relative h-24 w-24 sm:h-32 sm:w-32 rounded-2xl sm:rounded-3xl bg-surface border border-surface-highlight flex items-center justify-center text-3xl sm:text-4xl font-bold shadow-2xl transition-transform group-hover:scale-105 cursor-pointer overflow-hidden"
+                                className="relative h-24 w-24 sm:h-32 sm:w-32 rounded-md bg-surface border border-surface-highlight flex items-center justify-center text-3xl sm:text-4xl font-bold shadow-2xl transition-transform group-hover:scale-105 cursor-pointer overflow-hidden"
                             >
                                 <AvatarImage
                                     src={avatarUrl}
@@ -406,7 +406,7 @@ export function ChatSettingsPage() {
                     </section>
 
                     {/* Color Settings Section */}
-                    <section className="p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-surface/60 border border-surface-highlight backdrop-blur-sm space-y-4 sm:space-y-6">
+                    <section className="p-6 sm:p-8 rounded-md bg-surface-2 border border-stroke-edge space-y-4 sm:space-y-6">
                         <div className="flex items-center gap-2">
                             <Zap className="h-4 w-4 text-electric-cyan" />
                             <h2 className="text-content-muted text-xs sm:text-sm uppercase tracking-widest font-mono">
@@ -471,8 +471,7 @@ export function ChatSettingsPage() {
                                             backgroundColor: `${sessionColor}10`
                                         }}
                                     >
-                                        <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none" />
-                                        <input
+                                                                                <input
                                             id="session-color"
                                             aria-label="Color de la sesión"
                                             type="color"
@@ -506,9 +505,9 @@ export function ChatSettingsPage() {
 
                     {/* Board Meeting Toggle - Only for Group Chats */}
                     {isGroupChat && (
-                        <section className="p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-surface/60 border border-surface-highlight backdrop-blur-sm space-y-4">
+                        <section className="p-6 sm:p-8 rounded-md bg-surface-2 border border-stroke-edge space-y-4">
                             <div className="flex items-center gap-2">
-                                <Users className="h-4 w-4 text-purple-400" />
+                                <Users className="h-4 w-4 text-accent" aria-hidden="true" />
                                 <h2 className="text-content-muted text-xs sm:text-sm uppercase tracking-widest font-mono">Board Meeting</h2>
                             </div>
                             <div className="flex items-center justify-between">
@@ -565,7 +564,7 @@ export function ChatSettingsPage() {
 
                     {/* Group Members Section - Only for Group Chats */}
                     {isGroupChat && (
-                        <section className="p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-surface/60 border border-surface-highlight backdrop-blur-sm space-y-4 sm:space-y-6">
+                        <section className="p-6 sm:p-8 rounded-md bg-surface-2 border border-stroke-edge space-y-4 sm:space-y-6">
                             <div className="flex items-center gap-2">
                                 <span className="text-lg">👥</span>
                                 <h2 className="text-content-muted text-xs sm:text-sm uppercase tracking-widest font-mono">Miembros del Grupo</h2>

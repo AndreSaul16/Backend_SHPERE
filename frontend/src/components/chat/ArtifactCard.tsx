@@ -86,7 +86,7 @@ export function ArtifactCard({ content, language, artifactType, title: propsTitl
                     transition={{ repeat: Infinity, duration: 6, ease: 'linear' }}
                 />
             )}
-            <div className="relative bg-surface/50 border border-surface-highlight rounded-xl overflow-hidden hover:border-electric-cyan/30 transition-all shadow-lg backdrop-blur-sm">
+            <div className="relative bg-surface-2 border border-stroke-edge rounded-md overflow-hidden hover:border-brass-600 transition-colors shadow-e2">
                 <div className="px-4 py-3 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3 min-w-0">
                         <div className="p-2 bg-midnight rounded-lg text-electric-cyan group-hover:scale-110 transition-transform">

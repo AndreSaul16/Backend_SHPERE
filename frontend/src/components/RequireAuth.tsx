@@ -2,7 +2,7 @@
  * RequireAuth: wrapper que redirige a /login si no hay sesión.
  *
  * D24: su estado de carga era la última pantalla que quedaba con el diseño
- * viejo (`bg-gray-900` + `text-purple-400`) y encima `min-h-screen`, que §4.3
+ * viejo (gris de Tailwind y tinta violeta) y encima `min-h-screen`, que §4.3
  * prohíbe por el hueco de Safari móvil. Ahora es paño, tinta y el glifo de
  * espera de §9.12 («si la forma del contenido no se conoce, spinner»), con
  * `role="status"` para que la espera exista también sin verla.

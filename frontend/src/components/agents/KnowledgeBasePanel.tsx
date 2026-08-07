@@ -309,7 +309,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
             className="flex flex-col h-full bg-transparent overflow-hidden"
         >
             {/* Header */}
-            <div className="px-6 py-5 border-b border-white/5 bg-white/[0.02] backdrop-blur-md flex items-center justify-between">
+            <div className="px-6 py-5 border-b border-white/5 bg-surface-1 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-luxury-purple/10 rounded-xl">
                         <Database className="h-5 w-5 text-luxury-purple" />
@@ -335,7 +335,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                     ].map(({ icon: Icon, label, value }) => (
                         <div
                             key={label}
-                            className="flex items-center gap-2.5 p-3 rounded-2xl bg-white/[0.03] border border-white/5"
+                            className="flex items-center gap-2.5 p-3 rounded-md bg-white/[0.03] border border-white/5"
                         >
                             <Icon className="h-4 w-4 text-electric-cyan shrink-0" />
                             <div className="min-w-0">
@@ -361,7 +361,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
 
                 {/* Error state */}
                 {!isLoading && fetchError && (
-                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-red-500/10 border border-red-500/20">
+                    <div className="flex items-center gap-3 p-4 rounded-md bg-red-500/10 border border-red-500/20">
                         <AlertCircle className="h-5 w-5 text-red-400 shrink-0" />
                         <p className="text-sm text-red-300">{fetchError}</p>
                     </div>
@@ -372,7 +372,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                     <div className="flex flex-col items-center justify-center py-16 gap-6 text-center">
                         <div className="relative">
                             <div className="absolute inset-0 bg-luxury-purple/20 blur-3xl rounded-full" />
-                            <div className="relative h-24 w-24 rounded-[32px] bg-white/[0.03] border border-white/10 flex items-center justify-center shadow-2xl">
+                            <div className="relative h-24 w-24 rounded-md bg-white/[0.03] border border-white/10 flex items-center justify-center shadow-2xl">
                                 <FilePlus className="h-10 w-10 text-content-muted" aria-hidden="true" />
                             </div>
                         </div>
@@ -397,7 +397,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                             exit={{ opacity: 0, height: 0 }}
                             className="overflow-hidden"
                         >
-                            <div className="p-4 rounded-2xl bg-white/[0.03] border border-electric-cyan/20">
+                            <div className="p-4 rounded-md bg-white/[0.03] border border-electric-cyan/20">
                                 <div className="flex items-center gap-3 mb-3">
                                     <Upload className="h-4 w-4 text-electric-cyan animate-pulse shrink-0" />
                                     <span className="text-sm text-white font-medium truncate flex-1">
@@ -412,8 +412,8 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                                         className={cn(
                                             'h-full rounded-full',
                                             item.error
-                                                ? 'bg-red-500'
-                                                : 'bg-gradient-to-r from-electric-cyan to-luxury-purple',
+                                                ? 'bg-dissent-strong'
+                                                : 'bg-accent-fill',
                                         )}
                                         initial={{ width: 0 }}
                                         animate={{ width: `${item.progress}%` }}
@@ -435,7 +435,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, x: -20 }}
                             data-row
-                            className="group flex items-center gap-4 p-4 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-white/10 transition-all"
+                            className="group flex items-center gap-4 p-4 rounded-md bg-white/[0.03] border border-white/5 hover:border-white/10 transition-all"
                         >
                             {/* Status indicator */}
                             <div className="h-10 w-10 rounded-xl bg-white/[0.05] border border-white/5 flex items-center justify-center shrink-0">
@@ -520,7 +520,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                         elemento interactivo nativo. */}
                     <div
                         className={cn(
-                            'relative rounded-2xl border-2 border-dashed transition-all duration-300',
+                            'relative rounded-md border-2 border-dashed transition-all duration-300',
                             isDragOver
                                 ? 'border-accent/60 bg-accent/5'
                                 : 'border-stroke-edge hover:border-brass-600',
@@ -532,14 +532,14 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                             onDragLeave={handleDragLeave}
                             onDrop={handleDrop}
                             onClick={() => fileInputRef.current?.click()}
-                            className="flex w-full flex-col items-center justify-center gap-3 p-6 rounded-2xl cursor-pointer"
+                            className="flex w-full flex-col items-center justify-center gap-3 p-6 rounded-md cursor-pointer"
                         >
                             {/* <span>, no <div>: el modelo de contenido de
                                 <button> es contenido de frase, y un <div>
                                 dentro es HTML inválido (§12.8). */}
                             <span
                                 className={cn(
-                                    'p-3 rounded-2xl transition-colors',
+                                    'p-3 rounded-md transition-colors',
                                     isDragOver ? 'bg-accent/10' : 'bg-surface-3',
                                 )}
                             >

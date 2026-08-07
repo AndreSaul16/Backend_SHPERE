@@ -7,11 +7,14 @@ import { Save, RotateCcw, Bot } from "lucide-react";
 import { agentOverridesService, type AgentOverride } from "@/services/api";
 import { TextAreaField, TextField } from "@/components/ui/Field";
 
+// §2.8: la identidad de cada director es su token, no un color crudo de
+// Tailwind elegido a ojo — los cuatro de antes no eran ni siquiera los colores
+// de sus directores.
 const CORE_ROLES = [
-  { id: "CEO", name: "Oberon — CEO", color: "text-amber-400" },
-  { id: "CTO", name: "Nexus — CTO", color: "text-electric-cyan" },
-  { id: "CMO", name: "Vortex — CMO", color: "text-pink-400" },
-  { id: "CFO", name: "Ledger — CFO", color: "text-emerald-400" },
+  { id: "CEO", name: "Oberon — CEO", color: "text-agent-ceo" },
+  { id: "CTO", name: "Nexus — CTO", color: "text-agent-cto" },
+  { id: "CMO", name: "Vortex — CMO", color: "text-agent-cmo" },
+  { id: "CFO", name: "Ledger — CFO", color: "text-agent-cfo" },
 ];
 
 export function AgentOverridesSettings() {
@@ -103,7 +106,7 @@ export function AgentOverridesSettings() {
         return (
           <section
             key={role.id}
-            className="p-5 rounded-2xl bg-surface/30 border border-surface-highlight space-y-3"
+            className="p-5 rounded-md bg-surface/30 border border-surface-highlight space-y-3"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 font-semibold">

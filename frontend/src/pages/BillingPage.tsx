@@ -59,7 +59,7 @@ const BillingSkeleton: React.FC = () => (
         <div className="h-9 bg-surface-highlight/50 rounded-lg w-64 mb-8" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
             {[0, 1].map((i) => (
-                <div key={i} className="glass-panel p-6 rounded-2xl border border-surface-highlight space-y-4">
+                <div key={i} className="glass-panel p-6 rounded-md border border-surface-highlight space-y-4">
                     <div className="h-6 bg-surface-highlight/50 rounded w-40" />
                     <div className="h-10 bg-surface-highlight/50 rounded w-24" />
                     <div className="h-4 bg-surface-highlight/50 rounded w-32" />
@@ -149,7 +149,7 @@ export const BillingPage: React.FC = () => {
     if (error) {
         return (
             <div className="p-8 w-full max-w-5xl mx-auto flex flex-col items-center justify-center min-h-[50vh] gap-6">
-                <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-8 text-center max-w-md">
+                <div className="bg-red-500/10 border border-red-500/30 rounded-md p-8 text-center max-w-md">
                     <div className="text-4xl mb-4">⚠️</div>
                     <h2 className="text-xl font-bold text-red-400 mb-2">Error de conexión</h2>
                     <p className="text-content-muted mb-6">{error}</p>
@@ -167,7 +167,7 @@ export const BillingPage: React.FC = () => {
     return (
         <div className="flex flex-col h-full bg-midnight/40 overflow-y-auto">
             {/* Header */}
-            <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-surface flex items-center gap-3 bg-midnight/90 backdrop-blur-md sticky top-0 z-10">
+            <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-surface flex items-center gap-3 bg-surface-0 sticky top-0 z-10">
                 <Link to="/" className="p-2 hover:bg-surface rounded-full transition-colors text-content-muted hover:text-content-strong">
                     <ArrowLeft className="h-5 w-5" />
                 </Link>
@@ -180,7 +180,7 @@ export const BillingPage: React.FC = () => {
             <div className="flex-1 p-4 sm:p-8 w-full max-w-5xl mx-auto">
                 {/* Aviso: Stripe no configurado */}
                 {!stripe_configured && (
-                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 mb-8 flex items-center gap-3">
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-md p-4 mb-8 flex items-center gap-3">
                         <span className="text-2xl">⚠️</span>
                         <p className="text-amber-400 text-sm font-medium">
                             Pagos no disponibles temporalmente. El sistema de pagos no está configurado en este momento.
@@ -190,7 +190,7 @@ export const BillingPage: React.FC = () => {
 
                 {/* Error de acción (checkout) */}
                 {actionError && (
-                    <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 mb-8 flex items-center justify-between gap-3">
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-md p-4 mb-8 flex items-center justify-between gap-3">
                         <p className="text-red-400 text-sm">{actionError}</p>
                         <button onClick={() => setActionError(null)} className="text-red-400 hover:text-content-strong text-sm">✕</button>
                     </div>
@@ -199,7 +199,7 @@ export const BillingPage: React.FC = () => {
                 {/* Resumen: Balance de créditos + Almacenamiento */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
                     {/* Balance */}
-                    <div className="glass-panel p-6 rounded-2xl border border-surface-highlight">
+                    <div className="glass-panel p-6 rounded-md border border-surface-highlight">
                         <div className="flex items-center gap-2 mb-4">
                             <Zap className="h-4 w-4 text-electric-cyan" />
                             <h2 className="text-xs uppercase tracking-widest font-mono text-content-muted">Tus Créditos</h2>
@@ -221,7 +221,7 @@ export const BillingPage: React.FC = () => {
                     </div>
 
                     {/* Almacenamiento de documentos (GridFS) */}
-                    <div className="glass-panel p-6 rounded-2xl border border-surface-highlight">
+                    <div className="glass-panel p-6 rounded-md border border-surface-highlight">
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-2">
                                 <HardDrive className="h-4 w-4 text-luxury-purple" />
@@ -266,7 +266,7 @@ export const BillingPage: React.FC = () => {
                         </p>
 
                         {/* Consentimiento UE: ejecución inmediata + renuncia al desistimiento */}
-                        <label htmlFor="billing-consent" className="flex items-start gap-3 mb-6 p-4 glass-panel rounded-2xl border border-surface-highlight cursor-pointer select-none">
+                        <label htmlFor="billing-consent" className="flex items-start gap-3 mb-6 p-4 glass-panel rounded-md border border-surface-highlight cursor-pointer select-none">
                             <input
                                 id="billing-consent"
                                 type="checkbox"
@@ -286,7 +286,7 @@ export const BillingPage: React.FC = () => {
                             {PACKS.map((pack) => (
                                 <div
                                     key={pack.id}
-                                    className={`glass-panel p-6 rounded-2xl border flex flex-col relative overflow-hidden ${
+                                    className={`glass-panel p-6 rounded-md border flex flex-col relative overflow-hidden ${
                                         pack.popular ? 'border-luxury-purple/50' : 'border-surface-highlight'
                                     }`}
                                 >
@@ -323,7 +323,7 @@ export const BillingPage: React.FC = () => {
                         <p className="text-sm text-content-muted mb-6">Recargas pequeñas para cuando solo necesitas un empujón.</p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             {TOPUPS.map((t) => (
-                                <div key={t.id} className="glass-panel p-6 rounded-2xl border border-surface-highlight flex items-center justify-between gap-4">
+                                <div key={t.id} className="glass-panel p-6 rounded-md border border-surface-highlight flex items-center justify-between gap-4">
                                     <div>
                                         <h3 className="text-base font-bold text-content-strong">{t.name}</h3>
                                         <p className="text-sm text-electric-cyan font-medium">{t.credits}</p>

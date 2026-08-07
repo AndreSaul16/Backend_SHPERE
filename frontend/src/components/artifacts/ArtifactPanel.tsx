@@ -29,7 +29,7 @@ export function ArtifactPanel() {
     return (
         <div className="flex flex-col h-full bg-transparent overflow-hidden">
             {/* Header */}
-            <div className="h-16 px-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02] backdrop-blur-md">
+            <div className="h-16 px-6 border-b border-white/5 flex items-center justify-between bg-surface-1">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-luxury-purple/10 rounded-lg">
                         <FileCode className="h-5 w-5 text-luxury-purple" />
@@ -68,15 +68,15 @@ export function ArtifactPanel() {
                                         key={artifact.id}
                                         onClick={() => setActiveArtifact(artifact.id)}
                                         className={cn(
-                                            "w-full p-3 rounded-2xl flex items-center gap-3 text-left transition-all group relative duration-300",
+                                            "w-full p-3 rounded-md flex items-center gap-3 text-left transition-colors group relative duration-(--duration-tap)",
                                             isActive
-                                                ? "bg-luxury-purple/10 border border-luxury-purple/20 text-luxury-purple"
-                                                : "hover:bg-white/5 text-content-muted hover:text-content-strong border border-transparent"
+                                                ? "bg-accent/12 border border-accent text-accent"
+                                                : "hover:bg-stroke-hairline text-content-muted hover:text-content-strong border border-transparent"
                                         )}
                                     >
                                         <div className={cn(
-                                            "h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110",
-                                            isActive ? "bg-luxury-purple text-midnight shadow-[0_0_15px_rgba(157,133,255,0.4)]" : "bg-white/5"
+                                            "h-10 w-10 rounded-sm flex items-center justify-center flex-shrink-0",
+                                            isActive ? "bg-accent-fill text-accent-on-fill" : "bg-surface-inset"
                                         )}>
                                             <Icon className="h-5 w-5" />
                                         </div>
@@ -123,7 +123,7 @@ export function ArtifactPanel() {
                             <div className="flex-1 flex flex-col items-center justify-center gap-6 p-8 text-center h-full">
                                 <div className="relative">
                                     <div className="absolute inset-0 bg-luxury-purple/20 blur-3xl rounded-full" />
-                                    <div className="relative h-24 w-24 rounded-[32px] bg-white/[0.03] border border-white/10 flex items-center justify-center shadow-2xl">
+                                    <div className="relative h-24 w-24 rounded-md bg-white/[0.03] border border-white/10 flex items-center justify-center shadow-2xl">
                                         <GitBranch className="h-10 w-10 text-content-muted animate-pulse" aria-hidden="true" />
                                     </div>
                                 </div>

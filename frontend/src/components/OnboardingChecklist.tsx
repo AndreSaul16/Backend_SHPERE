@@ -79,7 +79,7 @@ export function OnboardingChecklist({ onPrimaryAction }: Props) {
         <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="w-full rounded-2xl bg-white/[0.02] border border-white/10 p-4 space-y-2.5 text-left"
+            className="w-full rounded-md bg-white/[0.02] border border-white/10 p-4 space-y-2.5 text-left"
         >
             <div className="flex items-center justify-between">
                 <p className="text-micro font-mono uppercase text-electric-cyan">Primeros pasos</p>
