@@ -427,6 +427,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                             initial={{ opacity: 0, y: 8 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, x: -20 }}
+                            data-row
                             className="group flex items-center gap-4 p-4 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-white/10 transition-all"
                         >
                             {/* Status indicator */}
@@ -468,12 +469,21 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
 
                             {/* Delete button */}
                             {!readOnly && (
+                                /* D16 (1.11): era `opacity-0 group-hover:opacity-100`,
+                                   o sea borrar un documento no se podía ni con
+                                   teclado ni en táctil. El contrato está en
+                                   `index.css` (`[data-row]`/`[data-row-actions]`):
+                                   visible por defecto, y sólo se esconde donde
+                                   hay hover fino. El `title` deja de ser la
+                                   única etiqueta (§9.6). */
                                 <button
+                                    type="button"
                                     onClick={() => deleteDocument(doc.id)}
-                                    className="p-2 rounded-xl opacity-0 group-hover:opacity-100 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all active-scale shrink-0"
-                                    title="Eliminar documento"
+                                    data-row-actions
+                                    aria-label={`Eliminar el documento ${doc.filename}`}
+                                    className="flex h-11 w-11 items-center justify-center rounded-xl bg-dissent/10 text-dissent hover:bg-dissent/20 transition-all active-scale shrink-0"
                                 >
-                                    <Trash2 className="h-4 w-4" />
+                                    <Trash2 className="h-4 w-4" aria-hidden="true" />
                                 </button>
                             )}
                         </motion.div>

@@ -483,6 +483,16 @@
     [data-row]:focus-within [data-row-actions],
     [data-row-actions]:focus-within{ opacity: 1; }
   }
+  /* §12.11: ≥44×44 en puntero grueso. Sin esto una acción de fila puede estar
+     «visible» en móvil y seguir siendo inalcanzable — que es el defecto que
+     1.11 viene a cerrar, no sólo el de la opacidad. En puntero fino se dejan
+     los 32px, que es lo que pide la densidad del pie del turno. */
+  @media (pointer: coarse){
+    [data-row-actions] :is(button,a),
+    button[data-row-actions], a[data-row-actions]{
+      min-block-size: 44px; min-inline-size: 44px;
+    }
+  }
 
   /* El acta se lee siempre sobre papel, en los dos temas.
      B9 (auditoría v3): la hoja no re-colorea por elemento — RE-DECLARA EL

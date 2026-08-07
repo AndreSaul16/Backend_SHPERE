@@ -13,6 +13,15 @@ import { ToolExecutionCard } from './ToolExecutionCard';
 import { useChatStore } from '@/store/useChatStore';
 import { useUserAvatar } from '@/hooks/useUserAvatar';
 
+/**
+ * Acción de la fila del turno (§9.11 «acciones»). Un solo sitio para las cinco:
+ * el tamaño táctil de §12.11 (≥44×44 en `pointer: coarse`, y ahí lo estira la
+ * regla de `index.css`) y el color de §2.2 —el token silenciado del sistema es
+ * `ink-300`, 9.87:1 sobre e1— en vez del gris 500 de antes, ≈2.7:1.
+ */
+const ROW_ACTION_CLASS =
+    'flex h-8 w-8 items-center justify-center rounded-sm text-content-muted transition-colors hover:bg-stroke-hairline hover:text-content-strong';
+
 interface MessageBubbleProps {
     message: Message;
     agent?: Agent;
@@ -192,6 +201,7 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                     initial={{ opacity: 0, y: 10, scale: 0.97 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ duration: 0.4, ease: "easeOut" }}
+                    data-row
                     className={cn(
                         "group p-3 sm:p-4 rounded-2xl shadow-lg text-sm leading-relaxed border text-left",
                         "min-w-[80px] max-w-full overflow-hidden",
@@ -442,38 +452,57 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
 
                     {/* Action buttons + timestamp footer */}
                     <div className="flex items-center justify-between gap-2 mt-2">
-                        {/* Action Buttons — visible on hover via group */}
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                            {/* Copy */}
-                            <button onClick={handleCopy} className="p-1 rounded hover:bg-white/10 text-gray-500 hover:text-white transition-colors" title="Copiar">
-                                {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                        {/* Acciones del turno — D16 (1.11) · DESIGN §9.11 «acciones»
+                            y P5. Eran `opacity-0 group-hover:opacity-100`: copiar,
+                            anclar, valorar, regenerar y borrar quedaban
+                            INALCANZABLES por teclado (el hover no llega) e
+                            invisibles en táctil (donde el hover no existe).
+
+                            El contrato vive en `index.css` (`[data-row]` /
+                            `[data-row-actions]`) y no aquí a propósito: el punto
+                            de partida por defecto es VISIBLE y sólo se oculta
+                            cuando el dispositivo demuestra tener hover fino
+                            —`@media (hover:hover) and (pointer:fine)`—, donde
+                            reaparece con `:hover` Y con `:focus-within`. Con
+                            utilidades sería al revés: se parte de oculto y
+                            cualquier excepción que falte deja la acción
+                            inalcanzable sin que nada avise.
+
+                            gap-2 (8px) y no gap-1: §12.15 exige ≥8px de espacio
+                            muerto entre dos objetivos táctiles adyacentes. */}
+                        <div className="flex items-center gap-2" data-row-actions>
+                            {/* Copiar. `aria-label` y no sólo `title`: §9.6
+                                prohíbe que el `title` sea la única etiqueta, y
+                                en táctil el `title` no aparece nunca. */}
+                            <button type="button" onClick={handleCopy} aria-label={copied ? "Copiado" : "Copiar el mensaje"} className={ROW_ACTION_CLASS} title="Copiar">
+                                {copied ? <Check className="h-3.5 w-3.5 text-success" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
                             </button>
 
-                            {/* Pin */}
+                            {/* Anclar */}
                             {onPin && (
-                                <button onClick={onPin} className={cn("p-1 rounded hover:bg-white/10 transition-colors", isPinned ? "text-yellow-500" : "text-gray-500 hover:text-white")} title={isPinned ? "Desanclar" : "Anclar"}>
-                                    <Pin className="h-3 w-3" />
+                                <button type="button" onClick={onPin} aria-pressed={isPinned} aria-label={isPinned ? "Desanclar el mensaje" : "Anclar el mensaje"} className={cn(ROW_ACTION_CLASS, isPinned && "text-warning")} title={isPinned ? "Desanclar" : "Anclar"}>
+                                    <Pin className="h-3.5 w-3.5" aria-hidden="true" />
                                 </button>
                             )}
 
                             {/* AI-only actions */}
                             {!isUser && !isSystem && (
                                 <>
-                                    {/* Regenerate */}
+                                    {/* Regenerar */}
                                     {onRegenerate && (
-                                        <button onClick={onRegenerate} className="p-1 rounded hover:bg-white/10 text-gray-500 hover:text-white transition-colors" title="Regenerar">
-                                            <RefreshCw className="h-3 w-3" />
+                                        <button type="button" onClick={onRegenerate} aria-label="Regenerar la respuesta" className={ROW_ACTION_CLASS} title="Regenerar">
+                                            <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
                                         </button>
                                     )}
 
-                                    {/* Rating */}
+                                    {/* Valoración */}
                                     {onRate && (
                                         <>
-                                            <button onClick={() => onRate('up')} className={cn("p-1 rounded hover:bg-white/10 transition-colors", rating === 'up' ? "text-emerald-400" : "text-gray-500 hover:text-white")} title="Buena respuesta">
-                                                <ThumbsUp className="h-3 w-3" />
+                                            <button type="button" onClick={() => onRate('up')} aria-pressed={rating === 'up'} aria-label="Valorar como buena respuesta" className={cn(ROW_ACTION_CLASS, rating === 'up' && "text-success")} title="Buena respuesta">
+                                                <ThumbsUp className="h-3.5 w-3.5" aria-hidden="true" />
                                             </button>
-                                            <button onClick={() => onRate('down')} className={cn("p-1 rounded hover:bg-white/10 transition-colors", rating === 'down' ? "text-red-400" : "text-gray-500 hover:text-white")} title="Mala respuesta">
-                                                <ThumbsDown className="h-3 w-3" />
+                                            <button type="button" onClick={() => onRate('down')} aria-pressed={rating === 'down'} aria-label="Valorar como mala respuesta" className={cn(ROW_ACTION_CLASS, rating === 'down' && "text-dissent")} title="Mala respuesta">
+                                                <ThumbsDown className="h-3.5 w-3.5" aria-hidden="true" />
                                             </button>
                                         </>
                                     )}
@@ -484,8 +513,8 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                             {isUser && (
                                 <>
                                     {onDelete && (
-                                        <button onClick={onDelete} className="p-1 rounded hover:bg-white/10 text-gray-500 hover:text-red-400 transition-colors" title="Eliminar">
-                                            <Trash2 className="h-3 w-3" />
+                                        <button type="button" onClick={onDelete} aria-label="Eliminar el mensaje" className={cn(ROW_ACTION_CLASS, "hover:text-dissent")} title="Eliminar">
+                                            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                                         </button>
                                     )}
                                 </>

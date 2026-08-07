@@ -164,7 +164,10 @@ describe('KnowledgeBasePanel — regresión P0 (b7452be)', () => {
         render(<KnowledgeBasePanel agentId={AGENT_ID} />);
         await screen.findByText('informe.pdf');
 
-        const buttons = screen.getAllByTitle('Eliminar documento');
+        // El botón nombra el objeto (§11): `Eliminar el documento «X»`. Antes
+        // su única etiqueta era el `title`, que §9.6 prohíbe y que en táctil no
+        // aparece nunca.
+        const buttons = screen.getAllByRole('button', { name: /^Eliminar el documento/ });
         expect(buttons).toHaveLength(2);
         fireEvent.click(buttons[0]);
 
@@ -190,7 +193,7 @@ describe('KnowledgeBasePanel — regresión P0 (b7452be)', () => {
         render(<KnowledgeBasePanel agentId={AGENT_ID} />);
         await screen.findByText('informe.pdf');
 
-        fireEvent.click(screen.getByTitle('Eliminar documento'));
+        fireEvent.click(screen.getByRole('button', { name: 'Eliminar el documento informe.pdf' }));
 
         await waitFor(() => expect(consoleError).toHaveBeenCalled());
         // No hay borrado optimista: si el backend rechaza, la fila sigue.
@@ -205,7 +208,7 @@ describe('KnowledgeBasePanel — regresión P0 (b7452be)', () => {
         render(<KnowledgeBasePanel agentId={AGENT_ID} readOnly />);
         await screen.findByText('informe.pdf');
 
-        expect(screen.queryByTitle('Eliminar documento')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^Eliminar el documento/ })).not.toBeInTheDocument();
     });
 
     // ---------------------------------------------------------------------

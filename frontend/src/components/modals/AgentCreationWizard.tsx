@@ -1171,6 +1171,7 @@ function StepKnowledge({
                         {files.map((entry) => (
                             <div
                                 key={entry.id}
+                                data-row
                                 className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/5 group"
                             >
                                 <div className="p-2 bg-white/5 rounded-lg shrink-0">
@@ -1211,13 +1212,22 @@ function StepKnowledge({
                                         </div>
                                     )}
                                 </div>
-                                {/* Remove button */}
+                                {/* Quitar un adjunto — D16 (1.11). Era
+                                    `opacity-0 group-hover:opacity-100`: sin ratón
+                                    no había forma de retirar un fichero mal
+                                    elegido. El contrato vive en `index.css`
+                                    (`[data-row]`/`[data-row-actions]`) y parte de
+                                    VISIBLE. Sin etiqueta era además un botón sin
+                                    nombre accesible. */}
                                 {(entry.status === 'pending' || entry.status === 'error') && (
                                     <button
+                                        type="button"
                                         onClick={() => onRemoveFile(entry.id)}
-                                        className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-all shrink-0"
+                                        data-row-actions
+                                        aria-label={`Quitar ${entry.file.name} de la lista`}
+                                        className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-dissent/10 text-content-muted hover:text-dissent transition-all shrink-0"
                                     >
-                                        <Trash2 className="h-3.5 w-3.5" />
+                                        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                                     </button>
                                 )}
                             </div>
