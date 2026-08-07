@@ -733,8 +733,8 @@ function StepChooseMethod({
             )}
 
             {templatesError && (
-                <div className="flex items-center justify-center py-12 gap-3 text-red-400/80">
-                    <AlertCircle className="h-5 w-5" />
+                <div className="flex items-center justify-center py-12 gap-3 text-danger">
+                    <AlertCircle className="h-5 w-5" aria-hidden="true" />
                     <span className="text-sm">{templatesError}</span>
                 </div>
             )}

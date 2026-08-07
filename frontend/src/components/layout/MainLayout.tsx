@@ -167,7 +167,7 @@ export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayo
                         )}
                     >
                         <GripVertical className={cn(
-                            "h-6 w-4 text-white/20 group-hover:text-electric-cyan transition-colors",
+                            "h-6 w-4 text-stroke-control group-hover:text-accent transition-colors",
                             isResizing && "text-electric-cyan"
                         )} aria-hidden="true" />
                     </div>

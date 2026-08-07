@@ -377,7 +377,7 @@ export function ChatPanel() {
                             </span>
                         </div>
                         <div className="flex items-center gap-2 mt-0.5 min-w-0">
-                            <ShieldCheck className="h-3 w-3 text-emerald-500/50 shrink-0" />
+                            <ShieldCheck className="h-3 w-3 text-emerald-500/50 shrink-0" aria-hidden="true" />
                             <p className="text-[10px] text-content-muted font-mono uppercase tracking-tighter truncate">
                                 {isGroupChat
                                     ? `${groupMembers.length} Expertos Activos`
