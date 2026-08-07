@@ -39,14 +39,20 @@ export function MarkdownViewer({ artifact }: MarkdownViewerProps) {
             </div>
 
             {/* Markdown Content */}
-            <div className="flex-1 overflow-auto p-8 sm:p-12 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+            {/* F3: el relleno era `p-8 sm:p-12` + `p-8 sm:p-10` en la hoja, o
+                sea 176px de márgenes dentro de un panel de 480px, y `sm:` mide
+                el VIEWPORT, no el panel: en escritorio se aplicaba el relleno
+                grande justo donde menos sitio hay. Con la tira de pestañas
+                horizontal y estos valores, al acta le queda ~370px de columna
+                en el ancho por defecto en vez de ~119px. */}
+            <div className="flex-1 overflow-auto p-4 sm:p-6 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                 {/* El acta se lee sobre papel, en los dos temas: `.acta-sheet`
                     aporta la superficie, el bisel de 6px y — lo importante — el
                     re-mapeo de contexto de variables de DESIGN §13, sin el cual
                     `.doc-prose` sacaría tinta clara sobre papel (blockquote a
                     1.13:1, viñetas a 2.10:1). La cabecera con fecha y recuento y
                     la medida definitiva son de la tarea 2.1. */}
-                <article className="acta-sheet mx-auto p-8 sm:p-10">
+                <article className="acta-sheet mx-auto p-6 sm:p-8">
                     <div className="doc-prose">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
                             {artifact.content}

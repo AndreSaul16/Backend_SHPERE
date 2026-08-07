@@ -12,10 +12,18 @@ interface MainLayoutProps {
     className?: string;
 }
 
-// Min/Max widths for the artifact panel (in pixels)
-const MIN_PANEL_WIDTH = 350;
-const MAX_PANEL_WIDTH = 800;
-const DEFAULT_PANEL_WIDTH = 450;
+/**
+ * Ancho del panel de artefactos — DESIGN §4.2 (`--panel-artifact-*`).
+ *
+ * F3: el panel abría en 450px y su carril de pestañas se llevaba 224px fijos,
+ * así que al acta —el entregable del producto— le quedaban ~215px de los 1440
+ * de la pantalla y el título salía partido a media palabra. El carril pasa a ser
+ * una tira horizontal (ver `ArtifactPanel`) y el ancho por defecto se alinea con
+ * el token del contrato, con lo que la hoja recupera el panel entero.
+ */
+const MIN_PANEL_WIDTH = 380;
+const MAX_PANEL_WIDTH = 760;
+const DEFAULT_PANEL_WIDTH = 480;
 
 export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayoutProps) {
     const { isSidebarOpen, toggleSidebar, isArtifactPanelOpen } = useChatStore();

@@ -391,6 +391,12 @@
     color: var(--content);
     max-inline-size: var(--container-measure);
     text-wrap: pretty;
+    /* F3: una palabra más ancha que la columna no puede salirse de la hoja.
+       `overflow-wrap` se hereda, así que esto cubre también los encabezados,
+       que es donde se veía —«Acta de la Junt‸ Direc‸» cortado por el borde del
+       panel—. §4.2: la medida real es el ancho disponible; lo que nunca se
+       permite es desbordar. */
+    overflow-wrap: break-word;
   }
   .doc-prose > * + *{ margin-block-start: 0.75em; }
 

@@ -1,4 +1,5 @@
 // Artifacts Panel - Main Workspace Component
+import { useCallback, useRef } from 'react';
 import { X, FileCode, FileText, Table, GitBranch, File } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChatStore } from '@/store/useChatStore';
@@ -25,6 +26,24 @@ export function ArtifactPanel() {
     } = useChatStore();
 
     const activeArtifact = artifacts.find(a => a.id === activeArtifactId);
+
+    // §9.8: flechas ←/→ para moverse entre pestañas, Home/End a los extremos.
+    // El foco viaja con la selección, que es el patrón de tabs automáticas.
+    const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+    const handleTabKeyDown = useCallback((e: React.KeyboardEvent) => {
+        const teclas = ['ArrowRight', 'ArrowLeft', 'Home', 'End'];
+        if (!teclas.includes(e.key) || artifacts.length === 0) return;
+        e.preventDefault();
+        const actual = artifacts.findIndex(a => a.id === activeArtifactId);
+        const desde = actual < 0 ? 0 : actual;
+        const destino =
+            e.key === 'Home' ? 0
+                : e.key === 'End' ? artifacts.length - 1
+                    : (desde + (e.key === 'ArrowRight' ? 1 : -1) + artifacts.length) % artifacts.length;
+        const siguiente = artifacts[destino];
+        setActiveArtifact(siguiente.id);
+        tabRefs.current[siguiente.id]?.focus();
+    }, [artifacts, activeArtifactId, setActiveArtifact]);
 
     return (
         <div className="flex flex-col h-full bg-transparent overflow-hidden">
@@ -54,55 +73,70 @@ export function ArtifactPanel() {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 flex min-h-0">
-                {/* Tabs Sidebar */}
-                {artifacts.length > 0 && (
-                    <div className="w-16 sm:w-56 border-r border-stroke-hairline overflow-y-auto scrollbar-none flex-shrink-0 bg-surface-1">
-                        <div className="p-3 space-y-2">
-                            {artifacts.map((artifact) => {
-                                const Icon = ARTIFACT_ICONS[artifact.type] || File;
-                                const isActive = artifact.id === activeArtifactId;
+            <div className="flex-1 flex flex-col min-h-0">
+                {/* Tira de pestañas — DESIGN §9.8, y la mitad visible de F3.
+                    Era un carril VERTICAL de 224px fijos (64px en móvil) que se
+                    comía la mitad del panel: con el ancho por defecto le dejaba
+                    al acta ~215px de los 1440 de pantalla y el documento salía
+                    cortado a media palabra. Una tira horizontal cuesta 48px de
+                    alto y devuelve el ancho entero a la hoja.
 
-                                return (
-                                    <button
-                                        key={artifact.id}
-                                        onClick={() => setActiveArtifact(artifact.id)}
-                                        className={cn(
-                                            "w-full p-3 rounded-md flex items-center gap-3 text-left transition-colors group relative duration-(--duration-tap)",
-                                            isActive
-                                                ? "bg-accent/12 border border-accent text-accent"
-                                                : "hover:bg-stroke-hairline text-content-muted hover:text-content-strong border border-transparent"
-                                        )}
-                                    >
-                                        <div className={cn(
-                                            "h-10 w-10 rounded-sm flex items-center justify-center flex-shrink-0",
-                                            isActive ? "bg-accent-fill text-accent-on-fill" : "bg-surface-inset"
-                                        )}>
-                                            <Icon className="h-5 w-5" />
-                                        </div>
-                                        <div className="flex-1 min-w-0 hidden sm:block">
-                                            <p className="text-xs font-bold truncate">
-                                                {artifact.title}
-                                            </p>
-                                            <p className="text-micro uppercase mt-0.5">
-                                                {artifact.language || artifact.type}
-                                            </p>
-                                        </div>
-                                        {isActive && (
-                                            <motion.div
-                                                layoutId="active-tab"
-                                                className="absolute left-0 top-3 bottom-3 w-1 bg-luxury-purple rounded-full"
-                                            />
-                                        )}
-                                    </button>
-                                );
-                            })}
-                        </div>
+                    §9.8 al pie de la letra: `role="tablist"`, `aria-selected`,
+                    `aria-controls`, subrayado de latón de 2px en vez de relleno,
+                    sólo la activa en el orden de tabulación y flechas ←/→ +
+                    Home/End para moverse. */}
+                {artifacts.length > 0 && (
+                    <div
+                        role="tablist"
+                        aria-label="Artefactos de la sesión"
+                        aria-orientation="horizontal"
+                        onKeyDown={handleTabKeyDown}
+                        className="flex items-stretch gap-1 px-2 border-b border-stroke-hairline bg-surface-1 overflow-x-auto scrollbar-none flex-shrink-0"
+                    >
+                        {artifacts.map((artifact) => {
+                            const Icon = ARTIFACT_ICONS[artifact.type] || File;
+                            const isActive = artifact.id === activeArtifactId;
+
+                            return (
+                                <button
+                                    key={artifact.id}
+                                    id={`artifact-tab-${artifact.id}`}
+                                    role="tab"
+                                    type="button"
+                                    aria-selected={isActive}
+                                    aria-controls="artifact-tabpanel"
+                                    tabIndex={isActive ? 0 : -1}
+                                    ref={(el) => { tabRefs.current[artifact.id] = el; }}
+                                    onClick={() => setActiveArtifact(artifact.id)}
+                                    className={cn(
+                                        "relative flex items-center gap-2 px-3 py-2.5 max-w-[200px] flex-shrink-0 transition-colors duration-(--duration-tap)",
+                                        isActive ? "text-accent" : "text-content-muted hover:text-content-strong"
+                                    )}
+                                >
+                                    <Icon className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                                    <span className="text-xs font-bold truncate">{artifact.title}</span>
+                                    <span className="text-micro uppercase text-content-quiet flex-shrink-0 hidden sm:inline">
+                                        {artifact.language || artifact.type}
+                                    </span>
+                                    {isActive && (
+                                        <motion.div
+                                            layoutId="active-tab"
+                                            className="absolute inset-x-0 bottom-0 h-0.5 bg-accent-fill"
+                                        />
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
                 )}
 
                 {/* Main Viewer */}
-                <div className="flex-1 min-w-0 bg-midnight/20">
+                <div
+                    id="artifact-tabpanel"
+                    role="tabpanel"
+                    aria-labelledby={activeArtifact ? `artifact-tab-${activeArtifact.id}` : undefined}
+                    className="flex-1 min-w-0 min-h-0 bg-midnight/20"
+                >
                     <AnimatePresence mode="wait">
                         {activeArtifact ? (
                             <motion.div
