@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { AGENT_HEX } from '@/store/useChatStore';
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -90,7 +91,7 @@ export function AgentDetailPage() {
     // ── Form State ───────────────────────────────────────────────────────
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
-    const [color, setColor] = useState("#00F0C8");
+    const [color, setColor] = useState(AGENT_HEX.custom);
     const [systemPrompt, setSystemPrompt] = useState("");
     const [temperature, setTemperature] = useState(0.7);
     const [model, setModel] = useState<AllowedModel>("deepseek-v4-pro");
@@ -131,7 +132,7 @@ export function AgentDetailPage() {
 
                 setName(data.identity?.name ?? "");
                 setDescription(data.identity?.description ?? "");
-                setColor(data.identity?.color ?? "#00F0C8");
+                setColor(data.identity?.color ?? AGENT_HEX.custom);
                 setRole(data.identity?.role ?? "specialist");
                 setSystemPrompt(data.brain_config?.system_prompt ?? "");
                 setTemperature(data.brain_config?.temperature ?? 0.7);
@@ -145,7 +146,7 @@ export function AgentDetailPage() {
                     JSON.stringify({
                         name: data.identity?.name ?? "",
                         description: data.identity?.description ?? "",
-                        color: data.identity?.color ?? "#00F0C8",
+                        color: data.identity?.color ?? AGENT_HEX.custom,
                         systemPrompt: data.brain_config?.system_prompt ?? "",
                         temperature: data.brain_config?.temperature ?? 0.7,
                         model: ALLOWED_MODELS.includes(data.brain_config?.model as AllowedModel)
@@ -424,12 +425,12 @@ export function AgentDetailPage() {
                                         }}
                                         maxLength={7}
                                         className="w-full bg-midnight/50 border border-white/5 rounded-xl pl-10 pr-4 py-2.5 text-sm font-mono text-content-strong uppercase focus:border-electric-cyan/50 transition-all"
-                                        placeholder="#00F0C8"
+                                        placeholder={AGENT_HEX.custom}
                                     />
                                 </div>
                                 {/* Quick Presets */}
                                 <div className="hidden sm:flex items-center gap-1.5">
-                                    {["#00F0C8", "#7B61FF", "#E34A95", "#6B8AFD", "#00C1B3"].map(
+                                    {[AGENT_HEX.custom, AGENT_HEX.CEO, AGENT_HEX.CMO, AGENT_HEX.CFO, AGENT_HEX.CTO].map(
                                         (preset) => (
                                             <button
                                                 key={preset}

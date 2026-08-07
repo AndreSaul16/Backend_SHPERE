@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Check } from "lucide-react";
 import type { Agent } from "@/types";
-import { getBoardAgentByRole, type BoardSessionState } from "@/store/useChatStore";
+import { AGENT_HEX, getBoardAgentByRole, type BoardSessionState } from "@/store/useChatStore";
 import { cn } from "@/lib/utils";
 
 /**
@@ -70,7 +70,7 @@ export function BoardWarRoom({ board, agents }: { board: BoardSessionState; agen
                             const agent = getBoardAgentByRole(agents, role);
                             const status = board.statusByRole[role] || "idle";
                             const vote = board.votes[role];
-                            const hex = agent?.hexColor || "#00F0C8";
+                            const hex = agent?.hexColor || AGENT_HEX.custom;
                             return (
                                 <div key={role} className="flex flex-col items-center gap-1 w-12">
                                     <div className="relative">

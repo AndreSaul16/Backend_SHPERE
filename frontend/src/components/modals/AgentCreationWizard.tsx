@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TextAreaField, TextField } from '@/components/ui/Field';
-import { useChatStore } from '@/store/useChatStore';
+import { AGENT_HEX, useChatStore } from '@/store/useChatStore';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -93,10 +93,13 @@ const CATEGORY_META: Record<string, { label: string; icon: typeof Scale; color: 
     education: { label: 'Educacion',  icon: GraduationCap, color: 'text-accent' },
 };
 
+// §2.8: las seis identidades del contrato más el latón. Los doce hex de antes
+// eran la paleta del sistema viejo (cian neón, morado, magenta) y ninguno
+// estaba calculado contra el paño.
 const PRESET_COLORS = [
-    '#00F5D4', '#9D85FF', '#FF2E97', '#6B8AFD',
-    '#E34A95', '#00C1B3', '#8A63D2', '#F59E0B',
-    '#10B981', '#EF4444', '#3B82F6', '#EC4899',
+    AGENT_HEX.custom, AGENT_HEX.CTO, AGENT_HEX.CFO,
+    AGENT_HEX.CEO, AGENT_HEX.CMO, AGENT_HEX.DEVIL,
+    AGENT_HEX.user,
 ];
 
 const MODEL_OPTIONS = [

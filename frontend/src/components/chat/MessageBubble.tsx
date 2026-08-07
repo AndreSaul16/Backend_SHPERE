@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import type { Message, Agent } from "@/types";
 import { ArtifactCard } from './ArtifactCard';
 import { ToolExecutionCard } from './ToolExecutionCard';
-import { useChatStore } from '@/store/useChatStore';
+import { AGENT_HEX, useChatStore } from '@/store/useChatStore';
 import { useUserAvatar } from '@/hooks/useUserAvatar';
 import { notify, reasonOf } from '@/lib/toastBus';
 import { AvatarImage } from '@/components/ui/AvatarImage';
@@ -152,7 +152,7 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
     };
 
     // HUD Colors: prioridad sesión > agente > fallback
-    const defaultColor = '#00F0C8'; // Cyan
+    const defaultColor = AGENT_HEX.custom; // latón (§2.8)
     const activeHexColor = agentColor || agent?.hexColor || defaultColor;
 
     // Board V2: etiqueta de "pensando" específica por rol y fase (en vez del genérico).

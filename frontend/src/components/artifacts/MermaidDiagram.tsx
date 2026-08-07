@@ -3,26 +3,50 @@ import mermaid from 'mermaid';
 import { Download, AlertTriangle, GitBranch } from 'lucide-react';
 import type { Artifact } from '@/types/artifact';
 
-mermaid.initialize({
-    startOnLoad: false,
-    securityLevel: 'strict',
-    theme: 'dark',
-    themeVariables: {
-        primaryColor: '#9D85FF',
-        primaryTextColor: '#FFFFFF',
-        primaryBorderColor: '#00F5D4',
-        lineColor: '#00F5D4',
-        secondaryColor: '#0A0A0F',
-        tertiaryColor: '#16161c',
-        background: 'transparent',
-        mainBkg: '#16161c',
-        nodeBorder: '#00F5D4',
-        clusterBkg: '#16161c',
-        titleColor: '#FFFFFF',
-        edgeLabelBackground: '#0A0A0F',
-    },
-    fontFamily: '"JetBrains Mono", monospace',
-});
+/**
+ * DESIGN §10: «`themeVariables` se deriva de los tokens leyendo
+ * `getComputedStyle(document.documentElement)`, nunca con hex literales — hoy
+ * `MermaidDiagram.tsx:11-22` tiene 11 hex clavados, así que un cambio de paleta
+ * arreglaría la app y dejaría todos los diagramas en la paleta antigua».
+ *
+ * Y eso es exactamente lo que había pasado: los diagramas seguían en cian
+ * `#00F5D4` y morado `#9D85FF` cuando el resto del producto ya era paño y
+ * latón. Leyendo la variable, el diagrama sigue al tema — incluido el claro —
+ * sin tocar este fichero.
+ */
+function token(name: string, fallback: string): string {
+    if (typeof window === 'undefined' || !document.documentElement) return fallback;
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return value || fallback;
+}
+
+/** Se llama en el primer render, no en la carga del módulo: en la carga del
+ *  módulo el `<html>` puede no tener todavía la hoja de estilos aplicada. */
+let temaAplicado = false;
+function aplicarTemaMermaid() {
+    if (temaAplicado) return;
+    temaAplicado = true;
+    mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: 'strict',
+        theme: 'dark',
+        themeVariables: {
+            primaryColor: token('--surface-2', '#142119'),
+            primaryTextColor: token('--content', '#EEEDE8'),
+            primaryBorderColor: token('--accent', '#D7A94F'),
+            lineColor: token('--accent', '#D7A94F'),
+            secondaryColor: token('--surface-1', '#0D1811'),
+            tertiaryColor: token('--surface-3', '#1C2A21'),
+            background: 'transparent',
+            mainBkg: token('--surface-2', '#142119'),
+            nodeBorder: token('--accent', '#D7A94F'),
+            clusterBkg: token('--surface-1', '#0D1811'),
+            titleColor: token('--content-strong', '#FBFAF7'),
+            edgeLabelBackground: token('--surface-0', '#060F09'),
+        },
+        fontFamily: '"JetBrains Mono", monospace',
+    });
+}
 
 interface MermaidDiagramProps {
     artifact: Artifact;
@@ -39,6 +63,7 @@ export function MermaidDiagram({ artifact }: MermaidDiagramProps) {
 
             try {
                 setError(null);
+                aplicarTemaMermaid();
                 const id = `mermaid-${artifact.id.replace(/-/g, '_')}`;
                 const { svg } = await mermaid.render(id, artifact.content);
                 setSvgContent(svg);
@@ -67,9 +92,9 @@ export function MermaidDiagram({ artifact }: MermaidDiagramProps) {
     };
 
     return (
-        <div className="flex flex-col h-full bg-[#0d0d12]">
+        <div className="flex flex-col h-full bg-surface-0">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-3 bg-white/[0.02] border-b border-white/5">
+            <div className="flex items-center justify-between px-6 py-3 bg-surface-1 border-b border-stroke-hairline">
                 <div className="flex items-center gap-3">
                     <GitBranch className="h-4 w-4 text-content-muted" aria-hidden="true" />
                     <span className="text-micro font-mono text-content-muted uppercase">

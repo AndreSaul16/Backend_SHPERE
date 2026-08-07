@@ -113,6 +113,36 @@ const AGENT_GREETINGS: Record<string, string> = {
 };
 
 // Lista de Agentes
+/**
+ * Identidades de director — DESIGN §2.8.
+ *
+ * Los hex que había aquí eran la columna «Hex hoy» del contrato, la que §2.8
+ * viene precisamente a sustituir: se preserva la FAMILIA DE TONO de cada
+ * director (es compromiso de marca) y se unifican lightness y croma para que
+ * los cinco lean como un solo sistema y todos pasen AA sobre las cuatro
+ * superficies de paño. Oberon con el hex viejo (`#8A63D2`) daba ≈4,47:1 sobre
+ * `baize-950`, por debajo de AA.
+ *
+ * Estos valores son `hexColor`, o sea los que viajan a SVG, `style` y al color
+ * picker, donde no hay `var()`. El equivalente en token es `--agent-*`.
+ */
+export const AGENT_HEX: Record<
+    'CEO' | 'CTO' | 'CFO' | 'CMO' | 'DEVIL' | 'user' | 'group' | 'custom',
+    string
+> = {
+    CEO: '#B290EC',    // hue 300 · 7.50:1 sobre baize-950 · 5.81:1 sobre baize-800
+    CTO: '#00BFB0',    // hue 185 · 8.42:1 · 6.52:1
+    CFO: '#7BA2F9',    // hue 265 · 7.77:1 · 6.02:1
+    CMO: '#DF80B8',    // hue 345 · 7.34:1 · 5.69:1
+    DEVIL: '#ED7F84',  // hue 18  · 7.39:1 · 5.72:1
+    user: '#2EB2EA',   // hue 232 · 8.04:1 · 6.23:1
+    // La junta entera y los agentes a medida nacen en latón: §2.8 sólo asigna
+    // identidad a los cinco directores, y el cian de antes era el acento del
+    // sistema viejo que §0 rechaza.
+    group: '#D7A94F',
+    custom: '#D7A94F',
+};
+
 const MOCK_AGENTS: Agent[] = [
     {
         id: 'group-chat',
@@ -121,7 +151,7 @@ const MOCK_AGENTS: Agent[] = [
         avatar: '🏛️',
         description: 'Orquestación completa - El Router decide quién responde.',
         color: 'text-content-muted',
-        hexColor: '#00F0C8', // Cyan Electrico (Default)
+        hexColor: AGENT_HEX.group, // latón: la junta es la sala, no un color más
         isOnline: true,
         capabilities: ['Análisis Estratégico', 'Decisiones Ejecutivas', 'Coordinación Multi-agente'],
     },
@@ -132,7 +162,7 @@ const MOCK_AGENTS: Agent[] = [
         avatar: 'O',
         description: 'Visión estratégica y liderazgo ejecutivo.',
         color: 'text-agent-ceo',
-        hexColor: '#8A63D2', // Purple
+        hexColor: AGENT_HEX.CEO,
         isOnline: true,
         capabilities: ['Estrategia Corporativa', 'Toma de Decisiones', 'Visión de Negocio'],
     },
@@ -143,7 +173,7 @@ const MOCK_AGENTS: Agent[] = [
         avatar: 'N',
         description: 'Experto en Arquitectura Cloud y DevOps.',
         color: 'text-agent-cto',
-        hexColor: '#00C1B3', // Teal
+        hexColor: AGENT_HEX.CTO,
         isOnline: true,
         capabilities: ['Cloud Architecture', 'DevOps', 'Seguridad Técnica'],
     },
@@ -154,7 +184,7 @@ const MOCK_AGENTS: Agent[] = [
         avatar: 'V',
         description: 'Estratega de Mercado y Posicionamiento.',
         color: 'text-agent-cmo',
-        hexColor: '#E34A95', // Magenta
+        hexColor: AGENT_HEX.CMO,
         isOnline: true,
         capabilities: ['Marketing Digital', 'Branding', 'Growth Hacking'],
     },
@@ -165,7 +195,7 @@ const MOCK_AGENTS: Agent[] = [
         avatar: 'L',
         description: 'Auditor Financiero y Gestión de Riesgos.',
         color: 'text-agent-cfo',
-        hexColor: '#6B8AFD', // Indigo
+        hexColor: AGENT_HEX.CFO,
         isOnline: true,
         capabilities: ['Análisis Financiero', 'Gestión de Riesgos', 'Proyecciones'],
     },
@@ -180,8 +210,8 @@ export const BOARD_DEVIL_AGENT: Agent = {
     role: 'DEVIL',
     avatar: '⚔️',
     description: 'Estresa la decisión: busca el fallo que el consenso ignora.',
-    color: 'text-rose-400',
-    hexColor: '#FF4D6D',
+    color: 'text-agent-devil',
+    hexColor: AGENT_HEX.DEVIL,
     isOnline: true,
 };
 
@@ -289,7 +319,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 description: a.brain_config.system_prompt.substring(0, 100) + '...',
                 avatar: a.identity.name.charAt(0).toUpperCase(),
                 color: 'bg-surface border-white/5',
-                hexColor: a.identity.color || '#00f2ff',
+                hexColor: a.identity.color || AGENT_HEX.custom,
                 isOnline: true,
                 identity: a.identity,
                 brain_config: a.brain_config,
@@ -314,7 +344,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 description: newAgentData.brain_config.system_prompt.substring(0, 100) + '...',
                 avatar: newAgentData.identity.name.charAt(0).toUpperCase(),
                 color: 'bg-surface border-white/5',
-                hexColor: newAgentData.identity.color || '#00f2ff',
+                hexColor: newAgentData.identity.color || AGENT_HEX.custom,
                 isOnline: true,
                 identity: newAgentData.identity,
                 brain_config: newAgentData.brain_config,

@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { ArrowLeft, Save, Camera, Zap, Pencil, Users, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useChatStore, getGroupMembers } from "@/store/useChatStore";
+import { AGENT_HEX, useChatStore, getGroupMembers } from "@/store/useChatStore";
 import { cn } from "@/lib/utils";
 import { TextField } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
@@ -418,11 +418,11 @@ export function ChatSettingsPage() {
                             /* Presets for Group Chat */
                             <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 sm:gap-4">
                                 {[
-                                    { name: 'Cyan', hex: '#00F0C8' },
-                                    { name: 'Teal', hex: '#00C1B3' },
-                                    { name: 'Indigo', hex: '#6B8AFD' },
-                                    { name: 'Purple', hex: '#8A63D2' },
-                                    { name: 'Magenta', hex: '#E34A95' },
+                                    { name: 'Latón', hex: AGENT_HEX.custom },
+                                    { name: 'Nexus', hex: AGENT_HEX.CTO },
+                                    { name: 'Ledger', hex: AGENT_HEX.CFO },
+                                    { name: 'Oberon', hex: AGENT_HEX.CEO },
+                                    { name: 'Vortex', hex: AGENT_HEX.CMO },
                                 ].map((c) => (
                                     <button
                                         key={c.hex}
@@ -663,7 +663,7 @@ export function ChatSettingsPage() {
                                     {/* §9.9: el estado activo de un chip no puede ser
                                         sólo cromático — de ahí `aria-pressed`. */}
                                     <div className="flex gap-2" role="group" aria-label="Colores sugeridos">
-                                        {['#8A63D2', '#00C1B3', '#E34A95', '#6B8AFD', '#00F0C8'].map(c => (
+                                        {[AGENT_HEX.CEO, AGENT_HEX.CTO, AGENT_HEX.CMO, AGENT_HEX.CFO, AGENT_HEX.custom].map(c => (
                                             <button
                                                 key={c}
                                                 type="button"

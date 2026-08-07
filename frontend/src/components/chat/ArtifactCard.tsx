@@ -1,5 +1,5 @@
 import { FileCode, Download, ExternalLink, FileText, Table, GitBranch, Gavel } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 import { useChatStore } from '@/store/useChatStore';
 import { getDownloadExtension, type ArtifactType } from '@/types/artifact';
 
@@ -68,28 +68,30 @@ export function ArtifactCard({ content, language, artifactType, title: propsTitl
     const displayContent = existingArtifact?.content || content;
     const size = formatSize(displayContent);
 
-    // Board V2: el "Acta de la Junta" es el artefacto estrella del debate → reveal
-    // con borde conic-gradient animado para destacarla como decisión.
+    // Board V2: el «Acta de la Junta» es el artefacto estrella del debate.
+    //
+    // Lo destacaba un borde de `conic-gradient` girando en bucle infinito cada
+    // 6 s (cian → morado → magenta), que §7.4 prohíbe por nombre entre «los
+    // cuatro bucles heredados» y §0 rechaza como degradado morado→cian. Un
+    // bucle sólo se permite si representa un proceso real en curso, y un acta
+    // ya cerrada no está haciendo nada.
+    //
+    // Lo sustituye lo que el sistema sí usa para «esta tarjeta es la
+    // importante»: el filete de latón de §9.3 (`selected`) y la barra de 2px en
+    // el canto de inicio. Materia, no luz — y coste cero.
     const isActa = /acta/i.test(title);
 
     return (
         <div className="my-4 group relative">
-            {isActa && (
-                <motion.div
-                    aria-hidden
-                    className="absolute -inset-[1.5px] rounded-xl pointer-events-none"
-                    style={{
-                        background: 'conic-gradient(from 0deg, #00F5D4, #9D85FF, #FF2E97, #00F5D4)',
-                        filter: 'blur(0.5px)',
-                    }}
-                    animate={{ rotate: 360 }}
-                    transition={{ repeat: Infinity, duration: 6, ease: 'linear' }}
-                />
-            )}
-            <div className="relative bg-surface-2 border border-stroke-edge rounded-md overflow-hidden hover:border-brass-600 transition-colors shadow-e2">
+            <div className={cn(
+                "relative bg-surface-2 rounded-md overflow-hidden transition-colors shadow-e2",
+                isActa
+                    ? "border border-brass-500 border-s-2 border-s-brass-500"
+                    : "border border-stroke-edge hover:border-brass-600",
+            )}>
                 <div className="px-4 py-3 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3 min-w-0">
-                        <div className="p-2 bg-midnight rounded-lg text-electric-cyan group-hover:scale-110 transition-transform">
+                        <div className="p-2 bg-surface-inset rounded-sm text-accent">
                             {isActa ? <Gavel className="h-4 w-4" /> : getIcon(artifactType, language)}
                         </div>
                         <div className="min-w-0">
