@@ -461,6 +461,22 @@
   }
   .doc-prose td{ padding:0.5em 0.75em; border-block-end:1px solid var(--stroke-hairline); }
 
+  /* §9.7 «Desbordamiento: contenedor propio con overflow-x: auto» — el
+     envoltorio lo pone `DocTable`, aquí van su caja y su foco. Sin él una tabla
+     de 4 columnas rompía la hoja del acta y se llevaba 2 columnas fuera de
+     vista sin avisar (F4). El margen se mueve del `table` al envoltorio para
+     que el ritmo vertical no cambie. */
+  .doc-table-scroll{
+    overflow-x: auto;
+    max-inline-size: 100%;
+    margin-block: 1em;
+    overscroll-behavior-x: contain;
+  }
+  .doc-table-scroll > table{ margin-block: 0; }
+  .doc-table-scroll:focus-visible{
+    outline: 2px solid var(--focus-ring); outline-offset: 2px;
+  }
+
   .doc-prose hr{ margin-block:2em; border:0; border-block-start:1px solid var(--stroke-edge); }
   .doc-prose img{ max-inline-size:100%; height:auto; border-radius:var(--radius-sm);
                   border:1px solid var(--stroke-hairline); }

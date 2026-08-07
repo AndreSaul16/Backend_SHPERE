@@ -5,6 +5,7 @@ import remarkGfm from "remark-gfm";
 import rehypeSanitize from "rehype-sanitize";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { chatService } from "@/services/api";
+import { docMarkdownComponents } from "@/components/shared/DocTable";
 import { Button } from "@/components/ui/Button";
 import { buttonClass } from "@/components/ui/buttonStyles";
 import type { SharedSession } from "@/types";
@@ -146,7 +147,7 @@ export function SharedSessionPage() {
                                         </p>
                                     )}
                                     <div className="doc-prose max-w-none break-words">
-                                        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]} components={docMarkdownComponents}>
                                             {m.content}
                                         </ReactMarkdown>
                                     </div>

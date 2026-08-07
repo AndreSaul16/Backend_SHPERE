@@ -1,6 +1,7 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Download, FileText } from 'lucide-react';
+import { docMarkdownComponents } from '@/components/shared/DocTable';
 import type { Artifact } from '@/types/artifact';
 
 interface MarkdownViewerProps {
@@ -54,7 +55,9 @@ export function MarkdownViewer({ artifact }: MarkdownViewerProps) {
                     la medida definitiva son de la tarea 2.1. */}
                 <article className="acta-sheet mx-auto p-6 sm:p-8">
                     <div className="doc-prose">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {/* F4: la tabla del acta se desplaza dentro de su
+                            contenedor (§9.7), nunca rompe la hoja. */}
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={docMarkdownComponents}>
                             {artifact.content}
                         </ReactMarkdown>
                     </div>
