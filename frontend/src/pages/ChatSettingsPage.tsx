@@ -274,22 +274,30 @@ export function ChatSettingsPage() {
                                 accept="image/*"
                                 className="sr-only"
                             />
-                            <div
+                            {/* D14/§12.4: era un `<div onClick>` MÁS un botón que
+                                hacía exactamente lo mismo — un camino de ratón
+                                duplicado y ninguno de teclado. Ahora el avatar
+                                entero es el <button> (área táctil de sobra,
+                                §12.11) y la chapa de la cámara es decoración
+                                dentro de él, no un segundo punto de tabulación. */}
+                            <button
+                                type="button"
                                 onClick={triggerFileInput}
-                                className="h-24 w-24 sm:h-32 sm:w-32 rounded-2xl sm:rounded-3xl bg-surface border border-surface-highlight flex items-center justify-center text-3xl sm:text-4xl font-bold shadow-2xl transition-transform group-hover:scale-105 cursor-pointer overflow-hidden"
+                                aria-label={isGroupChat ? 'Cambiar la imagen del grupo' : 'Cambiar la imagen del agente'}
+                                className="relative h-24 w-24 sm:h-32 sm:w-32 rounded-2xl sm:rounded-3xl bg-surface border border-surface-highlight flex items-center justify-center text-3xl sm:text-4xl font-bold shadow-2xl transition-transform group-hover:scale-105 cursor-pointer overflow-hidden"
                             >
                                 {avatarUrl ? (
-                                    <img src={avatarUrl} alt="Agent Avatar" className="h-full w-full object-cover" />
+                                    <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
                                 ) : (
                                     <span style={{ color: sessionColor }}>{activeAgent.avatar}</span>
                                 )}
-                            </div>
-                            <button
-                                onClick={triggerFileInput}
-                                className="absolute -bottom-2 -right-2 p-2 sm:p-2.5 bg-surface border border-surface-highlight rounded-xl text-electric-cyan shadow-lg hover:scale-110 transition-transform"
+                            </button>
+                            <span
+                                aria-hidden="true"
+                                className="pointer-events-none absolute -bottom-2 -right-2 p-2 sm:p-2.5 bg-surface border border-surface-highlight rounded-xl text-electric-cyan shadow-lg"
                             >
                                 <Camera className="h-4 w-4 sm:h-5 sm:w-5" />
-                            </button>
+                            </span>
                         </div>
 
                         <div className="w-full max-w-sm space-y-4">
@@ -440,7 +448,15 @@ export function ChatSettingsPage() {
                                     <p className="text-sm font-medium text-content-strong">Debate entre agentes</p>
                                     <p className="text-[10px] text-content-muted mt-0.5">Los agentes discuten entre sí antes de responderte (consume más tokens)</p>
                                 </div>
+                                {/* §12.7: un interruptor es `role="switch"` con
+                                    `aria-checked`; hasta ahora su estado era sólo
+                                    la posición del punto y el color. */}
                                 <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={boardEnabled}
+                                    aria-label="Debate entre agentes antes de responder"
+                                    aria-busy={boardLoading}
                                     onClick={toggleBoardMeeting}
                                     disabled={boardLoading}
                                     className={cn(
@@ -450,7 +466,7 @@ export function ChatSettingsPage() {
                                     )}
                                 >
                                     {boardLoading ? (
-                                        <Loader2 className="h-4 w-4 animate-spin mx-auto text-content-muted" />
+                                        <Loader2 className="h-4 w-4 animate-spin mx-auto text-content-muted" aria-hidden="true" />
                                     ) : (
                                         <span className={cn(
                                             "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
@@ -460,10 +476,21 @@ export function ChatSettingsPage() {
                                 </button>
                             </div>
                             {boardError && (
-                                <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2">
+                                <p className="text-xs text-danger bg-dissent/10 border border-dissent/30 rounded-xl px-3 py-2">
                                     {boardError}
                                 </p>
                             )}
+                            {/* §12.6: el resultado de guardar se anuncia. El
+                                mensaje de error de arriba aparecía en silencio. */}
+                            <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="live-board-save">
+                                {boardLoading
+                                    ? "Guardando la preferencia de debate…"
+                                    : boardError
+                                        ? boardError
+                                        : boardEnabled
+                                            ? "Debate entre agentes activado."
+                                            : "Debate entre agentes desactivado."}
+                            </p>
                         </section>
                     )}
 

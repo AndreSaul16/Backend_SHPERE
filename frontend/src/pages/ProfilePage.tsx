@@ -143,22 +143,28 @@ export function ProfilePage() {
                                 accept="image/*"
                                 className="sr-only"
                             />
-                            <div
+                            {/* D14/§12.4: mismo defecto que en la configuración de
+                                la sesión — `<div onClick>` más un botón gemelo.
+                                El avatar entero pasa a ser el <button> y la
+                                chapa de la cámara queda como decoración. */}
+                            <button
+                                type="button"
                                 onClick={triggerFileInput}
+                                aria-label="Cambiar tu imagen de perfil"
                                 className="h-24 w-24 sm:h-28 sm:w-28 md:h-32 md:w-32 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-2xl sm:text-3xl md:text-4xl shadow-2xl transition-transform group-hover:scale-105 cursor-pointer overflow-hidden"
                             >
                                 {avatarUrl ? (
-                                    <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+                                    <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
                                 ) : (
                                     avatarInitial
                                 )}
-                            </div>
-                            <button
-                                onClick={triggerFileInput}
-                                className="absolute -bottom-2 -right-2 p-1.5 sm:p-2 bg-surface border border-surface-highlight rounded-xl text-electric-cyan shadow-lg hover:scale-110 transition-transform"
+                            </button>
+                            <span
+                                aria-hidden="true"
+                                className="pointer-events-none absolute -bottom-2 -right-2 p-1.5 sm:p-2 bg-surface border border-surface-highlight rounded-xl text-electric-cyan shadow-lg"
                             >
                                 <Camera className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                            </button>
+                            </span>
                         </div>
 
                         <div className="space-y-1.5 sm:space-y-2">

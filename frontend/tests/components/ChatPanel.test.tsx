@@ -180,7 +180,9 @@ describe('ChatPanel — CreditsIndicator Integration (Task 4.2)', () => {
         useChatStore.setState({ currentSessionId: 'credits-test' });
         renderChatPanel('credits-test');
 
-        expect(screen.getByText(/Free/i)).toBeDefined();
+        // Dos nodos legítimos desde 1.12: el rótulo visual y el resumen
+        // `sr-only` que anuncia el saldo (§12.6).
+        expect(screen.getAllByText(/Free/i).length).toBeGreaterThan(0);
     });
 
     it('CreditsIndicator click navigates to billing', () => {

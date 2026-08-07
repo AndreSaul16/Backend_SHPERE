@@ -121,17 +121,31 @@ export function BoardWarRoom({ board, agents }: { board: BoardSessionState; agen
                             <motion.span
                                 initial={{ opacity: 0, y: 4 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="text-[10px] text-electric-cyan font-mono"
+                                className="text-micro text-accent font-mono"
+                                aria-hidden="true"
                             >
                                 {tallyText}
                                 {board.earlyExit && " — consenso, debate abreviado"}
                             </motion.span>
                         )}
                     </AnimatePresence>
-                    <span className="text-[9px] font-mono text-gray-600 uppercase tracking-widest ml-auto">
-                        ⚡ {board.cost} créditos
+                    <span className="text-micro font-mono text-content-muted uppercase ml-auto">
+                        {board.cost} créditos
                     </span>
                 </div>
+
+                {/* §12.6: el recuento cambia solo, según van votando los
+                    directores, así que se anuncia. `aria-atomic` para que se lea
+                    la frase entera y no el número que acaba de cambiar; el
+                    equivalente visual ya está arriba, por eso esto es `sr-only`.
+                    La región está SIEMPRE en el DOM aunque el recuento aún no
+                    exista: varios lectores no anuncian una región que aparece a
+                    la vez que su contenido. */}
+                <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="live-tally">
+                    {tallyText
+                        ? `${tallyText}${board.earlyExit ? ' — consenso, debate abreviado' : ''}. Fase: ${PHASE_LABELS[phaseIndex]?.label ?? 'en curso'}.`
+                        : ''}
+                </p>
             </div>
         </motion.div>
     );

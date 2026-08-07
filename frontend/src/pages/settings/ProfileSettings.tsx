@@ -60,7 +60,7 @@ export function ProfileSettings() {
 
   if (loading) return <p className="text-content-muted">Cargando perfil...</p>;
   if (error && !profile)
-    return <p className="text-red-400">Error: {error}</p>;
+    return <p className="text-danger">Error: {error}</p>;
   if (!profile) return null;
 
   return (
@@ -269,21 +269,38 @@ export function ProfileSettings() {
         </Field>
       </Section>
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && <p className="text-danger text-sm">{error}</p>}
 
       <div className="flex items-center gap-3">
         <button
+          type="button"
           onClick={handleSave}
           disabled={saving}
+          aria-busy={saving}
           className="flex items-center gap-2 px-4 py-2 bg-electric-cyan/10 text-electric-cyan rounded-xl hover:bg-electric-cyan hover:text-midnight transition-all font-medium disabled:opacity-50"
         >
-          <Save className="h-4 w-4" />
+          <Save className="h-4 w-4" aria-hidden="true" />
           {saving ? "Guardando..." : "Guardar cambios"}
         </button>
         {savedAt && !saving && (
-          <span className="text-xs text-emerald-400">Guardado ✓</span>
+          <span className="text-xs text-success" aria-hidden="true">Guardado ✓</span>
         )}
       </div>
+
+      {/* §12.6: «el resultado de guardar» se anuncia. El check verde de al lado
+          no dice nada a un lector de pantalla, y el error tampoco: era un <p>
+          normal que aparece y se queda mudo. La región vive SIEMPRE en el DOM,
+          porque una que se monta con su contenido no la anuncian varios
+          lectores. */}
+      <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="live-save">
+        {saving
+          ? "Guardando los cambios del perfil…"
+          : error
+            ? `No se pudieron guardar los cambios. ${error}`
+            : savedAt
+              ? "Cambios del perfil guardados."
+              : ""}
+      </p>
     </div>
   );
 }

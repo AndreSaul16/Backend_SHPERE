@@ -13,6 +13,7 @@ import { CreditsIndicator } from "@/components/CreditsIndicator";
 import { useBillingStore } from "@/store/useBillingStore";
 import { capture, ANALYTICS_EVENTS } from "@/lib/analytics";
 import { DebateTemplates } from "./DebateTemplates";
+import { useLiveAnnouncement } from "@/hooks/useLiveAnnouncement";
 
 export function ChatPanel() {
     const navigate = useNavigate();
@@ -67,6 +68,21 @@ export function ChatPanel() {
     const typingLabel = speakingAgent
         ? `${speakingAgent.name.split(' ')[0]} está escribiendo`
         : 'Procesando respuesta…';
+
+    // §12.6: el turno llega en streaming, o sea cambia SIN interacción, y hoy no
+    // se anuncia. Se anuncia un RESUMEN a cadencia de 1s —quién habla y cuánto
+    // lleva dicho—, nunca el token: un `aria-live` que cambia con cada token
+    // reinicia la locución del lector decenas de veces por segundo y el
+    // resultado es que no se oye nada.
+    const lastMessageAgent = lastMessage?.agentId
+        ? agents.find(a => a.id === lastMessage.agentId)
+        : undefined;
+    const streamingSummary = isTyping
+        ? `${typingLabel}. ${lastMessage?.content?.trim().length ?? 0} caracteres hasta ahora.`
+        : lastMessage && lastMessage.role !== 'user' && lastMessage.role !== 'system'
+            ? `Turno terminado. ${lastMessageAgent?.name ?? 'El agente'} ha respondido.`
+            : '';
+    const streamingAnnouncement = useLiveAnnouncement(streamingSummary, isTyping);
 
     // Load pins when session changes
     useEffect(() => {
@@ -486,7 +502,7 @@ export function ChatPanel() {
                                             <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.5, delay: 0.2 }} className="h-1 w-1 rounded-full bg-electric-cyan" />
                                             <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.5, delay: 0.4 }} className="h-1 w-1 rounded-full bg-electric-cyan" />
                                         </div>
-                                        <span>{typingLabel}</span>
+                                        <span aria-hidden="true">{typingLabel}</span>
                                     </motion.div>
                                 )}
                             </AnimatePresence>
@@ -494,6 +510,29 @@ export function ChatPanel() {
                         </>
                     )}
                 </div>
+            </div>
+
+            {/* Regiones vivas (§12.6). Siempre en el DOM: un `aria-live` que se
+                monta a la vez que su contenido no lo anuncian varios lectores,
+                porque no había región que observar cuando llegó el cambio.
+
+                Van juntas y fuera del scroller para que el orden de lectura no
+                dependa de dónde esté el turno, y `sr-only` porque el equivalente
+                visual ya existe (el indicador «X está escribiendo», el estado
+                del clip). No duplican pantalla: traducen. */}
+            <div className="sr-only">
+                <p aria-live="polite" aria-atomic="true" data-testid="live-streaming">
+                    {streamingAnnouncement}
+                </p>
+                <p aria-live="polite" aria-atomic="true" data-testid="live-upload">
+                    {uploadState === 'uploading'
+                        ? 'Subiendo el documento a la base de conocimiento…'
+                        : uploadState === 'done'
+                            ? 'Documento añadido a la base de conocimiento.'
+                            : uploadState === 'error'
+                                ? 'No se pudo subir el documento.'
+                                : ''}
+                </p>
             </div>
 
             {/* Input Section */}

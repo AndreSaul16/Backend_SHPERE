@@ -46,6 +46,21 @@ export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayo
         setIsResizing(false);
     }, []);
 
+    // §9.13: ←/→ mueven 16px, Home/End van a los extremos. El panel crece hacia
+    // la izquierda, así que ← ensancha y → estrecha: la flecha empuja el canto,
+    // no el número.
+    const handleResizeKeyDown = useCallback((e: React.KeyboardEvent) => {
+        const STEP = 16;
+        let next: number | null = null;
+        if (e.key === 'ArrowLeft') next = panelWidth + STEP;
+        else if (e.key === 'ArrowRight') next = panelWidth - STEP;
+        else if (e.key === 'Home') next = MAX_PANEL_WIDTH;
+        else if (e.key === 'End') next = MIN_PANEL_WIDTH;
+        if (next === null) return;
+        e.preventDefault();
+        setPanelWidth(Math.min(MAX_PANEL_WIDTH, Math.max(MIN_PANEL_WIDTH, next)));
+    }, [panelWidth]);
+
     // Attach/detach global mouse listeners for drag
     useEffect(() => {
         if (isResizing) {
@@ -117,9 +132,35 @@ export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayo
                     )}
                     style={{ width: window.innerWidth >= 1280 ? `${panelWidth}px` : undefined }}
                 >
-                    {/* Resize Handle - Desktop Only */}
+                    {/* Tirador de redimensionar — DESIGN §9.13.
+                        Era «un `div` con `onMouseDown` y nada más: no hay forma
+                        de redimensionar sin ratón». §9.13 prescribe literalmente
+                        el sustituto: `role="separator"`, `aria-orientation`,
+                        `aria-valuenow` y operable con ←/→ (paso 16px) y
+                        Home/End. El arrastre sigue siendo el atajo de ratón.
+
+                        La regla de jsx-a11y sobre interacciones en elementos no
+                        interactivos lo marca, y es un falso positivo suyo,
+                        verificado: su tabla de roles (aria-query) declara
+                        separator con superClass [roletype, structure] y punto.
+                        WAI-ARIA 1.2 dice que un separator FOCALIZABLE es un rol
+                        de widget, y el patrón «Window Splitter» de la APG es
+                        literalmente esto: role=separator + tabindex +
+                        aria-valuenow + flechas. El control SÍ es operable por
+                        teclado; lo que está incompleto es el modelo de la regla.
+                        Se silencia sólo esta línea, con su motivo. */}
+                    {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
                     <div
+                        role="separator"
+                        tabIndex={0}
+                        aria-orientation="vertical"
+                        aria-label="Ancho del panel de artefactos"
+                        aria-valuenow={panelWidth}
+                        aria-valuemin={MIN_PANEL_WIDTH}
+                        aria-valuemax={MAX_PANEL_WIDTH}
+                        aria-valuetext={`${panelWidth} píxeles`}
                         onMouseDown={handleMouseDown}
+                        onKeyDown={handleResizeKeyDown}
                         className={cn(
                             "hidden xl:flex absolute left-0 top-0 bottom-0 w-3 cursor-col-resize items-center justify-center group hover:bg-electric-cyan/10 transition-colors z-10",
                             isResizing && "bg-electric-cyan/20"
@@ -128,7 +169,7 @@ export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayo
                         <GripVertical className={cn(
                             "h-6 w-4 text-white/20 group-hover:text-electric-cyan transition-colors",
                             isResizing && "text-electric-cyan"
-                        )} />
+                        )} aria-hidden="true" />
                     </div>
 
                     {/* Panel Content */}

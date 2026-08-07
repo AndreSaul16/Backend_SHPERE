@@ -36,37 +36,56 @@ export function CreditsIndicator({ className = "", refreshMs = 60_000 }: Props) 
   const total = pro_messages_balance + topup_messages_balance;
   const isLow = total < 10;
   const isZero = total === 0;
-  const color = isLow ? "text-red-400" : "text-electric-cyan";
+  // §2: `dissent` (oxblood-400, 5.33:1) y `accent` (latón), no los grises y
+  // rojos crudos de Tailwind, que no pasan de 2.7:1 sobre el paño.
+  const color = isLow ? "text-dissent" : "text-accent";
   const planLabel = PLAN_LABELS[plan_id] || plan_id;
 
+  // §12.6: el saldo cambia SIN interacción —lo refresca un intervalo y cada
+  // turno lo consume—, así que hay que anunciarlo. Se anuncia una FRASE, no los
+  // dígitos sueltos: un lector que lea «100» y luego «+50» no dice nada.
+  const resumen = isZero
+    ? `Sin créditos en el plan ${planLabel}. Recarga para seguir convocando juntas.`
+    : `${pro_messages_balance} créditos del plan${
+        topup_messages_balance > 0 ? ` y ${topup_messages_balance} comprados` : ''
+      } · plan ${planLabel}`;
+
   return (
-    <div
+    // D14/§12.4: era un `<div onClick>`, o sea el acceso a recargar créditos no
+    // existía por teclado. Un <button> trae foco, Enter y Espacio de serie.
+    <button
+      type="button"
       onClick={() => navigate('/billing')}
       className={cn(
         "flex items-center gap-2 px-3 py-1.5 bg-surface/40 hover:bg-surface/60 border border-surface-highlight rounded-xl cursor-pointer transition-colors",
-        isZero && "border-rose-500/30 bg-rose-500/5",
+        isZero && "border-dissent/30 bg-dissent/5",
         className
       )}
-      title={`Créditos del plan: ${pro_messages_balance} (30 gratis cada mes) · Comprados: ${topup_messages_balance} (no caducan) · Clic para recargar`}
       data-testid="credits-indicator"
     >
-      <Zap className={`h-4 w-4 ${color} shrink-0`} />
-      <span className="text-xs font-mono text-content-muted whitespace-nowrap">
+      <Zap className={`h-4 w-4 ${color} shrink-0`} aria-hidden="true" />
+      <span className="text-xs font-mono text-content-muted whitespace-nowrap" aria-hidden="true">
         {isZero ? (
-          <span className="text-rose-400 font-medium">0 — Recargar</span>
+          <span className="text-dissent font-medium">0 — Recargar</span>
         ) : (
           <>
             {pro_messages_balance}
             {topup_messages_balance > 0 && (
-              <> <span className="text-emerald-400">+{topup_messages_balance}</span></>
+              <> <span className="text-success">+{topup_messages_balance}</span></>
             )}
           </>
         )}
         {" "}
-        <span className={cn("text-[10px] uppercase tracking-wider", isLow ? "text-red-400/60" : "text-content-quiet")}>
+        <span className={cn("text-micro uppercase", isLow ? "text-dissent" : "text-content-muted")}>
           {planLabel}
         </span>
       </span>
-    </div>
+      {/* El desglose era sólo un `title`, que §9.6 prohíbe como única fuente de
+          un dato y que en táctil no aparece nunca. Ahora es texto real, y la
+          misma región lo anuncia cuando cambia. */}
+      <span className="sr-only" aria-live="polite">
+        {resumen}. Ir a recargar.
+      </span>
+    </button>
   );
 }
