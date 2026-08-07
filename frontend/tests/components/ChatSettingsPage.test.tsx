@@ -23,6 +23,14 @@ vi.mock('firebase/auth', () => ({
     getAuth: vi.fn(() => ({ currentUser: null })),
 }));
 
+// `useNavigate` espiado, pero conservando `MemoryRouter` y el resto del módulo:
+// D28 necesita comprobar CUÁNDO se vuelve atrás, y sobre todo cuándo no.
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('react-router-dom')>();
+    return { ...actual, useNavigate: () => mockNavigate };
+});
+
 const makeSession = (overrides: Partial<ChatSession> = {}): ChatSession => ({
     session_id: 'session-d03',
     user_id: 'default_user',
@@ -194,5 +202,118 @@ describe('ChatSettingsPage — avisos de guardado (1.13)', () => {
         // `<ToastProvider>` sustituye el anterior en vez de apilarlos, así que
         // en pantalla sólo hay uno. §9.5.
         expect(new Set(seen.map((t) => t.dedupeKey))).toEqual(new Set(['session-color']));
+    });
+});
+
+/**
+ * Regresión D28 — el botón «Guardar» era decorativo.
+ *
+ * Era literalmente `onClick={() => navigate(-1)}`. La fila «El botón dice lo
+ * que hace» de DESIGN §11 lo cita por su nombre y por su número de línea como
+ * el ejemplo de lo que no se debe hacer.
+ *
+ * Y no era una queja teórica: el nombre se manda con un rebote de 500ms, así
+ * que escribir y pulsar «Guardar» de seguido —que es exactamente lo que hace
+ * quien acaba de renombrar la junta— dejaba el PATCH en el aire y salía de la
+ * pantalla.
+ */
+describe('ChatSettingsPage — el botón «Guardar» guarda (D28)', () => {
+    beforeEach(() => {
+        __resetToastBus();
+        mockNavigate.mockClear();
+        const session = makeSession();
+        useChatStore.setState({
+            sessions: [session],
+            currentSessionId: session.session_id,
+            selectedAgentId: 'cto-1',
+        });
+    });
+
+    afterEach(() => {
+        useChatStore.setState({
+            sessions: [],
+            currentSessionId: null,
+            selectedAgentId: 'group-chat',
+        });
+    });
+
+    const boton = () => screen.getByTestId('guardar-cambios');
+
+    it('§11: el rótulo es «Guardar cambios», no «Guardar»', () => {
+        renderPage();
+        expect(boton()).toHaveTextContent('Guardar cambios');
+    });
+
+    it('guarda el nombre pendiente del rebote antes de volver atrás', async () => {
+        const guardar = vi.fn(() => Promise.resolve());
+        useChatStore.setState({ updateSessionMetadata: guardar } as never);
+        renderPage();
+
+        // Escribir y pulsar de seguido: el rebote de 500ms sigue en el aire.
+        fireEvent.change(screen.getByPlaceholderText('Ej: Oberon'), {
+            target: { value: 'Junta de precios' },
+        });
+        fireEvent.click(boton());
+
+        // Con el bug, `guardar` no se llamaba nunca desde el botón.
+        await waitFor(() => expect(guardar).toHaveBeenCalledTimes(1));
+        expect(guardar.mock.calls[0][1]).toMatchObject({
+            title: 'Junta de precios',
+            visual_config: expect.objectContaining({ name: 'Junta de precios' }),
+        });
+    });
+
+    it('vuelve atrás sólo cuando el guardado ha ido bien', async () => {
+        useChatStore.setState({
+            updateSessionMetadata: vi.fn(() => Promise.resolve()),
+        } as never);
+        renderPage();
+
+        fireEvent.click(boton());
+
+        await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith(-1));
+    });
+
+    it('si el guardado falla, se queda en la pantalla y lo dice', async () => {
+        useChatStore.setState({
+            updateSessionMetadata: vi.fn(() => Promise.reject(new Error('502 upstream'))),
+        } as never);
+        const seen: ToastRecord[] = [];
+        const unsubscribe = subscribeToasts((t) => seen.push(t));
+        renderPage();
+
+        fireEvent.change(screen.getByPlaceholderText('Ej: Oberon'), {
+            target: { value: 'Junta de precios' },
+        });
+        fireEvent.click(boton());
+
+        await waitFor(() => expect(seen).toHaveLength(1));
+        expect(seen[0].title).toBe('No se pudo guardar el nombre');
+        // Lo peor que podía hacer: decir que guarda, fallar y salir igual.
+        expect(mockNavigate).not.toHaveBeenCalledWith(-1);
+        // §11 «qué se conservó»: el texto sigue en el campo.
+        expect((screen.getByPlaceholderText('Ej: Oberon') as HTMLInputElement).value).toBe(
+            'Junta de precios',
+        );
+        unsubscribe();
+    });
+
+    it('mientras guarda, el botón queda en su estado de carga (§9.1)', async () => {
+        let resolver: (() => void) | undefined;
+        useChatStore.setState({
+            updateSessionMetadata: vi.fn(
+                () => new Promise<void>((res) => { resolver = () => res(); }),
+            ),
+        } as never);
+        renderPage();
+
+        fireEvent.click(boton());
+
+        await waitFor(() => expect(boton()).toHaveAttribute('aria-busy', 'true'));
+        expect(boton()).toBeDisabled();
+        // Ancho congelado: la etiqueta sigue en el flujo, sólo invisible.
+        expect(boton().querySelector('.invisible')).not.toBeNull();
+
+        await act(async () => { resolver?.(); });
     });
 });

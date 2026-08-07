@@ -21,6 +21,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { chatService } from '../services/api';
 import { NetworkError, SessionError, type ErrorContext } from '../lib/errors';
 import { notify, reasonOf } from '../lib/toastBus';
+import { withAgentIdentityOverrides, saveAgentIdentityOverride } from '../lib/agentIdentityOverrides';
 
 interface ChatState {
     coreAgents: Agent[];
@@ -55,8 +56,9 @@ interface ChatState {
     sendMessage: (content: string, opts?: { regenerateFromId?: string }) => Promise<void>;
     stopGeneration: () => void;
     toggleArtifactPanel: () => void;
-    renameAgent: (id: string, newName: string) => void;
-    updateAgentColor: (id: string, newHexColor: string) => void;
+    /** D28: devuelven `false` si el retoque no se pudo persistir. */
+    renameAgent: (id: string, newName: string) => boolean;
+    updateAgentColor: (id: string, newHexColor: string) => boolean;
     addArtifact: (artifact: Artifact) => void;
     setActiveArtifact: (id: string | null) => void;
     updateSessionMetadata: (sessionId: string, updates: { title?: string; visual_config?: any }) => Promise<void>;
@@ -206,7 +208,10 @@ const createGreeting = (agentId: string, agents: Agent[]): Message => {
 export const getGroupMembers = (agents: Agent[]) => agents.filter(a => a.id !== 'group-chat');
 
 export const useChatStore = create<ChatState>((set, get) => ({
-    coreAgents: MOCK_AGENTS,
+    // D28: los retoques de nombre/color de los directores se guardan y se
+    // recuperan al arrancar. Antes vivían sólo en memoria y se perdían al
+    // recargar, con el modal diciendo «Guardar cambios» igual.
+    coreAgents: withAgentIdentityOverrides(MOCK_AGENTS),
     customAgents: [],
     sessions: [],
     currentSessionId: null,
@@ -275,7 +280,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 owner_user_id: a.owner_user_id,
                 is_public: a.is_public
             }));
-            set({ customAgents: mapped });
+            set({ customAgents: withAgentIdentityOverrides(mapped) });
         } catch (error: any) {
             const sphereError = new NetworkError('Error al obtener agentes personalizados', 'fetch_agents', error);
             set((state) => ({ errorStates: { ...state.errorStates, fetch_agents: sphereError.message } }));
@@ -554,6 +559,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
     toggleArtifactPanel: () => set((state) => ({ isArtifactPanelOpen: !state.isArtifactPanelOpen })),
 
     renameAgent: (id, newName) => {
+        // D28: además de la memoria, al almacén. El valor de retorno lo mira
+        // `ChatSettingsPage` para avisar si el navegador no deja escribir.
+        const persistido = saveAgentIdentityOverride(id, { name: newName });
         set((state) => ({
             coreAgents: state.coreAgents.map(agent =>
                 agent.id === id ? { ...agent, name: newName } : agent
@@ -562,9 +570,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 agent.id === id ? { ...agent, name: newName } : agent
             ),
         }));
+        return persistido;
     },
 
     updateAgentColor: (id, newHexColor) => {
+        const persistido = saveAgentIdentityOverride(id, { hexColor: newHexColor });
         set((state) => ({
             coreAgents: state.coreAgents.map(agent =>
                 agent.id === id ? { ...agent, hexColor: newHexColor } : agent
@@ -573,6 +583,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 agent.id === id ? { ...agent, hexColor: newHexColor } : agent
             ),
         }));
+        return persistido;
     },
 
     toggleSidebar: (open) => set((state) => ({
@@ -1039,8 +1050,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
     },
     resetState: () => set({
         // Limpia TODO lo específico del usuario para evitar fuga de datos entre
-        // cuentas en un navegador compartido (A6). Los coreAgents son globales
-        // (CEO/CTO/...), así que se conservan.
+        // cuentas en un navegador compartido (A6).
+        //
+        // D28: los coreAgents ya NO se conservan. Eran «globales» mientras
+        // nadie podía tocarlos, pero `renameAgent`/`updateAgentColor` los
+        // reescriben con el nombre y el color que les da CADA usuario, así que
+        // dejarlos puestos enseñaba al siguiente los directores del anterior.
+        // Vuelven a los de fábrica; `clearStores` borra además los retoques
+        // guardados.
+        coreAgents: MOCK_AGENTS,
         messagesBySession: {},
         artifacts: [],
         currentSessionId: null,

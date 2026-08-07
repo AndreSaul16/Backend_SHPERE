@@ -26,6 +26,9 @@ export function ChatSettingsPage() {
     // Determine if it's a group chat early (needed by hooks below)
     const isGroupChat = currentSession?.type === 'group' || activeAgent?.id === 'group-chat';
 
+    // D28: el guardado real del botón de la cabecera.
+    const [savingAll, setSavingAll] = useState(false);
+
     // Member edit modal state
     const [editingMember, setEditingMember] = useState<string | null>(null);
     const [editName, setEditName] = useState("");
@@ -92,11 +95,37 @@ export function ChatSettingsPage() {
         setEditingMember(member.id);
     };
 
+    /**
+     * D28 (segunda mitad) — editar un miembro sobrevive a la recarga.
+     *
+     * `renameAgent`/`updateAgentColor` sólo tocaban el array en memoria del
+     * store: sin `persist` y sin API, el nombre y el color que el usuario le
+     * daba a un director se perdían al recargar mientras el modal decía
+     * «Guardar cambios». Ahora los dos escriben también en el almacén local
+     * (`agentIdentityOverrides`), que se rehidrata al arrancar el store.
+     *
+     * Ojo: NO es guardado por API. El backend de este repo no tiene dónde
+     * guardarlo —`/me/agent-overrides` sólo acepta prompt/temperatura/modelo,
+     * y `visual_config` de la sesión es un modelo de campos fijos—, así que
+     * hacerlo de verdad exige tocar el servidor. El detalle está en la cabecera
+     * de `lib/agentIdentityOverrides.ts`.
+     */
     const saveMemberEdit = () => {
         if (!editingMember) return;
-        useChatStore.getState().renameAgent(editingMember, editName);
-        useChatStore.getState().updateAgentColor(editingMember, editColor);
+        const nombreOk = useChatStore.getState().renameAgent(editingMember, editName);
+        const colorOk = useChatStore.getState().updateAgentColor(editingMember, editColor);
         setEditingMember(null);
+        if (!nombreOk || !colorOk) {
+            // Modo privado, cuota llena, storage bloqueado. §11: qué pasó, qué
+            // hacer y qué se conserva.
+            notify({
+                title: 'El cambio no se guardará al recargar',
+                detail:
+                    'Este navegador no deja guardar preferencias. El nombre y el color se ven ahora, pero volverán a los de fábrica al recargar.',
+                variant: 'warning',
+                dedupeKey: 'member-identity',
+            });
+        }
     };
 
     if (!activeAgent || !currentSessionId || !currentSession) {
@@ -167,8 +196,9 @@ export function ChatSettingsPage() {
         }, 500);
     };
 
-    const handleNameChange = async (newName: string) => {
-        if (!currentSessionId) return;
+    /** `true` si el nombre quedó guardado. */
+    const handleNameChange = async (newName: string): Promise<boolean> => {
+        if (!currentSessionId) return false;
 
         try {
             await updateSessionMetadata(currentSessionId, {
@@ -178,6 +208,7 @@ export function ChatSettingsPage() {
                     name: newName
                 }
             });
+            return true;
         } catch (error) {
             // Avisa la página, no el store: `updateSessionMetadata` sirve a
             // nombre, color y avatar por igual, y sólo aquí se sabe cuál de los
@@ -191,7 +222,34 @@ export function ChatSettingsPage() {
                 variant: 'error',
                 dedupeKey: 'session-name',
             });
+            return false;
         }
+    };
+
+    /**
+     * D28 — el botón «Guardar» guarda.
+     *
+     * Antes era literalmente `onClick={() => navigate(-1)}`: la fila de §11
+     * «El botón dice lo que hace» lo cita por su nombre como el ejemplo de lo
+     * que no se debe hacer.
+     *
+     * Lo que quedaba de verdad sin guardar al pulsarlo era el nombre: se manda
+     * con un rebote de 500ms, así que escribir y pulsar «Guardar» de seguido
+     * dejaba el PATCH en el aire. Ahora el rebote se cancela y el guardado se
+     * hace aquí, esperado: sólo se vuelve atrás cuando ha ido bien. Si falla,
+     * la página se queda donde está —con el texto en el campo— y el aviso de
+     * `handleNameChange` explica qué pasó (§11).
+     */
+    const handleSave = async () => {
+        if (savingAll) return;
+        if (debouncedSave.current) {
+            clearTimeout(debouncedSave.current);
+            debouncedSave.current = null;
+        }
+        setSavingAll(true);
+        const guardado = await handleNameChange(localName || baseName);
+        setSavingAll(false);
+        if (guardado) navigate(-1);
     };
 
     const handleColorChange = async (newHex: string, themeName?: string) => {
@@ -247,13 +305,21 @@ export function ChatSettingsPage() {
                     </button>
                     <h1 className="text-base sm:text-xl font-bold text-content-strong">Configuración</h1>
                 </div>
-                <button
-                    onClick={() => navigate(-1)}
-                    className="flex items-center gap-2 px-3 py-2 bg-electric-cyan/10 text-electric-cyan rounded-xl hover:bg-electric-cyan hover:text-midnight transition-all font-medium text-sm"
+                {/* D28 + §11 «El botón dice lo que hace»: decía «Guardar» y
+                    sólo hacía `navigate(-1)`. Ahora guarda de verdad, y el
+                    rótulo es el de la fila «Bien» de esa misma tabla. El
+                    `<Button>` trae el estado `loading` de §9.1 —ancho
+                    congelado, gerundio, `aria-busy`— de serie. */}
+                <Button
+                    variant="primary"
+                    onClick={() => void handleSave()}
+                    loading={savingAll}
+                    loadingLabel="Guardando"
+                    data-testid="guardar-cambios"
                 >
-                    <Save className="h-4 w-4" />
-                    <span className="hidden sm:inline">Guardar</span>
-                </button>
+                    <Save className="h-4 w-4" aria-hidden="true" />
+                    Guardar cambios
+                </Button>
             </div>
 
             {/* Content - Added pb-32 for mobile scrollability */}
