@@ -114,7 +114,7 @@ export function Field({
                 </p>
             )}
             {error && (
-                <p id={errorId} className="flex items-start gap-1.5 text-xs text-oxblood-400">
+                <p id={errorId} className="flex items-start gap-1.5 text-xs text-danger">
                     <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                     <span>{error}</span>
                 </p>
@@ -139,7 +139,7 @@ function LoadingBar() {
 function ErrorGlyph() {
     return (
         <AlertCircle
-            className="pointer-events-none absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-oxblood-400"
+            className="pointer-events-none absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-danger"
             aria-hidden="true"
         />
     );
