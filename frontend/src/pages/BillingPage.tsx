@@ -33,8 +33,8 @@ function formatBytes(bytes: number): string {
 }
 
 function barColor(pct: number): string {
-    if (pct >= 90) return 'bg-red-500';
-    if (pct >= 70) return 'bg-amber-500';
+    if (pct >= 90) return 'bg-oxblood-500';
+    if (pct >= 70) return 'bg-warning';
     return 'bg-electric-cyan';
 }
 
@@ -149,9 +149,9 @@ export const BillingPage: React.FC = () => {
     if (error) {
         return (
             <div className="p-8 w-full max-w-5xl mx-auto flex flex-col items-center justify-center min-h-[50vh] gap-6">
-                <div className="bg-red-500/10 border border-red-500/30 rounded-md p-8 text-center max-w-md">
+                <div className="bg-oxblood-500/10 border border-oxblood-500/30 rounded-md p-8 text-center max-w-md">
                     <div className="text-4xl mb-4">⚠️</div>
-                    <h2 className="text-xl font-bold text-red-400 mb-2">Error de conexión</h2>
+                    <h2 className="text-xl font-bold text-danger mb-2">Error de conexión</h2>
                     <p className="text-content-muted mb-6">{error}</p>
                     <button
                         onClick={refresh}
@@ -180,9 +180,9 @@ export const BillingPage: React.FC = () => {
             <div className="flex-1 p-4 sm:p-8 w-full max-w-5xl mx-auto">
                 {/* Aviso: Stripe no configurado */}
                 {!stripe_configured && (
-                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-md p-4 mb-8 flex items-center gap-3">
+                    <div className="bg-warning/10 border border-warning/30 rounded-md p-4 mb-8 flex items-center gap-3">
                         <span className="text-2xl">⚠️</span>
-                        <p className="text-amber-400 text-sm font-medium">
+                        <p className="text-warning text-sm font-medium">
                             Pagos no disponibles temporalmente. El sistema de pagos no está configurado en este momento.
                         </p>
                     </div>
@@ -190,9 +190,9 @@ export const BillingPage: React.FC = () => {
 
                 {/* Error de acción (checkout) */}
                 {actionError && (
-                    <div className="bg-red-500/10 border border-red-500/30 rounded-md p-4 mb-8 flex items-center justify-between gap-3">
-                        <p className="text-red-400 text-sm">{actionError}</p>
-                        <button onClick={() => setActionError(null)} className="text-red-400 hover:text-content-strong text-sm">✕</button>
+                    <div className="bg-oxblood-500/10 border border-oxblood-500/30 rounded-md p-4 mb-8 flex items-center justify-between gap-3">
+                        <p className="text-danger text-sm">{actionError}</p>
+                        <button onClick={() => setActionError(null)} className="text-danger hover:text-content-strong text-sm">✕</button>
                     </div>
                 )}
 
@@ -291,7 +291,7 @@ export const BillingPage: React.FC = () => {
                                     }`}
                                 >
                                     {pack.popular && (
-                                        <div className="absolute top-0 right-0 bg-luxury-purple text-white text-micro font-bold px-3 py-1 rounded-bl-lg">
+                                        <div className="absolute top-0 right-0 bg-luxury-purple text-content-strong text-micro font-bold px-3 py-1 rounded-bl-lg">
                                             POPULAR
                                         </div>
                                     )}
@@ -305,7 +305,7 @@ export const BillingPage: React.FC = () => {
                                         title={!consentAccepted ? 'Acepta las condiciones de compra para continuar' : undefined}
                                         className={`w-full py-2.5 rounded-xl transition-all font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
                                             pack.popular
-                                                ? 'bg-luxury-purple text-white hover:bg-luxury-purple/80'
+                                                ? 'bg-luxury-purple text-content-strong hover:bg-luxury-purple/80'
                                                 : 'bg-electric-cyan/10 text-electric-cyan border border-electric-cyan/30 hover:bg-electric-cyan hover:text-midnight'
                                         }`}
                                     >

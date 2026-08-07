@@ -74,7 +74,7 @@ export function ActaActions({ title, content }: ActaActionsProps) {
     };
 
     return (
-        <div className="border-b border-white/5 bg-white/[0.02] px-4 py-3 space-y-2">
+        <div className="border-b border-stroke-hairline bg-surface-1 px-4 py-3 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
                 {/* Notion */}
                 <button
@@ -111,14 +111,14 @@ export function ActaActions({ title, content }: ActaActionsProps) {
                     href={notionUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-1.5 text-xs text-emerald-400 hover:underline"
+                    className="flex items-center gap-1.5 text-xs text-success hover:underline"
                 >
                     <CheckCircle2 className="h-3 w-3" />
                     Página creada en Notion <ExternalLink className="h-3 w-3" />
                 </a>
             )}
             {notionStatus === "error" && (
-                <p className="flex items-center gap-1.5 text-xs text-rose-400">
+                <p className="flex items-center gap-1.5 text-xs text-agent-devil">
                     <AlertCircle className="h-3 w-3" /> {notionError}
                 </p>
             )}
@@ -127,7 +127,7 @@ export function ActaActions({ title, content }: ActaActionsProps) {
             {showGithubModal && (
                 <div className="mt-2 rounded-xl border border-surface-highlight bg-surface/60 p-3 space-y-3">
                     {parsedIssues.length === 0 ? (
-                        <p className="text-xs text-amber-400">
+                        <p className="text-xs text-warning">
                             No se encontró la sección "Próximos pasos" con acciones en el acta.
                         </p>
                     ) : (
@@ -170,7 +170,7 @@ export function ActaActions({ title, content }: ActaActionsProps) {
                                     href={c.url}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="flex items-center gap-1.5 text-xs text-emerald-400 hover:underline"
+                                    className="flex items-center gap-1.5 text-xs text-success hover:underline"
                                 >
                                     <CheckCircle2 className="h-3 w-3" /> {c.title} <ExternalLink className="h-3 w-3" />
                                 </a>
@@ -178,14 +178,14 @@ export function ActaActions({ title, content }: ActaActionsProps) {
                             {/* Éxito parcial: mostrar también los que fallaron para
                                 no dar por creados items de acción que se perdieron. */}
                             {ghFailed.map((f, i) => (
-                                <p key={`err-${i}`} className="flex items-center gap-1.5 text-xs text-rose-400">
+                                <p key={`err-${i}`} className="flex items-center gap-1.5 text-xs text-agent-devil">
                                     <AlertCircle className="h-3 w-3" /> {f.title}: {f.error}
                                 </p>
                             ))}
                         </div>
                     )}
                     {ghStatus === "error" && (
-                        <p className="flex items-center gap-1.5 text-xs text-rose-400">
+                        <p className="flex items-center gap-1.5 text-xs text-agent-devil">
                             <AlertCircle className="h-3 w-3" /> {ghError}
                         </p>
                     )}

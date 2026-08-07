@@ -83,16 +83,16 @@ function StatusBadge({ status }: { status: AgentDocument['status'] }) {
         case 'pending':
             return (
                 <span className="relative flex h-2.5 w-2.5" title="Pendiente">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-yellow-400 opacity-75" />
-                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-yellow-400" />
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-warning opacity-75" />
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-warning" />
                 </span>
             );
         case 'processing':
             return <Loader2 className="h-4 w-4 text-electric-cyan animate-spin" />;
         case 'completed':
-            return <CheckCircle className="h-4 w-4 text-emerald-400" />;
+            return <CheckCircle className="h-4 w-4 text-success" />;
         case 'failed':
-            return <XCircle className="h-4 w-4 text-red-400" />;
+            return <XCircle className="h-4 w-4 text-danger" />;
     }
 }
 
@@ -309,13 +309,13 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
             className="flex flex-col h-full bg-transparent overflow-hidden"
         >
             {/* Header */}
-            <div className="px-6 py-5 border-b border-white/5 bg-surface-1 flex items-center justify-between">
+            <div className="px-6 py-5 border-b border-stroke-hairline bg-surface-1 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-luxury-purple/10 rounded-xl">
                         <Database className="h-5 w-5 text-luxury-purple" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-bold text-white uppercase tracking-widest">
+                        <h3 className="text-sm font-bold text-content-strong uppercase tracking-widest">
                             Knowledge Base
                         </h3>
                         <p className="text-micro text-content-muted font-mono mt-0.5">
@@ -327,7 +327,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
 
             {/* Summary Stats */}
             {totalFiles > 0 && (
-                <div className="grid grid-cols-3 gap-3 px-6 py-4 border-b border-white/5">
+                <div className="grid grid-cols-3 gap-3 px-6 py-4 border-b border-stroke-hairline">
                     {[
                         { icon: FileText, label: 'Archivos', value: totalFiles },
                         { icon: Layers, label: 'Chunks', value: totalChunks.toLocaleString() },
@@ -335,11 +335,11 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                     ].map(({ icon: Icon, label, value }) => (
                         <div
                             key={label}
-                            className="flex items-center gap-2.5 p-3 rounded-md bg-white/[0.03] border border-white/5"
+                            className="flex items-center gap-2.5 p-3 rounded-md bg-stroke-highlight border border-stroke-hairline"
                         >
                             <Icon className="h-4 w-4 text-electric-cyan shrink-0" />
                             <div className="min-w-0">
-                                <p className="text-xs font-bold text-white truncate">{value}</p>
+                                <p className="text-xs font-bold text-content-strong truncate">{value}</p>
                                 <p className="text-micro text-content-muted uppercase">
                                     {label}
                                 </p>
@@ -361,9 +361,9 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
 
                 {/* Error state */}
                 {!isLoading && fetchError && (
-                    <div className="flex items-center gap-3 p-4 rounded-md bg-red-500/10 border border-red-500/20">
-                        <AlertCircle className="h-5 w-5 text-red-400 shrink-0" />
-                        <p className="text-sm text-red-300">{fetchError}</p>
+                    <div className="flex items-center gap-3 p-4 rounded-md bg-oxblood-500/10 border border-oxblood-500/20">
+                        <AlertCircle className="h-5 w-5 text-danger shrink-0" />
+                        <p className="text-sm text-danger">{fetchError}</p>
                     </div>
                 )}
 
@@ -372,12 +372,12 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                     <div className="flex flex-col items-center justify-center py-16 gap-6 text-center">
                         <div className="relative">
                             <div className="absolute inset-0 bg-luxury-purple/20 blur-3xl rounded-full" />
-                            <div className="relative h-24 w-24 rounded-md bg-white/[0.03] border border-white/10 flex items-center justify-center shadow-2xl">
+                            <div className="relative h-24 w-24 rounded-md bg-stroke-highlight border border-stroke-edge flex items-center justify-center shadow-2xl">
                                 <FilePlus className="h-10 w-10 text-content-muted" aria-hidden="true" />
                             </div>
                         </div>
                         <div className="space-y-2 max-w-xs">
-                            <h4 className="text-white font-bold text-lg">Sin documentos</h4>
+                            <h4 className="text-content-strong font-bold text-lg">Sin documentos</h4>
                             <p className="text-content-muted text-sm leading-relaxed">
                                 {readOnly
                                     ? 'Este agente no tiene documentos en su base de conocimiento.'
@@ -397,17 +397,17 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                             exit={{ opacity: 0, height: 0 }}
                             className="overflow-hidden"
                         >
-                            <div className="p-4 rounded-md bg-white/[0.03] border border-electric-cyan/20">
+                            <div className="p-4 rounded-md bg-stroke-highlight border border-electric-cyan/20">
                                 <div className="flex items-center gap-3 mb-3">
                                     <Upload className="h-4 w-4 text-electric-cyan animate-pulse shrink-0" />
-                                    <span className="text-sm text-white font-medium truncate flex-1">
+                                    <span className="text-sm text-content-strong font-medium truncate flex-1">
                                         {item.file.name}
                                     </span>
                                     <span className="text-xs text-electric-cyan font-mono shrink-0">
                                         {item.error ?? `${item.progress}%`}
                                     </span>
                                 </div>
-                                <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                <div className="h-1.5 bg-stroke-highlight rounded-full overflow-hidden">
                                     <motion.div
                                         className={cn(
                                             'h-full rounded-full',
@@ -435,16 +435,16 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, x: -20 }}
                             data-row
-                            className="group flex items-center gap-4 p-4 rounded-md bg-white/[0.03] border border-white/5 hover:border-white/10 transition-all"
+                            className="group flex items-center gap-4 p-4 rounded-md bg-stroke-highlight border border-stroke-hairline hover:border-stroke-edge transition-all"
                         >
                             {/* Status indicator */}
-                            <div className="h-10 w-10 rounded-xl bg-white/[0.05] border border-white/5 flex items-center justify-center shrink-0">
+                            <div className="h-10 w-10 rounded-xl bg-stroke-highlight border border-stroke-hairline flex items-center justify-center shrink-0">
                                 <StatusBadge status={doc.status} />
                             </div>
 
                             {/* File info */}
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm font-semibold text-white truncate">
+                                <p className="text-sm font-semibold text-content-strong truncate">
                                     {doc.filename}
                                 </p>
                                 <div className="flex items-center gap-3 mt-1">
@@ -457,7 +457,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                                         </span>
                                     )}
                                     {doc.status === 'failed' && (
-                                        <span className="text-micro text-red-400 font-mono uppercase">
+                                        <span className="text-micro text-danger font-mono uppercase">
                                             Error al procesar
                                         </span>
                                     )}
@@ -467,7 +467,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                                         </span>
                                     )}
                                     {doc.status === 'pending' && (
-                                        <span className="text-micro text-yellow-400/80 font-mono uppercase">
+                                        <span className="text-micro text-warning/80 font-mono uppercase">
                                             En cola
                                         </span>
                                     )}
@@ -500,7 +500,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
 
             {/* Upload Zone */}
             {!readOnly && (
-                <div className="px-6 py-5 border-t border-white/5 bg-white/[0.02]">
+                <div className="px-6 py-5 border-t border-stroke-hairline bg-surface-1">
                     {/* D14 (1.10): esto era un <div onClick> con el <input
                         type="file"> en `hidden`. Con teclado NO se podía subir un
                         documento: el div no recibe foco y el input oculto tampoco.

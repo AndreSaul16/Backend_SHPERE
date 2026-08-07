@@ -76,13 +76,13 @@ export function BoardMeetingSettings() {
 
       {/* Success/Error banners */}
       {success && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-success/10 border border-success/30 text-success">
           <CheckCircle2 className="h-4 w-4" />
           {success}
         </div>
       )}
       {error && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400">
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-oxblood-500/10 border border-oxblood-500/30 text-danger">
           <XCircle className="h-4 w-4" />
           {error}
         </div>
@@ -122,10 +122,10 @@ export function BoardMeetingSettings() {
         {/* Token cost info — solo cuando está activado */}
         {enabled && (
           <div className="pt-3 border-t border-surface-highlight">
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/20">
-              <AlertTriangle className="h-4 w-4 text-yellow-400 mt-0.5 flex-shrink-0" />
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-warning/5 border border-yellow-500/20">
+              <AlertTriangle className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
               <div className="text-xs text-content-muted">
-                <p className="font-medium text-yellow-400 mb-1">Consumo de tokens</p>
+                <p className="font-medium text-warning mb-1">Consumo de tokens</p>
                 <p>
                   1 iteración = ~5 llamadas al LLM (~15k tokens por mensaje).
                   Todos los directores participan: CEO abre, CTO/CFO/CMO analizan,

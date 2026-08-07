@@ -76,7 +76,7 @@ describe('CodeBlock — copiar al portapapeles (D36)', () => {
 
         copiar(container);
 
-        await waitFor(() => expect(container.querySelector('.text-emerald-500')).not.toBeNull());
+        await waitFor(() => expect(container.querySelector('.text-success')).not.toBeNull());
         expect(writeText).toHaveBeenCalledWith('const a = 1;');
     });
 
@@ -89,7 +89,7 @@ describe('CodeBlock — copiar al portapapeles (D36)', () => {
         // Guardia: el arreglo no puede introducir el ✓ mentiroso que el
         // enunciado del hallazgo daba por hecho.
         await waitFor(() => expect(writeText).toHaveBeenCalled());
-        expect(container.querySelector('.text-emerald-500')).toBeNull();
+        expect(container.querySelector('.text-success')).toBeNull();
     });
 
     it('si la copia falla, lo dice (§11: qué pasó, qué hacer, qué se conservó)', async () => {

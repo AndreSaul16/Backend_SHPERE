@@ -88,10 +88,10 @@ export function ContactsSettings() {
 
   return (
     <div className="space-y-6">
-      <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 flex gap-3 text-sm">
-        <Shield className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+      <div className="p-4 rounded-xl bg-warning/5 border border-warning/20 flex gap-3 text-sm">
+        <Shield className="h-5 w-5 text-warning shrink-0 mt-0.5" />
         <div className="text-content-muted">
-          <strong className="text-amber-400">Whitelist obligatoria:</strong> los
+          <strong className="text-warning">Whitelist obligatoria:</strong> los
           agentes solo pueden enviar mensajes o crear eventos a contactos que
           añadas aquí. Esto previene que un prompt malicioso dispare envíos no
           autorizados.
@@ -99,7 +99,7 @@ export function ContactsSettings() {
       </div>
 
       {error && (
-        <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+        <div className="p-3 rounded-xl bg-oxblood-500/10 border border-oxblood-500/30 text-danger text-sm">
           {error}
         </div>
       )}
@@ -234,7 +234,7 @@ export function ContactsSettings() {
                 {c.id && (
                   <button
                     onClick={() => handleRemove(c.id!)}
-                    className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                    className="p-2 text-danger hover:bg-oxblood-500/10 rounded-lg transition-colors"
                     title="Eliminar"
                   >
                     <Trash2 className="h-4 w-4" />

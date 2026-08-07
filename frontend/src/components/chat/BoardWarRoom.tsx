@@ -60,7 +60,7 @@ export function BoardWarRoom({ board, agents }: { board: BoardSessionState; agen
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="border-b border-white/5 bg-surface-1 overflow-hidden z-10"
+            className="border-b border-stroke-hairline bg-surface-1 overflow-hidden z-10"
         >
             <div className="max-w-4xl mx-auto px-6 py-3">
                 <div className="flex items-center justify-between gap-4">
@@ -95,9 +95,9 @@ export function BoardWarRoom({ board, agents }: { board: BoardSessionState; agen
                                             <motion.div
                                                 initial={{ scale: 0 }}
                                                 animate={{ scale: 1 }}
-                                                className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-emerald-500 border-2 border-midnight flex items-center justify-center"
+                                                className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-success border-2 border-midnight flex items-center justify-center"
                                             >
-                                                <Check className="h-2 w-2 text-white" />
+                                                <Check className="h-2 w-2 text-content-strong" />
                                             </motion.div>
                                         )}
                                     </div>

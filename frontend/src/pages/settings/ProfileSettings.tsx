@@ -149,7 +149,7 @@ export function ProfileSettings() {
       </Section>
 
       <Section
-        icon={<MessageSquare className="h-5 w-5 text-emerald-400" />}
+        icon={<MessageSquare className="h-5 w-5 text-success" />}
         title="Estilo de comunicación"
       >
         <div className="grid grid-cols-2 gap-3">
@@ -191,7 +191,7 @@ export function ProfileSettings() {
         </Field>
       </Section>
 
-      <Section icon={<Wallet className="h-5 w-5 text-amber-400" />} title="Finanzas">
+      <Section icon={<Wallet className="h-5 w-5 text-warning" />} title="Finanzas">
         <div className="grid grid-cols-2 gap-3">
           <Field label="Moneda base">
             <select

@@ -137,7 +137,7 @@ export function ServiceCredentialsSettings() {
       {/* §12.6: el resultado de guardar se anuncia. Antes cambiaba el DOM en
           silencio y quien no ve la pantalla no sabía si había funcionado. */}
       {success && (
-        <div role="status" className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+        <div role="status" className="flex items-center gap-2 p-3 rounded-xl bg-success/10 border border-success/30 text-success">
           <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
           {success}
         </div>
@@ -185,7 +185,7 @@ export function ServiceCredentialsSettings() {
                 </div>
               </div>
               {svc.connected && (
-                <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full text-micro flex-shrink-0">
+                <span className="px-2 py-0.5 bg-success/10 text-success border border-success/30 rounded-full text-micro flex-shrink-0">
                   Configurado
                 </span>
               )}
@@ -266,8 +266,8 @@ export function ServiceCredentialsSettings() {
                 role="status"
                 className={`flex items-center gap-2 p-2 rounded-lg text-xs ${
                   testResults[svc.service].success
-                    ? "bg-emerald-500/10 text-emerald-400"
-                    : "bg-red-500/10 text-red-400"
+                    ? "bg-success/10 text-success"
+                    : "bg-oxblood-500/10 text-danger"
                 }`}
               >
                 {testResults[svc.service].success ? (
@@ -312,7 +312,7 @@ export function ServiceCredentialsSettings() {
                   <button
                     onClick={() => handleDelete(svc.service)}
                     disabled={saving === svc.service}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl hover:bg-red-500 hover:text-white transition-all text-sm disabled:opacity-50"
+                    className="flex items-center gap-2 px-4 py-2 bg-oxblood-500/10 text-danger border border-oxblood-500/20 rounded-xl hover:bg-oxblood-500 hover:text-content-strong transition-all text-sm disabled:opacity-50"
                   >
                     <Trash2 className="h-4 w-4" />
                     Eliminar

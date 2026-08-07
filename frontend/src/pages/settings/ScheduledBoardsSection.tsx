@@ -117,7 +117,7 @@ export function ScheduledBoardsSection() {
                         <h3 className="font-semibold text-content-strong">Juntas programadas</h3>
                         <p className="text-xs text-content-muted mt-0.5">
                             Ejecuta un debate del board de forma recurrente. Cada junta consume{" "}
-                            <strong className="text-yellow-400">5 créditos</strong>.
+                            <strong className="text-warning">5 créditos</strong>.
                         </p>
                     </div>
                 </div>
@@ -131,7 +131,7 @@ export function ScheduledBoardsSection() {
                 </button>
             </div>
 
-            {error && <p className="text-xs text-rose-400">{error}</p>}
+            {error && <p className="text-xs text-agent-devil">{error}</p>}
             {loading && <Loader2 className="h-4 w-4 animate-spin text-content-muted" />}
 
             {!loading && boards.length === 0 && !showForm && (
@@ -169,7 +169,7 @@ export function ScheduledBoardsSection() {
                             </button>
                             <button
                                 onClick={() => remove(b.id)}
-                                className="p-1.5 rounded-lg text-content-muted hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                                className="p-1.5 rounded-lg text-content-muted hover:text-agent-devil hover:bg-agent-devil/10 transition-colors"
                                 aria-label="Eliminar"
                             >
                                 <Trash2 className="h-3.5 w-3.5" />

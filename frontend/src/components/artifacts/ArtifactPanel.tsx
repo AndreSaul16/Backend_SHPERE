@@ -29,13 +29,13 @@ export function ArtifactPanel() {
     return (
         <div className="flex flex-col h-full bg-transparent overflow-hidden">
             {/* Header */}
-            <div className="h-16 px-6 border-b border-white/5 flex items-center justify-between bg-surface-1">
+            <div className="h-16 px-6 border-b border-stroke-hairline flex items-center justify-between bg-surface-1">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-luxury-purple/10 rounded-lg">
                         <FileCode className="h-5 w-5 text-luxury-purple" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-bold text-white uppercase tracking-widest">
+                        <h3 className="text-sm font-bold text-content-strong uppercase tracking-widest">
                             Artifact Workspace
                         </h3>
                         {artifacts.length > 0 && (
@@ -47,7 +47,7 @@ export function ArtifactPanel() {
                 </div>
                 <button
                     onClick={() => toggleArtifactPanel()}
-                    className="p-2 rounded-full hover:bg-white/5 transition-colors text-content-muted hover:text-content-strong active-scale"
+                    className="p-2 rounded-full hover:bg-stroke-highlight transition-colors text-content-muted hover:text-content-strong active-scale"
                 >
                     <X className="h-5 w-5" />
                 </button>
@@ -57,7 +57,7 @@ export function ArtifactPanel() {
             <div className="flex-1 flex min-h-0">
                 {/* Tabs Sidebar */}
                 {artifacts.length > 0 && (
-                    <div className="w-16 sm:w-56 border-r border-white/5 overflow-y-auto scrollbar-none flex-shrink-0 bg-white/[0.01]">
+                    <div className="w-16 sm:w-56 border-r border-stroke-hairline overflow-y-auto scrollbar-none flex-shrink-0 bg-surface-1">
                         <div className="p-3 space-y-2">
                             {artifacts.map((artifact) => {
                                 const Icon = ARTIFACT_ICONS[artifact.type] || File;
@@ -123,12 +123,12 @@ export function ArtifactPanel() {
                             <div className="flex-1 flex flex-col items-center justify-center gap-6 p-8 text-center h-full">
                                 <div className="relative">
                                     <div className="absolute inset-0 bg-luxury-purple/20 blur-3xl rounded-full" />
-                                    <div className="relative h-24 w-24 rounded-md bg-white/[0.03] border border-white/10 flex items-center justify-center shadow-2xl">
+                                    <div className="relative h-24 w-24 rounded-md bg-stroke-highlight border border-stroke-edge flex items-center justify-center shadow-2xl">
                                         <GitBranch className="h-10 w-10 text-content-muted animate-pulse" aria-hidden="true" />
                                     </div>
                                 </div>
                                 <div className="space-y-2 max-w-xs">
-                                    <h4 className="text-white font-bold text-lg">Área de Visualización</h4>
+                                    <h4 className="text-content-strong font-bold text-lg">Área de Visualización</h4>
                                     <p className="text-content-muted text-sm leading-relaxed">
                                         Los objetos de código, diagramas y tablas generados por SPHERE aparecerán aquí para su inspección.
                                     </p>

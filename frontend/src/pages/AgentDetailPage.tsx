@@ -243,12 +243,12 @@ export function AgentDetailPage() {
     if (fetchError) {
         return (
             <div className="flex flex-col items-center justify-center h-full gap-4 bg-midnight/40 px-4">
-                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-md text-center space-y-3 max-w-md">
-                    <AlertTriangle className="h-8 w-8 text-red-400 mx-auto" />
-                    <p className="text-sm text-red-400 font-medium">{fetchError}</p>
+                <div className="p-4 bg-oxblood-500/10 border border-oxblood-500/20 rounded-md text-center space-y-3 max-w-md">
+                    <AlertTriangle className="h-8 w-8 text-danger mx-auto" />
+                    <p className="text-sm text-danger font-medium">{fetchError}</p>
                     <button
                         onClick={() => navigate("/chat")}
-                        className="px-4 py-2 bg-surface border border-white/5 rounded-xl text-sm text-content-muted hover:text-content-strong transition-colors"
+                        className="px-4 py-2 bg-surface border border-stroke-hairline rounded-xl text-sm text-content-muted hover:text-content-strong transition-colors"
                     >
                         Volver al chat
                     </button>
@@ -424,7 +424,7 @@ export function AgentDetailPage() {
                                             if (/^#[0-9A-Fa-f]{0,6}$/.test(val)) setColor(val);
                                         }}
                                         maxLength={7}
-                                        className="w-full bg-midnight/50 border border-white/5 rounded-xl pl-10 pr-4 py-2.5 text-sm font-mono text-content-strong uppercase focus:border-electric-cyan/50 transition-all"
+                                        className="w-full bg-midnight/50 border border-stroke-hairline rounded-xl pl-10 pr-4 py-2.5 text-sm font-mono text-content-strong uppercase focus:border-electric-cyan/50 transition-all"
                                         placeholder={AGENT_HEX.custom}
                                     />
                                 </div>
@@ -438,7 +438,7 @@ export function AgentDetailPage() {
                                                 className={cn(
                                                     "h-6 w-6 rounded-lg border transition-all hover:scale-125",
                                                     color === preset
-                                                        ? "border-white/40 scale-110"
+                                                        ? "border-stroke-control scale-110"
                                                         : "border-transparent opacity-60"
                                                 )}
                                                 style={{ backgroundColor: preset }}
@@ -510,13 +510,13 @@ export function AgentDetailPage() {
                                     value={temperature}
                                     onChange={(e) => setTemperature(parseFloat(e.target.value))}
                                     aria-valuetext={`${temperature.toFixed(1)} de 2`}
-                                    className="w-full h-2 rounded-full appearance-none cursor-pointer bg-midnight/80 border border-white/5
+                                    className="w-full h-2 rounded-full appearance-none cursor-pointer bg-midnight/80 border border-stroke-hairline
                                         [&::-webkit-slider-thumb]:appearance-none
                                         [&::-webkit-slider-thumb]:h-5
                                         [&::-webkit-slider-thumb]:w-5
                                         [&::-webkit-slider-thumb]:rounded-full
                                         [&::-webkit-slider-thumb]:border-2
-                                        [&::-webkit-slider-thumb]:border-white/20
+                                        [&::-webkit-slider-thumb]:border-stroke-control
                                         [&::-webkit-slider-thumb]:shadow-lg
                                         [&::-webkit-slider-thumb]:transition-transform
                                         [&::-webkit-slider-thumb]:hover:scale-125
@@ -524,7 +524,7 @@ export function AgentDetailPage() {
                                         [&::-moz-range-thumb]:w-5
                                         [&::-moz-range-thumb]:rounded-full
                                         [&::-moz-range-thumb]:border-2
-                                        [&::-moz-range-thumb]:border-white/20
+                                        [&::-moz-range-thumb]:border-stroke-control
                                         [&::-moz-range-thumb]:shadow-lg"
                                     style={{
                                         // @ts-expect-error -- CSS custom property for thumb color
@@ -572,7 +572,7 @@ export function AgentDetailPage() {
                                             "px-4 py-3 rounded-xl border text-sm font-mono transition-all text-left",
                                             model === m
                                                 ? "border-electric-cyan/40 bg-electric-cyan/10 text-electric-cyan"
-                                                : "border-white/5 bg-midnight/50 text-content-muted hover:border-white/10 hover:text-content-strong"
+                                                : "border-stroke-hairline bg-midnight/50 text-content-muted hover:border-stroke-edge hover:text-content-strong"
                                         )}
                                     >
                                         <div className="flex items-center gap-2">
@@ -627,8 +627,8 @@ export function AgentDetailPage() {
                         className="p-6 sm:p-8 rounded-md bg-oxblood-500/12 border border-oxblood-500 space-y-4"
                     >
                         <div className="flex items-center gap-2">
-                            <AlertTriangle className="h-4 w-4 text-red-500" />
-                            <h2 className="text-red-400 text-xs sm:text-sm uppercase tracking-widest font-mono">
+                            <AlertTriangle className="h-4 w-4 text-danger" />
+                            <h2 className="text-danger text-xs sm:text-sm uppercase tracking-widest font-mono">
                                 Zona de Peligro
                             </h2>
                         </div>
@@ -640,7 +640,7 @@ export function AgentDetailPage() {
 
                         <button
                             onClick={() => setShowDeleteModal(true)}
-                            className="flex items-center gap-2 px-4 py-2.5 bg-red-500/10 border border-red-500/30 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500 hover:text-white transition-all"
+                            className="flex items-center gap-2 px-4 py-2.5 bg-oxblood-500/10 border border-oxblood-500/30 rounded-xl text-sm font-medium text-danger hover:bg-oxblood-500 hover:text-content-strong transition-all"
                         >
                             <Trash2 className="h-4 w-4" />
                             Eliminar Agente

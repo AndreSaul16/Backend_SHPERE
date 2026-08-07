@@ -61,12 +61,12 @@ export function CodeBlock({ artifact }: CodeBlockProps) {
     return (
         <div className="flex flex-col h-full bg-[#0d0d12]">
             {/* Toolbar */}
-            <div className="flex items-center justify-between px-6 py-3 bg-white/[0.02] border-b border-white/5">
+            <div className="flex items-center justify-between px-6 py-3 bg-surface-1 border-b border-stroke-hairline">
                 <div className="flex items-center gap-3">
                     <div className="flex gap-1.5">
-                        <div className="h-2.5 w-2.5 rounded-full bg-red-500/40" />
-                        <div className="h-2.5 w-2.5 rounded-full bg-amber-500/40" />
-                        <div className="h-2.5 w-2.5 rounded-full bg-emerald-500/40" />
+                        <div className="h-2.5 w-2.5 rounded-full bg-oxblood-500/40" />
+                        <div className="h-2.5 w-2.5 rounded-full bg-warning/40" />
+                        <div className="h-2.5 w-2.5 rounded-full bg-success/40" />
                     </div>
                     <span className="text-micro font-mono text-content-muted uppercase ml-2 flex items-center gap-2">
                         <ExternalLink className="h-3 w-3" />
@@ -76,14 +76,14 @@ export function CodeBlock({ artifact }: CodeBlockProps) {
                 <div className="flex gap-2">
                     <button
                         onClick={handleCopy}
-                        className="p-2 rounded-xl hover:bg-white/5 transition-all text-gray-400 hover:text-electric-cyan"
+                        className="p-2 rounded-xl hover:bg-stroke-highlight transition-all text-content-muted hover:text-electric-cyan"
                         title="Copiar código"
                     >
-                        {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                        {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
                     </button>
                     <button
                         onClick={handleDownload}
-                        className="p-2 rounded-xl hover:bg-white/5 transition-all text-gray-400 hover:text-electric-cyan"
+                        className="p-2 rounded-xl hover:bg-stroke-highlight transition-all text-content-muted hover:text-electric-cyan"
                         title="Descargar"
                     >
                         <Download className="h-4 w-4" />
@@ -118,7 +118,7 @@ export function CodeBlock({ artifact }: CodeBlockProps) {
             </div>
 
             {/* Status Bar */}
-            <div className="px-6 py-2 border-t border-white/5 bg-white/[0.01] flex justify-between items-center">
+            <div className="px-6 py-2 border-t border-stroke-hairline bg-surface-1 flex justify-between items-center">
                 <p className="text-micro text-content-muted font-mono">
                     SIZE: {(artifact.content.length / 1024).toFixed(1)} KB · LINES: {artifact.content.split('\n').length}
                 </p>

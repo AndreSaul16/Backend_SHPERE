@@ -19,14 +19,14 @@ export function ErrorOverlay() {
                 className="fixed bottom-6 right-6 z-[100] max-w-md w-full"
             >
                 <div className="bg-oxblood-500/12 border border-oxblood-500 rounded-md p-4 shadow-2xl flex items-start gap-3">
-                    <div className="p-2 bg-red-500/20 rounded-lg flex-shrink-0">
-                        <AlertCircle className="h-5 w-5 text-red-500" />
+                    <div className="p-2 bg-oxblood-500/20 rounded-lg flex-shrink-0">
+                        <AlertCircle className="h-5 w-5 text-danger" />
                     </div>
                     <div className="flex-1 min-w-0 pt-1">
-                        <h4 className="text-sm font-bold text-red-500 uppercase tracking-widest">
+                        <h4 className="text-sm font-bold text-danger uppercase tracking-widest">
                             Error del Sistema
                         </h4>
-                        <p className="text-xs text-red-200/80 mt-1 leading-relaxed">
+                        <p className="text-xs text-danger/80 mt-1 leading-relaxed">
                             {activeError}
                         </p>
                     </div>

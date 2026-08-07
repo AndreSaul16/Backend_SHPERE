@@ -22,7 +22,7 @@ export function MarkdownViewer({ artifact }: MarkdownViewerProps) {
     return (
         <div className="flex flex-col h-full bg-[#0d0d12]">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-3 bg-white/[0.02] border-b border-white/5">
+            <div className="flex items-center justify-between px-6 py-3 bg-surface-1 border-b border-stroke-hairline">
                 <div className="flex items-center gap-3">
                     <FileText className="h-4 w-4 text-content-muted" aria-hidden="true" />
                     <span className="text-micro font-mono text-content-muted uppercase">
@@ -31,7 +31,7 @@ export function MarkdownViewer({ artifact }: MarkdownViewerProps) {
                 </div>
                 <button
                     onClick={handleDownload}
-                    className="p-2 rounded-xl hover:bg-white/5 transition-all text-gray-400 hover:text-electric-cyan"
+                    className="p-2 rounded-xl hover:bg-stroke-highlight transition-all text-content-muted hover:text-electric-cyan"
                     title="Descargar .md"
                 >
                     <Download className="h-4 w-4" />

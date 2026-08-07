@@ -79,7 +79,7 @@ export function OnboardingChecklist({ onPrimaryAction }: Props) {
         <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="w-full rounded-md bg-white/[0.02] border border-white/10 p-4 space-y-2.5 text-left"
+            className="w-full rounded-md bg-surface-1 border border-stroke-edge p-4 space-y-2.5 text-left"
         >
             <div className="flex items-center justify-between">
                 <p className="text-micro font-mono uppercase text-electric-cyan">Primeros pasos</p>
@@ -103,18 +103,18 @@ export function OnboardingChecklist({ onPrimaryAction }: Props) {
                         className={cn(
                             "w-full flex items-center gap-3 p-2.5 rounded-xl border transition-all text-left",
                             step.done
-                                ? "border-emerald-500/20 bg-emerald-500/[0.04] cursor-default"
-                                : "border-white/5 hover:border-electric-cyan/30 hover:bg-white/[0.03]"
+                                ? "border-success/20 bg-success/[0.04] cursor-default"
+                                : "border-stroke-hairline hover:border-electric-cyan/30 hover:bg-stroke-highlight"
                         )}
                     >
                         <div className={cn(
                             "h-7 w-7 rounded-lg flex items-center justify-center shrink-0",
-                            step.done ? "bg-emerald-500/20 text-emerald-400" : "bg-white/5 text-gray-400"
+                            step.done ? "bg-success/20 text-success" : "bg-stroke-highlight text-content-muted"
                         )}>
                             {step.done ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
                         </div>
                         <div className="min-w-0">
-                            <p className={cn("text-xs font-semibold", step.done ? "text-gray-400 line-through" : "text-white")}>
+                            <p className={cn("text-xs font-semibold", step.done ? "text-content-muted line-through" : "text-content-strong")}>
                                 {step.label}
                             </p>
                             <p className="text-xs text-content-muted truncate">{step.desc}</p>

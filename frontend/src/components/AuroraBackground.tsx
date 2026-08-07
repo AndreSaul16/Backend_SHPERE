@@ -24,7 +24,7 @@ export const AuroraBackground: React.FC = () => {
         <div className="aurora-container">
             {/* Deep Blue Base */}
             <motion.div
-                className="aurora-blob w-[600px] h-[600px] bg-blue-900/20 top-[-10%] left-[-10%]"
+                className="aurora-blob w-[600px] h-[600px] bg-surface-2/20 top-[-10%] left-[-10%]"
                 animate={reducedMotion ? undefined : {
                     x: [0, 50, 0],
                     y: [0, 30, 0],

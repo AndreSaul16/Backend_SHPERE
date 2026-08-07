@@ -108,7 +108,7 @@ export function DataGrid({ artifact }: DataGridProps) {
     return (
         <div className="flex flex-col h-full bg-[#0d0d12]">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-3 bg-white/[0.02] border-b border-white/5">
+            <div className="flex items-center justify-between px-6 py-3 bg-surface-1 border-b border-stroke-hairline">
                 <div className="flex items-center gap-3">
                     <TableIcon className="h-4 w-4 text-content-muted" aria-hidden="true" />
                     <span className="text-micro font-mono text-content-muted uppercase">
@@ -117,7 +117,7 @@ export function DataGrid({ artifact }: DataGridProps) {
                 </div>
                 <button
                     onClick={handleDownload}
-                    className="p-2 rounded-xl hover:bg-white/5 transition-all text-gray-400 hover:text-electric-cyan"
+                    className="p-2 rounded-xl hover:bg-stroke-highlight transition-all text-content-muted hover:text-electric-cyan"
                     title="Exportar CSV"
                 >
                     <Download className="h-4 w-4" />
@@ -132,7 +132,7 @@ export function DataGrid({ artifact }: DataGridProps) {
                             {headers.map((header, i) => (
                                 <th
                                     key={i}
-                                    className="px-6 py-4 text-left text-micro font-bold text-gray-400 uppercase border-b border-white/5"
+                                    className="px-6 py-4 text-left text-micro font-bold text-content-muted uppercase border-b border-stroke-hairline"
                                 >
                                     {header}
                                 </th>
@@ -143,14 +143,14 @@ export function DataGrid({ artifact }: DataGridProps) {
                         {rows.map((row, rowIdx) => (
                             <tr
                                 key={rowIdx}
-                                className="group hover:bg-white/[0.02] transition-colors"
+                                className="group hover:bg-surface-1 transition-colors"
                             >
                                 {row.map((cell, cellIdx) => {
                                     const isNumeric = !isNaN(Number(cell.replace(/[^0-9.-]+/g, ""))) && cell !== '';
                                     return (
                                         <td
                                             key={cellIdx}
-                                            className={`px-6 py-4 text-gray-300 group-hover:text-white transition-colors ${isNumeric ? 'text-right font-mono text-electric-cyan/80' : 'text-left'
+                                            className={`px-6 py-4 text-content-muted group-hover:text-content-strong transition-colors ${isNumeric ? 'text-right font-mono text-electric-cyan/80' : 'text-left'
                                                 }`}
                                         >
                                             {cell}
@@ -164,7 +164,7 @@ export function DataGrid({ artifact }: DataGridProps) {
             </div>
 
             {/* Footer Summary */}
-            <div className="px-6 py-3 bg-white/[0.01] border-t border-white/5">
+            <div className="px-6 py-3 bg-surface-1 border-t border-stroke-hairline">
                 <p className="text-micro text-content-muted font-mono uppercase">
                     REC: {rows.length} · COLS: {headers.length} · SOURCE: SPHERE_ENGINE_V2
                 </p>

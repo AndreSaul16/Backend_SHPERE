@@ -106,9 +106,9 @@ export function ProfilePage() {
                     disabled={isSaving}
                     className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all font-medium text-sm ${
                         saveStatus === "success"
-                            ? "bg-emerald-500/10 text-emerald-400"
+                            ? "bg-success/10 text-success"
                             : saveStatus === "error"
-                            ? "bg-red-500/10 text-red-400"
+                            ? "bg-oxblood-500/10 text-danger"
                             : "bg-electric-cyan/10 text-electric-cyan hover:bg-electric-cyan hover:text-midnight"
                     } disabled:opacity-60`}
                 >
@@ -168,7 +168,7 @@ export function ProfilePage() {
                             <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-content-strong">{displayName || "—"}</h2>
                             <p className="text-content-muted font-mono text-micro sm:text-xs md:text-sm uppercase">{userEmail}</p>
                             <div className="flex gap-2 justify-center pt-1 sm:pt-2 flex-wrap">
-                                <span className="px-2.5 sm:px-3 py-0.5 sm:py-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-full text-micro sm:text-xs">Online</span>
+                                <span className="px-2.5 sm:px-3 py-0.5 sm:py-1 bg-success/10 text-success border border-success/20 rounded-full text-micro sm:text-xs">Online</span>
                             </div>
                         </div>
                     </section>
@@ -223,7 +223,7 @@ export function ProfilePage() {
                         {/* Notifications */}
                         <div className="p-6 rounded-md bg-surface/30 border border-surface-highlight space-y-4">
                             <div className="flex items-center gap-3 text-content-strong font-semibold mb-4">
-                                <Bell className="h-5 w-5 text-amber-500" />
+                                <Bell className="h-5 w-5 text-warning" />
                                 <h3>Preferencias de Sistema</h3>
                             </div>
                             <p className="text-xs text-content-muted">
@@ -235,8 +235,8 @@ export function ProfilePage() {
                         </div>
 
                         {/* Logout */}
-                        <div className="p-6 rounded-md bg-red-500/5 border border-red-500/20 space-y-4">
-                            <div className="flex items-center gap-3 text-red-500 font-semibold mb-4">
+                        <div className="p-6 rounded-md bg-oxblood-500/5 border border-oxblood-500/20 space-y-4">
+                            <div className="flex items-center gap-3 text-danger font-semibold mb-4">
                                 <LogOut className="h-5 w-5" />
                                 <h3>Cerrar Sesión</h3>
                             </div>
@@ -244,7 +244,7 @@ export function ProfilePage() {
                             <button
                                 onClick={handleLogout}
                                 disabled={isLoggingOut}
-                                className="w-full py-2 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl hover:bg-red-500 hover:text-white transition-all text-sm font-medium disabled:opacity-60 flex items-center justify-center gap-2"
+                                className="w-full py-2 bg-oxblood-500/10 text-danger border border-oxblood-500/20 rounded-xl hover:bg-oxblood-500 hover:text-content-strong transition-all text-sm font-medium disabled:opacity-60 flex items-center justify-center gap-2"
                             >
                                 {isLoggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                                 {isLoggingOut ? "Cerrando sesión..." : "Cerrar Sesión"}

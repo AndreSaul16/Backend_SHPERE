@@ -192,14 +192,14 @@ export function IntegrationsSettings() {
   return (
     <div className="space-y-6">
       {justConnected && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-success/10 border border-success/30 text-success">
           <CheckCircle2 className="h-4 w-4" />
           Conectado correctamente a {justConnected}
         </div>
       )}
 
       {error && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-oxblood-500/10 border border-oxblood-500/30 text-danger text-sm">
           <XCircle className="h-4 w-4 shrink-0" />
           {error}
         </div>
@@ -240,12 +240,12 @@ export function IntegrationsSettings() {
                     <h3 className="font-semibold flex items-center gap-2">
                       {meta.label}
                       {isConnected && (
-                        <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full text-micro">
+                        <span className="px-2 py-0.5 bg-success/10 text-success border border-success/30 rounded-full text-micro">
                           Conectado
                         </span>
                       )}
                       {registered && !isConnected && (
-                        <span className="px-2 py-0.5 bg-sky-500/10 text-sky-400 border border-sky-500/30 rounded-full text-micro">
+                        <span className="px-2 py-0.5 bg-info/10 text-info border border-sky-500/30 rounded-full text-micro">
                           App registrada
                         </span>
                       )}
@@ -289,7 +289,7 @@ export function IntegrationsSettings() {
                             title="Copiar"
                           >
                             {copied === p ? (
-                              <Check className="h-3.5 w-3.5 text-emerald-400" />
+                              <Check className="h-3.5 w-3.5 text-success" />
                             ) : (
                               <Copy className="h-3.5 w-3.5" />
                             )}
@@ -341,7 +341,7 @@ export function IntegrationsSettings() {
                     <button
                       onClick={() => handleDisconnect(p)}
                       disabled={isWorking}
-                      className="w-full flex items-center justify-center gap-2 py-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl hover:bg-red-500 hover:text-white transition-all text-sm font-medium disabled:opacity-50"
+                      className="w-full flex items-center justify-center gap-2 py-2 bg-oxblood-500/10 text-danger border border-oxblood-500/20 rounded-xl hover:bg-oxblood-500 hover:text-content-strong transition-all text-sm font-medium disabled:opacity-50"
                     >
                       <Unlink className="h-4 w-4" />
                       {isWorking ? "Desconectando..." : "Desconectar"}
@@ -360,7 +360,7 @@ export function IntegrationsSettings() {
                   <button
                     onClick={() => handleDeleteApp(p)}
                     disabled={isWorking}
-                    className="w-full flex items-center justify-center gap-1.5 py-1.5 text-content-muted hover:text-red-400 transition-all text-xs disabled:opacity-50"
+                    className="w-full flex items-center justify-center gap-1.5 py-1.5 text-content-muted hover:text-danger transition-all text-xs disabled:opacity-50"
                     title="Elimina el client_id/secret y revoca los tokens emitidos"
                   >
                     <Trash2 className="h-3.5 w-3.5" />

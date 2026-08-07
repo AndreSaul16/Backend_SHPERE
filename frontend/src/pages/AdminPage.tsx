@@ -84,7 +84,7 @@ export function AdminPage() {
     if (denied) {
         return (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-center p-8">
-                <ShieldAlert className="h-12 w-12 text-rose-400" />
+                <ShieldAlert className="h-12 w-12 text-agent-devil" />
                 <h2 className="text-lg font-bold text-content-strong">Sin acceso</h2>
                 <p className="text-sm text-content-muted">No tienes permisos para ver el panel de administración.</p>
             </div>
@@ -199,7 +199,7 @@ export function AdminPage() {
                                         {txs.map((t, i) => (
                                             <div key={i} className="flex items-center justify-between gap-3 text-xs font-mono tabular-nums">
                                                 <span className="text-content-muted truncate">{t.reason}</span>
-                                                <span className={t.delta < 0 ? "text-rose-400" : "text-emerald-400"}>
+                                                <span className={t.delta < 0 ? "text-agent-devil" : "text-success"}>
                                                     {t.delta > 0 ? "+" : ""}{t.delta}
                                                 </span>
                                             </div>

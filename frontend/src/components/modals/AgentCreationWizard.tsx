@@ -530,7 +530,7 @@ export function AgentCreationWizard({ isOpen, onClose, onAgentCreated }: AgentCr
                                                 className={cn(
                                                     'flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all',
                                                     isActive && 'bg-electric-cyan/10 text-electric-cyan',
-                                                    isDone && 'bg-white/5 text-content-muted hover:bg-white/10 cursor-pointer',
+                                                    isDone && 'bg-stroke-highlight text-content-muted hover:bg-stroke-hairline cursor-pointer',
                                                     !isActive && !isDone && 'text-content-quiet cursor-not-allowed',
                                                 )}
                                             >
@@ -540,7 +540,7 @@ export function AgentCreationWizard({ isOpen, onClose, onAgentCreated }: AgentCr
                                             {i < STEPS.length - 1 && (
                                                 <div className={cn(
                                                     'flex-1 h-px transition-colors',
-                                                    i < step ? 'bg-electric-cyan/30' : 'bg-white/5',
+                                                    i < step ? 'bg-electric-cyan/30' : 'bg-stroke-highlight',
                                                 )} />
                                             )}
                                         </div>
@@ -669,13 +669,13 @@ function StepChooseMethod({
                 whileHover={{ y: -2, scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
                 onClick={onStartFromScratch}
-                className="w-full flex items-center gap-5 p-6 rounded-md bg-white/[0.03] border-2 border-dashed border-white/10 hover:border-electric-cyan/40 hover:bg-white/[0.06] transition-all text-left group"
+                className="w-full flex items-center gap-5 p-6 rounded-md bg-stroke-highlight border-2 border-dashed border-stroke-edge hover:border-electric-cyan/40 hover:bg-stroke-highlight transition-all text-left group"
             >
                 <div className="p-4 bg-electric-cyan/10 rounded-md group-hover:bg-electric-cyan/20 transition-colors shrink-0">
                     <PenLine className="h-7 w-7 text-electric-cyan" />
                 </div>
                 <div className="min-w-0">
-                    <p className="font-bold text-white text-lg group-hover:text-electric-cyan transition-colors">
+                    <p className="font-bold text-content-strong text-lg group-hover:text-electric-cyan transition-colors">
                         Crear desde cero
                     </p>
                     <p className="text-sm text-content-muted mt-1">
@@ -687,11 +687,11 @@ function StepChooseMethod({
 
             {/* Divider */}
             <div className="flex items-center gap-4">
-                <div className="flex-1 h-px bg-white/5" />
+                <div className="flex-1 h-px bg-stroke-highlight" />
                 <span className="text-micro font-bold text-content-muted uppercase">
                     o usa una plantilla
                 </span>
-                <div className="flex-1 h-px bg-white/5" />
+                <div className="flex-1 h-px bg-stroke-highlight" />
             </div>
 
             {/* Category filters */}
@@ -703,7 +703,7 @@ function StepChooseMethod({
                             'px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border',
                             categoryFilter === null
                                 ? 'bg-electric-cyan/10 text-electric-cyan border-electric-cyan/30'
-                                : 'bg-white/[0.03] text-content-muted border-white/5 hover:border-white/10 hover:text-content-strong',
+                                : 'bg-stroke-highlight text-content-muted border-stroke-hairline hover:border-stroke-edge hover:text-content-strong',
                         )}
                     >
                         Todas
@@ -718,8 +718,8 @@ function StepChooseMethod({
                                 className={cn(
                                     'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border',
                                     categoryFilter === cat
-                                        ? 'bg-white/10 text-white border-white/20'
-                                        : 'bg-white/[0.03] text-content-muted border-white/5 hover:border-white/10 hover:text-content-strong',
+                                        ? 'bg-stroke-hairline text-content-strong border-stroke-control'
+                                        : 'bg-stroke-highlight text-content-muted border-stroke-hairline hover:border-stroke-edge hover:text-content-strong',
                                 )}
                             >
                                 <CatIcon className="h-3 w-3" />
@@ -762,16 +762,16 @@ function StepChooseMethod({
                                 whileHover={{ y: -3, scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => onSelectTemplate(template)}
-                                className="flex items-start gap-4 p-5 rounded-md bg-white/[0.03] border border-white/5 hover:border-luxury-purple/40 hover:bg-white/[0.06] transition-all text-left group"
+                                className="flex items-start gap-4 p-5 rounded-md bg-stroke-highlight border border-stroke-hairline hover:border-luxury-purple/40 hover:bg-stroke-highlight transition-all text-left group"
                             >
                                 <div className={cn(
-                                    'p-3 rounded-xl bg-white/[0.05] border border-white/5 shrink-0',
-                                    meta?.color ?? 'text-gray-400',
+                                    'p-3 rounded-xl bg-stroke-highlight border border-stroke-hairline shrink-0',
+                                    meta?.color ?? 'text-content-muted',
                                 )}>
                                     <TemplateIcon className="h-5 w-5" />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="font-bold text-white text-sm group-hover:text-luxury-purple transition-colors truncate">
+                                    <p className="font-bold text-content-strong text-sm group-hover:text-luxury-purple transition-colors truncate">
                                         {template.name}
                                     </p>
                                     <p className="text-xs text-content-muted mt-1 line-clamp-2">
@@ -782,7 +782,7 @@ function StepChooseMethod({
                                             {template.tags.slice(0, 3).map((tag) => (
                                                 <span
                                                     key={tag}
-                                                    className="px-2 py-0.5 bg-white/5 text-content-muted rounded-md text-micro font-medium"
+                                                    className="px-2 py-0.5 bg-stroke-highlight text-content-muted rounded-md text-micro font-medium"
                                                 >
                                                     {tag}
                                                 </span>
@@ -895,7 +895,7 @@ function StepConfigure({
                     <div
                         role="group"
                         aria-labelledby="wizard-color-label"
-                        className="flex flex-wrap gap-2 p-3 rounded-md bg-white/[0.03] border border-white/5"
+                        className="flex flex-wrap gap-2 p-3 rounded-md bg-stroke-highlight border border-stroke-hairline"
                     >
                         {PRESET_COLORS.map((c) => (
                             <button
@@ -925,7 +925,7 @@ function StepConfigure({
                         <Thermometer className="h-3 w-3" aria-hidden="true" />
                         Temperatura
                     </label>
-                    <div className="p-3 rounded-md bg-white/[0.03] border border-white/5 space-y-3">
+                    <div className="p-3 rounded-md bg-stroke-highlight border border-stroke-hairline space-y-3">
                         <div className="flex items-center justify-between">
                             <span className="text-xs text-content-muted">Preciso</span>
                             <span className="text-sm font-mono font-bold text-electric-cyan">
@@ -969,8 +969,8 @@ function StepConfigure({
                                 className={cn(
                                     'w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left',
                                     model === opt.value
-                                        ? 'bg-electric-cyan/10 border-electric-cyan/30 text-white'
-                                        : 'bg-white/[0.03] border-white/5 text-gray-400 hover:border-white/10 hover:text-gray-300',
+                                        ? 'bg-electric-cyan/10 border-electric-cyan/30 text-content-strong'
+                                        : 'bg-stroke-highlight border-stroke-hairline text-content-muted hover:border-stroke-edge hover:text-content-muted',
                                 )}
                             >
                                 <div className={cn(
@@ -990,15 +990,15 @@ function StepConfigure({
             </div>
 
             {/* Preview pill */}
-            <div className="flex items-center gap-3 p-4 rounded-md bg-white/[0.02] border border-white/5">
+            <div className="flex items-center gap-3 p-4 rounded-md bg-surface-1 border border-stroke-hairline">
                 <div
-                    className="h-10 w-10 rounded-xl flex items-center justify-center text-white font-bold text-sm border border-white/10"
+                    className="h-10 w-10 rounded-xl flex items-center justify-center text-content-strong font-bold text-sm border border-stroke-edge"
                     style={{ backgroundColor: color + '30', borderColor: color + '50' }}
                 >
                     {name.trim() ? name.trim().charAt(0).toUpperCase() : '?'}
                 </div>
                 <div className="min-w-0">
-                    <p className="text-sm font-bold text-white truncate">
+                    <p className="text-sm font-bold text-content-strong truncate">
                         {name.trim() || 'Nombre del agente'}
                     </p>
                     <p className="text-xs text-content-muted truncate">
@@ -1006,10 +1006,10 @@ function StepConfigure({
                     </p>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
-                    <span className="px-2 py-0.5 bg-white/5 text-content-muted rounded text-micro font-mono">
+                    <span className="px-2 py-0.5 bg-stroke-highlight text-content-muted rounded text-micro font-mono">
                         {model}
                     </span>
-                    <span className="px-2 py-0.5 bg-white/5 text-content-muted rounded text-micro font-mono">
+                    <span className="px-2 py-0.5 bg-stroke-highlight text-content-muted rounded text-micro font-mono">
                         t={temperature.toFixed(1)}
                     </span>
                 </div>
@@ -1068,7 +1068,7 @@ function StepKnowledge({
             className="p-8 space-y-6"
         >
             <div className="space-y-1">
-                <h3 className="text-base font-bold text-white">Base de Conocimiento</h3>
+                <h3 className="text-base font-bold text-content-strong">Base de Conocimiento</h3>
                 <p className="text-sm text-content-muted">
                     Sube documentos para que tu agente tenga contexto especializado. Este paso es opcional.
                 </p>
@@ -1085,7 +1085,7 @@ function StepKnowledge({
                         {suggestedFiles.map((sf) => (
                             <span
                                 key={sf}
-                                className="px-2.5 py-1 bg-white/5 text-gray-400 rounded-lg text-xs border border-white/5"
+                                className="px-2.5 py-1 bg-stroke-highlight text-content-muted rounded-lg text-xs border border-stroke-hairline"
                             >
                                 {sf}
                             </span>
@@ -1177,13 +1177,13 @@ function StepKnowledge({
                             <div
                                 key={entry.id}
                                 data-row
-                                className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/5 group"
+                                className="flex items-center gap-3 p-3 rounded-xl bg-stroke-highlight border border-stroke-hairline group"
                             >
-                                <div className="p-2 bg-white/5 rounded-lg shrink-0">
-                                    <File className="h-4 w-4 text-gray-400" />
+                                <div className="p-2 bg-stroke-highlight rounded-lg shrink-0">
+                                    <File className="h-4 w-4 text-content-muted" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-medium text-white truncate">
+                                    <p className="text-xs font-medium text-content-strong truncate">
                                         {entry.file.name}
                                     </p>
                                     <p className="text-xs text-content-muted">
@@ -1197,7 +1197,7 @@ function StepKnowledge({
                                     )}
                                     {entry.status === 'uploading' && (
                                         <div className="flex items-center gap-2">
-                                            <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                            <div className="w-16 h-1.5 bg-stroke-hairline rounded-full overflow-hidden">
                                                 <div
                                                     className="h-full bg-electric-cyan rounded-full transition-all duration-300"
                                                     style={{ width: `${entry.progress}%` }}
@@ -1209,11 +1209,11 @@ function StepKnowledge({
                                         </div>
                                     )}
                                     {entry.status === 'success' && (
-                                        <CheckCircle2 className="h-4 w-4 text-green-400" />
+                                        <CheckCircle2 className="h-4 w-4 text-success" />
                                     )}
                                     {entry.status === 'error' && (
                                         <div className="flex items-center gap-1.5" title={entry.errorMessage}>
-                                            <XCircle className="h-4 w-4 text-red-400" />
+                                            <XCircle className="h-4 w-4 text-danger" />
                                         </div>
                                     )}
                                 </div>
@@ -1300,11 +1300,11 @@ function StepReview({
             className="p-8 space-y-6"
         >
             {/* Summary card */}
-            <div className="rounded-md bg-white/[0.03] border border-white/5 overflow-hidden">
+            <div className="rounded-md bg-stroke-highlight border border-stroke-hairline overflow-hidden">
                 {/* Agent header */}
-                <div className="p-6 flex flex-wrap items-center gap-4 border-b border-white/5">
+                <div className="p-6 flex flex-wrap items-center gap-4 border-b border-stroke-hairline">
                     <div
-                        className="h-14 w-14 rounded-md flex items-center justify-center text-white font-bold text-xl border border-white/10 shadow-lg"
+                        className="h-14 w-14 rounded-md flex items-center justify-center text-content-strong font-bold text-xl border border-stroke-edge shadow-lg"
                         style={{
                             backgroundColor: color + '25',
                             borderColor: color + '40',
@@ -1314,7 +1314,7 @@ function StepReview({
                         {name.trim().charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
-                        <p className="text-lg font-bold text-white truncate">{name}</p>
+                        <p className="text-lg font-bold text-content-strong truncate">{name}</p>
                         {description && (
                             <p className="text-sm text-content-muted truncate mt-0.5">{description}</p>
                         )}
@@ -1343,7 +1343,7 @@ function StepReview({
                         value={
                             <div className="flex items-center gap-2">
                                 <div
-                                    className="h-4 w-4 rounded-md border border-white/10"
+                                    className="h-4 w-4 rounded-md border border-stroke-edge"
                                     style={{ backgroundColor: color }}
                                 />
                                 <span className="font-mono text-xs">{color}</span>
@@ -1363,8 +1363,8 @@ function StepReview({
                     <p className="text-micro font-bold text-content-muted uppercase mb-2">
                         System Prompt
                     </p>
-                    <div className="p-4 rounded-xl bg-midnight/60 border border-white/5 max-h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
-                        <p className="text-xs text-gray-400 font-mono leading-relaxed whitespace-pre-wrap">
+                    <div className="p-4 rounded-xl bg-midnight/60 border border-stroke-hairline max-h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
+                        <p className="text-xs text-content-muted font-mono leading-relaxed whitespace-pre-wrap">
                             {systemPrompt.length > 500
                                 ? systemPrompt.substring(0, 500) + '...'
                                 : systemPrompt}
@@ -1382,7 +1382,7 @@ function StepReview({
                             {files.map((f) => (
                                 <span
                                     key={f.id}
-                                    className="flex items-center gap-1.5 px-2.5 py-1 bg-white/5 text-gray-400 rounded-lg text-xs border border-white/5"
+                                    className="flex items-center gap-1.5 px-2.5 py-1 bg-stroke-highlight text-content-muted rounded-lg text-xs border border-stroke-hairline"
                                 >
                                     <File className="h-3 w-3" />
                                     {f.file.name}
@@ -1398,10 +1398,10 @@ function StepReview({
                 <motion.div
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-3 p-4 rounded-md bg-red-500/5 border border-red-500/20"
+                    className="flex items-center gap-3 p-4 rounded-md bg-oxblood-500/5 border border-oxblood-500/20"
                 >
-                    <AlertCircle className="h-5 w-5 text-red-400 shrink-0" />
-                    <p className="text-sm text-red-400">{submitError}</p>
+                    <AlertCircle className="h-5 w-5 text-danger shrink-0" />
+                    <p className="text-sm text-danger">{submitError}</p>
                 </motion.div>
             )}
 
@@ -1411,17 +1411,17 @@ function StepReview({
                     {files.map((f) => (
                         <div key={f.id} className="flex items-center gap-3">
                             <span className="text-xs text-content-muted truncate w-32">{f.file.name}</span>
-                            <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                            <div className="flex-1 h-1.5 bg-stroke-hairline rounded-full overflow-hidden">
                                 <div
                                     className={cn(
                                         'h-full rounded-full transition-all duration-300',
-                                        f.status === 'error' ? 'bg-red-400' : 'bg-electric-cyan',
+                                        f.status === 'error' ? 'bg-oxblood-500' : 'bg-electric-cyan',
                                     )}
                                     style={{ width: `${f.progress}%` }}
                                 />
                             </div>
-                            {f.status === 'success' && <Check className="h-4 w-4 text-green-400" />}
-                            {f.status === 'error' && <XCircle className="h-4 w-4 text-red-400" />}
+                            {f.status === 'success' && <Check className="h-4 w-4 text-success" />}
+                            {f.status === 'error' && <XCircle className="h-4 w-4 text-danger" />}
                             {f.status === 'uploading' && (
                                 <Loader2 className="h-4 w-4 text-electric-cyan animate-spin" />
                             )}
@@ -1447,12 +1447,12 @@ function ReviewField({
     icon: React.ReactNode;
 }) {
     return (
-        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-1.5">
+        <div className="p-3 rounded-xl bg-surface-1 border border-stroke-hairline space-y-1.5">
             <p className="text-micro font-bold text-content-muted uppercase flex items-center gap-1.5">
                 {icon}
                 {label}
             </p>
-            <div className="text-sm font-semibold text-white">{value}</div>
+            <div className="text-sm font-semibold text-content-strong">{value}</div>
         </div>
     );
 }

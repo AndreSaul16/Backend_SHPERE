@@ -95,7 +95,7 @@ export function AgentOverridesSettings() {
       </p>
 
       {error && (
-        <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+        <div className="p-3 rounded-xl bg-oxblood-500/10 border border-oxblood-500/30 text-danger text-sm">
           {error}
         </div>
       )}
@@ -122,7 +122,7 @@ export function AgentOverridesSettings() {
                 <button
                   onClick={() => handleReset(role.id)}
                   disabled={saving === role.id}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-midnight/50 text-content-muted hover:text-red-400 hover:bg-red-500/10 border border-surface-highlight rounded-lg text-xs transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-midnight/50 text-content-muted hover:text-danger hover:bg-oxblood-500/10 border border-surface-highlight rounded-lg text-xs transition-colors"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
                   Restaurar default
