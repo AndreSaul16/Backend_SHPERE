@@ -62,7 +62,7 @@ function ThinkingBlock({ thinking, isStreaming, hasContent, hexColor, label }: {
     if (!hasThinking) {
         if (isThinkingNow) {
             return (
-                <div className="flex items-center gap-2 mb-2 text-[11px] text-content-quiet italic">
+                <div className="flex items-center gap-2 mb-2 text-[11px] text-content-muted italic">
                     <Brain className="h-3 w-3 animate-pulse" style={{ color: hexColor }} />
                     <span>{label || 'Pensando'}</span>
                     <span className="inline-flex gap-0.5">
@@ -84,7 +84,7 @@ function ThinkingBlock({ thinking, isStreaming, hasContent, hexColor, label }: {
             <button
                 type="button"
                 onClick={() => { setUserToggled(true); setOpen(!expanded); }}
-                className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-content-quiet hover:text-content-muted transition-colors"
+                className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-content-muted hover:text-content-strong transition-colors"
             >
                 <Brain className="h-3 w-3" style={{ color: hexColor }} />
                 <span>{isThinkingNow ? 'Razonando…' : 'Razonamiento'}</span>
@@ -100,7 +100,7 @@ function ThinkingBlock({ thinking, isStreaming, hasContent, hexColor, label }: {
                         className="overflow-hidden"
                     >
                         <div
-                            className="mt-1.5 pl-3 border-l-2 text-[12px] leading-relaxed text-content-quiet italic whitespace-pre-wrap [overflow-wrap:break-word]"
+                            className="mt-1.5 pl-3 border-l-2 text-[12px] leading-relaxed text-content-muted italic whitespace-pre-wrap [overflow-wrap:break-word]"
                             style={{ borderColor: `${hexColor}40` }}
                         >
                             {thinking}
@@ -207,7 +207,7 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                         "min-w-[80px] max-w-full overflow-hidden",
                         "[overflow-wrap:break-word] [word-break:break-word]",
                         isUser
-                            ? "bg-user-bubble text-white rounded-tr-sm"
+                            ? "bg-user-bubble/12 text-content rounded-tr-sm"
                             : "bg-ai-bubble/95 text-content-strong rounded-tl-sm backdrop-blur-sm relative"
                     )}
                     style={isUser
@@ -536,7 +536,7 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                                     {message.vote.decision === 'SI' ? '✓ A FAVOR' : message.vote.decision === 'NO' ? '✗ EN CONTRA' : '~ CONDICIONAL'} · {message.vote.confidence}%
                                 </span>
                             )}
-                            <span className="text-[9px] sm:text-[10px] opacity-30">
+                            <span className="text-[9px] sm:text-[10px] text-content-muted">
                                 {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                         </div>

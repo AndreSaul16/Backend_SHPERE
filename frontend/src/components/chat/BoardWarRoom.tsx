@@ -87,7 +87,7 @@ export function BoardWarRoom({ board, agents }: { board: BoardSessionState; agen
                                             {VOTE_GLYPH[vote.decision] || "·"} {vote.confidence}%
                                         </span>
                                     ) : (
-                                        <span className="text-[8px] font-mono uppercase tracking-tight text-gray-600 leading-none truncate w-full text-center">
+                                        <span className="text-[8px] font-mono uppercase tracking-tight text-content-muted leading-none truncate w-full text-center">
                                             {status === "speaking" ? "hablando" : role}
                                         </span>
                                     )}
@@ -103,12 +103,12 @@ export function BoardWarRoom({ board, agents }: { board: BoardSessionState; agen
                                 <span
                                     className={cn(
                                         "transition-colors",
-                                        i === phaseIndex ? "text-electric-cyan font-bold" : i < phaseIndex ? "text-gray-500" : "text-gray-700"
+                                        i === phaseIndex ? "text-accent font-bold" : i < phaseIndex ? "text-content-muted" : "text-content-quiet"
                                     )}
                                 >
                                     {p.label}
                                 </span>
-                                {i < PHASE_LABELS.length - 1 && <span className="text-gray-700">▸</span>}
+                                {i < PHASE_LABELS.length - 1 && <span className="text-content-quiet" aria-hidden="true">▸</span>}
                             </div>
                         ))}
                     </div>

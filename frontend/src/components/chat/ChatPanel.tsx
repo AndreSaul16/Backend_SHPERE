@@ -335,7 +335,7 @@ export function ChatPanel() {
                             Iniciar Nuevo Chat
                         </motion.button>
 
-                        <p className="text-[10px] text-gray-600 font-mono uppercase tracking-widest">
+                        <p className="text-[10px] text-content-quiet font-mono uppercase tracking-widest">
                             Powered by SPHERE Neuro-Link v2.0
                         </p>
                     </motion.div>
@@ -372,13 +372,13 @@ export function ChatPanel() {
                             <h3 className="font-bold text-white text-lg tracking-tight truncate">
                                 {isGroupChat ? activeAgent?.name : baseName}
                             </h3>
-                            <span className="px-2 py-0.5 bg-white/5 text-gray-500 rounded-lg text-[9px] font-black uppercase tracking-widest border border-white/5">
+                            <span className="px-2 py-0.5 bg-white/5 text-content-muted rounded-lg text-[9px] font-black uppercase tracking-widest border border-white/5">
                                 {role}
                             </span>
                         </div>
                         <div className="flex items-center gap-2 mt-0.5 min-w-0">
                             <ShieldCheck className="h-3 w-3 text-emerald-500/50 shrink-0" />
-                            <p className="text-[10px] text-gray-500 font-mono uppercase tracking-tighter truncate">
+                            <p className="text-[10px] text-content-muted font-mono uppercase tracking-tighter truncate">
                                 {isGroupChat
                                     ? `${groupMembers.length} Expertos Activos`
                                     : "Canal Encriptado de Extremo a Extremo"}
@@ -392,16 +392,16 @@ export function ChatPanel() {
                     <div className="hidden lg:flex mr-2">
                         <CreditsIndicator />
                     </div>
-                    <button onClick={() => setIsSearchOpen(v => !v)} className={cn("p-2 rounded-xl hover:bg-white/5 transition-all active-scale", isSearchOpen ? "text-electric-cyan" : "text-gray-500 hover:text-white")} title="Buscar">
+                    <button onClick={() => setIsSearchOpen(v => !v)} className={cn("p-2 rounded-xl hover:bg-white/5 transition-all active-scale", isSearchOpen ? "text-accent" : "text-content-muted hover:text-content-strong")} title="Buscar">
                         <Search className="h-4 w-4" />
                     </button>
-                    <button onClick={() => setShowPinnedOnly(v => !v)} className={cn("p-2 rounded-xl hover:bg-white/5 transition-all active-scale", showPinnedOnly ? "text-yellow-500" : "text-gray-500 hover:text-white")} title="Solo pinneados">
+                    <button onClick={() => setShowPinnedOnly(v => !v)} className={cn("p-2 rounded-xl hover:bg-white/5 transition-all active-scale", showPinnedOnly ? "text-warning" : "text-content-muted hover:text-content-strong")} title="Solo pinneados">
                         <Pin className="h-4 w-4" />
                     </button>
-                    <button onClick={handleExport} className="p-2 rounded-xl hover:bg-white/5 transition-all text-gray-500 hover:text-white active-scale" title="Exportar">
+                    <button onClick={handleExport} className="p-2 rounded-xl hover:bg-white/5 transition-all text-content-muted hover:text-content-strong active-scale" title="Exportar">
                         <Download className="h-4 w-4" />
                     </button>
-                    <button onClick={() => navigate('/chat/settings')} className="p-2 rounded-xl hover:bg-white/5 transition-all text-gray-500 hover:text-white active-scale">
+                    <button onClick={() => navigate('/chat/settings')} className="p-2 rounded-xl hover:bg-white/5 transition-all text-content-muted hover:text-content-strong active-scale">
                         <MoreVertical className="h-4 w-4" />
                     </button>
                 </div>
@@ -432,15 +432,15 @@ export function ChatPanel() {
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Buscar en esta conversación..."
-                                className="flex-1 bg-transparent text-white text-sm placeholder:text-gray-600"
+                                className="flex-1 bg-transparent text-content-strong text-sm placeholder:text-content-quiet"
                                 autoFocus
                             />
                             {searchQuery && (
-                                <span className="text-[10px] text-gray-500 font-mono">
+                                <span className="text-[10px] text-content-muted font-mono">
                                     {filteredMessages.filter(m => m.role !== 'system').length} resultados
                                 </span>
                             )}
-                            <button onClick={() => { setSearchQuery(''); setIsSearchOpen(false); }} className="p-1 hover:bg-white/10 rounded text-gray-500 hover:text-white">
+                            <button onClick={() => { setSearchQuery(''); setIsSearchOpen(false); }} className="p-1 hover:bg-white/10 rounded text-content-muted hover:text-content-strong">
                                 <X className="h-4 w-4" />
                             </button>
                         </div>
@@ -469,7 +469,7 @@ export function ChatPanel() {
                             </div>
                             <div className="space-y-2">
                                 <h2 className="text-white font-bold text-xl uppercase tracking-widest">Listo para empezar</h2>
-                                <p className="text-gray-500 text-sm max-w-xs leading-relaxed">
+                                <p className="text-content-muted text-sm max-w-xs leading-relaxed">
                                     {isGroupChat
                                         ? "Plantea una decisión y tu junta debatirá para darte una recomendación."
                                         : "Escribe tu primer mensaje para empezar la conversación."}
@@ -508,7 +508,7 @@ export function ChatPanel() {
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         exit={{ opacity: 0 }}
-                                        className="flex items-center gap-3 text-gray-500 text-[10px] font-mono uppercase tracking-widest ml-14"
+                                        className="flex items-center gap-3 text-content-muted text-[10px] font-mono uppercase tracking-widest ml-14"
                                     >
                                         <div className="flex gap-1">
                                             <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.5 }} className="h-1 w-1 rounded-full bg-electric-cyan" />
@@ -599,12 +599,12 @@ export function ChatPanel() {
                                     : "Adjuntar documento a la base de conocimiento del agente"
                             }
                             className={cn(
-                                "p-3.5 transition-all disabled:opacity-30 active-scale",
+                                "p-3.5 transition-all disabled:text-content-quiet disabled:cursor-not-allowed active-scale",
                                 uploadState === 'done'
                                     ? "text-emerald-400"
                                     : uploadState === 'error'
                                     ? "text-red-400"
-                                    : "text-gray-500 hover:text-white"
+                                    : "text-content-muted hover:text-content-strong"
                             )}
                         >
                             <Paperclip className={cn("h-5 w-5", uploadState === 'uploading' && "animate-pulse")} />
@@ -617,7 +617,7 @@ export function ChatPanel() {
                             onChange={(e) => setInputValue(e.target.value)}
                             onKeyDown={handleKeyDown}
                             placeholder={canIntervene ? "Intervenir en el debate…" : isTyping ? "Sistema ocupado..." : "Transmite tu consulta..."}
-                            className="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder:text-gray-600 resize-none py-3.5 max-h-48 text-[15px] leading-relaxed font-medium"
+                            className="flex-1 bg-transparent border-none focus:ring-0 text-content-strong placeholder:text-content-muted resize-none py-3.5 max-h-48 text-[15px] leading-relaxed font-medium"
                             rows={1}
                             disabled={isTyping && !canIntervene}
                         />
@@ -632,7 +632,7 @@ export function ChatPanel() {
                                     "p-3.5 rounded-xl transition-all duration-300",
                                     inputValue.trim()
                                         ? "bg-electric-cyan/80 text-midnight shadow-[0_0_20px_rgba(0,245,212,0.4)] hover:scale-105"
-                                        : "bg-white/5 text-gray-600 cursor-not-allowed"
+                                        : "bg-white/5 text-content-quiet cursor-not-allowed"
                                 )}
                             >
                                 <Hand className="h-5 w-5" />
@@ -655,7 +655,7 @@ export function ChatPanel() {
                                     "p-3.5 rounded-xl transition-all duration-300",
                                     inputValue.trim()
                                         ? "bg-luxury-purple text-white shadow-[0_0_20px_rgba(157,133,255,0.4)] hover:scale-105"
-                                        : "bg-white/5 text-gray-600 cursor-not-allowed"
+                                        : "bg-white/5 text-content-quiet cursor-not-allowed"
                                 )}
                             >
                                 <Send className="h-5 w-5" />
@@ -667,14 +667,14 @@ export function ChatPanel() {
                         <div className="flex items-center gap-4">
                             {/* Chip de coste de la acción: board grupal ≈5⚡ (o 3 si el triage reduce), directo 1⚡ */}
                             <span
-                                className="flex items-center gap-1 text-[9px] font-mono text-gray-500 uppercase tracking-widest"
+                                className="flex items-center gap-1 text-[9px] font-mono text-content-muted uppercase tracking-widest"
                                 title={isGroupChat ? "Un debate de la junta cuesta hasta 5 créditos (3 si el triage reduce los participantes)" : "Un mensaje cuesta 1 crédito"}
                             >
                                 <Zap className="h-3 w-3 text-electric-cyan/70" />
                                 {isGroupChat ? `${boardSession?.cost ?? 5} por debate` : "1 por mensaje"}
                             </span>
                         </div>
-                        <p className="text-[9px] text-gray-700 font-mono uppercase tracking-tighter">
+                        <p className="text-[9px] text-content-quiet font-mono uppercase tracking-tighter">
                             Powered by SPHERE Neuro-Link v2.0
                         </p>
                     </div>
