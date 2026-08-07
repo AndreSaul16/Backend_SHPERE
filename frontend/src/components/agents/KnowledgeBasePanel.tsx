@@ -484,57 +484,78 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
             {/* Upload Zone */}
             {!readOnly && (
                 <div className="px-6 py-5 border-t border-white/5 bg-white/[0.02]">
+                    {/* D14 (1.10): esto era un <div onClick> con el <input
+                        type="file"> en `hidden`. Con teclado NO se podía subir un
+                        documento: el div no recibe foco y el input oculto tampoco.
+                        Ahora el disparador es un <button> real — foco, Enter y
+                        Espacio gratis — y el input va `sr-only` en vez de `hidden`,
+                        porque `display:none` lo saca del árbol de accesibilidad y
+                        además algunos navegadores se niegan a abrir el selector de
+                        un input que no está pintado.
+
+                        El arrastrar y soltar se queda donde estaba: es un ATAJO de
+                        ratón sobre el mismo contenedor, no el único camino. */}
                     <div
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
                         onDrop={handleDrop}
-                        onClick={() => fileInputRef.current?.click()}
                         className={cn(
-                            'relative flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 border-dashed cursor-pointer transition-all duration-300',
+                            'relative rounded-2xl border-2 border-dashed transition-all duration-300',
                             isDragOver
-                                ? 'border-electric-cyan/60 bg-electric-cyan/5 scale-[1.01]'
-                                : 'border-white/10 hover:border-electric-cyan/30 hover:bg-white/[0.02]',
+                                ? 'border-accent/60 bg-accent/5'
+                                : 'border-stroke-edge hover:border-brass-600',
                         )}
                     >
-                        <div
-                            className={cn(
-                                'p-3 rounded-2xl transition-colors',
-                                isDragOver ? 'bg-electric-cyan/10' : 'bg-white/5',
-                            )}
+                        <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="flex w-full flex-col items-center justify-center gap-3 p-6 rounded-2xl cursor-pointer"
                         >
-                            <Upload
+                            <div
                                 className={cn(
-                                    'h-6 w-6 transition-colors',
-                                    isDragOver ? 'text-electric-cyan' : 'text-gray-500',
-                                )}
-                            />
-                        </div>
-                        <div className="text-center">
-                            <p
-                                className={cn(
-                                    'text-sm font-medium transition-colors',
-                                    isDragOver ? 'text-electric-cyan' : 'text-gray-400',
+                                    'p-3 rounded-2xl transition-colors',
+                                    isDragOver ? 'bg-accent/10' : 'bg-surface-3',
                                 )}
                             >
-                                {isDragOver
-                                    ? 'Suelta los archivos aquí'
-                                    : 'Arrastra archivos o haz clic para subir'}
-                            </p>
-                            <p className="text-[10px] text-gray-600 mt-1.5 font-mono uppercase tracking-wider">
-                                {ALLOWED_EXTENSIONS.join(' · ')} — Máx {formatFileSize(MAX_FILE_SIZE)}
-                            </p>
-                        </div>
+                                <Upload
+                                    className={cn(
+                                        'h-6 w-6 transition-colors',
+                                        isDragOver ? 'text-accent' : 'text-content-muted',
+                                    )}
+                                    aria-hidden="true"
+                                />
+                            </div>
+                            <div className="text-center">
+                                <span
+                                    className={cn(
+                                        'block text-sm font-medium transition-colors',
+                                        isDragOver ? 'text-accent' : 'text-content-muted',
+                                    )}
+                                >
+                                    {isDragOver
+                                        ? 'Suelta los archivos aquí'
+                                        : 'Subir documentos'}
+                                </span>
+                                <span className="block text-micro text-content-muted mt-1.5 font-mono uppercase">
+                                    {ALLOWED_EXTENSIONS.join(' · ')} — Máx {formatFileSize(MAX_FILE_SIZE)}
+                                </span>
+                                <span className="block text-micro text-content-muted mt-1">
+                                    También puedes arrastrarlos aquí.
+                                </span>
+                            </div>
+                        </button>
 
                         <input
                             ref={fileInputRef}
                             type="file"
                             multiple
                             accept={ALLOWED_EXTENSIONS.join(',')}
+                            aria-label="Subir documentos a la base de conocimiento"
                             onChange={(e) => {
                                 handleFiles(e.target.files);
                                 e.target.value = '';
                             }}
-                            className="hidden"
+                            className="sr-only"
                         />
                     </div>
                 </div>
