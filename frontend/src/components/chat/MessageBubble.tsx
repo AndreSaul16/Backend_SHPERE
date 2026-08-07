@@ -14,7 +14,7 @@ import { AGENT_HEX, useChatStore } from '@/store/useChatStore';
 import { useUserAvatar } from '@/hooks/useUserAvatar';
 import { notify, reasonOf } from '@/lib/toastBus';
 import { AvatarImage } from '@/components/ui/AvatarImage';
-import { docMarkdownComponents } from '@/components/shared/DocTable';
+import { DocTable } from '@/components/shared/DocTable';
 
 /**
  * Acción de la fila del turno (§9.11 «acciones»). Un solo sitio para las cinco:
@@ -354,7 +354,7 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                                 ),
                                 // F4 · §9.7: una tabla ancha se desplaza dentro
                                 // de su contenedor; jamás rompe la burbuja.
-                                ...docMarkdownComponents,
+                                table: DocTable,
                             };
 
                             while ((match = combinedPattern.exec(content)) !== null) {

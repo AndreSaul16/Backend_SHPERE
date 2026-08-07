@@ -65,6 +65,10 @@ describe('useBillingStore', () => {
 describe('useBillingStore.refresh()', () => {
     beforeEach(() => {
         vi.useFakeTimers({ shouldAdvanceTime: true });
+        // La consulta de saldo comparte promesa entre llamantes solapados (F7);
+        // `reset()` la suelta para que un caso no arrastre la del anterior —el
+        // primer test deja una a propósito sin resolver—.
+        useBillingStore.getState().reset();
         useBillingStore.setState({
             plan_id: 'free',
             pro_messages_balance: 5,

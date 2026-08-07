@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { CreditCard, Zap, Sparkles, ArrowLeft, Loader2, HardDrive, FileText, RefreshCw } from 'lucide-react';
+import { CreditCard, Zap, Sparkles, ArrowLeft, Loader2, HardDrive, FileText, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useBillingStore } from '../store/useBillingStore';
+import { Button } from '@/components/ui/Button';
 import { authHeaders, profileService, type StorageUsage } from '../services/api';
 import { capture, ANALYTICS_EVENTS } from '@/lib/analytics';
 
@@ -53,9 +54,20 @@ async function readErrorMessage(response: Response, fallback: string): Promise<s
     }
 }
 
+/**
+ * F7 — cuánto se espera antes de admitir que esto no carga.
+ *
+ * `useBillingStore.refresh()` puede tardar hasta ~12s en el peor caso (espera a
+ * que Firebase Auth esté listo + tres reintentos con backoff). Pasado ese
+ * margen, seguir enseñando bloques grises es mentir: un esqueleto que no
+ * termina no dice nada y no ofrece salida. §11 pide decir qué pasó, qué hacer y
+ * qué se conservó.
+ */
+const ESPERA_MAXIMA_MS = 12000;
+
 /** Skeleton para el estado de carga del panel de facturación */
 const BillingSkeleton: React.FC = () => (
-    <div data-testid="billing-loading" className="p-6 sm:p-8 w-full max-w-5xl mx-auto animate-pulse">
+    <div data-testid="billing-loading" aria-busy="true" className="p-6 sm:p-8 w-full max-w-5xl mx-auto animate-pulse">
         <div className="h-9 bg-surface-highlight/50 rounded-lg w-64 mb-8" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
             {[0, 1].map((i) => (
@@ -81,6 +93,8 @@ export const BillingPage: React.FC = () => {
     } = useBillingStore();
 
     const [actionError, setActionError] = useState<string | null>(null);
+    // F7: se agotó la espera del esqueleto (ver `ESPERA_MAXIMA_MS`).
+    const [tardaDemasiado, setTardaDemasiado] = useState(false);
     const [pendingPlan, setPendingPlan] = useState<string | null>(null);
     const [storage, setStorage] = useState<StorageUsage | null>(null);
     // Consentimiento UE (servicios digitales de ejecución inmediata): sin marcar
@@ -140,25 +154,45 @@ export const BillingPage: React.FC = () => {
     const totalBalance = pro_messages_balance + topup_messages_balance;
     const storagePct = storage?.percent_used ?? 0;
 
+    const cargandoPorPrimeraVez = isLoading && !loaded;
+
+    // F7: el esqueleto tiene cuenta atrás. Sin ella, una consulta que no
+    // termina —dos `refresh()` solapados bastaban— dejaba la pantalla en tres
+    // bloques grises para siempre: sin mensaje, sin reintento y sin salida.
+    useEffect(() => {
+        if (!cargandoPorPrimeraVez) {
+            setTardaDemasiado(false);
+            return;
+        }
+        const id = setTimeout(() => setTardaDemasiado(true), ESPERA_MAXIMA_MS);
+        return () => clearTimeout(id);
+    }, [cargandoPorPrimeraVez]);
+
     // Loading state: skeleton mientras se obtienen los datos por primera vez
-    if (isLoading && !loaded) {
+    if (cargandoPorPrimeraVez && !tardaDemasiado) {
         return <BillingSkeleton />;
     }
 
-    // Error state: mostrar error con botón de reintento
-    if (error) {
+    // Sin nada que enseñar: o falló, o lleva demasiado esperando. Los dos casos
+    // acaban en la misma salida, que es lo único útil aquí — decirlo y ofrecer
+    // reintentar (§11). Si YA hay datos cargados la página se pinta igual y el
+    // fallo se cuenta arriba en una banda, en vez de esconder el saldo.
+    if ((error || tardaDemasiado) && !loaded) {
         return (
             <div className="p-8 w-full max-w-5xl mx-auto flex flex-col items-center justify-center min-h-[50vh] gap-6">
-                <div className="bg-oxblood-500/10 border border-oxblood-500/30 rounded-md p-8 text-center max-w-md">
-                    <div className="text-4xl mb-4">⚠️</div>
-                    <h2 className="text-xl font-bold text-danger mb-2">Error de conexión</h2>
-                    <p className="text-content-muted mb-6">{error}</p>
-                    <button
-                        onClick={refresh}
-                        className="px-6 py-3 bg-electric-cyan/10 text-electric-cyan border border-electric-cyan/30 hover:bg-electric-cyan hover:text-midnight rounded-xl transition-all font-medium"
-                    >
+                <div className="bg-dissent/12 border border-dissent/30 rounded-md p-8 text-center max-w-md">
+                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-sm border border-dissent/40 text-dissent">
+                        <AlertTriangle className="h-6 w-6" aria-hidden="true" />
+                    </div>
+                    <h2 className="text-xl font-bold text-content-strong mb-2">No hemos podido cargar tus créditos</h2>
+                    <p className="text-content-muted mb-6">
+                        {error
+                            ? 'El servidor de facturación no responde. Tu saldo y tus compras no han cambiado.'
+                            : 'La consulta está tardando más de lo normal. Tu saldo y tus compras no han cambiado.'}
+                    </p>
+                    <Button onClick={() => { setTardaDemasiado(false); void refresh(); }}>
                         Reintentar
-                    </button>
+                    </Button>
                 </div>
             </div>
         );
@@ -185,6 +219,17 @@ export const BillingPage: React.FC = () => {
                         <p className="text-warning text-sm font-medium">
                             Pagos no disponibles temporalmente. El sistema de pagos no está configurado en este momento.
                         </p>
+                    </div>
+                )}
+
+                {/* F7: si el saldo ya estaba cargado, un refresco fallido no
+                    esconde la página — la envejece. Se dice, con salida. */}
+                {error && loaded && (
+                    <div className="bg-warning/10 border border-warning/30 rounded-md p-4 mb-8 flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-warning text-sm">
+                            Estas cifras pueden no estar al día: no hemos podido consultar tu saldo.
+                        </p>
+                        <Button variant="ghost" onClick={() => { void refresh(); }}>Reintentar</Button>
                     </div>
                 )}
 

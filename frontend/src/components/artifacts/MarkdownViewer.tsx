@@ -1,7 +1,7 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Download, FileText } from 'lucide-react';
-import { docMarkdownComponents } from '@/components/shared/DocTable';
+import { DocTable } from '@/components/shared/DocTable';
 import type { Artifact } from '@/types/artifact';
 
 interface MarkdownViewerProps {
@@ -57,7 +57,7 @@ export function MarkdownViewer({ artifact }: MarkdownViewerProps) {
                     <div className="doc-prose">
                         {/* F4: la tabla del acta se desplaza dentro de su
                             contenedor (§9.7), nunca rompe la hoja. */}
-                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={docMarkdownComponents}>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ table: DocTable }}>
                             {artifact.content}
                         </ReactMarkdown>
                     </div>

@@ -54,7 +54,10 @@ describe('BillingPage - Loading / Error / Stripe States (Task 2.3)', () => {
 
         renderPage();
 
-        expect(screen.getByText('Error al cargar la información de facturación')).toBeInTheDocument();
+        // §11: el error dice qué pasó, qué hacer y qué se conservó — no el
+        // volcado del código de error del store, que era lo que salía antes.
+        expect(screen.getByText('No hemos podido cargar tus créditos')).toBeInTheDocument();
+        expect(screen.getByText(/no han cambiado/i)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /reintentar/i })).toBeInTheDocument();
     });
 

@@ -27,12 +27,3 @@ export function DocTable({ children }: { children?: ReactNode }) {
         </div>
     );
 }
-
-/**
- * Componentes de `react-markdown` compartidos por las tres superficies que
- * pintan markdown de agente (el acta, el turno del transcript y la vista
- * pública). Se exporta el mapa para que ninguna se olvide de la tabla.
- */
-export const docMarkdownComponents = {
-    table: ({ children }: { children?: ReactNode }) => <DocTable>{children}</DocTable>,
-};
