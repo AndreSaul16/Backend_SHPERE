@@ -719,11 +719,19 @@ export function ChatPanel() {
                         <button
                             type="button"
                             onClick={() => setReproduciendo('muestra')}
-                            className="flex w-full items-center justify-center gap-2 rounded-sm border border-stroke-control px-4 py-2 text-sm text-content transition-colors duration-(--duration-tap) hover:border-brass-600"
+                            /* Dos líneas y no una: medido a 390px, «Ver una
+                               junta de muestra · sin gastar créditos» en una
+                               fila parte el título en dos y deja la coletilla
+                               pegada al canto. Apilado cabe entero. */
+                            className="flex w-full flex-col items-center gap-0.5 rounded-sm border border-stroke-control px-4 py-2 text-sm text-content transition-colors duration-(--duration-tap) hover:border-brass-600"
                         >
-                            <PlayCircle className="h-4 w-4" aria-hidden="true" />
-                            Ver una junta de muestra
-                            <span className="text-micro uppercase text-content-quiet">sin gastar créditos</span>
+                            <span className="flex items-center gap-2">
+                                <PlayCircle className="h-4 w-4" aria-hidden="true" />
+                                Ver una junta de muestra
+                            </span>
+                            <span className="text-micro uppercase text-content-quiet">
+                                Sin gastar créditos
+                            </span>
                         </button>
                     </motion.div>
                 </div>

@@ -57,7 +57,10 @@ function mensajeDeCodigo(code: string): string {
     "auth/user-not-found": "Esta cuenta ya no existe.",
     "auth/weak-password": `La contraseña debe tener al menos ${MINIMO_CONTRASENA} caracteres.`,
   };
-  return messages[code] ?? "No se pudo cambiar la contraseña. Pide un enlace nuevo.";
+  // Neutral a propósito: esta misma función redacta el fallo de VALIDAR el
+  // enlace y el de CAMBIAR la contraseña. Decir «no se pudo cambiar» cuando lo
+  // que ha fallado es la validación cuenta algo que no ha pasado.
+  return messages[code] ?? "Este enlace no se ha podido validar. Pide uno nuevo.";
 }
 
 export function ResetPasswordPage() {
