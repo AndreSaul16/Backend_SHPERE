@@ -10,9 +10,13 @@ import {
     type ScheduledBoardInput,
 } from "@/services/api";
 import { SelectField, TextAreaField, TextField } from "@/components/ui/Field";
+import { DIAS, aHoraLocal, describeCadencia, dosDigitos, husoLocal } from "@/lib/horarioUtc";
 import { InlineError, type FalloDeSeccion } from "@/components/ui/InlineError";
 
-const WEEKDAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+/* D69/D70 — la tabla de días y la traducción de UTC a hora local viven en
+   `lib/horarioUtc.ts`, con su test. Aquí había un array que empezaba en lunes
+   mientras el valor que se enviaba lo interpretaba `cron` empezando en
+   domingo, y todas las horas se pintaban en UTC sin decirlo dos veces. */
 
 const EMPTY_FORM: ScheduledBoardInput = {
     query: "",
@@ -25,11 +29,7 @@ const EMPTY_FORM: ScheduledBoardInput = {
 };
 
 function describe(b: ScheduledBoard): string {
-    const when =
-        b.cadence === "daily"
-            ? `cada día a las ${b.hour_utc}:00 UTC`
-            : `cada ${WEEKDAYS[b.weekday ?? 0]} a las ${b.hour_utc}:00 UTC`;
-    return when;
+    return describeCadencia(b.cadence, b.hour_utc, b.weekday);
 }
 
 export function ScheduledBoardsSection() {
@@ -43,6 +43,15 @@ export function ScheduledBoardsSection() {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [form, setForm] = useState<ScheduledBoardInput>(EMPTY_FORM);
     const [saving, setSaving] = useState(false);
+
+    /* D70 — a qué hora de TU reloj cae lo que estás tecleando. Va como `hint`,
+       o sea atado con aria-describedby: quien usa lector de pantalla lo oye al
+       enfocar el campo, no como un texto suelto al lado. */
+    const localDelFormulario = aHoraLocal(form.hour_utc, form.weekday ?? 0);
+    const horaLocalDelFormulario =
+        form.cadence === "weekly" && localDelFormulario.cambiaDeDia
+            ? `${DIAS[localDelFormulario.dia]} a las ${dosDigitos(localDelFormulario.hora)} en ${husoLocal()}`
+            : `${dosDigitos(localDelFormulario.hora)} en ${husoLocal()}`;
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -237,11 +246,15 @@ export function ScheduledBoardsSection() {
                                     setForm((f) => ({ ...f, weekday: Number(e.target.value) }))
                                 }
                             >
-                                {WEEKDAYS.map((d, i) => (
+                                {DIAS.map((d, i) => (
                                     <option key={i} value={i}>{d}</option>
                                 ))}
                             </SelectField>
                         )}
+                        {/* D70 — la hora se teclea en UTC porque es lo que el
+                            servidor guarda, pero debajo se lee a qué hora de TU
+                            reloj cae. Sin esto, «9» podía ser tu mediodía o tu
+                            madrugada y no había forma de saberlo. */}
                         <TextField
                             label="Hora (UTC)"
                             id="scheduled-hour"
@@ -252,6 +265,7 @@ export function ScheduledBoardsSection() {
                             onChange={(e) =>
                                 setForm((f) => ({ ...f, hour_utc: Number(e.target.value) }))
                             }
+                            hint={horaLocalDelFormulario}
                             controlClassName="w-24"
                         />
                         <SelectField

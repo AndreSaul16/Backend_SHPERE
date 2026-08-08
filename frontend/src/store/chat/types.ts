@@ -65,7 +65,9 @@ export interface AgentsSlice {
     customAgents: Agent[];
 
     fetchCustomAgents: () => Promise<void>;
-    addCustomAgent: (data: NewCustomAgentInput) => Promise<void>;
+    /** Devuelve el id del agente creado (D67): quien lo crea no puede
+     *  suponer que es `customAgents[0]`. */
+    addCustomAgent: (data: NewCustomAgentInput) => Promise<string>;
     deleteCustomAgent: (id: string) => Promise<void>;
     getAgents: () => Agent[];
     /** D28: devuelven `false` si el retoque no se pudo persistir. */

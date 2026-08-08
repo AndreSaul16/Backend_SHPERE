@@ -57,6 +57,12 @@ export const createAgentsSlice = (set: ChatSet, get: ChatGet): AgentsSlice => ({
             const newAgentData = await chatService.createCustomAgent(data);
             const mapped = mapCustomAgent(newAgentData);
             set(state => ({ customAgents: [mapped, ...state.customAgents] }));
+            // D67 — el identificador se DEVUELVE. Quien crea un agente y luego
+            // le sube documentos lo leía de `customAgents[0]`, o sea de una
+            // suposición sobre el orden de una lista compartida: si entre las
+            // dos líneas entraba un `fetchCustomAgents` (lo hace el arranque),
+            // los ficheros subían al agente equivocado.
+            return mapped.id;
         } catch (error: any) {
             const sphereError = new NetworkError('Error al crear agente personalizado', 'fetch_agents', error);
             set(conError('fetch_agents', sphereError.message));

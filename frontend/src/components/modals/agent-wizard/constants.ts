@@ -24,6 +24,7 @@ import {
     Users,
 } from 'lucide-react';
 import { AGENT_HEX } from '@/store/useChatStore';
+import { MODELOS } from '@/lib/modelos';
 
 export const STEPS = [
     { label: 'Metodo', icon: LayoutTemplate },
@@ -55,10 +56,8 @@ export const PRESET_COLORS = [
     AGENT_HEX.user,
 ];
 
-export const MODEL_OPTIONS = [
-    { value: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro', description: 'Razonamiento máximo (recomendado)' },
-    { value: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash', description: 'Rápido y económico' },
-];
+/** D65/D66 — una sola lista de modelos en toda la app: `lib/modelos.ts`. */
+export const MODEL_OPTIONS = MODELOS;
 
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 

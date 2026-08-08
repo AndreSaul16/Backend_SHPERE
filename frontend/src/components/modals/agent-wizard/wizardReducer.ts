@@ -16,6 +16,7 @@
  * un reducer avanza dos veces por render en modo estricto.
  */
 import { PRESET_COLORS } from './constants';
+import { MODELO_POR_DEFECTO } from '@/lib/modelos';
 import type { AgentTemplate, FileEntry, WizardForm, WizardStep } from './types';
 
 export interface WizardState {
@@ -59,7 +60,7 @@ export const initialWizardState: WizardState = {
         systemPrompt: '',
         color: PRESET_COLORS[0],
         temperature: 0.7,
-        model: 'deepseek-v4-pro',
+        model: MODELO_POR_DEFECTO,
     },
     files: [],
     isDragOver: false,
@@ -68,13 +69,14 @@ export const initialWizardState: WizardState = {
 };
 
 /**
- * El modelo que deja «crear desde cero», que NO es ninguna de las dos opciones
- * de `MODEL_OPTIONS` (D41-B2). Está mal —ninguna de las dos casillas queda
- * marcada y la revisión enseña este identificador crudo— pero se conserva tal
- * cual: arreglarlo dentro de un troceo estructural haría imposible saber qué
- * rompió qué. Hay un test que lo fija.
+ * El modelo con el que arranca «crear desde cero» (D66).
+ *
+ * Era `'deepseek-chat'`, que no estaba en la lista de opciones: ninguno de los
+ * dos radios quedaba marcado y la pantalla de revisión enseñaba ese
+ * identificador crudo, que además el backend no sirve. La fase 6 lo dejó tal
+ * cual a propósito para no mezclar un arreglo con un troceo; aquí se arregla.
  */
-const SCRATCH_MODEL = 'deepseek-chat';
+const SCRATCH_MODEL = MODELO_POR_DEFECTO;
 
 let fileIdCounter = 0;
 

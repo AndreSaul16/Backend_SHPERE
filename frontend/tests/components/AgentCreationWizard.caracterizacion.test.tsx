@@ -17,6 +17,7 @@ import { http, HttpResponse } from 'msw';
 import { server } from '../setup';
 import { AgentCreationWizard } from '../../src/components/modals/AgentCreationWizard';
 import { AGENT_HEX } from '../../src/store/useChatStore';
+import { MODELO_POR_DEFECTO } from '../../src/lib/modelos';
 
 vi.mock('firebase/auth', () => ({
     getAuth: vi.fn(() => ({
@@ -316,9 +317,9 @@ describe('D41 — envío', () => {
         expect(cuerpo).toEqual({
             identity: { name: 'Auditor', role: 'specialist', color: AGENT_HEX.CTO },
             brain_config: {
-                // BUG D41-B2 fijado: «desde cero» deja un modelo que no está en
-                // la lista de opciones (ver test dedicado más abajo).
-                model: 'deepseek-chat',
+                // D66 arreglado en la fase 7: «desde cero» arranca en el
+                // modelo por defecto, que SÍ está en la lista de opciones.
+                model: MODELO_POR_DEFECTO,
                 temperature: 1.4,
                 system_prompt: 'Audita contratos.',
             },
@@ -470,20 +471,22 @@ describe('D41 — el modal y el borrado al cerrar', () => {
         expect(await screen.findByText(/Suelta los archivos aquí/i)).toBeInTheDocument();
     });
 
-    it('BUG D41-B2: «desde cero» fija un modelo que no es ninguna de las dos opciones', async () => {
+    it('D66: «desde cero» arranca con un modelo que SÍ está en la lista', async () => {
         const user = userEvent.setup();
         montar();
 
         await user.click(await screen.findByRole('button', { name: /crear desde cero/i }));
 
+        // Antes ninguno de los dos radios quedaba marcado y la revisión
+        // enseñaba «deepseek-chat» crudo, que ni existía como opción.
         expect(await screen.findByRole('button', { name: /DeepSeek V4 Pro/ })).toHaveAttribute(
             'aria-pressed',
-            'false',
+            'true',
         );
         expect(screen.getByRole('button', { name: /DeepSeek V4 Flash/ })).toHaveAttribute(
             'aria-pressed',
             'false',
         );
-        expect(screen.getByText('deepseek-chat')).toBeInTheDocument();
+        expect(screen.queryByText('deepseek-chat')).not.toBeInTheDocument();
     });
 });

@@ -30,7 +30,7 @@ export function useAgentSubmission(
         try {
             // 1. El agente, por la acción del store (que llama a
             //    `chatService.createCustomAgent`).
-            await addCustomAgent({
+            const agentId = await addCustomAgent({
                 identity: {
                     name: form.name.trim(),
                     role: 'specialist',
@@ -45,11 +45,10 @@ export function useAgentSubmission(
                 is_public: false,
             });
 
-            // El identificador del recién creado se recoge del store: la acción
-            // lo antepone a la lista.
-            const createdAgent = useChatStore.getState().customAgents[0];
-            const agentId = createdAgent?.id;
-
+            // D67 — el identificador lo devuelve la acción. Antes se leía de
+            // `customAgents[0]`, o sea de una suposición sobre el orden de la
+            // lista: si el store se recargaba entre medias, los documentos
+            // subían al agente equivocado.
             if (!agentId) {
                 throw new Error('No se pudo obtener el ID del agente creado');
             }

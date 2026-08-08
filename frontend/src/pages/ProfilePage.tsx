@@ -3,6 +3,8 @@ import { useEstadoEfimero } from "@/hooks/useEstadoEfimero";
 import { User, Shield, Bell, ArrowLeft, LogOut, Save, Camera, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useUserAvatar, saveUserAvatar } from "@/hooks/useUserAvatar";
+import { TIPOS_ACEPTADOS_ATTR, prepararAvatar } from "@/lib/avatar";
+import { reasonOf, toast } from "@/lib/toastBus";
 import { profileService } from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { TextField } from "@/components/ui/Field";
@@ -44,15 +46,26 @@ export function ProfilePage() {
             });
     }, [firebaseUser]);
 
-    const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    /**
+     * D56 — la foto se comprueba y se encoge antes de guardarse.
+     *
+     * Era un `FileReader` que metía el fichero entero, tal cual, en
+     * `localStorage`: sin mirar si era una imagen y sin mirar cuánto pesaba.
+     */
+    const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const base64 = reader.result as string;
-                saveUserAvatar(base64);
-            };
-            reader.readAsDataURL(file);
+        event.target.value = ''; // permitir volver a elegir la misma foto
+        if (!file) return;
+        try {
+            const recortado = await prepararAvatar(file);
+            if (!saveUserAvatar(recortado)) {
+                toast.error(
+                    'No se ha podido guardar tu foto',
+                    'El almacenamiento del navegador está lleno. Libera espacio y vuelve a intentarlo.',
+                );
+            }
+        } catch (err) {
+            toast.error('No se ha podido usar esa imagen', reasonOf(err));
         }
     };
 
@@ -138,8 +151,8 @@ export function ProfilePage() {
                                 aria-label="Subir imagen de avatar"
                                 type="file"
                                 ref={fileInputRef}
-                                onChange={handleAvatarChange}
-                                accept="image/*"
+                                onChange={(e) => { void handleAvatarChange(e); }}
+                                accept={TIPOS_ACEPTADOS_ATTR}
                                 className="sr-only"
                             />
                             {/* D14/§12.4: mismo defecto que en la configuración de

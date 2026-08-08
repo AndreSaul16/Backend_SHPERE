@@ -22,6 +22,12 @@ export interface AdditionalKwargs {
 
 /** Un turno tal y como viene del historial (`human` | `ai`). */
 export interface TurnoPersistido {
+    /**
+     * El identificador que LangChain pone a cada mensaje y que el backend
+     * devuelve tal cual en `GET /sessions/{id}/history`. Puede faltar: los
+     * `HumanMessage` construidos a mano no siempre lo llevan.
+     */
+    id?: string | null;
     type?: string;
     content: string;
     additional_kwargs?: AdditionalKwargs;
@@ -34,6 +40,43 @@ const TIPOS_DE_ARTEFACTO: Record<string, 'code' | 'markdown' | 'mermaid' | 'data
 
 // Validar que el role es un valor válido de Role (nunca 'assistant')
 const VALID_ROLES = ['user', 'system', 'CTO', 'CMO', 'CFO', 'CEO', 'specialist', 'DEVIL'];
+
+/**
+ * D59 — el identificador de un turno del historial.
+ *
+ * Era `history-<sesión>-<índice>`: la POSICIÓN en la lista. Los pines y las
+ * valoraciones se guardan en el backend con el identificador del mensaje como
+ * clave (`POST /sessions/{id}/pins`), así que bastaba con que la lista
+ * cambiase de longitud —el backend resume y poda hilos largos— para que todos
+ * los pines apuntaran al mensaje de al lado. Silenciosamente: no hay error, el
+ * pin sale en otro sitio.
+ *
+ * Se prefiere el `id` que el backend ya manda y nadie leía. Cuando falta se
+ * cae a una huella del contenido, que sigue siendo estable frente a la poda
+ * —lo que el índice nunca fue— y sólo colisiona si dos turnos del mismo autor
+ * dicen exactamente lo mismo, en cuyo caso pinar uno pina el otro: preferible
+ * a pinar uno cualquiera.
+ *
+ * LIMITACIÓN DECLARADA: un pin puesto DURANTE el turno en vivo se guarda con
+ * el uuid que el cliente inventó al crear el mensaje, que no es ninguno de
+ * estos dos. Ese pin sigue sin sobrevivir a la recarga. Cerrarlo exige que el
+ * backend devuelva el identificador del mensaje en el propio flujo de
+ * streaming, y el backend no se toca en esta fase.
+ */
+export function idDeTurno(turno: TurnoPersistido, sessionId: string): string {
+    const delBackend = typeof turno.id === 'string' ? turno.id.trim() : '';
+    if (delBackend) return delBackend;
+
+    // Huella de 32 bits del autor más el contenido. No es criptografía: es un
+    // identificador reproducible que no depende de dónde caiga el mensaje.
+    const semilla = `${turno.type ?? ''}|${turno.additional_kwargs?.agent_id ?? ''}|${turno.content}`;
+    let h = 0x811c9dc5;
+    for (let i = 0; i < semilla.length; i++) {
+        h ^= semilla.charCodeAt(i);
+        h = Math.imul(h, 0x01000193) >>> 0;
+    }
+    return `hist-${sessionId}-${h.toString(36)}`;
+}
 
 export interface HistorialMapeado {
     messages: Message[];
@@ -112,7 +155,7 @@ export function mapSessionHistory(
 ): HistorialMapeado {
     const artifacts: Artifact[] = [];
 
-    const messages: Message[] = rawMessages.map((m, idx) => {
+    const messages: Message[] = rawMessages.map((m) => {
         let role: Role = 'system';
         let resolvedAgentId: string | undefined;
         if (m.type === 'human') role = 'user';
@@ -125,7 +168,7 @@ export function mapSessionHistory(
         const processedContent = extraerArtefactos(m.content, m.additional_kwargs, artifacts);
 
         return {
-            id: `history-${sessionId}-${idx}`,
+            id: idDeTurno(m, sessionId),
             role,
             content: processedContent,
             timestamp: new Date(m.additional_kwargs?.timestamp || Date.now()),

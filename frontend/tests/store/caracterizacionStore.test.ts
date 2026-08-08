@@ -24,6 +24,7 @@ import {
     AGENT_HEX,
 } from '../../src/store/useChatStore';
 import { chatService } from '../../src/services/api';
+import { idDeTurno } from '../../src/store/chat/historyMapper';
 import type { ChatSession, Message } from '../../src/types';
 
 vi.mock('../../src/services/api', () => ({
@@ -287,17 +288,35 @@ describe('loadSession — mapeo del historial persistido', () => {
         return useChatStore.getState().messagesBySession[id];
     };
 
-    it('numera los mensajes por índice y traduce `human` a `user`', async () => {
+    it('traduce `human` a `user` y resuelve al autor', async () => {
         const msgs = await cargar([
             { type: 'human', content: 'pregunta', additional_kwargs: {} },
             { type: 'ai', content: 'respuesta', additional_kwargs: { agent_role: 'CTO', agent_id: 'cto-1' } },
         ]);
 
-        expect(msgs[0].id).toBe('history-s-hist-0');
         expect(msgs[0].role).toBe('user');
-        expect(msgs[1].id).toBe('history-s-hist-1');
         expect(msgs[1].role).toBe('CTO');
         expect(msgs[1].agentId).toBe('cto-1');
+    });
+
+    /* D59 — el identificador ya no es la POSICIÓN. Los pines se guardan en el
+       backend con él como clave; con el índice, podar el hilo movía todos los
+       pines un sitio a la izquierda. */
+    it('D59: usa el identificador que manda el backend cuando existe', async () => {
+        const msgs = await cargar([
+            { id: 'run-abc', type: 'ai', content: 'respuesta', additional_kwargs: {} },
+        ]);
+        expect(msgs[0].id).toBe('run-abc');
+    });
+
+    it('D59: sin identificador del backend, el mismo turno da el mismo id caiga donde caiga', () => {
+        const turno = { type: 'ai', content: 'respuesta', additional_kwargs: {} };
+        // El identificador no depende de la posición: eso era el defecto.
+        expect(idDeTurno(turno, 's-d59')).toBe(idDeTurno(turno, 's-d59'));
+        // Y sigue distinguiendo turnos distintos de la misma sesión.
+        expect(idDeTurno(turno, 's-d59')).not.toBe(
+            idDeTurno({ ...turno, content: 'otra' }, 's-d59'),
+        );
     });
 
     it('un rol desconocido cae a `CEO` (nunca `assistant`)', async () => {

@@ -5,7 +5,8 @@
 import { useEffect, useState } from "react";
 import { Save, RotateCcw, Bot } from "lucide-react";
 import { agentOverridesService, type AgentOverride } from "@/services/api";
-import { TextAreaField, TextField } from "@/components/ui/Field";
+import { SelectField, TextAreaField, TextField } from "@/components/ui/Field";
+import { MODELOS } from "@/lib/modelos";
 import { InlineError, type FalloDeSeccion } from "@/components/ui/InlineError";
 import { EsqueletoDeTarjetas } from "@/components/ui/Esqueleto";
 
@@ -182,15 +183,23 @@ export function AgentOverridesSettings() {
                   })
                 }
               />
-              <TextField
+              {/* D65 — esto era un campo de texto libre mientras la ficha del
+                  director restringia a una lista cerrada: cabia una errata que
+                  se guardaba sin protestar y fallaba luego, al invocar el
+                  modelo. Misma lista en los dos sitios (`lib/modelos.ts`). */}
+              <SelectField
                 label="Modelo alternativo"
                 id={`override-model-${role.id}`}
-                placeholder="deepseek-v4-pro"
                 value={ov?.model_override || ""}
                 onChange={(e) =>
                   handleChange(role.id, { model_override: e.target.value || null })
                 }
-              />
+              >
+                <option value="">Por defecto</option>
+                {MODELOS.map((m) => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </SelectField>
             </div>
 
             <div className="flex justify-end">

@@ -33,7 +33,12 @@ describe('ScheduledBoardsSection (F3)', () => {
         render(<ScheduledBoardsSection />);
         expect(await screen.findByText('Revisar métricas')).toBeInTheDocument();
         expect(screen.getByText(/5 créditos/i)).toBeInTheDocument();
-        expect(screen.getByText(/cada Lunes a las 9:00 UTC/i)).toBeInTheDocument();
+        /* D69/D70 — `weekday: 0` es DOMINGO (numeración de `cron` y de
+           `Date.getDay()`), no lunes: ése era el desfase de un día. Y la hora
+           se lee dos veces, la local y la de UTC, porque son la misma cosa
+           dicha para dos lectores distintos. */
+        expect(screen.getByText(/cada Domingo/i)).toBeInTheDocument();
+        expect(screen.getByText(/09:00 UTC/i)).toBeInTheDocument();
     });
 
     it('crea una nueva junta vía POST', async () => {
