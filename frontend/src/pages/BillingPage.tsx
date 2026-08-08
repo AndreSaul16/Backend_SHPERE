@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CreditCard, Zap, Sparkles, ArrowLeft, Loader2, HardDrive, FileText, RefreshCw, AlertTriangle } from 'lucide-react';
+import { CreditCard, Zap, Sparkles, ArrowLeft, Loader2, HardDrive, FileText, RefreshCw, AlertTriangle, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useBillingStore } from '../store/useBillingStore';
 import { Button } from '@/components/ui/Button';
@@ -107,6 +107,10 @@ export const BillingPage: React.FC = () => {
     // F7: se agotó la espera del esqueleto (ver `ESPERA_MAXIMA_MS`).
     const [tardaDemasiado, setTardaDemasiado] = useState(false);
     const [pendingPlan, setPendingPlan] = useState<string | null>(null);
+    // 6.10: el portal de Stripe. `POST /billing/portal` existía en el backend
+    // desde el principio y no lo llamaba nadie: quien había comprado no tenía
+    // dónde ver sus facturas ni cambiar su método de pago.
+    const [abriendoPortal, setAbriendoPortal] = useState(false);
     const [storage, setStorage] = useState<StorageUsage | null>(null);
     // Consentimiento UE (servicios digitales de ejecución inmediata): sin marcar
     // la casilla no se puede iniciar ningún checkout.
@@ -175,6 +179,68 @@ export const BillingPage: React.FC = () => {
             });
         } finally {
             setPendingPlan(null);
+        }
+    };
+
+    /**
+     * 6.10 — abrir el portal de facturación de Stripe.
+     *
+     * Aquí sí se sale con `window.location.href`, y a propósito: el destino es
+     * un dominio de Stripe, no una ruta del SPA. Lo que no puede pasar es lo de
+     * `PaywallModal` —una recarga para ir a una página propia—; salir del sitio
+     * a la pasarela es exactamente lo que se pretende.
+     *
+     * El 404 tiene su propio mensaje: significa «esta cuenta nunca ha comprado
+     * nada», que no es un fallo sino un estado, y decirle «ha fallado» a quien
+     * simplemente no tiene facturas es mentirle.
+     */
+    const abrirPortal = async () => {
+        if (abriendoPortal) return;
+        setActionError(null);
+        setAbriendoPortal(true);
+        try {
+            const headers = await authHeaders();
+            const response = await fetch(`${API_URL}/billing/portal`, { method: 'POST', headers });
+            if (response.status === 404) {
+                setActionError({
+                    title: 'Todavía no tienes facturación que gestionar',
+                    detail:
+                        'El portal aparece en cuanto haces tu primera compra: es donde Stripe guarda tus facturas y tu método de pago. Tus créditos gratuitos no pasan por él.',
+                    tone: 'warning',
+                    onDismiss: () => setActionError(null),
+                });
+                return;
+            }
+            if (!response.ok) {
+                setActionError({
+                    title: 'No se ha podido abrir el portal de facturación',
+                    detail: 'No se te ha cobrado nada y tus datos de pago siguen igual. Vuelve a intentarlo.',
+                    reason: await readErrorMessage(response),
+                    onRetry: () => { void abrirPortal(); },
+                    retryLabel: 'Volver a intentarlo',
+                });
+                return;
+            }
+            const data = await response.json();
+            if (typeof data?.url === 'string' && data.url) {
+                window.location.href = data.url;
+            } else {
+                setActionError({
+                    title: 'El portal de facturación no ha respondido como esperábamos',
+                    detail: 'No se te ha cobrado nada. Vuelve a intentarlo dentro de un momento.',
+                    onRetry: () => { void abrirPortal(); },
+                    retryLabel: 'Volver a intentarlo',
+                });
+            }
+        } catch {
+            setActionError({
+                title: 'No se ha podido abrir el portal de facturación',
+                detail: 'No se te ha cobrado nada y tus datos de pago siguen igual. Comprueba tu conexión y vuelve a intentarlo.',
+                onRetry: () => { void abrirPortal(); },
+                retryLabel: 'Volver a intentarlo',
+            });
+        } finally {
+            setAbriendoPortal(false);
         }
     };
 
@@ -268,26 +334,50 @@ export const BillingPage: React.FC = () => {
 
                 {/* Resumen: Balance de créditos + Almacenamiento */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-                    {/* Balance */}
+                    {/* Balance — 6.10: el total es LA cifra, no el tercer
+                        renglón de una lista. La pregunta que trae a alguien a
+                        esta página es «¿cuánto me queda?», y estaba escrita al
+                        mismo tamaño que sus dos sumandos y debajo de ellos. */}
                     <div className="glass-panel p-6 rounded-md border border-surface-highlight">
                         <div className="flex items-center gap-2 mb-4">
-                            <Zap className="h-4 w-4 text-electric-cyan" />
+                            <Zap className="h-4 w-4 text-electric-cyan" aria-hidden="true" />
                             <h2 className="text-xs uppercase tracking-widest font-mono text-content-muted">Tus Créditos</h2>
                         </div>
-                        <div className="flex flex-col gap-3">
-                            <div className="flex justify-between items-baseline">
-                                <span className="text-content-muted text-sm">Plan Free (30/mes)</span>
-                                <span className="text-2xl font-bold text-content-strong">{pro_messages_balance}</span>
+                        <p className="flex items-baseline gap-2">
+                            <span className="text-5xl font-semibold tabular-nums text-content-strong sm:text-6xl">
+                                {totalBalance}
+                            </span>
+                            <span className="text-sm text-content-muted">
+                                {totalBalance === 1 ? 'crédito disponible' : 'créditos disponibles'}
+                            </span>
+                        </p>
+                        <dl className="mt-4 space-y-1.5 border-t border-surface-highlight pt-3 text-sm">
+                            <div className="flex items-baseline justify-between gap-3">
+                                <dt className="text-content-muted">Del plan gratuito (30/mes)</dt>
+                                <dd className="font-mono tabular-nums text-content">{pro_messages_balance}</dd>
                             </div>
-                            <div className="flex justify-between items-baseline">
-                                <span className="text-content-muted text-sm">Comprados</span>
-                                <span className="text-2xl font-bold text-electric-cyan">{topup_messages_balance}</span>
+                            <div className="flex items-baseline justify-between gap-3">
+                                <dt className="text-content-muted">Comprados (no caducan)</dt>
+                                <dd className="font-mono tabular-nums text-content">{topup_messages_balance}</dd>
                             </div>
-                            <div className="border-t border-surface-highlight pt-3 flex justify-between items-baseline">
-                                <span className="text-content-strong font-medium">Total disponible</span>
-                                <span className="text-3xl font-bold text-content-strong">{totalBalance}</span>
-                            </div>
-                        </div>
+                        </dl>
+
+                        {/* 6.10 · El portal de Stripe. El endpoint existía desde
+                            el principio y no lo llamaba nadie: quien compraba no
+                            tenía dónde ver sus facturas ni cambiar su tarjeta. */}
+                        {stripe_configured && (
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                className="mt-4 w-full"
+                                onClick={() => { void abrirPortal(); }}
+                                loading={abriendoPortal}
+                                loadingLabel="Abriendo el portal"
+                            >
+                                <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                                Facturas y método de pago
+                            </Button>
+                        )}
                     </div>
 
                     {/* Almacenamiento de documentos (GridFS).
@@ -317,7 +407,20 @@ export const BillingPage: React.FC = () => {
                                     </span>
                                     <span className="text-content-muted text-xs font-mono">{storagePct.toFixed(1)}%</span>
                                 </div>
-                                <div className="h-2.5 bg-midnight/50 rounded-full overflow-hidden border border-surface-highlight">
+                                {/* §12: una barra que sólo existe como ancho de
+                                    un div no existe para quien no la ve. Con
+                                    `role="progressbar"` y su `aria-valuetext`,
+                                    el lector dice «Almacenamiento, 43% usado,
+                                    430 MB de 1 GB» en vez de callarse. */}
+                                <div
+                                    role="progressbar"
+                                    aria-label="Almacenamiento usado"
+                                    aria-valuemin={0}
+                                    aria-valuemax={100}
+                                    aria-valuenow={Math.round(storagePct)}
+                                    aria-valuetext={`${storagePct.toFixed(1)} % usado — ${formatBytes(storage.used_bytes)} de ${formatBytes(storage.quota_bytes)}`}
+                                    className="h-2.5 bg-surface-inset rounded-full overflow-hidden border border-surface-highlight"
+                                >
                                     <div className={`h-full rounded-full transition-all ${barColor(storagePct)}`} style={{ width: `${storagePct}%` }} />
                                 </div>
                                 <div className="flex items-center gap-2 text-xs text-content-muted">

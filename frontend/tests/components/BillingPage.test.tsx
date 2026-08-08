@@ -109,8 +109,11 @@ describe('BillingPage - Loading / Error / Stripe States (Task 2.3)', () => {
         expect(screen.getByText('Créditos y Facturación')).toBeInTheDocument();
         expect(screen.getByText('100')).toBeInTheDocument();
         expect(screen.getByText('Packs de recarga')).toBeInTheDocument();
-        expect(screen.getByText('Total disponible')).toBeInTheDocument();
+        // 6.10: el total es LA cifra de la tarjeta, con su unidad al lado, y
+        // los dos sumandos quedan debajo en letra de detalle.
         expect(screen.getByText('150')).toBeInTheDocument();
+        expect(screen.getByText('créditos disponibles')).toBeInTheDocument();
+        expect(screen.getByText('Del plan gratuito (30/mes)')).toBeInTheDocument();
     });
 
     it('checkout buttons stay disabled until EU consent is accepted', () => {
