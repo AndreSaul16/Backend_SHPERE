@@ -35,6 +35,15 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    // Tarea 4.12 — el manifiesto es lo que hace medible el presupuesto de
+    // arranque. `dist/index.html` sólo lleva la entrada y sus `modulepreload`;
+    // el grafo real (qué chunk importa a cuál, y si es estática o
+    // dinámicamente) sólo está aquí. Lo consume
+    // `scripts/check-bundle-budget.mjs`, que corre en CI después del build.
+    // Pesa unos pocos KB en `dist/` y no se sirve al navegador.
+    manifest: true,
+  },
   // IMPORTANTE PARA DOCKER/PODMAN
   server: {
     host: true, // Escuchar en todas las direcciones (0.0.0.0)

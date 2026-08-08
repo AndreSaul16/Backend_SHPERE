@@ -103,6 +103,62 @@ jobs:
         working-directory: frontend
         run: node scripts/check-dead-classes.mjs
 
+      # ── Tarea 4.12 · presupuesto de arranque ──────────────────────────────
+      #
+      # La fase 4 sacó del arranque las trece rutas, los cinco visores de
+      # artefacto, el asistente de creación de agentes y las cinco secciones de
+      # ajustes. Sin una puerta, eso se deshace solo: basta con que alguien
+      # añada un `import` estático en `App.tsx` —o en cualquier fichero que
+      # cuelgue de él— para devolver un módulo entero al camino crítico, y no
+      # falla nada ni se ve en la revisión.
+      #
+      # El presupuesto de DESIGN §7 y del plan: entry ≤ 220 KB gzip,
+      # CSS ≤ 45 KB gzip.
+      #
+      # POR QUÉ ESTE PASO VIVE SÓLO EN CI: el proyecto no compila en local por
+      # decisión del dueño. Aquí sí se compila, así que aquí es donde se puede
+      # medir. Consecuencia que hay que saber: la primera ejecución de este job
+      # es también la PRIMERA MEDICIÓN REAL del presupuesto. Si sale por encima,
+      # el número que hay que mirar es el desglose por chunk que el script
+      # imprime, no el techo.
+      #
+      # `npx vite build` y no `npm run build`: el typecheck ya corrió arriba con
+      # `tsc -b`, y `npm run build` lo repetiría entero.
+      - name: Build de producción
+        working-directory: frontend
+        run: npx vite build
+      - name: Presupuesto de arranque (entry ≤ 220 KB gzip · CSS ≤ 45 KB gzip)
+        working-directory: frontend
+        run: node scripts/check-bundle-budget.mjs
+      # LO QUE FALTA DE 4.12, dicho aquí y no en un documento aparte: el tercer
+      # presupuesto de la tarea es «LCP ≤ 2,0 s en 4G simulada». NO está puesto,
+      # y el motivo es que hoy no se puede medir de forma que signifique algo:
+      #
+      #   · Medir LCP exige servir la app y cargarla con un Chrome de verdad
+      #     (Lighthouse). La app arranca en `/login` y desde ahí no hay LCP
+      #     representativo: lo que hay que medir es la primera pantalla del
+      #     producto, y ésa vive detrás de Firebase Auth.
+      #   · Sin sesión sembrada, la medición sería la de una pantalla de
+      #     entrada — un número verde que no dice nada del producto.
+      #
+      # Lo que hace falta para cerrarlo, y va con la 8.4 del plan (perfil de
+      # rendimiento contra el móvil de referencia): un usuario de prueba
+      # sembrado, un `vite preview` en el job y `lighthouse --preset=desktop
+      # --throttling-method=simulate` con presupuesto en `budget.json`. Mientras
+      # tanto, los dos presupuestos de tamaño sí son puerta dura, y son los que
+      # protegen el trabajo de code splitting de esta fase.
+
+      # El artefacto se sube SIEMPRE, también cuando el presupuesto falla: sin
+      # el `dist/` no hay forma de averiguar qué entró en el chunk desde la
+      # máquina de nadie.
+      - name: Guardar el build para poder mirarlo
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-frontend
+          path: frontend/dist
+          retention-days: 7
+
   lint:
     runs-on: ubuntu-latest
     continue-on-error: true
