@@ -122,11 +122,18 @@ export const BillingPage: React.FC = () => {
         // Si volvemos de Stripe (success=true), refrescamos varias veces
         // porque el webhook puede tardar unos segundos en procesar el pago.
         const params = new URLSearchParams(window.location.search);
+        /* D49 — estos tres temporizadores no se cancelaban nunca. Salir de
+           facturación antes de diez segundos —que es lo normal: se mira el
+           saldo y se vuelve al chat— dejaba tres peticiones pendientes
+           escribiendo en un store cuya pantalla ya no existe. */
+        const pendientes: ReturnType<typeof setTimeout>[] = [];
         if (params.get('success') === 'true') {
             capture(ANALYTICS_EVENTS.PURCHASE_COMPLETED);
-            const intervals = [2000, 5000, 10000];
-            intervals.forEach((ms) => setTimeout(() => refresh(), ms));
+            for (const ms of [2000, 5000, 10000]) {
+                pendientes.push(setTimeout(() => refresh(), ms));
+            }
         }
+        return () => { pendientes.forEach(clearTimeout); };
     }, [refresh]);
 
     const handleCheckout = async (planId: string) => {

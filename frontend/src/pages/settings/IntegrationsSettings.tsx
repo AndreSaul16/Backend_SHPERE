@@ -4,6 +4,7 @@
  * El client_secret se cifra en el backend y nunca se devuelve.
  */
 import { useEffect, useState, useCallback } from "react";
+import { useEstadoEfimero } from "@/hooks/useEstadoEfimero";
 import { useSearchParams } from "react-router-dom";
 import {
   Github,
@@ -89,7 +90,7 @@ export function IntegrationsSettings({ control: controlExterno }: { control?: Co
   // Form state por provider
   const [clientIds, setClientIds] = useState<Record<string, string>>({});
   const [clientSecrets, setClientSecrets] = useState<Record<string, string>>({});
-  const [copied, setCopied] = useState<string | null>(null);
+  const [copied, marcarCopiado] = useEstadoEfimero<string | null>(null, 2000);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -132,8 +133,7 @@ export function IntegrationsSettings({ control: controlExterno }: { control?: Co
   const copyCallback = async (provider: string, url: string) => {
     try {
       await navigator.clipboard.writeText(url);
-      setCopied(provider);
-      setTimeout(() => setCopied((c) => (c === provider ? null : c)), 2000);
+      marcarCopiado(provider);
     } catch {
       /* clipboard no disponible */
     }

@@ -1,4 +1,5 @@
 import React, { memo, useMemo, useState } from 'react';
+import { useEstadoEfimero } from '@/hooks/useEstadoEfimero';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
@@ -156,7 +157,7 @@ function MessageBubbleInterno({ message, agent, agentColor, sessionAvatar, isTyp
     const userAvatar = useUserAvatar();
     const reducido = useReducedMotion();
     const artifacts = useChatStore(state => state.artifacts);
-    const [copied, setCopied] = useState(false);
+    const [copied, marcarCopiado] = useEstadoEfimero(false, 2000);
 
     /**
      * 4.7 — el turno partido en piezas, y sólo cuando el turno cambia.
@@ -191,8 +192,7 @@ function MessageBubbleInterno({ message, agent, agentColor, sessionAvatar, isTyp
     const handleCopy = async () => {
         try {
             await navigator.clipboard.writeText(message.content);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
+            marcarCopiado(true);
         } catch (error) {
             notify({
                 title: 'No se pudo copiar el mensaje',

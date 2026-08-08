@@ -12,6 +12,14 @@ import { MailCheck, RefreshCw, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { AuthAlert, AuthNotice, AuthShell } from "@/components/auth/AuthShell";
 import { destinoDeRegreso } from "@/lib/rutaDeRegreso";
+import { esCodigoDeFirebase } from "@/lib/erroresDeFirebase";
+
+/** Primera espera del sondeo de verificación (D48). */
+const ESPERA_INICIAL_MS = 5_000;
+/** Techo de la espera: un sondeo por minuto es suficiente para no perderse. */
+const ESPERA_MAXIMA_MS = 60_000;
+/** A los diez minutos se deja de preguntar y queda el botón manual. */
+const SONDEO_MAXIMO_MS = 10 * 60_000;
 
 export function VerifyEmailPage() {
     const { user, resendVerification, reloadUser, signOut } = useAuth();
@@ -41,14 +49,60 @@ export function VerifyEmailPage() {
         return () => clearTimeout(t);
     }, [cooldown]);
 
-    // Polling suave: cada 5s comprobamos si ya verificó (sin spamear).
+    /**
+     * D48 — el sondeo dejó de ser cada 5 s para siempre.
+     *
+     * Era un `setInterval` de 5 000 ms sin techo y sin mirar si la pestaña
+     * estaba visible: quien deja esta pantalla abierta en una pestaña de
+     * fondo —que es exactamente lo que se hace mientras se busca el correo—
+     * disparaba 720 recargas de token por hora, contra Firebase, para
+     * siempre. Ahora: espera creciente (5 s, 7,5 s, 11 s… hasta 60 s), en
+     * pausa mientras la pestaña está oculta, y se rinde a los 10 minutos
+     * dejando el botón «Ya lo he verificado», que es la vía manual y siempre
+     * estuvo ahí.
+     */
+    const [sondeoAgotado, setSondeoAgotado] = useState(false);
     useEffect(() => {
-        const iv = setInterval(async () => {
+        if (sondeoAgotado) return;
+        let vivo = true;
+        let temporizador: ReturnType<typeof setTimeout> | null = null;
+        let espera = ESPERA_INICIAL_MS;
+        const finaliza = Date.now() + SONDEO_MAXIMO_MS;
+
+        const programar = () => {
+            if (!vivo) return;
+            if (Date.now() > finaliza) { setSondeoAgotado(true); return; }
+            temporizador = setTimeout(sondear, espera);
+        };
+
+        const sondear = async () => {
+            if (!vivo) return;
+            // Pestaña de fondo: no se pregunta, sólo se reintenta más tarde.
+            if (document.hidden) { programar(); return; }
             const ok = await reloadUser();
-            if (ok) navigate(destino, { replace: true });
-        }, 5000);
-        return () => clearInterval(iv);
-    }, [reloadUser, navigate, destino]);
+            if (!vivo) return;
+            if (ok) { navigate(destino, { replace: true }); return; }
+            espera = Math.min(Math.round(espera * 1.5), ESPERA_MAXIMA_MS);
+            programar();
+        };
+
+        // Volver a la pestaña es la mejor pista de que se acaba de pulsar el
+        // enlace del correo: se comprueba en el acto y se reinicia la espera.
+        const alVolver = () => {
+            if (document.hidden || !vivo) return;
+            if (temporizador !== null) clearTimeout(temporizador);
+            espera = ESPERA_INICIAL_MS;
+            void sondear();
+        };
+        document.addEventListener('visibilitychange', alVolver);
+
+        programar();
+        return () => {
+            vivo = false;
+            if (temporizador !== null) clearTimeout(temporizador);
+            document.removeEventListener('visibilitychange', alVolver);
+        };
+    }, [reloadUser, navigate, destino, sondeoAgotado]);
 
     const handleResend = async () => {
         setError(null);
@@ -56,8 +110,8 @@ export function VerifyEmailPage() {
             await resendVerification();
             setResent(true);
             setCooldown(60);
-        } catch (e: any) {
-            setError(e?.code === "auth/too-many-requests"
+        } catch (e: unknown) {
+            setError(esCodigoDeFirebase(e, "auth/too-many-requests")
                 ? "Demasiados intentos. Espera unos minutos."
                 : "No se pudo reenviar. Inténtalo de nuevo.");
         }

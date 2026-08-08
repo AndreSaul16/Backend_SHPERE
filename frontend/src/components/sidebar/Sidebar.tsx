@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 import { useAgentes, useChatStore } from "@/store/useChatStore";
 import { useBillingStore } from "@/store/useBillingStore";
 import { useUserAvatar } from "@/hooks/useUserAvatar";
+import { useEsAdmin } from "@/hooks/useEsAdmin";
+import { useEstadoEfimero } from "@/hooks/useEstadoEfimero";
 import { useAuth } from "@/contexts/AuthContext";
 import { TextField } from "@/components/ui/Field";
 import { AvatarImage } from "@/components/ui/AvatarImage";
@@ -55,27 +57,17 @@ export function Sidebar() {
     // `value` ni `onChange` que no filtraba nada.
     const [query, setQuery] = useState("");
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
-    const [copiedId, setCopiedId] = useState<string | null>(null);
+    // D49 — el «copiado» se apaga solo; antes era un setTimeout sin limpiar.
+    const [copiedId, marcarCopiado] = useEstadoEfimero<string | null>(null, 1800);
     const [sharingId, setSharingId] = useState<string | null>(null);
     // Referencias del menú: el foco tiene que volver al disparador al cerrar.
     const menuRef = useRef<HTMLDivElement | null>(null);
     const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
-    // Admin: sonda perezosa — solo mostramos el link si el backend concede el
-    // panel. F1: esto llamaba a `adminService.users()`, cuya respuesta normal
-    // (403 «no eres admin») entraba en `handleError` y abría el paywall «Has
-    // agotado tus créditos» en CADA carga a todo usuario no administrador.
-    // `isAdmin()` es la misma pregunta sin efecto global (ver `api.ts`).
-    const [isAdmin, setIsAdmin] = useState(false);
-
-    useEffect(() => {
-        let active = true;
-        import("@/services/api")
-            .then(({ adminService }) => adminService.isAdmin())
-            .then((admin) => { if (active) setIsAdmin(admin); })
-            .catch(() => { /* la sonda ya no lanza; red caída = no hay link */ });
-        return () => { active = false; };
-    }, []);
+    // Admin: sonda perezosa — sólo mostramos el enlace si el backend concede el
+    // panel. La copia literal de este efecto que vivía aquí es la que se
+    // convirtió en `useEsAdmin`; 7.5 dice absorber, no duplicar.
+    const isAdmin = useEsAdmin();
 
     const copyToClipboard = async (text: string) => {
         try {
@@ -101,8 +93,7 @@ export function Sidebar() {
             await copyToClipboard(`${window.location.origin}/share/${share_token}`);
             // Refrescar sesiones para que el menú muestre "Dejar de compartir".
             fetchSessions();
-            setCopiedId(sessionId);
-            setTimeout(() => setCopiedId((id) => (id === sessionId ? null : id)), 1800);
+            marcarCopiado(sessionId);
         } catch (error) {
             toast.error(
                 "No se pudo compartir la conversación",
@@ -218,11 +209,14 @@ export function Sidebar() {
         menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
     }, [activeMenuId]);
 
-    // Cargar sesiones y saldo de créditos al montar
+    /* D58 — aquí había un `fetchSessions()` más. `AuthenticatedApp` ya lo
+       llama al entrar la sesión (`App.tsx`), así que el arranque pedía la
+       lista dos veces: dos peticiones, dos escrituras al store y un salto
+       visible en la lista si la segunda llegaba antes. Queda el saldo, que
+       nadie más pide. */
     useEffect(() => {
-        fetchSessions();
         refreshBilling();
-    }, []);
+    }, [refreshBilling]);
 
     // D10: el filtrado es por título, sin distinguir mayúsculas ni acentos —
     // «análisis» tiene que encontrarse escribiendo «analisis».

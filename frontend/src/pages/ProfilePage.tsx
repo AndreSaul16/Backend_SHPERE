@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from "react";
+import { useEstadoEfimero } from "@/hooks/useEstadoEfimero";
 import { User, Shield, Bell, ArrowLeft, LogOut, Save, Camera, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useUserAvatar, saveUserAvatar } from "@/hooks/useUserAvatar";
@@ -18,7 +19,8 @@ export function ProfilePage() {
     const [userEmail, setUserEmail] = useState("");
     const [isSaving, setIsSaving] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
-    const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
+    // D49 — «Guardado»/«Error» vuelven a «Guardar» solos, con limpieza.
+    const [saveStatus, marcarEstado] = useEstadoEfimero<"idle" | "success" | "error">("idle", 2500);
     /* 5.15 · D63 — lo cargado del servidor es la referencia; si el nombre en
        pantalla ya no coincide, hay trabajo sin guardar. Se compara contra el
        valor traído y no contra el inicial vacío, o el formulario nacería sucio
@@ -61,15 +63,13 @@ export function ProfilePage() {
     const handleSave = async () => {
         if (isSaving) return;
         setIsSaving(true);
-        setSaveStatus("idle");
+        marcarEstado("idle");
         try {
             await profileService.updateProfile({ display_name: displayName });
             setNombreGuardado(displayName);
-            setSaveStatus("success");
-            setTimeout(() => setSaveStatus("idle"), 2500);
+            marcarEstado("success");
         } catch {
-            setSaveStatus("error");
-            setTimeout(() => setSaveStatus("idle"), 2500);
+            marcarEstado("error");
         } finally {
             setIsSaving(false);
         }

@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { PasswordField, TextField } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { buttonClass } from "@/components/ui/buttonStyles";
+import { codigoDeFirebase, esCodigoDeFirebase } from "@/lib/erroresDeFirebase";
 import { AuthAlert, AuthShell, SocialButtons, type SocialProvider } from "@/components/auth/AuthShell";
 import { destinoDeRegreso } from "@/lib/rutaDeRegreso";
 
@@ -36,8 +37,8 @@ export function LoginPage() {
     try {
       await signInWithEmail(email, password);
       navigate(destino, { replace: true });
-    } catch (err: any) {
-      const code = err?.code || "";
+    } catch (err: unknown) {
+      const code = codigoDeFirebase(err);
       const messages: Record<string, string> = {
         "auth/user-not-found": "Usuario no encontrado",
         "auth/wrong-password": "Contraseña incorrecta",
@@ -65,8 +66,8 @@ export function LoginPage() {
         await signInWithMicrosoft();
       }
       navigate(destino, { replace: true });
-    } catch (err: any) {
-      if (err?.code === "auth/popup-closed-by-user") {
+    } catch (err: unknown) {
+      if (esCodigoDeFirebase(err, "auth/popup-closed-by-user")) {
         setError("Ventana cerrada. Inténtalo de nuevo.");
       } else {
         setError("Error con el acceso social. Inténtalo de nuevo.");

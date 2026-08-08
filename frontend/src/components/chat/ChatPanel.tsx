@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
+import { useTemporizadores } from "@/hooks/useEstadoEfimero";
 import { Send, Square, Paperclip, MoreVertical, Zap, ShieldCheck, Search, X, Download, Pin, Hand, Landmark, PlayCircle } from "lucide-react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -128,6 +129,10 @@ export function ChatPanel() {
     // Attachment (upload to custom agent's knowledge base) state
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploadState, setUploadState] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
+    /* D49 — los tres `setTimeout` de vuelta a 'idle' no se limpiaban: subir un
+       documento y cambiar de conversación dejaba un temporizador escribiendo
+       sobre un árbol desmontado. `programar` los cancela al desmontar. */
+    const programar = useTemporizadores();
     const CORE_AGENT_IDS = ['CEO', 'CTO', 'CFO', 'CMO', 'system', 'group-chat'];
     const isCustomAgent = !!selectedAgentId && !CORE_AGENT_IDS.includes(selectedAgentId);
 
@@ -366,14 +371,14 @@ export function ChatPanel() {
         try {
             await chatService.uploadAgentDocument(selectedAgentId, file);
             setUploadState('done');
-            setTimeout(() => setUploadState('idle'), 2500);
+            programar(() => setUploadState('idle'), 2500);
         } catch {
             // Sin aviso: la subida ya tiene canal visible propio y en su sitio
             // —el clip cambia de estado, el `title` dice qué pasó y la región
             // viva anuncia «No se pudo subir el documento»—. Un toast encima
             // sería el mismo fallo dos veces.
             setUploadState('error');
-            setTimeout(() => setUploadState('idle'), 3000);
+            programar(() => setUploadState('idle'), 3000);
         }
     };
 
@@ -533,7 +538,7 @@ export function ChatPanel() {
         try {
             await chatService.intervene(currentSessionId, text);
             setInterveneState('sent');
-            setTimeout(() => setInterveneState('idle'), 2500);
+            programar(() => setInterveneState('idle'), 2500);
         } catch (e) {
             setInterveneState('idle');
             // La intervención no ha entrado: el texto vuelve y se dice por qué,

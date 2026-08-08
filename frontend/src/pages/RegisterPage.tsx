@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { PasswordField, TextField } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { buttonClass } from "@/components/ui/buttonStyles";
+import { codigoDeFirebase, esCodigoDeFirebase } from "@/lib/erroresDeFirebase";
 import { AuthAlert, AuthShell, SocialButtons, type SocialProvider } from "@/components/auth/AuthShell";
 
 export function RegisterPage() {
@@ -55,8 +56,8 @@ export function RegisterPage() {
     try {
       await signUpWithEmail(email, password);
       navigate("/verify-email");
-    } catch (err: any) {
-      const code = err?.code || "";
+    } catch (err: unknown) {
+      const code = codigoDeFirebase(err);
       const messages: Record<string, string> = {
         "auth/email-already-in-use": "Este correo ya está registrado",
         "auth/weak-password": "La contraseña debe tener al menos 6 caracteres",
@@ -83,8 +84,8 @@ export function RegisterPage() {
         await signInWithMicrosoft();
       }
       navigate("/");
-    } catch (err: any) {
-      if (err?.code === "auth/popup-closed-by-user") {
+    } catch (err: unknown) {
+      if (esCodigoDeFirebase(err, "auth/popup-closed-by-user")) {
         setError("Ventana cerrada. Inténtalo de nuevo.");
       } else {
         setError("Error con el registro social. Inténtalo de nuevo.");

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEstadoEfimero } from '@/hooks/useEstadoEfimero';
 import { Copy, Check, Download, ExternalLink } from 'lucide-react';
 
 /* 4.3 — `{ Prism }` del índice de `react-syntax-highlighter` arrastraba
@@ -17,7 +17,8 @@ interface CodeBlockProps {
 }
 
 export function CodeBlock({ artifact }: CodeBlockProps) {
-    const [copied, setCopied] = useState(false);
+    // D49 — el ✓ se apaga solo y el temporizador muere con el componente.
+    const [copied, marcarCopiado] = useEstadoEfimero(false, 2000);
 
     /**
      * D36 — una copia que falla lo dice.
@@ -37,8 +38,7 @@ export function CodeBlock({ artifact }: CodeBlockProps) {
     const handleCopy = async () => {
         try {
             await navigator.clipboard.writeText(artifact.content);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
+            marcarCopiado(true);
         } catch (error) {
             notify({
                 title: 'No se pudo copiar el código',
