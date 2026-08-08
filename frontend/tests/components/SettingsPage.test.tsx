@@ -74,3 +74,61 @@ describe('SettingsPage — Scroll Fix (Task 2.4, SP-001)', () => {
         expect(screen.getByTestId('profile-settings')).toBeInTheDocument();
     });
 });
+
+/**
+ * 6.4 — la navegación del shell de ajustes.
+ *
+ * Los tres defectos que esto vigila: la pestaña activa se distinguía sólo por
+ * color y sin `aria-current`; la barra de móvil se desplazaba sin ninguna pista
+ * visual (a 320px «Contactos» era indescubrible); y Facturación y el panel de
+ * administración vivían fuera de esta navegación aunque son ajustes de cuenta.
+ */
+describe('SettingsPage — navegación (6.4)', () => {
+    const montar = (section = 'profile') =>
+        render(
+            <MemoryRouter initialEntries={[`/settings/${section}`]}>
+                <SettingsPage />
+            </MemoryRouter>
+        );
+
+    it('la sección activa se anuncia con aria-current, no sólo con color', () => {
+        montar('contacts');
+        const activos = screen
+            .getAllByRole('link')
+            .filter((a) => a.getAttribute('aria-current') === 'page');
+        // Una por forma de la navegación (lateral y desplazable): las dos se
+        // pintan siempre y el breakpoint decide cuál se ve.
+        expect(activos.length).toBeGreaterThan(0);
+        activos.forEach((a) => expect(a.getAttribute('href')).toBe('/settings/contacts'));
+    });
+
+    it('todas las secciones son alcanzables desde la navegación', () => {
+        montar('profile');
+        const destinos = new Set(
+            screen.getAllByRole('link').map((a) => a.getAttribute('href'))
+        );
+        ['profile', 'integrations', 'board-meeting', 'agent-overrides', 'contacts'].forEach((id) =>
+            expect(destinos.has(`/settings/${id}`)).toBe(true)
+        );
+    });
+
+    it('Facturación entra en la navegación de la cuenta', () => {
+        montar('profile');
+        const destinos = screen.getAllByRole('link').map((a) => a.getAttribute('href'));
+        expect(destinos).toContain('/billing');
+    });
+
+    it('el panel de administración NO se ofrece sin permiso', () => {
+        montar('profile');
+        const destinos = screen.getAllByRole('link').map((a) => a.getAttribute('href'));
+        expect(destinos).not.toContain('/admin');
+    });
+
+    it('la barra desplazable lleva sus dos pistas de desvanecimiento', () => {
+        const { container } = montar('profile');
+        // Dos cantos, ocultos mientras no haya nada que revelar: la pista es su
+        // aparición, no su presencia.
+        const pistas = container.querySelectorAll('span[aria-hidden="true"].pointer-events-none');
+        expect(pistas.length).toBe(2);
+    });
+});
