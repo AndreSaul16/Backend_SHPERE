@@ -368,7 +368,7 @@ function MessageBubbleInterno({ message, agent, agentColor, sessionAvatar, isTyp
                             />
                             {agent ? agent.name.split(' ')[0] : (message.role && !['user', 'system'].includes(message.role) ? message.role : 'SPHERE')}
                             {message.isConclusion && (
-                                <span className="px-1.5 py-0.5 rounded bg-current/10 text-current text-micro not-italic">
+                                <span className="px-1.5 py-0.5 rounded-xs bg-current/10 text-content-strong text-micro not-italic">
                                     · CONCLUSIÓN
                                 </span>
                             )}

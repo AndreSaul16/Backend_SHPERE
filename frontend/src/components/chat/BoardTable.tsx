@@ -145,8 +145,13 @@ function Placa({
         >
             <span
                 aria-hidden="true"
-                className="flex h-6 w-6 items-center justify-center rounded-xs border text-xs font-bold leading-none"
-                style={{ color: colorDeAgente(rol, hex), borderColor: colorDeAgenteAlpha(rol, hex, 35), backgroundColor: colorDeAgenteAlpha(rol, hex, 12) }}
+                /* FASE 8 — §9.10: «el color del director entra por una barra,
+                   no por el fondo» — y menos aún por la letra: la inicial en
+                   el color de identidad medía 2.0-2.3:1 en claro (y ~3.7 con
+                   el token). La tinta es del sistema; la identidad queda en
+                   el filete, el tinte y la barra del pie. */
+                className="flex h-6 w-6 items-center justify-center rounded-xs border text-xs font-bold leading-none text-content-strong"
+                style={{ borderColor: colorDeAgenteAlpha(rol, hex, 35), backgroundColor: colorDeAgenteAlpha(rol, hex, 12) }}
             >
                 {inicial}
             </span>
