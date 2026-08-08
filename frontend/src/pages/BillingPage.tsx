@@ -302,8 +302,8 @@ export const BillingPage: React.FC = () => {
         <div className="flex flex-col h-full bg-midnight/40 overflow-y-auto">
             {/* Header */}
             <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-surface flex items-center gap-3 bg-surface-0 sticky top-0 z-10">
-                <Link to="/" className="p-2 hover:bg-surface rounded-full transition-colors text-content-muted hover:text-content-strong">
-                    <ArrowLeft className="h-5 w-5" />
+                <Link to="/" aria-label="Volver al chat" className="p-2 hover:bg-surface rounded-full transition-colors text-content-muted hover:text-content-strong">
+                    <ArrowLeft className="h-5 w-5" aria-hidden="true" />
                 </Link>
                 <h1 className="text-base sm:text-xl font-bold text-content-strong flex items-center gap-2">
                     <CreditCard className="h-5 w-5 text-electric-cyan" />
@@ -475,7 +475,7 @@ export const BillingPage: React.FC = () => {
                                     }`}
                                 >
                                     {pack.popular && (
-                                        <div className="absolute top-0 right-0 bg-luxury-purple text-content-strong text-micro font-bold px-3 py-1 rounded-bl-lg">
+                                        <div className="absolute top-0 right-0 bg-luxury-purple text-baize-950 text-micro font-bold px-3 py-1 rounded-bl-lg">
                                             POPULAR
                                         </div>
                                     )}

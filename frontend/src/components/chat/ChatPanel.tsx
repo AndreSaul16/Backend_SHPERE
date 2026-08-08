@@ -820,11 +820,11 @@ export function ChatPanel() {
                     <div className="hidden lg:flex mr-2">
                         <CreditsIndicator />
                     </div>
-                    <button onClick={() => setIsSearchOpen(v => !v)} className={cn("p-1.5 sm:p-2 rounded-sm hover:bg-stroke-hairline transition-all active-scale", isSearchOpen ? "text-accent" : "text-content-muted hover:text-content-strong")} title="Buscar en la conversación">
-                        <Search className="h-4 w-4" />
+                    <button onClick={() => setIsSearchOpen(v => !v)} aria-label="Buscar en la conversación" aria-pressed={isSearchOpen} className={cn("p-1.5 sm:p-2 rounded-sm hover:bg-stroke-hairline transition-all active-scale", isSearchOpen ? "text-accent" : "text-content-muted hover:text-content-strong")} title="Buscar en la conversación">
+                        <Search className="h-4 w-4" aria-hidden="true" />
                     </button>
-                    <button onClick={() => setShowPinnedOnly(v => !v)} className={cn("p-1.5 sm:p-2 rounded-sm hover:bg-stroke-hairline transition-all active-scale", showPinnedOnly ? "text-warning" : "text-content-muted hover:text-content-strong")} title="Sólo los anclados">
-                        <Pin className="h-4 w-4" />
+                    <button onClick={() => setShowPinnedOnly(v => !v)} aria-label="Sólo los anclados" aria-pressed={showPinnedOnly} className={cn("p-1.5 sm:p-2 rounded-sm hover:bg-stroke-hairline transition-all active-scale", showPinnedOnly ? "text-warning" : "text-content-muted hover:text-content-strong")} title="Sólo los anclados">
+                        <Pin className="h-4 w-4" aria-hidden="true" />
                     </button>
                     {/* 5.10 · Q7 — reproducir el debate. Sólo cuando hay uno
                         terminado que reproducir: durante el debate en curso el
@@ -843,8 +843,8 @@ export function ChatPanel() {
                         aria-label="Descargar la junta entera">
                         <Download className="h-4 w-4" />
                     </button>
-                    <button onClick={() => navigate('/chat/settings')} className="p-1.5 sm:p-2 rounded-sm hover:bg-stroke-hairline transition-all text-content-muted hover:text-content-strong active-scale">
-                        <MoreVertical className="h-4 w-4" />
+                    <button onClick={() => navigate('/chat/settings')} aria-label="Ajustes de la conversación" title="Ajustes de la conversación" className="p-1.5 sm:p-2 rounded-sm hover:bg-stroke-hairline transition-all text-content-muted hover:text-content-strong active-scale">
+                        <MoreVertical className="h-4 w-4" aria-hidden="true" />
                     </button>
                 </div>
             </header>

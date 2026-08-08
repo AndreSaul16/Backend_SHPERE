@@ -112,8 +112,8 @@ export function ProfilePage() {
             {/* Header */}
             <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-surface flex items-center justify-between bg-surface-0 sticky top-0 z-10">
                 <div className="flex items-center gap-3 sm:gap-4">
-                    <Link to="/" className="p-2 hover:bg-surface rounded-full transition-colors text-content-muted hover:text-content-strong">
-                        <ArrowLeft className="h-5 w-5" />
+                    <Link to="/" aria-label="Volver al chat" className="p-2 hover:bg-surface rounded-full transition-colors text-content-muted hover:text-content-strong">
+                        <ArrowLeft className="h-5 w-5" aria-hidden="true" />
                     </Link>
                     <h1 className="text-base sm:text-xl font-bold text-content-strong">Mi Perfil</h1>
                 </div>
