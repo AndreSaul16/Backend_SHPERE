@@ -17,6 +17,9 @@ import { useLiveAnnouncement } from "@/hooks/useLiveAnnouncement";
 import { reasonOf, toast } from "@/lib/toastBus";
 import { AvatarImage } from "@/components/ui/AvatarImage";
 import { Button } from "@/components/ui/Button";
+import { useDraft } from "@/hooks/useDraft";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { StreamInterrupted } from "./StreamInterrupted";
 
 export function ChatPanel() {
     const navigate = useNavigate();
@@ -37,8 +40,35 @@ export function ChatPanel() {
 
     const messages = getCurrentMessages();
     const agents = getAgents();
-    const [inputValue, setInputValue] = useState("");
+    /**
+     * Q3 — lo que se escribe no se pierde.
+     *
+     * El compositor era un `useState` a secas: seis líneas de contexto para la
+     * junta se evaporaban al navegar, al recargar y cuando el envío fallaba.
+     * `useDraft` guarda por sesión y restaura; el resto del componente sigue
+     * usando `inputValue`/`setInputValue` como antes.
+     */
+    const draft = useDraft(currentSessionId ?? urlSessionId ?? null);
+    const inputValue = draft.value;
+    const setInputValue = draft.setValue;
+    const online = useOnlineStatus();
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const composerRef = useRef<HTMLTextAreaElement>(null);
+
+    /**
+     * El compositor crece con el texto (hasta `max-h-48`).
+     *
+     * Era `rows={1}` fijo: un borrador de seis líneas —justo el que Q3 viene a
+     * salvar— se recuperaba entero pero se VEÍA una línea, y el usuario no
+     * tenía forma de saber que lo demás seguía ahí. Recuperar el trabajo y
+     * esconderlo no es recuperarlo.
+     */
+    useEffect(() => {
+        const el = composerRef.current;
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.height = `${Math.min(el.scrollHeight, 192)}px`;
+    }, [inputValue]);
 
     // Search state
     const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -201,6 +231,17 @@ export function ChatPanel() {
         }
     }, [currentSessionId]);
 
+    /**
+     * Reintenta un turno: trunca desde esa burbuja y reenvía la última consulta
+     * del usuario. Es el mismo camino que «Regenerar», que ya existía — un
+     * turno cortado y un turno que no gusta se arreglan igual.
+     */
+    const reintentarTurno = (messageId: string) => {
+        const ultimaConsulta = messages.filter(m => m.role === 'user').pop()?.content;
+        if (!ultimaConsulta) return;
+        void sendMessage(ultimaConsulta, { regenerateFromId: messageId });
+    };
+
     const handleExport = useCallback(() => {
         const title = currentSession?.title || 'SPHERE Chat';
         const md = exportAsMarkdown(messages, title, agents);
@@ -251,13 +292,14 @@ export function ChatPanel() {
         // Limpiamos el input optimistamente. El decremento de créditos lo hace
         // streamChat una sola vez tras confirmar que el backend aceptó el envío
         // (A4: antes se decrementaba aquí Y en streamChat → -2 por mensaje).
-        setInputValue("");
+        draft.commit();
         await sendMessage(text);
         // A8: si el envío falló, devolvemos el texto al input para que el usuario
-        // pueda reintentar sin reescribir (sin pisar lo que ya esté tecleando).
+        // pueda reintentar sin reescribir (sin pisar lo que ya esté tecleando),
+        // y lo volvemos a guardar: si además cierra la pestaña, sigue ahí.
         const sendError = useChatStore.getState().errorStates.send_message;
         if (sendError) {
-            setInputValue((cur) => cur || text);
+            draft.restore(text);
         }
     };
 
@@ -268,7 +310,7 @@ export function ChatPanel() {
     const handleIntervene = async () => {
         const text = inputValue.trim();
         if (!text || !currentSessionId) return;
-        setInputValue("");
+        draft.commit();
         setInterveneState('sending');
         try {
             await chatService.intervene(currentSessionId, text);
@@ -276,7 +318,14 @@ export function ChatPanel() {
             setTimeout(() => setInterveneState('idle'), 2500);
         } catch (e) {
             setInterveneState('idle');
-            setInputValue((cur) => cur || text);
+            // La intervención no ha entrado: el texto vuelve y se dice por qué,
+            // porque el banner de arriba sigue diciendo «puedes intervenir» y
+            // sin aviso el usuario cree que su turno está registrado.
+            draft.restore(text);
+            toast.error(
+                'Tu intervención no ha entrado en el debate',
+                reasonOf(e) ?? 'El texto sigue en el campo. Vuelve a enviarlo antes de que cambie la fase.',
+            );
         }
     };
 
@@ -502,8 +551,8 @@ export function ChatPanel() {
                             {filteredMessages.map((msg, idx) => {
                                 const msgAgent = msg.agentId ? agents.find(a => a.id === msg.agentId) : (msg.role !== 'user' && msg.role !== 'system' ? activeAgent : undefined);
                                 return (
+                                    <div key={msg.id} className="space-y-3">
                                     <MessageBubble
-                                        key={msg.id}
                                         message={msg}
                                         agent={msgAgent}
                                         /* F5 · §2.8 — en una junta manda la
@@ -526,8 +575,18 @@ export function ChatPanel() {
                                         rating={ratings[msg.id] || null}
                                         onPin={() => handlePin(msg.id)}
                                         onRate={(r) => handleRate(msg.id, r)}
-                                        onRegenerate={!msg.role.includes('user') && idx === filteredMessages.length - 1 ? () => sendMessage(messages.filter(m => m.role === 'user').pop()?.content || '', { regenerateFromId: msg.id }) : undefined}
+                                        onRegenerate={!msg.role.includes('user') && idx === filteredMessages.length - 1 ? () => reintentarTurno(msg.id) : undefined}
                                     />
+                                    {/* Eje 4 · el turno cortado se dice EN EL
+                                        HILO, con su acción, no en un aviso que
+                                        se va. */}
+                                    {msg.interrupted && (
+                                        <StreamInterrupted
+                                            offline={!online}
+                                            onRetry={() => reintentarTurno(msg.id)}
+                                        />
+                                    )}
+                                    </div>
                                 );
                             })}
 
@@ -580,6 +639,26 @@ export function ChatPanel() {
             {/* Input Section */}
             <div className="p-6 z-10">
                 <div className="max-w-4xl mx-auto">
+                    {/* Q3 · §11: si el usuario no ha perdido nada, se dice. Un
+                        texto que reaparece solo desconcierta; uno que se
+                        presenta —y se puede tirar— tranquiliza. */}
+                    {draft.restored && (
+                        <div
+                            role="status"
+                            className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 px-4 text-micro uppercase text-content-muted"
+                        >
+                            <span>Borrador recuperado</span>
+                            <span aria-hidden="true">·</span>
+                            <button
+                                type="button"
+                                onClick={draft.discard}
+                                className="rounded-sm text-accent underline decoration-1 underline-offset-2 hover:text-accent-hover"
+                            >
+                                Descartar
+                            </button>
+                        </div>
+                    )}
+
                     {/* Banner de intervención durante el debate */}
                     <AnimatePresence>
                         {canIntervene && (
@@ -642,6 +721,7 @@ export function ChatPanel() {
                         </button>
 
                         <textarea
+                            ref={composerRef}
                             id="chat-composer"
                             aria-label={canIntervene ? "Intervenir en el debate" : "Tu consulta a la junta"}
                             value={inputValue}
@@ -705,6 +785,13 @@ export function ChatPanel() {
                                 {isGroupChat ? `${boardSession?.cost ?? 5} por debate` : "1 por mensaje"}
                             </span>
                         </div>
+                        {/* Eje 5 · se dice donde se va a pulsar, no sólo arriba:
+                            el usuario que está a punto de enviar mira aquí. */}
+                        {!online && (
+                            <span className="text-micro uppercase text-warning" data-testid="aviso-envio-sin-red">
+                                Sin conexión — el envío fallará; tu texto se guarda
+                            </span>
+                        )}
                     </div>
                 </div>
             </div>
