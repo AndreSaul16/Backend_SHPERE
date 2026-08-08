@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
-import { Send, Square, Paperclip, MoreVertical, Zap, ShieldCheck, Search, X, Download, Pin, Hand, Landmark } from "lucide-react";
+import { Send, Square, Paperclip, MoreVertical, Zap, ShieldCheck, Search, X, Download, Pin, Hand, Landmark, PlayCircle } from "lucide-react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { getBoardAgentByRole, getGroupMembers, useAgentes, useChatStore, useEstaTransmitiendo, useMensajesDeSesion } from "@/store/useChatStore";
@@ -27,6 +27,8 @@ import { RegionBoundary } from "@/components/shared/RegionBoundary";
 import { useVentanaDeTurnos } from "@/hooks/useVentanaDeTurnos";
 import { citaLlana } from "@/utils/citaLlana";
 import { comboDe, useAtajo } from "@/hooks/useShortcuts";
+import { DebateReplay } from "./DebateReplay";
+import { mensajesDeMuestra } from "@/lib/sampleBoard";
 
 export function ChatPanel() {
     const navigate = useNavigate();
@@ -109,6 +111,10 @@ export function ChatPanel() {
         el.style.height = 'auto';
         el.style.height = `${Math.min(el.scrollHeight, techo)}px`;
     }, [inputValue]);
+
+    /* 5.10 · Q7 — el reproductor. Un solo estado para los dos usos: el debate
+       de esta junta y la junta de muestra de una cuenta nueva. */
+    const [reproduciendo, setReproduciendo] = useState<'debate' | 'muestra' | null>(null);
 
     // Search state
     const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -690,6 +696,18 @@ export function ChatPanel() {
                         {/* §9.1: el primario es relleno macizo de latón con texto
                             `baize-950` (8.96:1). No lleva degradado ni sombra
                             precisamente porque es lo único macizo de la pantalla. */}
+                        {/* 5.10 · Q7 — la junta de muestra. Una cuenta nueva ve
+                            un botón que dice «5 créditos» sin saber qué pasa al
+                            pulsarlo; esto lo enseña sin gastar ninguno. Va
+                            DEBAJO del primario, no compitiendo con él. */}
+                        <DebateReplay
+                            open={reproduciendo === 'muestra'}
+                            onClose={() => setReproduciendo(null)}
+                            mensajes={mensajesDeMuestra()}
+                            agentes={agents}
+                            titulo="Junta de muestra · Precios 2026"
+                        />
+
                         <Button
                             variant="primary"
                             className="w-full"
@@ -697,6 +715,16 @@ export function ChatPanel() {
                         >
                             Iniciar nuevo chat
                         </Button>
+
+                        <button
+                            type="button"
+                            onClick={() => setReproduciendo('muestra')}
+                            className="flex w-full items-center justify-center gap-2 rounded-sm border border-stroke-control px-4 py-2 text-sm text-content transition-colors duration-(--duration-tap) hover:border-brass-600"
+                        >
+                            <PlayCircle className="h-4 w-4" aria-hidden="true" />
+                            Ver una junta de muestra
+                            <span className="text-micro uppercase text-content-quiet">sin gastar créditos</span>
+                        </button>
                     </motion.div>
                 </div>
             </div>
@@ -777,6 +805,19 @@ export function ChatPanel() {
                     <button onClick={() => setShowPinnedOnly(v => !v)} className={cn("p-1.5 sm:p-2 rounded-sm hover:bg-stroke-hairline transition-all active-scale", showPinnedOnly ? "text-warning" : "text-content-muted hover:text-content-strong")} title="Sólo los anclados">
                         <Pin className="h-4 w-4" />
                     </button>
+                    {/* 5.10 · Q7 — reproducir el debate. Sólo cuando hay uno
+                        terminado que reproducir: durante el debate en curso el
+                        espectáculo ya está ocurriendo. */}
+                    {hayMesaQueEnsenar && !isTyping && messages.length > 1 && (
+                        <button
+                            onClick={() => setReproduciendo('debate')}
+                            className="p-1.5 sm:p-2 rounded-sm hover:bg-stroke-hairline transition-all text-content-muted hover:text-content-strong active-scale"
+                            title="Reproducir el debate"
+                            aria-label="Reproducir el debate"
+                        >
+                            <PlayCircle className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                    )}
                     <button onClick={handleExport} className="p-1.5 sm:p-2 rounded-sm hover:bg-stroke-hairline transition-all text-content-muted hover:text-content-strong active-scale" title="Descargar la junta entera en un fichero HTML"
                         aria-label="Descargar la junta entera">
                         <Download className="h-4 w-4" />
@@ -793,6 +834,14 @@ export function ChatPanel() {
                 cuanto terminaba —y al reabrir la junta ya no volvía nunca—. La
                 mesa es de la sesión, no del stream: se monta siempre que haya
                 junta con debate (`loadSession` la reconstruye del historial). */}
+            <DebateReplay
+                open={reproduciendo === 'debate'}
+                onClose={() => setReproduciendo(null)}
+                mensajes={messages}
+                agentes={agents}
+                titulo={currentSession?.title || 'Debate de la junta'}
+            />
+
             <AnimatePresence>
                 {isGroupChat && boardSession && hayMesaQueEnsenar && (
                     <BoardWarRoom board={boardSession} agents={agents} intervencionPorRol={intervencionPorRol} />
