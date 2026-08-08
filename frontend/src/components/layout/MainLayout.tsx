@@ -1,4 +1,5 @@
 import { type ReactNode, useState, useCallback, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Menu, X, GripVertical } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -63,6 +64,10 @@ export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayo
     const isSidebarOpen = useChatStore((s) => s.isSidebarOpen);
     const toggleSidebar = useChatStore((s) => s.toggleSidebar);
     const isArtifactPanelOpen = useChatStore((s) => s.isArtifactPanelOpen);
+    /* D51 — cambiar de ruta rearma la frontera del hueco central. Sin esto,
+       un fallo al pintar `/billing` dejaba rota también la ruta siguiente:
+       React no vuelve a montar un subárbol que una frontera dio por caído. */
+    const { pathname } = useLocation();
     const toggleArtifactPanel = useChatStore((s) => s.toggleArtifactPanel);
 
     /* 5.3 · Q9 — los dos conmutadores del shell.
@@ -222,7 +227,7 @@ export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayo
 
             {/* Center Chat - Flexible */}
             <main className="flex-1 h-full relative flex flex-col min-w-0 z-10 bg-transparent">
-                <ErrorBoundary>
+                <ErrorBoundary resetKeys={[pathname]}>
                     {chat}
                 </ErrorBoundary>
             </main>
