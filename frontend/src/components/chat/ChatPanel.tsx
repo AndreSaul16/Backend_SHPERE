@@ -9,7 +9,9 @@ import { BoardWarRoom } from "./BoardWarRoom";
 import { AgendaRail, type SegmentoDelDia } from "./AgendaRail";
 import { fasesDe } from "./agendaPhases";
 import { cn } from "@/lib/utils";
-import { exportAsMarkdown, downloadAsFile } from "@/utils/exportChat";
+import { downloadAsFile } from "@/utils/exportChat";
+import { construirHtmlDeJunta } from "@/utils/exportBoardHtml";
+import { esActa } from "@/utils/acta";
 import { CreditsIndicator } from "@/components/CreditsIndicator";
 import { useBillingStore } from "@/store/useBillingStore";
 import { capture, ANALYTICS_EVENTS } from "@/lib/analytics";
@@ -418,12 +420,32 @@ export function ChatPanel() {
         void sendMessage(ultimaConsulta, { regenerateFromId: messageId });
     };
 
+    /**
+     * 5.13 · Q14 — la junta como UN fichero que se abre sin red.
+     *
+     * Antes esto bajaba markdown plano y perdía todo lo que hace reconocible al
+     * producto: los votos, las confianzas, el recuento, el acta con su
+     * jerarquía. Para el usuario una junta archivada es un documento de facto
+     * —se adjunta a un correo, se guarda con el expediente— y un `.md` no lo
+     * parece. El acta suelta sigue bajándose en markdown desde su propio visor,
+     * que es donde tiene sentido.
+     */
     const handleExport = useCallback(() => {
-        const title = currentSession?.title || 'SPHERE Chat';
-        const md = exportAsMarkdown(messages, title, agents);
-        const filename = `${title.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().slice(0, 10)}.md`;
-        downloadAsFile(md, filename);
-    }, [messages, currentSession, agents]);
+        const title = currentSession?.title || 'Junta de SPHERE';
+        const artefactos = useChatStore.getState().artifacts;
+        const acta = artefactos.find((a) => esActa(a))?.content ?? null;
+        const html = construirHtmlDeJunta({
+            titulo: title,
+            fecha: new Date(),
+            acta,
+            mensajes: messages,
+            agentes: agents,
+            votos: boardSession?.votes ?? {},
+            coste: boardSession ? boardSession.cost : null,
+        });
+        const filename = `${title.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().slice(0, 10)}.html`;
+        downloadAsFile(html, filename, 'text/html');
+    }, [messages, currentSession, agents, boardSession]);
 
     const getAgentDisplayInfo = (agent: typeof activeAgent) => {
         if (!agent) return { baseName: 'SPHERE', role: 'Director' };
@@ -755,7 +777,8 @@ export function ChatPanel() {
                     <button onClick={() => setShowPinnedOnly(v => !v)} className={cn("p-1.5 sm:p-2 rounded-sm hover:bg-stroke-hairline transition-all active-scale", showPinnedOnly ? "text-warning" : "text-content-muted hover:text-content-strong")} title="Sólo los anclados">
                         <Pin className="h-4 w-4" />
                     </button>
-                    <button onClick={handleExport} className="p-1.5 sm:p-2 rounded-sm hover:bg-stroke-hairline transition-all text-content-muted hover:text-content-strong active-scale" title="Exportar">
+                    <button onClick={handleExport} className="p-1.5 sm:p-2 rounded-sm hover:bg-stroke-hairline transition-all text-content-muted hover:text-content-strong active-scale" title="Descargar la junta entera en un fichero HTML"
+                        aria-label="Descargar la junta entera">
                         <Download className="h-4 w-4" />
                     </button>
                     <button onClick={() => navigate('/chat/settings')} className="p-1.5 sm:p-2 rounded-sm hover:bg-stroke-hairline transition-all text-content-muted hover:text-content-strong active-scale">
