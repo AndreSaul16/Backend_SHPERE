@@ -1,0 +1,72 @@
+# openspec/config.yaml — configuración SDD de SPHERE
+# Generado por sdd-init el 2026-08-08. Modo de persistencia: hybrid (ficheros + Engram).
+schema: spec-driven
+
+context: |
+  Monorepo SPHERE: `backend/` (FastAPI + Motor/MongoDB + Redis, Python 3.11) y
+  `frontend/` (React 19 + TypeScript 5.9 estricto + Vite 7 + Tailwind v4 + Zustand 5
+  + React Router 7 + Framer Motion 12).
+  Arquitectura backend: capas presentation/api/v1 → application → domain → infrastructure,
+  con `Depends(get_current_user)` para auth y modelos Pydantic en los endpoints.
+  Identidad visual: contrato auditable en DESIGN.md («sala capitular»: baize, brass,
+  oxblood, anilina). Tokens OKLCH en frontend/src/index.css.
+  CI: .github/workflows/ci.yml — test-backend (pytest con Mongo/Redis reales),
+  test-frontend (tsc -b, vitest, clases muertas, build, presupuesto de bundle), lint (Ruff).
+  Trampas del entorno: `npm` está interceptado por pnpm; `tsc --noEmit` sin `-b` es un no-op
+  (tsconfig solution-style); los tests de frontend solo corren desde `frontend/`.
+
+strict_tdd: true
+
+testing:
+  backend:
+    runner: "python -m pytest tests/ -q  (desde backend/)"
+    framework: "pytest 9.0.3 + pytest-asyncio 1.3.0 (asyncio_mode=auto)"
+    unit: true
+    integration: "httpx 0.28 + fakeredis 2.35; Mongo/Redis reales como servicios en CI"
+    e2e: false
+    coverage: false
+    linter: "ruff check backend/app (no bloqueante en CI)"
+    typechecker: false
+  frontend:
+    runner: "./node_modules/.bin/vitest run  (desde frontend/)"
+    framework: "vitest 5 beta + @testing-library/react 16 + MSW 2 + jsdom 27"
+    unit: true
+    integration: true
+    e2e: false
+    coverage: "./node_modules/.bin/vitest run --coverage (@vitest/coverage-v8)"
+    linter: "./node_modules/.bin/eslint ."
+    typechecker: "./node_modules/.bin/tsc -b --noEmit"
+    extra_gates:
+      - "node scripts/check-dead-classes.mjs"
+      - "node scripts/check-bundle-budget.mjs (entry <= 220 KB gzip, CSS <= 45 KB gzip)"
+
+rules:
+  proposal:
+    - Incluir plan de reversión para cambios de riesgo
+    - Identificar módulos afectados (backend/app/..., frontend/src/...)
+    - Declarar explícitamente qué NO se toca
+  specs:
+    - Escenarios en formato Given/When/Then
+    - Usar RFC 2119 (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Diagramas de secuencia para flujos con SSE, créditos o auth
+    - Documentar decisiones de arquitectura con su porqué
+  tasks:
+    - Agrupar por fase, numeración jerárquica (1.1, 1.2)
+    - Tareas completables en una sesión
+  apply:
+    guidelines:
+      - Seguir los patrones existentes del módulo antes que introducir nuevos
+      - Respetar DESIGN.md como contrato de identidad en cualquier cambio de UI
+      - Nunca ejecutar builds tras un cambio (regla del dueño); el build lo hace CI
+      - Nunca añadir atribución de IA a los commits; solo conventional commits
+    tdd: true
+    test_command: "backend: python -m pytest tests/ -q | frontend: ./node_modules/.bin/vitest run"
+  verify:
+    guidelines:
+      - Verificar contra el CI real, no solo local, cuando el fallo solo se reproduce en CI
+    test_command: "backend: python -m pytest tests/ -q | frontend: ./node_modules/.bin/vitest run"
+    build_command: ""
+    coverage_threshold: 0
+  archive:
+    - Avisar antes de fusionar deltas destructivas
