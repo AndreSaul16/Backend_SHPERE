@@ -1,3 +1,19 @@
+> # ⛔ OBSOLETO — no leer como si fuera verdad
+>
+> **Anotado el 8 de agosto de 2026** (tarea 7.8 · D39). Ya estaba en `legacy/`,
+> pero seguía listando como «construidos y pendientes de conectar» dos ficheros
+> que **fueron borrados, no integrados**:
+>
+> - `src/components/TokenUsageBar.tsx` — borrado. `GET /me/usage` sigue expuesto
+>   por el backend y no lo llama nadie.
+> - `src/components/ToolConfirmationModal.tsx` — borrado. La preferencia
+>   `ui_preferences.tool_confirmation_level` se guarda en el perfil y nadie la lee.
+>
+> Todo lo visual que diga este documento («Midnight Protocol», cian eléctrico,
+> morado) está **derogado** por `DESIGN.md`.
+
+---
+
 # Resumen Frontend - Proyecto SPHERE
 
 **Interfaz Ultra-Premium con "Midnight Protocol" y Artifacts Workspace**

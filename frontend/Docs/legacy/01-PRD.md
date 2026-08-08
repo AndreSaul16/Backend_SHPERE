@@ -1,3 +1,22 @@
+> # ⛔ OBSOLETO — no leer como si fuera verdad
+>
+> **Movido a `Docs/legacy/` el 8 de agosto de 2026** (tarea 7.8 · D39 del
+> `PLAN_REFACTOR_FRONTEND_V3.md`). Se conserva como registro de la intención
+> inicial. **El PRD vigente es `PRODUCT.md`, en la raíz del repositorio.**
+>
+> **Lo que este documento dice y es falso hoy:**
+>
+> - **Stack:** promete Cloud Run, vLLM en Runpod y Podman. El despliegue real es
+>   Railway y la inferencia va contra la API de DeepSeek.
+> - **Latencia:** fija «objetivo <2 s para el primer token». El QA del 11 de junio
+>   de 2026 midió **43,7 s** para una junta completa. El objetivo vigente está en
+>   `PLAN_IMPLEMENTACION_BOARD_V2.md` (<100 s de latencia total).
+> - **Roles:** habla de CEO, CTO, CMO y CFO. Hoy hay además un **Abogado del
+>   Diablo** con fase propia en el debate (Board V2).
+> - **Diseño:** todo lo visual que diga aquí está derogado por `DESIGN.md`.
+
+---
+
 # 📄 Documento de Requisitos del Producto (PRD) - Proyecto SPHERE
 
 ## 1. Visión del Producto
