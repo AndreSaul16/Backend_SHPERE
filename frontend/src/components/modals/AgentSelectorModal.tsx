@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Zap, Crown, Monitor, TrendingUp, Briefcase, Plus, Users, Trash2 } from 'lucide-react';
+import { Search, Zap, Crown, Monitor, TrendingUp, Briefcase, Plus, Users, Trash2, Landmark } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useChatStore } from '@/store/useChatStore';
 import { useNavigate } from 'react-router-dom';
@@ -157,7 +157,11 @@ export function AgentSelectorModal() {
                                                 className="w-full flex items-center gap-4 p-5 rounded-md bg-surface-2 border border-stroke-edge hover:border-brass-600 transition-colors text-left relative overflow-hidden group"
                                             >
                                                 <div className="h-14 w-14 rounded-sm bg-brass-600/20 border border-brass-400/40 flex items-center justify-center">
-                                                    <span className="text-2xl" role="img" aria-label="Junta">🏛️</span>
+                                                    {/* D53 · §10: el mismo glifo con el que la
+                                                        cabecera del chat firma la junta. El emoji
+                                                        se pintaba a todo color y rompía el latón
+                                                        de la propia tarjeta que decora. */}
+                                                    <Landmark className="h-7 w-7 text-accent" aria-hidden="true" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="font-bold text-content-strong group-hover:text-accent transition-colors">Junta Directiva</p>

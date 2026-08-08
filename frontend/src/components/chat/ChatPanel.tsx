@@ -59,7 +59,8 @@ export function ChatPanel() {
     const composerRef = useRef<HTMLTextAreaElement>(null);
 
     /**
-     * El compositor crece con el texto (hasta `max-h-48`).
+     * El compositor crece con el texto, hasta el techo de ocho líneas que fija
+     * `.compositor` en `index.css`.
      *
      * Era `rows={1}` fijo: un borrador de seis líneas —justo el que Q3 viene a
      * salvar— se recuperaba entero pero se VEÍA una línea, y el usuario no
@@ -80,8 +81,12 @@ export function ChatPanel() {
         if ('fieldSizing' in document.documentElement.style) return;
         const el = composerRef.current;
         if (!el) return;
+        // El techo se lee de `.compositor`, no se copia: dos números que hay que
+        // acordarse de cambiar a la vez acaban discrepando, y el usuario sin
+        // dimensionado nativo vería un campo de otro alto que el resto.
+        const techo = Number.parseFloat(getComputedStyle(el).maxBlockSize) || Infinity;
         el.style.height = 'auto';
-        el.style.height = `${Math.min(el.scrollHeight, 192)}px`;
+        el.style.height = `${Math.min(el.scrollHeight, techo)}px`;
     }, [inputValue]);
 
     // Search state
@@ -837,7 +842,10 @@ export function ChatPanel() {
                             onChange={(e) => setInputValue(e.target.value)}
                             onKeyDown={handleKeyDown}
                             placeholder={canIntervene ? "Intervenir en el debate…" : isTyping ? "Sistema ocupado..." : "Transmite tu consulta..."}
-                            className="compositor flex-1 bg-transparent border-none focus:ring-0 text-content-strong placeholder:text-content-muted resize-none py-3.5 max-h-48 text-[15px] leading-relaxed font-medium"
+                            /* El techo lo pone `.compositor` (§3.8). Estaba
+                               además `max-h-48`, que era 12rem y ganaba a la
+                               regla: dos techos distintos para el mismo campo. */
+                            className="compositor flex-1 bg-transparent border-none focus:ring-0 text-content-strong placeholder:text-content-muted resize-none py-3.5 text-[15px] leading-relaxed font-medium"
                             rows={1}
                             disabled={isTyping && !canIntervene}
                         />

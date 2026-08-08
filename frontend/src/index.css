@@ -601,7 +601,12 @@
      efecto. El techo va aquí para que la red y el camino nativo lo compartan. */
   .compositor{
     field-sizing: content;
-    max-block-size: 12rem; /* ~8 líneas a 15px/1.6 */
+    /* Ocho líneas de verdad, medidas: 15px × 1.625 (`leading-relaxed`) = 24,375px
+       por línea, 195px las ocho, MÁS los 28px de relleno vertical del campo
+       (`py-3.5`). `max-block-size` mide la caja del borde, así que el techo de
+       12rem de antes dejaba 164px de contenido — 6,7 líneas, no 8: el borrador
+       de ocho líneas que este techo viene a proteger no cabía en él. */
+    max-block-size: 14rem;
   }
 
   /* §9.12 el esqueleto: barrido de `--stroke-hairline` a 1400ms sobre el

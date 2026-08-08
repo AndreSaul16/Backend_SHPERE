@@ -242,7 +242,10 @@ export const BillingPage: React.FC = () => {
                 {/* Aviso: Stripe no configurado */}
                 {!stripe_configured && (
                     <div className="bg-warning/10 border border-warning/30 rounded-md p-4 mb-8 flex items-center gap-3">
-                        <span className="text-2xl">⚠️</span>
+                        {/* D53 · §10: glifo de línea, no emoji. El emoji lo pinta
+                            cada sistema operativo con su propia paleta a todo
+                            color, y aquí choca con el ámbar del aviso. */}
+                        <AlertTriangle className="h-6 w-6 shrink-0 text-warning" aria-hidden="true" />
                         <p className="text-warning text-sm font-medium">
                             Pagos no disponibles temporalmente. El sistema de pagos no está configurado en este momento.
                         </p>
