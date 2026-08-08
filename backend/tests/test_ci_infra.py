@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 
+import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]  # SPHERE repo root
@@ -48,6 +49,14 @@ def resolve_default_branch() -> str | None:
     de origin/HEAD. `git rev-parse --abbrev-ref HEAD` no vale: en un PR el
     checkout está detached, y GITHUB_BASE_REF es la rama destino del PR, que no
     tiene por qué ser la por defecto.
+
+    El fallback de git es *best effort* y por eso el contrato admite devolver
+    algo falsy: en un checkout estilo `actions/checkout` (init + fetch --depth=1)
+    `refs/remotes/origin/HEAD` no existe y git sale con rc=128 → None → el test
+    hace skip. En un `clone --single-branch` origin/HEAD apunta a la rama
+    clonada, no a la por defecto; eso NO es distinguible sin red (este mismo
+    repo es shallow y single-branch y sí acierta), así que la garantía real la
+    da SPHERE_DEFAULT_BRANCH, que el workflow exporta siempre.
     """
     from_env = os.environ.get("SPHERE_DEFAULT_BRANCH", "").strip()
     if from_env:
