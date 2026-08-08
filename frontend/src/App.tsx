@@ -16,6 +16,7 @@ import { VerifyEmailPage } from "@/pages/VerifyEmailPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { AuroraBackground } from "@/components/AuroraBackground";
 import { ErrorOverlay } from "@/components/common/ErrorOverlay";
+import { ConnectionBanner } from "@/components/common/ConnectionBanner";
 import { useChatStore } from "@/store/useChatStore";
 import { PaywallModal } from "@/components/modals/PaywallModal";
 import { BillingPage } from "@/pages/BillingPage";
@@ -146,6 +147,8 @@ function App() {
     <AuthProvider>
       <div className="relative min-h-screen">
         <AuroraBackground />
+        {/* Eje 5 · el estado de la red se dice antes de que el usuario pulse. */}
+        <ConnectionBanner />
         <ErrorOverlay />
         <AgentSelectorModal />
         <PaywallModal />
