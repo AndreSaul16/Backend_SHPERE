@@ -78,17 +78,17 @@ Chain strategy: pending
 
 ## Fase 3: Anti-falso-verde (mutaciones; revertir SIEMPRE)
 
-- [ ] 3.1 **Mutación PW-001**: borrar a mano la guarda de 2.4 y correr solo 1.2 y 1.3. Ambos **deben**
+- [x] 3.1 **Mutación PW-001**: borrar a mano la guarda de 2.4 y correr solo 1.2 y 1.3. Ambos **deben**
       dar `AssertionError: assert 1 == 0`. Si alguno pasa, el test no observa nada → reescribirlo.
       Revertir la mutación.
-- [ ] 3.2 **Falso verde PW-002 (a)**: crear el perfil `U` **antes** del 1er POST dentro del test.
+- [x] 3.2 **Falso verde PW-002 (a)**: crear el perfil `U` **antes** del 1er POST dentro del test.
       Esperado: falla la precondición `AssertionError: assert {...} is None`. Revertir.
-- [ ] 3.3 **Falso verde PW-002 (b)**: usar otro `event_id` en el replay. Esperado:
+- [x] 3.3 **Falso verde PW-002 (b)**: usar otro `event_id` en el replay. Esperado:
       `AssertionError: assert 0 == 1` en `count_documents({"stripe_event_id": E})`. Revertir.
-- [ ] 3.4 **Falso verde PW-003**: quitar el `delete_one` del `side_effect` (dejar solo la llamada al
+- [x] 3.4 **Falso verde PW-003**: quitar el `delete_one` del `side_effect` (dejar solo la llamada al
       helper real). Esperado: `AssertionError: assert 1 == 0` — el verde depende de la carrera real.
       Revertir.
-- [ ] 3.5 `git status --short backend/app` **vacío** y `git diff -- backend/` sin restos de mutación
+- [x] 3.5 `git status --short backend/app` **vacío** y `git diff -- backend/` sin restos de mutación
       antes de cualquier commit.
 
 ## Fase 4: Script de auditoría

@@ -244,13 +244,17 @@ def orphan_env(sync_db):
 
 @pytest.mark.asyncio
 async def test_orphan_topup_no_grant_no_claim(async_client: AsyncClient, orphan_env):
+    from app.presentation.api.v1 import webhooks as webhooks_mod
+
     E, U, SKU = "evt_pw001_topup", "usr_pw001_topup", "deep_dive"
     event = orphan_env.event(E, U, "payment", SKU)
 
     # Precondición explícita: mata el falso verde de "el perfil ya existía".
     assert orphan_env.users.find_one({"firebase_uid": U}) is None
 
-    with patch("stripe.Webhook.construct_event", return_value=event):
+    with patch("stripe.Webhook.construct_event", return_value=event), \
+         patch("app.presentation.api.v1.webhooks._claim_grant",
+               wraps=webhooks_mod._claim_grant) as claim_spy:
         r = await async_client.post(
             "/api/v1/webhooks/stripe", json=event,
             headers={"stripe-signature": "v"},
@@ -258,6 +262,10 @@ async def test_orphan_topup_no_grant_no_claim(async_client: AsyncClient, orphan_
 
     assert r.status_code == 200
     assert orphan_env.tx.count_documents({"stripe_event_id": E}) == 0
+    # El claim no se llega a INTENTAR. Sin esto el test lo pasaría también la
+    # compensación de PW-003 (que inserta y borra), y la guarda de perfil dejaría
+    # de estar observada: mismo estado final, distinto comportamiento.
+    assert claim_spy.call_count == 0
     failed = orphan_env.failed.find_one({"event_id": E})
     assert failed is not None
     assert failed["reason"] == "user_profile_not_found"
@@ -265,6 +273,8 @@ async def test_orphan_topup_no_grant_no_claim(async_client: AsyncClient, orphan_
 
 @pytest.mark.asyncio
 async def test_orphan_subscription_no_grant_no_claim(async_client: AsyncClient, orphan_env):
+    from app.presentation.api.v1 import webhooks as webhooks_mod
+
     E, U, P = "evt_pw001_sub", "usr_pw001_sub", "free"
     event = orphan_env.event(E, U, "subscription", P)
     S = event["data"]["object"]["subscription"]
@@ -272,7 +282,9 @@ async def test_orphan_subscription_no_grant_no_claim(async_client: AsyncClient, 
     assert orphan_env.users.find_one({"firebase_uid": U}) is None
 
     with patch("stripe.Webhook.construct_event", return_value=event), \
-         patch("stripe.Subscription.retrieve", return_value=_FAKE_PERIOD_END):
+         patch("stripe.Subscription.retrieve", return_value=_FAKE_PERIOD_END) as retrieve_spy, \
+         patch("app.presentation.api.v1.webhooks._claim_grant",
+               wraps=webhooks_mod._claim_grant) as claim_spy:
         r = await async_client.post(
             "/api/v1/webhooks/stripe", json=event,
             headers={"stripe-signature": "v"},
@@ -280,6 +292,10 @@ async def test_orphan_subscription_no_grant_no_claim(async_client: AsyncClient, 
 
     assert r.status_code == 200
     assert orphan_env.tx.count_documents({"stripe_event_id": E}) == 0
+    assert claim_spy.call_count == 0
+    # Un huérfano se corta antes del dispatch de `mode`: no gastamos una llamada
+    # a la API de Stripe por un pago que no vamos a aplicar.
+    assert retrieve_spy.call_count == 0
     assert orphan_env.users.count_documents({"subscription.stripe_subscription_id": S}) == 0
     failed = orphan_env.failed.find_one({"event_id": E})
     assert failed is not None
