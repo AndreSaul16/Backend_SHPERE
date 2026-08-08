@@ -196,6 +196,44 @@ export function ChatPanel() {
         ? 'Un debate de la junta cuesta hasta 5 créditos (3 si el triage reduce los participantes)'
         : 'Un mensaje cuesta 1 crédito';
 
+    /**
+     * 5.6 · Q10 — el saldo se declara ANTES, no después del 402.
+     *
+     * Hasta aquí el coste estaba en el botón pero el saldo no: quien tenía tres
+     * créditos escribía sus seis líneas de contexto, pulsaba, y sólo entonces le
+     * salía el paywall encima de una junta a medias. El upsell llegaba tarde y
+     * además castigaba el trabajo ya hecho. Ahora el saldo viaja con el coste,
+     * y si no llega se dice antes de escribir (cierra B4).
+     *
+     * Selectores atómicos, uno por cifra: `useBillingStore()` entero volvería a
+     * repintar el panel en cada refresco de saldo, que ocurre cada minuto y al
+     * final de cada turno.
+     */
+    const saldoDelPlan = useBillingStore((s) => s.pro_messages_balance);
+    const saldoComprado = useBillingStore((s) => s.topup_messages_balance);
+    const saldoCargado = useBillingStore((s) => s.loaded);
+    const abrirPaywall = useBillingStore((s) => s.openPaywall);
+
+    const saldo = saldoDelPlan + saldoComprado;
+    // Mismo criterio que el indicador de créditos (D33): «no lo sabemos» es no
+    // haber cargado Y no tener cifra. Una cifra vieja informa; un cero inventado
+    // durante los segundos de arranque diría que no hay saldo cuando sí lo hay,
+    // y eso es justo el aviso que no se puede dar en falso.
+    const saldoConocido = saldoCargado || saldo > 0;
+    const saldoProyectado = Math.max(0, saldo - costeDelEnvio);
+    const saldoInsuficiente = saldoConocido && saldo < costeDelEnvio;
+    // El envío entra, pero es el último que entra: avisarlo aquí evita que el
+    // siguiente sea el que se encuentre la puerta cerrada.
+    const ultimoQueEntra = saldoConocido && !saldoInsuficiente && saldoProyectado < costeDelEnvio;
+
+    const accionDelEnvio = isGroupChat ? 'Convocar junta' : 'Enviar mensaje';
+    /** El nombre accesible del botón: la frase entera de Q10. */
+    const etiquetaDelEnvio = saldoInsuficiente
+        ? `Sin saldo para ${isGroupChat ? 'convocar' : 'enviar'}: ${costeDelEnvio} créditos y te quedan ${saldo}. Recargar`
+        : saldoConocido
+            ? `${accionDelEnvio} · ${costeDelEnvio} créditos · te quedan ${saldo}`
+            : `${accionDelEnvio} · ${costeDelEnvio} créditos`;
+
     const messagesContainerRef = useRef<HTMLDivElement>(null);
 
     // Filtered messages (search + pinned filter)
@@ -432,6 +470,12 @@ export function ChatPanel() {
     const handleSendMessage = async () => {
         const text = inputValue.trim();
         if (!text) return;
+        // Q10 · B4 — el paywall se abre AQUÍ, con el borrador intacto y sin
+        // haber gastado nada, en vez de llegar como un 402 a mitad de junta.
+        if (saldoInsuficiente) {
+            abrirPaywall('upgrade_cta');
+            return;
+        }
         // Analytics (F6): primer mensaje de la sesión y arranque de debate del board.
         if (messages.length === 0) capture(ANALYTICS_EVENTS.FIRST_MESSAGE_SENT, { group: isGroupChat });
         if (isGroupChat) capture(ANALYTICS_EVENTS.BOARD_DEBATE_STARTED);
@@ -887,6 +931,43 @@ export function ChatPanel() {
                         </div>
                     )}
 
+                    {/* 5.6 · Q10/B4 — el aviso llega ANTES de escribir.
+                        No espera a que haya texto ni al clic: quien abre la
+                        junta con tres créditos lo sabe antes de redactar sus
+                        seis líneas de contexto. §P5: el color no es la única
+                        señal, el texto dice la cifra y la salida. */}
+                    {saldoInsuficiente && (
+                        <div
+                            role="status"
+                            data-testid="aviso-saldo-corto"
+                            className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-sm border border-oxblood-500 bg-oxblood-500/12 px-3 py-2 text-xs text-danger"
+                        >
+                            <span>
+                                Te quedan {saldo} {saldo === 1 ? 'crédito' : 'créditos'} y{' '}
+                                {isGroupChat ? 'un debate' : 'un mensaje'} cuesta {costeDelEnvio}.
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => navigate('/billing')}
+                                className="rounded-sm text-accent underline decoration-1 underline-offset-2 hover:text-accent-hover"
+                            >
+                                Recargar créditos
+                            </button>
+                        </div>
+                    )}
+                    {ultimoQueEntra && (
+                        <div
+                            role="status"
+                            data-testid="aviso-ultimo-envio"
+                            className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 px-4 text-micro uppercase text-warning"
+                        >
+                            <span>
+                                Te quedan {saldo}: después de {isGroupChat ? 'este debate' : 'este mensaje'} te
+                                quedarán {saldoProyectado}.
+                            </span>
+                        </div>
+                    )}
+
                     {/* Banner de intervención durante el debate */}
                     <AnimatePresence>
                         {canIntervene && (
@@ -997,19 +1078,35 @@ export function ChatPanel() {
                                lado de un avión de papel, no dice qué son. */
                             <button
                                 onClick={handleSendMessage}
+                                /* Con el saldo corto el botón NO se deshabilita:
+                                   un botón muerto no explica nada y deja al
+                                   usuario sin siguiente paso. Sigue pulsable y
+                                   lleva a recargar, que es lo que hace falta. */
                                 disabled={!inputValue.trim()}
-                                aria-label={`${textoDelCoste}. Convocar`}
-                                title={detalleDelCoste}
+                                aria-label={etiquetaDelEnvio}
+                                title={saldoInsuficiente
+                                    ? `Te quedan ${saldo} créditos y esto cuesta ${costeDelEnvio}`
+                                    : detalleDelCoste}
+                                data-testid="boton-enviar"
                                 className={cn(
                                     "flex items-center gap-1.5 px-3.5 py-3.5 rounded-sm transition-colors duration-(--duration-tap)",
-                                    inputValue.trim()
-                                        ? "bg-accent-fill text-accent-on-fill hover:bg-accent-hover"
-                                        : "bg-surface-inset text-content-quiet cursor-not-allowed"
+                                    !inputValue.trim()
+                                        ? "bg-surface-inset text-content-quiet cursor-not-allowed"
+                                        : saldoInsuficiente
+                                            ? "border border-oxblood-500 text-danger hover:bg-oxblood-500/12"
+                                            : "bg-accent-fill text-accent-on-fill hover:bg-accent-hover"
                                 )}
                             >
                                 <Send className="h-5 w-5" aria-hidden="true" />
+                                {/* El coste, siempre. El saldo se le suma a
+                                    partir de `sm`: a 390px el compositor sólo
+                                    tiene sitio para una cifra, y ahí el saldo lo
+                                    da la línea de debajo, que sí cabe entera. */}
                                 <span className="font-mono text-micro font-bold tnum" aria-hidden="true">
                                     {costeDelEnvio}
+                                    {saldoConocido && (
+                                        <span className="hidden sm:inline"> · {saldo}</span>
+                                    )}
                                 </span>
                             </button>
                         )}
@@ -1022,7 +1119,13 @@ export function ChatPanel() {
                                 title={detalleDelCoste}
                             >
                                 <Zap className="h-3 w-3 text-accent" aria-hidden="true" />
+                                {/* Q10: coste Y saldo, en la misma línea. A
+                                    390px ésta es la que lleva el saldo, porque
+                                    el botón sólo tiene sitio para el coste. */}
                                 {textoDelCoste}
+                                {saldoConocido && (
+                                    <span className="text-content-quiet">· te quedan {saldo}</span>
+                                )}
                             </span>
                             <span className="text-micro uppercase text-content-quiet hidden sm:inline">
                                 ⏎ envía · ⇧⏎ salta de línea
