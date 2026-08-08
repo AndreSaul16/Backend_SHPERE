@@ -18,6 +18,20 @@ export function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // 5.14 · D27 — validación en vivo, pero no impaciente: el error de un campo
+  // no sale hasta que se ha abandonado una vez; a partir de ahí se actualiza a
+  // cada pulsación, que es cuando el usuario está corrigiendo.
+  const [tocadaClave, setTocadaClave] = useState(false);
+  const [tocadaRepeticion, setTocadaRepeticion] = useState(false);
+
+  const errorDeLongitud =
+    tocadaClave && password.length > 0 && password.length < 6
+      ? "Al menos 6 caracteres."
+      : undefined;
+  const errorDeRepeticion =
+    tocadaRepeticion && confirmPassword.length > 0 && confirmPassword !== password
+      ? "Las dos contraseñas no coinciden."
+      : undefined;
 
   const { signUpWithEmail, signInWithGoogle, signInWithGithub, signInWithMicrosoft } = useAuth();
   const navigate = useNavigate();
@@ -112,8 +126,10 @@ export function RegisterPage() {
           id="register-password"
           autoComplete="new-password"
           hint="Al menos 6 caracteres."
+          error={errorDeLongitud}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          onBlur={() => setTocadaClave(true)}
           placeholder="••••••••"
           required
           minLength={6}
@@ -123,8 +139,10 @@ export function RegisterPage() {
           label="Confirmar contraseña"
           id="register-password-confirm"
           autoComplete="new-password"
+          error={errorDeRepeticion}
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
+          onBlur={() => setTocadaRepeticion(true)}
           placeholder="••••••••"
           required
           minLength={6}

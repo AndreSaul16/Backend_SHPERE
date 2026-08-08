@@ -57,6 +57,7 @@ const AdminPage = lazy(() => MODULOS_DE_RUTA.admin().then((m) => ({ default: m.A
 const LoginPage = lazy(() => MODULOS_DE_RUTA.entrar().then((m) => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => MODULOS_DE_RUTA.registro().then((m) => ({ default: m.RegisterPage })));
 const VerifyEmailPage = lazy(() => MODULOS_DE_RUTA.verificarEmail().then((m) => ({ default: m.VerifyEmailPage })));
+const ResetPasswordPage = lazy(() => MODULOS_DE_RUTA.recuperarContrasena().then((m) => ({ default: m.ResetPasswordPage })));
 const SharedSessionPage = lazy(() => MODULOS_DE_RUTA.conversacionCompartida().then((m) => ({ default: m.SharedSessionPage })));
 
 /**
@@ -120,6 +121,9 @@ function AuthenticatedApp() {
       <Route path="/register" element={<Suspense fallback={<EsqueletoDeAutenticacion />}><RegisterPage /></Suspense>} />
       {/* Verificación de email (cuentas password sin verificar) */}
       <Route path="/verify-email" element={<Suspense fallback={<EsqueletoDeAutenticacion />}><VerifyEmailPage /></Suspense>} />
+      {/* 5.14 · D26 — recuperación de contraseña. Pública por definición: quien
+          la usa es justo quien NO puede iniciar sesión. */}
+      <Route path="/reset-password" element={<Suspense fallback={<EsqueletoDeAutenticacion />}><ResetPasswordPage /></Suspense>} />
       {/* Conversación compartida (público read-only, fuera de RequireAuth) */}
       <Route path="/share/:token" element={<Suspense fallback={<EsqueletoDeDocumento />}><SharedSessionPage /></Suspense>} />
 

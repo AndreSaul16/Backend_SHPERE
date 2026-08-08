@@ -73,7 +73,7 @@ describe('precarga de rutas desde el rail', () => {
         expect(Object.keys(MODULOS_DE_RUTA).sort()).toEqual([
             'admin', 'ajustes', 'ajustesDeConversacion', 'chat', 'conversacionCompartida',
             'detalleDeAgente', 'entrar', 'facturacion', 'panelDeArtefactos', 'perfil',
-            'registro', 'verificarEmail',
+            'recuperarContrasena', 'registro', 'verificarEmail',
         ]);
     });
 

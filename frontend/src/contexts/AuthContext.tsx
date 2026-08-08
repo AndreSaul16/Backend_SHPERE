@@ -17,6 +17,9 @@ import {
   signInWithPopup,
   signOut as firebaseSignOut,
   sendEmailVerification,
+  sendPasswordResetEmail,
+  verifyPasswordResetCode,
+  confirmPasswordReset,
   type User as FirebaseUser,
 } from "firebase/auth";
 import { auth, googleProvider, githubProvider, microsoftProvider } from "@/lib/firebase";
@@ -44,6 +47,18 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   resendVerification: () => Promise<void>;
   reloadUser: () => Promise<boolean>; // devuelve emailVerified tras refrescar
+  /**
+   * Recuperación de contraseña — tarea 5.14 (D26).
+   *
+   * Hasta ahora la aplicación NO tenía ninguna salida para quien olvidaba su
+   * contraseña: el único camino era escribir a soporte. Son las tres piezas del
+   * flujo de Firebase, y ninguna necesita que haya sesión iniciada.
+   */
+  sendPasswordReset: (email: string) => Promise<void>;
+  /** Valida el código del enlace y devuelve el correo al que pertenece. */
+  verifyPasswordReset: (code: string) => Promise<string>;
+  /** Fija la contraseña nueva. El código se consume: sólo sirve una vez. */
+  confirmPasswordResetWithCode: (code: string, newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -142,6 +157,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return cur.emailVerified;
   }, []);
 
+  const sendPasswordReset = useCallback(async (email: string) => {
+    await sendPasswordResetEmail(auth, email);
+  }, []);
+
+  const verifyPasswordReset = useCallback(async (code: string) => {
+    return await verifyPasswordResetCode(auth, code);
+  }, []);
+
+  const confirmPasswordResetWithCode = useCallback(
+    async (code: string, newPassword: string) => {
+      await confirmPasswordReset(auth, code, newPassword);
+    },
+    [],
+  );
+
   const signInWithGoogle = useCallback(async () => {
     await signInWithPopup(auth, googleProvider);
   }, []);
@@ -178,6 +208,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signOut,
         resendVerification,
         reloadUser,
+        sendPasswordReset,
+        verifyPasswordReset,
+        confirmPasswordResetWithCode,
       }}
     >
       {children}

@@ -31,6 +31,7 @@ export const MODULOS_DE_RUTA = {
     entrar: () => import('@/pages/LoginPage'),
     registro: () => import('@/pages/RegisterPage'),
     verificarEmail: () => import('@/pages/VerifyEmailPage'),
+    recuperarContrasena: () => import('@/pages/ResetPasswordPage'),
     conversacionCompartida: () => import('@/pages/SharedSessionPage'),
 } as const;
 

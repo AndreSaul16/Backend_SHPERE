@@ -108,6 +108,15 @@ export function LoginPage() {
           disabled={loading}
         />
 
+        {/* 5.14 · D26. El enlace vive PEGADO al campo de contraseña, que es
+            donde se descubre el problema, y no en el pie: quien no recuerda la
+            clave no baja a leer el pie, vuelve a intentarlo. */}
+        <div className="flex justify-end">
+          <Link to="/reset-password" className={buttonClass({ variant: "link" })}>
+            ¿Has olvidado tu contraseña?
+          </Link>
+        </div>
+
         <Button
           type="submit"
           variant="primary"
