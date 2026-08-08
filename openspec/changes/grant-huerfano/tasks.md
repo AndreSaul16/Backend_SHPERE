@@ -61,20 +61,20 @@ Chain strategy: pending
 
 ## Fase 2: GREEN — `webhooks.py` (único fichero de producción)
 
-- [ ] 2.1 Extraer `_dead_letter(failed_col, event_id, event_type, obj, reason)` (~línea 46) y hacer
+- [x] 2.1 Extraer `_dead_letter(failed_col, event_id, event_type, obj, reason)` (~línea 46) y hacer
       que la rama malformed `155-161` lo use.
-- [ ] 2.2 `_grant_subscription`:71 → `res = users_col.update_one(...)`; `return res.matched_count > 0`.
-- [ ] 2.3 `_grant_topup`:80 → igual; el early-return de `topup_messages <= 0` devuelve `True` con
+- [x] 2.2 `_grant_subscription`:71 → `res = users_col.update_one(...)`; `return res.matched_count > 0`.
+- [x] 2.3 `_grant_topup`:80 → igual; el early-return de `topup_messages <= 0` devuelve `True` con
       comentario (SKU desconocido ≠ perfil huérfano).
-- [ ] 2.4 Guarda walrus en la cadena `elif` de :162 —
+- [x] 2.4 Guarda walrus en la cadena `elif` de :162 —
       `elif (user_doc := users_col.find_one({"firebase_uid": user_id})) is None:` → log ERROR +
       `_dead_letter(..., "user_profile_not_found")` + `return {"status": "user_profile_not_found"}`.
       Docstring: explica por qué el evento queda en `processing`.
-- [ ] 2.5 Borrar el `find_one` de :184; :185 pasa a `if not validate_topup_tier(user_doc, plan_id):`.
-- [ ] 2.6 Capturar `claimed_tx`/`applied` en las dos ramas de `mode` y añadir la cola única al final
+- [x] 2.5 Borrar el `find_one` de :184; :185 pasa a `if not validate_topup_tier(user_doc, plan_id):`.
+- [x] 2.6 Capturar `claimed_tx`/`applied` en las dos ramas de `mode` y añadir la cola única al final
       de la rama (~:203): `if claimed_tx is not None and not applied:` →
       `transactions_col.delete_one({"_id": claimed_tx["_id"]})` + `_dead_letter` + `return`.
-- [ ] 2.7 Correr la suite: esperado `324 passed, 0 failed`. Commit GREEN (unit 2).
+- [x] 2.7 Correr la suite: esperado `324 passed, 0 failed`. Commit GREEN (unit 2).
 
 ## Fase 3: Anti-falso-verde (mutaciones; revertir SIEMPRE)
 

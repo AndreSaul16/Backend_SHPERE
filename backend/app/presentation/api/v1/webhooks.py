@@ -39,6 +39,21 @@ def _claim_grant(transactions_col, tx_doc: dict) -> bool:
         return False
 
 
+def _dead_letter(failed_col, event_id: str, event_type: str, obj, reason: str) -> None:
+    """Registra un pago que no se pudo aplicar para que soporte lo compense.
+
+    A2: NO perdemos la compra en silencio. `reason` es lo único que distingue
+    los motivos (metadata corrupta, perfil ausente, …), así que es obligatorio.
+    """
+    failed_col.insert_one({
+        "event_id": event_id,
+        "type": event_type,
+        "reason": reason,
+        "stripe_object": obj,
+        "created_at": datetime.now(timezone.utc),
+    })
+
+
 def _ts_to_dt(ts):
     if ts is None:
         return None
@@ -52,8 +67,12 @@ def _resolve_plan_from_metadata(obj) -> str | None:
 
 
 def _grant_subscription(users_col, user_id: str, plan_id: str, customer_id: str,
-                        subscription_id: str | None, period_end: datetime | None):
-    """Asigna plan, otorga balance del periodo y actualiza datos Stripe."""
+                        subscription_id: str | None, period_end: datetime | None) -> bool:
+    """Asigna plan, otorga balance del periodo y actualiza datos Stripe.
+
+    Devuelve False si el perfil no existe (el $set no encontró a nadie): el
+    llamador debe compensar el claim en vez de dar la compra por aplicada.
+    """
     plan_messages = settings.plan_messages_map.get(plan_id, 0)
     update = {
         "$set": {
@@ -68,19 +87,28 @@ def _grant_subscription(users_col, user_id: str, plan_id: str, customer_id: str,
             "wallet.last_period_reset": datetime.now(timezone.utc),
         }
     }
-    users_col.update_one({"firebase_uid": user_id}, update)
+    res = users_col.update_one({"firebase_uid": user_id}, update)
+    # matched_count, no modified_count: reaplicar los mismos valores da
+    # modified_count == 0 con el perfil presente y dispararía una compensación falsa.
+    return res.matched_count > 0
 
 
-def _grant_topup(users_col, user_id: str, plan_id: str):
-    """Suma mensajes de top-up al wallet del usuario."""
+def _grant_topup(users_col, user_id: str, plan_id: str) -> bool:
+    """Suma mensajes de top-up al wallet del usuario.
+
+    Devuelve False solo si el perfil no existe (ver _grant_subscription).
+    """
     topup_messages = settings.topup_messages_map.get(plan_id, 0)
     if topup_messages <= 0:
         logger.warning(f"Top-up plan_id desconocido: {plan_id}")
-        return
-    users_col.update_one(
+        # SKU desconocido ≠ perfil huérfano: el usuario existe y no hay nada que
+        # compensar. Comportamiento intacto, fuera del alcance de este arreglo.
+        return True
+    res = users_col.update_one(
         {"firebase_uid": user_id},
         {"$inc": {"wallet.topup_messages_balance": topup_messages}},
     )
+    return res.matched_count > 0
 
 
 @router.post("/stripe")
@@ -146,19 +174,37 @@ async def stripe_webhook(request: Request):
             customer_id = obj.get("customer")
             mode = obj.get("mode")  # "subscription" | "payment"
             plan_id = _resolve_plan_from_metadata(obj)
+            # Rastro del claim de ESTA petición, para poder compensarlo si el
+            # grant no llega a aplicarse. None = no reclamamos nada aquí.
+            claimed_tx = None
+            applied = True
 
             if not user_id or not plan_id:
                 logger.error(f"checkout.session.completed sin user_id/plan_id: {obj.get('id')}")
                 # A2: NO perdemos la compra en silencio. La registramos para que
                 # soporte pueda compensar, y devolvemos 200 (marcando done abajo)
                 # para que Stripe no reintente eternamente.
-                failed_col.insert_one({
-                    "event_id": event_id,
-                    "type": event_type,
-                    "reason": "missing_user_id_or_plan_id",
-                    "stripe_object": obj,
-                    "created_at": datetime.now(timezone.utc),
-                })
+                _dead_letter(failed_col, event_id, event_type, obj,
+                             "missing_user_id_or_plan_id")
+            elif (user_doc := users_col.find_one({"firebase_uid": user_id})) is None:
+                # El perfil no existe todavía (alta a medias) o ya no existe
+                # (cuenta borrada). Salimos ANTES de reclamar el evento y antes
+                # del dispatch de `mode`, así que no se escribe claim, no se
+                # muta el wallet y la suscripción ni siquiera se consulta.
+                #
+                # Deliberado: NO marcamos el evento como "done" (el return se
+                # salta el update final), así la entrega queda reprocesable —
+                # cuando el perfil aparezca, un replay del mismo evento SÍ
+                # otorga los créditos. Coste: "processing" pasa a significar dos
+                # cosas (crashó a mitad / diferido por perfil ausente); el motivo
+                # real vive en failed_payments.reason.
+                logger.error(
+                    f"checkout.session.completed sin perfil de usuario: "
+                    f"user={user_id} event={event_id} — pago sin aplicar."
+                )
+                _dead_letter(failed_col, event_id, event_type, obj,
+                             "user_profile_not_found")
+                return {"status": "user_profile_not_found"}
             elif mode == "subscription":
                 subscription_id = obj.get("subscription")
                 # Resolver period_end consultando la subscripción (session no lo trae siempre).
@@ -170,19 +216,23 @@ async def stripe_webhook(request: Request):
                     except Exception as e:
                         logger.warning(f"No pude leer subscription {subscription_id}: {e}")
                 # Claim idempotente antes de mutar el wallet (A2).
-                if _claim_grant(transactions_col, {
+                tx_doc = {
                     "user_id": user_id,
                     "delta": settings.plan_messages_map.get(plan_id, 0),
                     "balance_source": "plan",
                     "reason": "subscription_grant",
                     "stripe_event_id": event_id,
                     "created_at": datetime.now(timezone.utc),
-                }):
-                    _grant_subscription(users_col, user_id, plan_id, customer_id, subscription_id, period_end)
+                }
+                if _claim_grant(transactions_col, tx_doc):
+                    claimed_tx = tx_doc
+                    applied = _grant_subscription(
+                        users_col, user_id, plan_id, customer_id, subscription_id, period_end
+                    )
             elif mode == "payment":  # top-up
                 # Defense-in-depth: validar que el top-up corresponde al tier del usuario
-                user_doc = users_col.find_one({"firebase_uid": user_id})
-                if user_doc and not validate_topup_tier(user_doc, plan_id):
+                # (user_doc ya viene de la guarda de perfil de arriba: no es None).
+                if not validate_topup_tier(user_doc, plan_id):
                     logger.warning(
                         f"WEBHOOK SECURITY: cross-tier top-up rechazado. "
                         f"user={user_id} tier={get_user_plan(user_doc)} "
@@ -192,15 +242,32 @@ async def stripe_webhook(request: Request):
                     # (Stripe reintentaría por siempre)
                 else:
                     # Claim idempotente antes del $inc (A2).
-                    if _claim_grant(transactions_col, {
+                    tx_doc = {
                         "user_id": user_id,
                         "delta": settings.topup_messages_map.get(plan_id, 0),
                         "balance_source": "topup",
                         "reason": "topup_purchase",
                         "stripe_event_id": event_id,
                         "created_at": datetime.now(timezone.utc),
-                    }):
-                        _grant_topup(users_col, user_id, plan_id)
+                    }
+                    if _claim_grant(transactions_col, tx_doc):
+                        claimed_tx = tx_doc
+                        applied = _grant_topup(users_col, user_id, plan_id)
+
+            # El perfil pasó la guarda pero desapareció antes del grant (borrado
+            # de cuenta a mitad). Deshacemos el claim de ESTA petición para que
+            # el evento se pueda reprocesar; se borra por _id (insert_one lo
+            # inyecta en el dict), nunca por stripe_event_id: sin el índice
+            # único podríamos llevarnos un documento ajeno.
+            if claimed_tx is not None and not applied:
+                logger.error(
+                    f"Grant sobre perfil inexistente: user={user_id} "
+                    f"event={event_id} — claim revertido, pago sin aplicar."
+                )
+                transactions_col.delete_one({"_id": claimed_tx["_id"]})
+                _dead_letter(failed_col, event_id, event_type, obj,
+                             "user_profile_not_found")
+                return {"status": "user_profile_not_found"}
 
         elif event_type == "invoice.payment_succeeded":
             # Renovación de suscripción → reset del balance del periodo.
