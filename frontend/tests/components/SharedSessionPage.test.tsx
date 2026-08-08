@@ -103,3 +103,60 @@ describe('SharedSessionPage (F1 — vista pública read-only)', () => {
         });
     });
 });
+
+/**
+ * Tarea 2.4 — la conversación compartida es la única superficie pública del
+ * producto, y hasta ahora enseñaba cinco párrafos iguales sobre paño: sin
+ * identidad de director, sin votos y con el mismo `<title>` para todas las
+ * conversaciones del mundo.
+ */
+describe('SharedSessionPage — la constancia, en público', () => {
+    const CONVERSACION = {
+        title: 'Lanzamiento en Q4',
+        messages: [
+            { role: 'user', content: '¿Lanzamos en Q4?' },
+            {
+                role: 'assistant', content: 'La caja no aguanta.',
+                agent_role: 'CFO', board_vote: { decision: 'NO', confidence: 91 },
+            },
+            {
+                role: 'assistant', content: 'La plataforma llega.',
+                agent_role: 'CTO', board_vote: { decision: 'SI', confidence: 78 },
+            },
+        ],
+    };
+
+    it('se lee sobre papel y cada director trae su identidad y su voto', async () => {
+        server.use(http.get(ENDPOINT, () => HttpResponse.json(CONVERSACION)));
+        const { container } = renderAt('tok-junta');
+
+        expect(await screen.findByText('Lanzamiento en Q4')).toBeInTheDocument();
+        expect(container.querySelector('.acta-sheet')).not.toBeNull();
+
+        // §P2: el disenso se encuentra antes que la conformidad.
+        expect(screen.getByText(/EN CONTRA/)).toBeInTheDocument();
+        expect(screen.getByText(/91%/)).toBeInTheDocument();
+        expect(screen.getByText(/A FAVOR/)).toBeInTheDocument();
+
+        // Cada turno lleva el filete de su director, y no todos el mismo.
+        const filetes = [...container.querySelectorAll<HTMLElement>('[style*="border-inline-start-color"]')]
+            .map((e) => e.style.borderInlineStartColor);
+        expect(filetes.length).toBe(3);
+        expect(new Set(filetes).size).toBe(3);
+    });
+
+    it('el `<title>` nombra la junta, y se devuelve al salir', async () => {
+        const original = document.title;
+        server.use(http.get(ENDPOINT, () => HttpResponse.json(CONVERSACION)));
+        const { unmount } = renderAt('tok-junta');
+        await waitFor(() => expect(document.title).toBe('Lanzamiento en Q4 · SPHERE'));
+        unmount();
+        expect(document.title).toBe(original);
+    });
+
+    it('un enlace muerto también lo dice en la pestaña', async () => {
+        server.use(http.get(ENDPOINT, () => HttpResponse.json({ detail: 'not found' }, { status: 404 })));
+        renderAt('tok-muerto');
+        await waitFor(() => expect(document.title).toBe('Enlace no disponible · SPHERE'));
+    });
+});

@@ -6,9 +6,11 @@ import rehypeSanitize from "rehype-sanitize";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { chatService } from "@/services/api";
 import { DocTable } from "@/components/shared/DocTable";
+import { VoteChip } from "@/components/chat/VoteChip";
+import { AGENT_HEX } from "@/store/useChatStore";
 import { Button } from "@/components/ui/Button";
 import { buttonClass } from "@/components/ui/buttonStyles";
-import type { SharedSession } from "@/types";
+import type { SharedMessage, SharedSession } from "@/types";
 
 /**
  * Vista PÚBLICA read-only de una conversación compartida.
@@ -85,6 +87,27 @@ export function SharedSessionPage() {
         };
     }, [token, attempt]);
 
+    /**
+     * Tarea 2.4 — el `<title>` nombra la junta.
+     *
+     * Esta es la única superficie pública del producto: el título es lo que se
+     * ve en la pestaña, en el historial del navegador y en un marcador. Decía
+     * «SPHERE — Tu consejo de dirección» para todas las conversaciones
+     * compartidas del mundo.
+     *
+     * Las metas de Open Graph NO se tocan desde aquí y no es un olvido: un
+     * crawler no ejecuta JavaScript, así que una SPA no puede darle la vista
+     * previa por sesión. Eso necesita que el backend sirva el HTML de
+     * `/share/:token` con las metas ya puestas — tarea de backend, apuntada en
+     * el plan. Las metas genéricas de producto ya están en `index.html`.
+     */
+    useEffect(() => {
+        const anterior = document.title;
+        if (state.status === 'ok') document.title = `${state.data.title} · SPHERE`;
+        else if (state.status === 'gone') document.title = 'Enlace no disponible · SPHERE';
+        return () => { document.title = anterior; };
+    }, [state]);
+
     return (
         <div className="min-h-dvh bg-surface-0 text-content">
             {/* Banner de origen */}
@@ -128,37 +151,28 @@ export function SharedSessionPage() {
 
                 {state.status === 'ok' && (
                     <>
-                        <h1 className="mb-6 text-2xl font-semibold tracking-tight text-content-strong">
-                            {state.data.title}
-                        </h1>
-                        <div className="space-y-5">
-                            {state.data.messages.map((m, idx) => (
-                                <div
-                                    key={idx}
-                                    className={
-                                        m.role === "user"
-                                            ? "ms-auto max-w-[85%] rounded-md border-s-2 border-agent-user bg-agent-user/12 px-4 py-3"
-                                            : "me-auto max-w-[90%] rounded-md border border-stroke-edge bg-surface-2 px-4 py-3"
-                                    }
-                                >
-                                    {m.role === "assistant" && m.agent_role && (
-                                        <p className="mb-1.5 text-micro font-semibold uppercase text-content-muted">
-                                            {m.agent_role}
-                                        </p>
-                                    )}
-                                    <div className="doc-prose doc-prose--turno max-w-none break-words">
-                                        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]} components={{ table: DocTable }}>
-                                            {m.content}
-                                        </ReactMarkdown>
-                                    </div>
-                                </div>
-                            ))}
-                            {state.data.messages.length === 0 && (
-                                <p className="py-8 text-center text-sm text-content-muted">
-                                    Esta conversación aún no tiene mensajes.
-                                </p>
-                            )}
-                        </div>
+                        {/* La constancia se lee sobre papel (§P1, §5.3). Esta es
+                            la única pantalla del producto que ve alguien que no
+                            ha entrado nunca: si la junta deja acta, lo que hay
+                            que enseñar es el acta, no un chat. La hoja re-mapea
+                            el contexto de variables, así que todo lo que se
+                            pinte dentro —placas, chips, citas— sale en la rama
+                            clara sin repintarlo elemento a elemento. */}
+                        <article className="acta-sheet p-5 sm:p-8">
+                            <h1 className="mb-6 text-2xl font-serif font-semibold tracking-tight text-content-strong">
+                                {state.data.title}
+                            </h1>
+                            <div className="space-y-5">
+                                {state.data.messages.map((m, idx) => (
+                                    <SharedTurn key={idx} message={m} />
+                                ))}
+                                {state.data.messages.length === 0 && (
+                                    <p className="py-8 text-center text-sm text-content-muted">
+                                        Esta conversación aún no tiene mensajes.
+                                    </p>
+                                )}
+                            </div>
+                        </article>
 
                         {/* CTA a registro */}
                         <div className="mt-12 space-y-3 rounded-md border border-stroke-edge bg-surface-2 p-6 text-center">
@@ -171,6 +185,64 @@ export function SharedSessionPage() {
                         </div>
                     </>
                 )}
+            </div>
+        </div>
+    );
+}
+
+/**
+ * Un turno de la conversación compartida.
+ *
+ * Tarea 2.4: «placas con identidad y votos». Los cinco directores tienen color
+ * propio (§2.8) y aquí se usa — la placa lleva su filete y su nombre— y el voto
+ * se cuenta con el mismo chip que el transcript del producto (§P2: el disenso
+ * es la señal). Sin identidad ni voto, esta pantalla enseña cinco párrafos
+ * iguales y el visitante no ve lo único que la junta aporta: quién dijo qué y
+ * con cuánta confianza.
+ */
+function SharedTurn({ message }: { message: SharedMessage }) {
+    const esUsuario = message.role === 'user';
+    const rol = (message.agent_role ?? '').toUpperCase();
+    // El hex sale del catálogo del store, nunca escrito a mano (§13.1).
+    const identidad =
+        rol in AGENT_HEX ? AGENT_HEX[rol as keyof typeof AGENT_HEX] : AGENT_HEX.custom;
+
+    return (
+        <div
+            className={
+                esUsuario
+                    ? 'ms-auto max-w-[85%] rounded-md border-s-2 bg-surface-inset px-4 py-3'
+                    : 'me-auto max-w-[95%] rounded-md border-s-2 px-4 py-3'
+            }
+            // §9.11: filete de identidad de 2px al margen del turno, no un
+            // relleno de color — sobre papel, un lavado del color de agente no
+            // llegaría al contraste que pide §12.
+            style={{ borderInlineStartColor: esUsuario ? AGENT_HEX.user : identidad }}
+        >
+            <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                {/* El nombre va en grafito y NO en el color del director: los
+                    hex de §2.8 están calculados contra el paño (7,3-8,4:1) y
+                    sobre papel se quedan en 2,5:1, por debajo del mínimo de §12.
+                    La identidad la porta el filete, que es un elemento gráfico
+                    redundante con el nombre escrito (§P5). */}
+                <span className="text-micro font-sans font-semibold uppercase text-content-muted">
+                    {esUsuario ? 'Consulta' : message.agent_role || 'Junta'}
+                </span>
+                {message.board_vote?.decision && (
+                    <VoteChip
+                        decision={message.board_vote.decision}
+                        confidence={message.board_vote.confidence}
+                    />
+                )}
+            </div>
+            <div className="doc-prose doc-prose--turno max-w-none break-words">
+                <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeSanitize]}
+                    components={{ table: DocTable }}
+                >
+                    {message.content}
+                </ReactMarkdown>
             </div>
         </div>
     );

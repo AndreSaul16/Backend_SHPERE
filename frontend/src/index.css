@@ -577,6 +577,14 @@
     --accent-hover: var(--brass-700);
     --dissent: var(--oxblood-600);         --dissent-strong: var(--oxblood-700);
     --certify: var(--aniline-600);
+    /* Las superficies también, con los mismos valores que el tema claro. Sin
+       esta línea, cualquier cosa que se pinte dentro de la hoja con un
+       `bg-surface-*` —el chip «A FAVOR» de la conversación compartida fue el
+       primero en aparecer— salía en paño oscuro sobre el papel, con el texto
+       grafito encima. La hoja re-declara el CONTEXTO: si se deja media
+       declaración, el hueco se ve. */
+    --surface-0: var(--paper-100); --surface-1: var(--paper-200);
+    --surface-2: var(--paper-50);  --surface-3: var(--paper-50);
     --surface-inset: var(--paper-300);
     --stroke-hairline: color-mix(in oklab, var(--graphite-900) 12%, transparent);
     --stroke-edge: color-mix(in oklab, var(--graphite-900) 16%, transparent);

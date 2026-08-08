@@ -15,6 +15,7 @@ import { useUserAvatar } from '@/hooks/useUserAvatar';
 import { notify, reasonOf } from '@/lib/toastBus';
 import { AvatarImage } from '@/components/ui/AvatarImage';
 import { DocTable } from '@/components/shared/DocTable';
+import { VoteChip } from './VoteChip';
 
 /**
  * Acción de la fila del turno (§9.11 «acciones»). Un solo sitio para las cinco:
@@ -24,28 +25,6 @@ import { DocTable } from '@/components/shared/DocTable';
  */
 const ROW_ACTION_CLASS =
     'flex h-8 w-8 items-center justify-center rounded-sm text-content-muted transition-colors hover:bg-stroke-hairline hover:text-content-strong';
-
-/**
- * Chip de voto — DESIGN §P2, §2.4 y §9.9.
- *
- * F6: los tres votos se pintaban con el color de la BURBUJA, así que «✗ EN
- * CONTRA · 91%» —la señal más valiosa del producto— era cromáticamente idéntica
- * a «✓ A FAVOR · 78%» y sólo se distinguían por el glifo. §P2 es explícita: «un
- * voto en contra debe encontrarse antes que un voto a favor» y «el disenso usa
- * `--color-dissent` y nunca comparte tratamiento con los votos a favor».
- *
- * El color NO es el único canal (§P5): siguen estando el glifo, la palabra y el
- * porcentaje. Lo que cambia es el peso óptico — el disenso pesa, la conformidad
- * se apaga — para que el desacuerdo se encuentre antes al recorrer el hilo.
- */
-const VOTE_CHIP: Record<'SI' | 'NO' | 'CONDICIONAL', { clase: string; texto: string; glifo: string }> = {
-    // Oxblood, relleno y peso: es lo que hay que ver primero.
-    NO: { clase: 'border-dissent/50 bg-dissent/12 text-dissent font-bold', texto: 'EN CONTRA', glifo: '✗' },
-    // Ámbar: hay decisión, pero cuelga de una condición.
-    CONDICIONAL: { clase: 'border-warning/45 bg-warning/12 text-warning font-bold', texto: 'CONDICIONAL', glifo: '~' },
-    // Conformidad: neutra y callada. Es el fondo contra el que destaca el disenso.
-    SI: { clase: 'border-stroke-edge bg-surface-2 text-content-muted font-medium', texto: 'A FAVOR', glifo: '✓' },
-};
 
 interface MessageBubbleProps {
     message: Message;
@@ -584,19 +563,12 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
 
                         {/* Chip de voto (board V2) + timestamp */}
                         <div className="flex items-center gap-2">
-                            {!isUser && message.vote && (() => {
-                                // §9.9: radio corto y filete del color semántico
-                                // a 40-50% con relleno al 12%; nunca píldora.
-                                const chip = VOTE_CHIP[message.vote.decision] ?? VOTE_CHIP.CONDICIONAL;
-                                return (
-                                    <span
-                                        className={cn('px-2 py-0.5 rounded-xs text-micro font-mono border tnum', chip.clase)}
-                                        title={`Voto: ${message.vote.decision} · confianza ${message.vote.confidence}%`}
-                                    >
-                                        {chip.glifo} {chip.texto} · {message.vote.confidence}%
-                                    </span>
-                                );
-                            })()}
+                            {!isUser && message.vote && (
+                                <VoteChip
+                                    decision={message.vote.decision}
+                                    confidence={message.vote.confidence}
+                                />
+                            )}
                             <span className="text-xs text-content-muted">
                                 {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
