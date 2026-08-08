@@ -337,7 +337,7 @@ function MessageBubbleInterno({ message, agent, agentColor, sessionAvatar, isTyp
                     )}
                     /* El filete fino sigue siendo el del sistema; el del canto
                        lleva la identidad. El de la burbuja de usuario era
-                       `#22D3EE20` escrito a pelo — el cian de la paleta
+                       un hex de ocho dígitos escrito a pelo — el cian de la paleta
                        anterior, no el `--agent-user` de §2.8. */
                     style={isUser
                         ? { borderColor: `${AGENT_HEX.user}35`, borderInlineEndColor: AGENT_HEX.user }

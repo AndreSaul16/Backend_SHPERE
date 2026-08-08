@@ -106,7 +106,7 @@ export function DataGrid({ artifact }: DataGridProps) {
     }
 
     return (
-        <div className="flex flex-col h-full bg-[#0d0d12]">
+        <div className="flex flex-col h-full bg-surface-code">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-3 bg-surface-1 border-b border-stroke-hairline">
                 <div className="flex items-center gap-3">
@@ -136,7 +136,7 @@ export function DataGrid({ artifact }: DataGridProps) {
             >
                 <table className="w-full text-[13px] border-collapse">
                     <thead className="sticky top-0 z-10">
-                        <tr className="bg-[#16161c]">
+                        <tr className="bg-surface-1">
                             {headers.map((header, i) => (
                                 <th
                                     key={i}

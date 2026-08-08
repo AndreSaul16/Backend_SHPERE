@@ -31,6 +31,33 @@ const AGENT_GREETINGS: Record<string, string> = {
  * Estos valores son `hexColor`, o sea los que viajan a SVG, `style` y al color
  * picker, donde no hay `var()`. El equivalente en token es `--agent-*`.
  */
+/**
+ * ⚠ LIMITACIÓN DECLARADA DE 7.6 — estos seis hex NO se han migrado a tokens.
+ *
+ * Los ratios de los comentarios están medidos contra `baize-950` y
+ * `baize-800`, o sea contra el paño: en tema claro, `#B290EC` sobre `paper-100`
+ * da 2.4:1. Los tokens `--agent-*` del bloque `[data-theme="light"]` de
+ * `index.css` SÍ tienen valores recalculados para papel, y hoy no los consume
+ * nadie desde JavaScript.
+ *
+ * Por qué no se ha hecho aquí, dicho en claro: `hexColor` no es un color de
+ * pintura, es un DATO. Se usa en 43 sitios de 16 ficheros para componer
+ * cadenas de opacidad a mano (`${color}15`, `${color}40`), viaja al backend
+ * como el color elegido de un agente a medida y vuelve del backend en
+ * `identity.color`. Convertirlo en algo que dependa del tema es una migración
+ * de una tarde entera con riesgo sobre los dos efectos de firma —la Mesa y el
+ * Palco— y no cabía en esta fase sin dejarla a medias.
+ *
+ * El camino ya está abierto y probado: `mermaidTheme.aHex()` convierte el
+ * `oklch()` de un token a hex y `MermaidDiagram` lo usa desde D29 para seguir
+ * al tema sin literales. Lo que falta es un `coloresDeAgente()` que lea
+ * `--agent-ceo`… con `AGENT_HEX` de respaldo, y un punto donde recalcularlo al
+ * cambiar de tema — que NO puede ser `useAgentes`, porque su `useShallow`
+ * perdería la estabilidad de referencia que costó la tarea 4.6.
+ *
+ * Los colores de los agentes A MEDIDA no entran en esto: los elige el usuario
+ * y no son de nadie más.
+ */
 export const AGENT_HEX: Record<
     'CEO' | 'CTO' | 'CFO' | 'CMO' | 'DEVIL' | 'user' | 'group' | 'custom',
     string

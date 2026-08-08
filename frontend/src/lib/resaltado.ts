@@ -103,4 +103,29 @@ export function lenguajeSoportado(lenguaje: string | undefined | null): boolean 
 }
 
 export { PrismLight };
-export { default as temaCodigo } from 'react-syntax-highlighter/dist/esm/styles/prism/vsc-dark-plus';
+
+/**
+ * DOS temas de Prism, no uno (7.6).
+ *
+ * El único que había era `vsc-dark-plus`, pensado para fondo casi negro. La
+ * fase 6 encendió el tema claro y dejó tres contenedores con `bg-[#0d0d12]`
+ * escrito a mano justo para que ese resaltado siguiera siendo legible: en el
+ * tema claro, el panel de artefactos era un rectángulo negro en medio de una
+ * página de papel. Verificado en navegador antes de tocarlo.
+ *
+ * Cambiar sólo el fondo a un token no vale: con `vsc-dark-plus` sobre papel,
+ * las cadenas van en `#CE9178` (naranja claro) y los comentarios en `#6A9955`
+ * (verde claro) — los dos por debajo de 2:1 sobre `paper-50`. El resaltado y
+ * el fondo son una sola decisión, así que se conmutan juntos.
+ *
+ * `one-light` y no `vs`: `vs` pinta el texto plano en negro puro sobre blanco
+ * puro, que es justo el par que §2.6 prohíbe («papel, no folio en blanco»).
+ * `one-light` trabaja sobre `#fafafa` con grises de tinta, que es el mismo
+ * gesto que el paño hace en oscuro.
+ *
+ * El fondo propio de los dos temas se anula en los tres visores con
+ * `background: transparent` en `customStyle`: el color de la caja lo pone
+ * `--surface-code`, que es un token y sí sabe de temas.
+ */
+export { default as temaCodigoOscuro } from 'react-syntax-highlighter/dist/esm/styles/prism/vsc-dark-plus';
+export { default as temaCodigoClaro } from 'react-syntax-highlighter/dist/esm/styles/prism/one-light';

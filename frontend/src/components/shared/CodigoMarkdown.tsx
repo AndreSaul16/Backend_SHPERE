@@ -24,7 +24,8 @@
  *   sin relleno — si además pintara los suyos habría dos cajas concéntricas.
  */
 import type { ComponentPropsWithoutRef } from 'react';
-import { PrismLight as SyntaxHighlighter, temaCodigo, lenguajeSoportado } from '@/lib/resaltado';
+import { PrismLight as SyntaxHighlighter, lenguajeSoportado } from '@/lib/resaltado';
+import { useTemaDeCodigo } from '@/hooks/useTemaDeCodigo';
 
 const SIN_CAJA_PROPIA = {
     margin: 0,
@@ -37,6 +38,7 @@ const SIN_CAJA_PROPIA = {
 } as const;
 
 export function CodigoMarkdown({ className, children, ...props }: ComponentPropsWithoutRef<'code'>) {
+    const temaCodigo = useTemaDeCodigo();
     const lenguaje = /language-([\w-]+)/.exec(className ?? '')?.[1];
 
     if (!lenguaje || !lenguajeSoportado(lenguaje)) {

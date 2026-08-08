@@ -6,7 +6,8 @@ import { Copy, Check, Download, ExternalLink } from 'lucide-react';
    arranque para colorear un `json`. `@/lib/resaltado` registra OCHO sobre
    `prism-light`, y es el mismo motor que usa el markdown del transcript (4.4):
    un solo resaltado en toda la app. */
-import { PrismLight as SyntaxHighlighter, temaCodigo, lenguajeSoportado } from '@/lib/resaltado';
+import { PrismLight as SyntaxHighlighter, lenguajeSoportado } from '@/lib/resaltado';
+import { useTemaDeCodigo } from '@/hooks/useTemaDeCodigo';
 
 import { getDownloadExtension } from '@/types/artifact';
 import type { Artifact } from '@/types/artifact';
@@ -19,6 +20,8 @@ interface CodeBlockProps {
 export function CodeBlock({ artifact }: CodeBlockProps) {
     // D49 — el ✓ se apaga solo y el temporizador muere con el componente.
     const [copied, marcarCopiado] = useEstadoEfimero(false, 2000);
+    // 7.6 — el resaltado se conmuta con `data-theme`, igual que el fondo.
+    const temaCodigo = useTemaDeCodigo();
 
     /**
      * D36 — una copia que falla lo dice.
@@ -64,7 +67,7 @@ export function CodeBlock({ artifact }: CodeBlockProps) {
     };
 
     return (
-        <div className="flex flex-col h-full bg-[#0d0d12]">
+        <div className="flex flex-col h-full bg-surface-code">
             {/* Toolbar */}
             <div className="flex items-center justify-between px-6 py-3 bg-surface-1 border-b border-stroke-hairline">
                 <div className="flex items-center gap-3">
@@ -115,8 +118,10 @@ export function CodeBlock({ artifact }: CodeBlockProps) {
                         lineHeight: '1.7',
                         fontFamily: '"JetBrains Mono", monospace',
                     }}
+                    /* El color NO va aquí: la librería lo pisa con el de su
+                       propio tema (ver la regla de `index.css` que lo corrige
+                       con `!important`, con la medida que lo demuestra). */
                     lineNumberStyle={{
-                        color: 'rgba(255,255,255,0.1)',
                         paddingRight: '1.5rem',
                         minWidth: '3.5rem',
                         textAlign: 'right',

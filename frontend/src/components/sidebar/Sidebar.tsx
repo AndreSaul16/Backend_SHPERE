@@ -368,7 +368,7 @@ export function Sidebar() {
                                         className={cn(
                                             "w-full px-3 sm:px-4 py-2.5 pe-12 flex items-center gap-3 hover:bg-surface-highlight/40 transition-all duration-200 group border-l-2",
                                             currentSessionId === session.session_id
-                                                ? "bg-surface-highlight/60 border-accent shadow-[inset_4px_0_12px_rgba(0,240,200,0.05)]"
+                                                ? "bg-surface-highlight/60 border-accent shadow-[inset_4px_0_12px_var(--stroke-highlight)]"
                                                 : "border-transparent"
                                         )}
                                     >

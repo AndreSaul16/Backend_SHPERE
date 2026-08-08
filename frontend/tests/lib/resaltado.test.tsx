@@ -3,7 +3,10 @@ import { render } from '@testing-library/react';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 
-import { LENGUAJES_RESALTADOS, lenguajeSoportado } from '../../src/lib/resaltado';
+import { renderHook } from '@testing-library/react';
+import { LENGUAJES_RESALTADOS, lenguajeSoportado, temaCodigoClaro, temaCodigoOscuro } from '../../src/lib/resaltado';
+import { useTemaDeCodigo } from '../../src/hooks/useTemaDeCodigo';
+import { CLAVE_TEMA } from '../../src/lib/tema';
 import { CodigoMarkdown } from '../../src/components/shared/CodigoMarkdown';
 
 /**
@@ -81,5 +84,37 @@ describe('CodigoMarkdown — el bloque cercado del turno', () => {
         const enLinea = container.querySelector('code');
         expect(enLinea?.textContent).toBe('pro_messages_balance');
         expect(enLinea?.querySelectorAll('span')).toHaveLength(0);
+    });
+});
+
+/**
+ * 7.6 — el resaltado tiene DOS temas y se elige por `data-theme`.
+ *
+ * No se comprueba el aspecto (eso es del navegador, y se hizo allí): se
+ * comprueba que existen los dos objetos de estilo, que son distintos, y que el
+ * gancho devuelve el que toca. Un solo tema es exactamente el estado del que
+ * se viene, y es el que dejaba el panel de artefactos como un rectángulo negro
+ * en una página de papel.
+ */
+describe('resaltado — un tema por cada tema de la aplicación', () => {
+    it('el claro y el oscuro son dos hojas de estilo distintas', () => {
+        expect(temaCodigoOscuro).toBeTruthy();
+        expect(temaCodigoClaro).toBeTruthy();
+        expect(temaCodigoClaro).not.toBe(temaCodigoOscuro);
+        // El color del texto plano tiene que ser distinto: si fueran el mismo
+        // objeto importado dos veces, esto pasaría igual y no diría nada.
+        const plano = (t: Record<string, { color?: string }>) => t['code[class*="language-"]']?.color;
+        expect(plano(temaCodigoClaro as never)).not.toBe(plano(temaCodigoOscuro as never));
+    });
+
+    it('el gancho sigue al tema efectivo', () => {
+        window.localStorage.setItem(CLAVE_TEMA, 'light');
+        const { result: claro } = renderHook(() => useTemaDeCodigo());
+        expect(claro.current).toBe(temaCodigoClaro);
+
+        window.localStorage.setItem(CLAVE_TEMA, 'dark');
+        const { result: oscuro } = renderHook(() => useTemaDeCodigo());
+        expect(oscuro.current).toBe(temaCodigoOscuro);
+        window.localStorage.removeItem(CLAVE_TEMA);
     });
 });

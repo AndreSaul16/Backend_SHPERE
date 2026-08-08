@@ -97,6 +97,15 @@
   --surface-0:var(--baize-950); --surface-1:var(--baize-900);
   --surface-2:var(--baize-850); --surface-3:var(--baize-800);
   --surface-inset:var(--baize-700); --surface-doc:var(--paper-50);
+  /* 7.6 · El lienzo del código. Existe como token propio porque es lo ÚNICO
+     que cambia a la vez que el tema de resaltado de Prism (`lib/resaltado`):
+     fondo y colores del código son una sola decisión. Antes eran tres
+     `bg-[#0d0d12]` escritos a mano, que en tema claro dejaban un rectángulo
+     casi negro en medio de una página de papel. */
+  --surface-code:var(--baize-950);
+  /* Numeración de líneas: presente pero por debajo del código. No es
+     `content-quiet`: no es texto que se lea, es una regla graduada. */
+  --content-gutter:color-mix(in oklab, var(--ink-50) 22%, transparent);
 
   --content-strong:var(--ink-50); --content:var(--ink-100);
   --content-muted:var(--ink-300); --content-quiet:var(--ink-500); /* 4.59:1 suelo — SÓLO sobre e0/e1; sobre e2+ usar ink-400 */
@@ -134,6 +143,8 @@
   --surface-0:var(--paper-100); --surface-1:var(--paper-200);
   --surface-2:var(--paper-50);  --surface-3:var(--paper-50);
   --surface-inset:var(--paper-300); --surface-doc:var(--paper-50);
+  --surface-code:var(--paper-50);
+  --content-gutter:color-mix(in oklab, var(--graphite-900) 32%, transparent);
 
   --content-strong:var(--graphite-900); --content:var(--graphite-800);
   --content-muted:var(--graphite-700);  --content-quiet:var(--graphite-600);
@@ -180,6 +191,8 @@
   --color-surface-0:var(--surface-0);   --color-surface-1:var(--surface-1);
   --color-surface-2:var(--surface-2);   --color-surface-3:var(--surface-3);
   --color-surface-inset:var(--surface-inset); --color-surface-doc:var(--surface-doc);
+  --color-surface-code:var(--surface-code);
+  --color-content-gutter:var(--content-gutter);
   --color-content-strong:var(--content-strong); --color-content:var(--content);
   --color-content-muted:var(--content-muted);   --color-content-quiet:var(--content-quiet);
 
@@ -799,3 +812,17 @@
      sustituto y ya vive en `body`. No vuelven: §7.4 las nombra por su nombre
      entre los bucles prohibidos. */
 }
+
+/* ═══ 7.6 · La numeración de líneas del código ════════════════════════════════
+   `react-syntax-highlighter` escribe el color de la numeración como estilo EN
+   LÍNEA, y lo hace DESPUÉS de mezclar el `lineNumberStyle` que se le pasa
+   (`createStyleObject` en `create-element.js` extiende la hoja del tema encima
+   del estilo propio). Medido en navegador: el `rgba(255,255,255,0.1)` que
+   `CodeBlock` llevaba desde siempre nunca llegó a aplicarse — los números
+   salían del color de los COMENTARIOS del tema, o sea verde en oscuro, y
+   competían con el propio código.
+
+   Un estilo en línea de una librería sólo se gana con `!important`. Es el
+   único de todo el fichero y está aquí, con su motivo, en vez de repartido por
+   tres componentes. */
+.react-syntax-highlighter-line-number{ color: var(--content-gutter) !important; }
