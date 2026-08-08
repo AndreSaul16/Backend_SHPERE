@@ -11,6 +11,7 @@ import { AvatarImage } from "@/components/ui/AvatarImage";
 import { notify, reasonOf } from "@/lib/toastBus";
 import { useBoardSettingsStore } from "@/store/useBoardSettingsStore";
 import { InlineError } from "@/components/ui/InlineError";
+import { UnsavedGuardDialog } from "@/components/ui/UnsavedGuardDialog";
 
 
 export function ChatSettingsPage() {
@@ -289,6 +290,17 @@ export function ChatSettingsPage() {
 
     return (
         <div className="flex flex-col h-full bg-midnight/40 relative overflow-hidden">
+            {/* 5.15 · D63. Aquí lo sucio es el nombre tecleado que todavía no
+                ha salido: el guardado va con rebote de 500 ms, así que salir
+                dentro de esa media ventana se lleva lo último escrito sin que
+                el usuario lo sepa. Los demás ajustes de esta pantalla (color,
+                avatar, interruptor de debate) se guardan al instante y no
+                tienen nada pendiente que perder. */}
+            <UnsavedGuardDialog
+                sucio={localName.trim() !== baseName.trim()}
+                objeto={baseName || "esta junta"}
+                consecuencia="El nombre que acabas de escribir aún no se ha guardado."
+            />
             {/* Header */}
             <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-surface flex items-center justify-between bg-surface-0 sticky top-0 z-10">
                 <div className="flex items-center gap-3 sm:gap-4">

@@ -16,6 +16,7 @@ import {
     Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { UnsavedGuardDialog } from "@/components/ui/UnsavedGuardDialog";
 import { TextAreaField, TextField } from "@/components/ui/Field";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { reasonOf, toast } from "@/lib/toastBus";
@@ -271,6 +272,14 @@ export function AgentDetailPage() {
     // ── Render ───────────────────────────────────────────────────────────
     return (
         <div className="flex flex-col h-full bg-midnight/40 relative overflow-hidden">
+            {/* 5.15 · D63 — este formulario YA calculaba `isDirty` y sólo lo
+                usaba para atenuar el botón de guardar: un clic en el rail se
+                llevaba por delante un prompt de sistema reescrito entero. */}
+            <UnsavedGuardDialog
+                sucio={isDirty}
+                objeto={name || "este director"}
+                consecuencia="Se pierden el prompt, el modelo y los ajustes que has cambiado."
+            />
             {/* ── Header ────────────────────────────────────────────── */}
             <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-surface flex items-center justify-between bg-surface-0 sticky top-0 z-10">
                 <div className="flex items-center gap-3 sm:gap-4">

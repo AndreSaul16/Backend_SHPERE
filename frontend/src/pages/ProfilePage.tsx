@@ -6,6 +6,7 @@ import { profileService } from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { TextField } from "@/components/ui/Field";
 import { AvatarImage } from "@/components/ui/AvatarImage";
+import { UnsavedGuardDialog } from "@/components/ui/UnsavedGuardDialog";
 
 export function ProfilePage() {
     const avatarUrl = useUserAvatar();
@@ -18,17 +19,24 @@ export function ProfilePage() {
     const [isSaving, setIsSaving] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
+    /* 5.15 · D63 — lo cargado del servidor es la referencia; si el nombre en
+       pantalla ya no coincide, hay trabajo sin guardar. Se compara contra el
+       valor traído y no contra el inicial vacío, o el formulario nacería sucio
+       y preguntaría al salir sin que nadie hubiera tocado nada. */
+    const [nombreGuardado, setNombreGuardado] = useState("");
 
     useEffect(() => {
         profileService.getProfile()
             .then((profile) => {
                 setDisplayName(profile.display_name || "");
+                setNombreGuardado(profile.display_name || "");
                 setUserEmail(profile.email || "");
             })
             .catch(() => {
                 // Fallback a Firebase Auth si el backend falla
                 if (firebaseUser) {
                     setDisplayName(firebaseUser.displayName || "");
+                    setNombreGuardado(firebaseUser.displayName || "");
                     setUserEmail(firebaseUser.email || "");
                 }
             });
@@ -56,6 +64,7 @@ export function ProfilePage() {
         setSaveStatus("idle");
         try {
             await profileService.updateProfile({ display_name: displayName });
+            setNombreGuardado(displayName);
             setSaveStatus("success");
             setTimeout(() => setSaveStatus("idle"), 2500);
         } catch {
@@ -81,6 +90,11 @@ export function ProfilePage() {
 
     return (
         <div className="flex flex-col h-full bg-midnight/40 relative overflow-hidden">
+            <UnsavedGuardDialog
+                sucio={displayName !== nombreGuardado}
+                objeto="tu perfil"
+                consecuencia="Se pierde el nombre que has escrito y no guardado."
+            />
             {/* Header */}
             <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-surface flex items-center justify-between bg-surface-0 sticky top-0 z-10">
                 <div className="flex items-center gap-3 sm:gap-4">

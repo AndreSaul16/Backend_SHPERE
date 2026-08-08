@@ -9,6 +9,7 @@ import { Field as FormField } from "@/components/ui/Field";
 import { fieldControlClass } from "@/components/ui/fieldStyles";
 import { InlineError, type FalloDeSeccion } from "@/components/ui/InlineError";
 import { aplicarDensidad, leerDensidad, type Densidad } from "@/lib/densidad";
+import { UnsavedGuardDialog } from "@/components/ui/UnsavedGuardDialog";
 
 export function ProfileSettings() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -19,12 +20,19 @@ export function ProfileSettings() {
   // fallida se resolvía con un `<p>Error: TypeError: Failed to fetch</p>` y
   // nada más: sin reintentar, sin volver, sin nada.
   const [error, setError] = useState<FalloDeSeccion | null>(null);
+  /* 5.15 · D63 — la referencia es lo último que dijo el servidor. Este
+     formulario tiene diecinueve controles repartidos en cinco secciones, y
+     salir de la pestaña era perderlos todos sin una palabra. Se compara el
+     objeto entero serializado: los cambios son anidados (`ui_preferences`,
+     `professional_profile`…) y una lista de campos sueltos se queda corta en
+     cuanto alguien añade uno. */
+  const [guardado, setGuardado] = useState<string>("");
 
   const cargar = () => {
     setLoading(true);
     profileService
       .getProfile()
-      .then((p) => { setProfile(p); setError(null); })
+      .then((p) => { setProfile(p); setGuardado(JSON.stringify(p)); setError(null); })
       .catch(() =>
         setError({
           title: "No se ha podido cargar tu perfil",
@@ -69,6 +77,7 @@ export function ProfileSettings() {
         personal_kb_enabled: profile.personal_kb_enabled,
       });
       setProfile(updated);
+      setGuardado(JSON.stringify(updated));
       setSavedAt(Date.now());
       setError(null);
     } catch {
@@ -90,6 +99,10 @@ export function ProfileSettings() {
 
   return (
     <div className="space-y-6">
+      <UnsavedGuardDialog
+        sucio={guardado !== "" && JSON.stringify(profile) !== guardado}
+        objeto="tus ajustes de perfil"
+      />
       <Section icon={<User className="h-5 w-5 text-electric-cyan" />} title="Identidad">
         <Field label="Nombre público">
           <input
