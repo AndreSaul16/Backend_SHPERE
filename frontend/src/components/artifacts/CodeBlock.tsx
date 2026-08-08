@@ -1,7 +1,12 @@
 import { useState } from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Copy, Check, Download, ExternalLink } from 'lucide-react';
+
+/* 4.3 — `{ Prism }` del índice de `react-syntax-highlighter` arrastraba
+   `refractor` entero: ~300 gramáticas, cerca de 1 MB de JS que se parsea en el
+   arranque para colorear un `json`. `@/lib/resaltado` registra OCHO sobre
+   `prism-light`, y es el mismo motor que usa el markdown del transcript (4.4):
+   un solo resaltado en toda la app. */
+import { PrismLight as SyntaxHighlighter, temaCodigo, lenguajeSoportado } from '@/lib/resaltado';
 
 import { getDownloadExtension } from '@/types/artifact';
 import type { Artifact } from '@/types/artifact';
@@ -94,8 +99,13 @@ export function CodeBlock({ artifact }: CodeBlockProps) {
             {/* Editor Area */}
             <div className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                 <SyntaxHighlighter
-                    language={artifact.language || 'text'}
-                    style={vscDarkPlus}
+                    /* Un lenguaje que no está registrado se pinta SIN colorear
+                       en vez de reventar: `prism-light` sólo conoce las ocho de
+                       `@/lib/resaltado`, y refractor lanza si le piden una
+                       gramática que no tiene. `text` no está registrada tampoco
+                       y es el camino de salida deliberado. */
+                    language={lenguajeSoportado(artifact.language) ? artifact.language : 'text'}
+                    style={temaCodigo}
                     showLineNumbers
                     customStyle={{
                         margin: 0,

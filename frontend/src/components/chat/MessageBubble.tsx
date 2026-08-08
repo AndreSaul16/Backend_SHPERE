@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import rehypeHighlight from 'rehype-highlight';
 import rehypeSanitize from 'rehype-sanitize';
-import 'highlight.js/styles/atom-one-dark.css';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Copy, Check, RefreshCw, Pin, ThumbsUp, ThumbsDown, Trash2, Brain, ChevronDown } from 'lucide-react';
 import { cn } from "@/lib/utils";
@@ -15,6 +13,7 @@ import { useUserAvatar } from '@/hooks/useUserAvatar';
 import { notify, reasonOf } from '@/lib/toastBus';
 import { AvatarImage } from '@/components/ui/AvatarImage';
 import { DocTable } from '@/components/shared/DocTable';
+import { CodigoMarkdown } from '@/components/shared/CodigoMarkdown';
 import { VoteChip } from './VoteChip';
 
 /**
@@ -377,6 +376,12 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                                 // F4 · §9.7: una tabla ancha se desplaza dentro
                                 // de su contenedor; jamás rompe la burbuja.
                                 table: DocTable,
+                                // 4.4: el bloque cercado lo colorea el MISMO
+                                // Prism ligero que el panel de artefactos. Antes
+                                // esto lo hacía `rehype-highlight` con el tema
+                                // de `highlight.js`: dos motores de resaltado
+                                // en la misma pantalla, con dos paletas.
+                                code: CodigoMarkdown,
                             };
 
                             while ((match = combinedPattern.exec(content)) !== null) {
@@ -388,7 +393,7 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                                             <ReactMarkdown
                                                 key={`text-${partKey++}`}
                                                 remarkPlugins={[remarkGfm]}
-                                                rehypePlugins={[rehypeSanitize, rehypeHighlight]}
+                                                rehypePlugins={[rehypeSanitize]}
                                                 components={markdownComponents}
                                             >
                                                 {textBefore}
@@ -486,7 +491,7 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                                         <ReactMarkdown
                                             key={`text-${partKey++}`}
                                             remarkPlugins={[remarkGfm]}
-                                            rehypePlugins={[rehypeSanitize, rehypeHighlight]}
+                                            rehypePlugins={[rehypeSanitize]}
                                             components={markdownComponents}
                                         >
                                             {remaining}
@@ -500,7 +505,7 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                                 return (
                                     <ReactMarkdown
                                         remarkPlugins={[remarkGfm]}
-                                        rehypePlugins={[rehypeSanitize, rehypeHighlight]}
+                                        rehypePlugins={[rehypeSanitize]}
                                         components={markdownComponents}
                                     >
                                         {message.content}
