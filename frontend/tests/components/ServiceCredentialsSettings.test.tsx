@@ -80,6 +80,10 @@ describe('ServiceCredentialsSettings — D38', () => {
         render(<ServiceCredentialsSettings />);
         await waitFor(() => expect(screen.getByText('WhatsApp')).toBeInTheDocument());
 
+        // 6.8: los servicios llegan plegados. El formulario de uno existe
+        // cuando su fila está abierta, que es el punto del acordeón.
+        await user.click(screen.getByRole('button', { name: /WhatsApp/ }));
+
         await user.type(screen.getByLabelText('API Key'), 'secreto');
         await user.click(screen.getByRole('button', { name: /Guardar/ }));
 

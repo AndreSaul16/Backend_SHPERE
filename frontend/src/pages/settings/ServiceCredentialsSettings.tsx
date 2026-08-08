@@ -9,6 +9,12 @@ import type { ServiceCredentialsResponse } from "@/services/api";
 import { motivoLegible } from "@/lib/errors";
 import { PasswordField, TextField } from "@/components/ui/Field";
 import { InlineError, type FalloDeSeccion } from "@/components/ui/InlineError";
+import { FilaDeConexion } from "@/pages/settings/FilaDeConexion";
+import {
+  pasaElFiltro,
+  useControlDeAcordeon,
+  type ControlDeAcordeon,
+} from "@/pages/settings/conexionesAcordeon";
 import {
   Key,
   Calendar,
@@ -35,7 +41,8 @@ const SERVICE_ICONS: Record<string, React.ReactNode> = {
   financial_api: <TrendingUp className="h-5 w-5" />,
 };
 
-export function ServiceCredentialsSettings() {
+export function ServiceCredentialsSettings({ control: controlExterno }: { control?: ControlDeAcordeon } = {}) {
+  const control = useControlDeAcordeon(controlExterno);
   const [data, setData] = useState<ServiceCredentialsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -169,22 +176,28 @@ export function ServiceCredentialsSettings() {
       )}
       {error && <InlineError {...error} />}
 
-      {/* Service cards */}
-      <div className="grid grid-cols-1 gap-4">
-        {data?.services.map((svc) => (
-          <div
+      {/* Service cards — 6.8: plegadas, y sólo una abierta en toda la página. */}
+      <div className="grid grid-cols-1 gap-2">
+        {data?.services
+          .filter((svc) => pasaElFiltro(control.filtro, svc.label, svc.service, svc.description))
+          .map((svc) => (
+          <FilaDeConexion
             key={svc.service}
-            className="p-5 rounded-md bg-surface/30 border border-surface-highlight space-y-4"
+            id={svc.service}
+            control={control}
+            icono={SERVICE_ICONS[svc.service] || <Key className="h-5 w-5" />}
+            titulo={svc.label}
+            descripcion={svc.description}
+            estado={
+              svc.connected
+                ? { texto: "Configurado", tono: "ok" }
+                : { texto: "Sin configurar", tono: "pendiente" }
+            }
           >
-            {/* Header */}
+            {/* Herramientas que desbloquea */}
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="text-accent">
-                  {SERVICE_ICONS[svc.service] || <Key className="h-5 w-5" />}
-                </div>
                 <div className="min-w-0">
-                  <h3 className="font-semibold text-content-strong">{svc.label}</h3>
-                  <p className="text-xs text-content-muted mt-1">{svc.description}</p>
                   {svc.tools && svc.tools.length > 0 && (
                     <div className="relative group/tools inline-block mt-2">
                       <span className="px-2 py-0.5 bg-surface-highlight/70 text-content-muted border border-surface-highlight rounded-full text-micro font-medium cursor-default">
@@ -204,11 +217,6 @@ export function ServiceCredentialsSettings() {
                   )}
                 </div>
               </div>
-              {svc.connected && (
-                <span className="px-2 py-0.5 bg-success/10 text-success border border-success/30 rounded-full text-micro flex-shrink-0">
-                  Configurado
-                </span>
-              )}
             </div>
 
             {/* Input fields */}
@@ -340,7 +348,7 @@ export function ServiceCredentialsSettings() {
                 </>
               )}
             </div>
-          </div>
+          </FilaDeConexion>
         ))}
       </div>
     </div>

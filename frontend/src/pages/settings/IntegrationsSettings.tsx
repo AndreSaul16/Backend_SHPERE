@@ -26,6 +26,12 @@ import {
   type OAuthAppsList,
 } from "@/services/api";
 import { PasswordField, TextField } from "@/components/ui/Field";
+import { FilaDeConexion } from "@/pages/settings/FilaDeConexion";
+import {
+  pasaElFiltro,
+  useControlDeAcordeon,
+  type ControlDeAcordeon,
+} from "@/pages/settings/conexionesAcordeon";
 
 const PROVIDER_META: Record<
   string,
@@ -69,7 +75,8 @@ const PROVIDER_META: Record<
   },
 };
 
-export function IntegrationsSettings() {
+export function IntegrationsSettings({ control: controlExterno }: { control?: ControlDeAcordeon } = {}) {
+  const control = useControlDeAcordeon(controlExterno);
   const [data, setData] = useState<IntegrationsList | null>(null);
   const [apps, setApps] = useState<OAuthAppsList | null>(null);
   const [loading, setLoading] = useState(true);
@@ -242,7 +249,7 @@ export function IntegrationsSettings() {
         agentes actúan en tu nombre.
       </p>
 
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 gap-2">
         {providers.map((p) => {
           const meta =
             PROVIDER_META[p] || {
@@ -257,35 +264,26 @@ export function IntegrationsSettings() {
           const isWorking = working === p;
           const callbackUrl = apps?.callback_urls?.[p] || "";
 
+          // 6.8: el buscador filtra por lo que el usuario recuerda —el nombre
+          // del servicio o para qué servía—, no por su clave interna.
+          if (!pasaElFiltro(control.filtro, meta.label, p, meta.description)) return null;
+
           return (
-            <div
+            <FilaDeConexion
               key={p}
-              className="p-5 rounded-md bg-surface/30 border border-surface-highlight space-y-4"
+              id={p}
+              control={control}
+              icono={meta.icon}
+              titulo={meta.label}
+              descripcion={meta.description}
+              estado={
+                isConnected
+                  ? { texto: "Conectado", tono: "ok" }
+                  : registered
+                    ? { texto: "App registrada", tono: "medio" }
+                    : { texto: "Sin conectar", tono: "pendiente" }
+              }
             >
-              {/* Header */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3 text-content-strong">
-                  {meta.icon}
-                  <div>
-                    <h3 className="font-semibold flex items-center gap-2">
-                      {meta.label}
-                      {isConnected && (
-                        <span className="px-2 py-0.5 bg-success/10 text-success border border-success/30 rounded-full text-micro">
-                          Conectado
-                        </span>
-                      )}
-                      {registered && !isConnected && (
-                        <span className="px-2 py-0.5 bg-info/10 text-info border border-sky-500/30 rounded-full text-micro">
-                          App registrada
-                        </span>
-                      )}
-                    </h3>
-                    <p className="text-xs text-content-muted mt-1">
-                      {meta.description}
-                    </p>
-                  </div>
-                </div>
-              </div>
 
               {!registered ? (
                 /* ---- Paso 1: registrar la OAuth app ---- */
@@ -398,7 +396,7 @@ export function IntegrationsSettings() {
                   </button>
                 </div>
               )}
-            </div>
+            </FilaDeConexion>
           );
         })}
       </div>
