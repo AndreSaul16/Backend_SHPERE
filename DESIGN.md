@@ -326,7 +326,7 @@ Base **4px**. Valores permitidos: `0, 1(4), 2(8), 3(12), 4(16), 5(20), 6(24), 8(
 
 | Token | Valor | Uso |
 |---|---|---|
-| `--measure-doc` | `min(68ch, 100% - 32px)` | **Medida del acta y del transcript.** 68ch (~72 caracteres) es el TECHO, no el suelo: en 390px la medida real es el ancho disponible (~40ch) y eso es correcto — nunca forzar 68ch con scroll horizontal |
+| `--measure-doc` | `min(60ch, 100% - 32px)` | **Medida del acta y del transcript.** 60ch (**72,5 caracteres medidos**, ver la nota de abajo) es el TECHO, no el suelo: en 390px la medida real es el ancho disponible y eso es correcto — nunca forzar la medida con scroll horizontal |
 | `--measure-form` | `44rem` | Formularios de una columna |
 | `--container-app` | `100%` | El shell ocupa el viewport; la medida la impone el contenido |
 | `--rail-order` | `56px` | Canal izquierda del rail del orden del día (§8.4) |
@@ -335,7 +335,28 @@ Base **4px**. Valores permitidos: `0, 1(4), 2(8), 3(12), 4(16), 5(20), 6(24), 8(
 | `--panel-artifact-default` | `480px` | Por defecto |
 | `--panel-artifact-max` | `760px` | Máximo |
 
-Hoy el transcript usa `max-w-4xl` (896px) sin unidad `ch`: a 16px eso son ~112 caracteres por línea, casi el doble del óptimo de lectura. `68ch` es una decisión de legibilidad, no de gusto.
+Hoy el transcript usa `max-w-4xl` (896px) sin unidad `ch`: a 16px eso son ~112 caracteres por línea, casi el doble del óptimo de lectura. La medida es una decisión de legibilidad, no de gusto.
+
+> **68ch → 60ch — corregido por la fase 4 (rendimiento), y MEDIDO.**
+>
+> El valor original era `68ch` con la anotación «(~72 caracteres)». El paréntesis decía la intención correcta y el número la implementaba mal **para esta cara**: `ch` es el ancho del glifo «0», y en una tipografía proporcional el carácter medio de prosa es bastante más estrecho que el cero.
+>
+> **Cómo se midió** (no se estimó): Chromium headless contra el servidor de desarrollo, `.doc-prose` con la hoja de estilos real de la aplicación, diez párrafos de prosa española de acta —no *lorem ipsum*—, `await document.fonts.ready`, y recuento carácter a carácter con un `Range`, agrupando por la fila en que cae cada uno. Se descarta la última línea de cada párrafo, que siempre es parcial. Muestra: 19-20 líneas completas por medida.
+>
+> | `--container-measure` | Ancho de caja | Caracteres/línea (media) | Rango |
+> |---|---|---|---|
+> | `68ch` (original) | 630,0px | **82,1** | 77-90 |
+> | `62ch` | 574,4px | 73,9 | 64-82 |
+> | `61ch` | 565,1px | 72,9 | 64-79 |
+> | **`60ch`** (vigente) | 555,8px | **72,5** | 64-79 |
+> | `59ch` | 546,6px | 70,5 | 64-75 |
+> | `58ch` | 537,3px | 69,0 | 63-75 |
+>
+> En Literata Regular a 16px, **1ch = 9,264px**. `68ch` quedaba a 82 caracteres, siete por encima del techo de la ventana 65-75 que exige el criterio de aceptación de la tarea 3.7. `60ch` es el valor entero que cae más cerca de los ~72 que el contrato pedía desde el principio.
+>
+> El número vive en `--measure-doc` y en `--container-measure`, que son el mismo valor: `.doc-prose` consume el segundo, y separarlos daría dos medidas distintas para la misma hoja.
+>
+> **Lo que NO se ha tocado, a propósito:** la línea del contrato de dirección de §0 sigue diciendo «columna de 68ch». Ese bloque está copiado *verbatim* en `frontend/index.html` para que sobreviva al build y se pueda auditar con `grep` sobre `dist/` (§8.8, clave `b620ecfd`); es un artefacto congelado y no una tabla de tokens. Queda anotada la discrepancia aquí en vez de arreglarla en silencio en dos sitios.
 
 ### 4.3 Breakpoints — móvil es el caso base, el escritorio es la expansión
 
@@ -344,7 +365,7 @@ Hoy el transcript usa `max-w-4xl` (896px) sin unidad `ch`: a 16px eso son ~112 c
 **Caso base (0-639px, diseñado a 390×844).** La experiencia entera, sin degradados:
 - **El Palco** (§8.1): la Mesa en formato vertical — banda adherida bajo la cabecera con TODOS los asientos visibles a la vez (placas de 48-56px con su aguja); tocar una placa abre el **asiento en foco** a casi todo el ancho, navegable con swipe. La junta completa siempre a la vista; la intimidad de un director cada vez.
 - **El Canto** (§8.4): el rail del orden del día como uñero de libro en el borde izquierdo — 3px de filamento con el cursor de latón ligado al scroll. El scroll ES el eje del debate.
-- Transcript a **ancho completo** con medida `min(68ch, 100% − 32px)`; nombres de director sobre el turno (no hay margen lateral que usar).
+- Transcript a **ancho completo** con medida `min(60ch, 100% − 32px)` (§4.2: 60ch son 72,5 caracteres medidos, no 68); nombres de director sobre el turno (no hay margen lateral que usar).
 - Sidebar en cajón (e4, velo, `Escape`/swipe-back). Panel de artefactos como **hoja a pantalla completa** que sube desde abajo (sheet) — el acta se lee como documento, no como panel.
 - Entrada de chat anclada abajo con `env(safe-area-inset-bottom)`; la acción primaria (enviar/convocar, con su coste) vive en la **zona del pulgar** (§12.15).
 - El Sello, la Aguja y el Grano: idénticos (§8.2/8.3/8.5 escalan sin variante).
@@ -355,7 +376,7 @@ Hoy el transcript usa `max-w-4xl` (896px) sin unidad `ch`: a 16px eso son ~112 c
 | `md` | 48rem (768px) | Formularios en 2 columnas; barra de guardado adherida; tablas dejan de apilarse en tarjetas |
 | `lg` | 64rem (1024px) | Sidebar fija; el Canto se ensancha al gutter de 56px con números y nombres al margen (Hansard); el Palco se despliega a **la Sala**: todas las placas simultáneas en arco 2D con la lámpara móvil |
 | `xl` | 80rem (1280px) | El panel de artefactos deja de ser sheet y pasa a columna en línea redimensionable (380/480/760) |
-| `2xl` | 96rem (1536px) | Medida sube a `74ch`; los márgenes crecen, no la medida |
+| `2xl` | 96rem (1536px) | Medida sube a `65ch` (~77 caracteres medidos; era `74ch`, que con la corrección de §4.2 serían 89 y se sale de la ventana de lectura); los márgenes crecen, no la medida |
 
 **Contenedores de altura:** `h-dvh`, nunca `h-screen` ni `min-h-screen` (hoy `RequireAuth.tsx:13` usa `min-h-screen` y deja el hueco clásico de Safari móvil). Las barras fijas (entrada, toasts, sheet) respetan `env(safe-area-inset-*)`.
 
@@ -777,7 +798,7 @@ Con imagen: `--radius-sm`, `object-fit: cover`, **`onError` obligatorio** con fa
 
 ### 9.11 Burbuja de mensaje — el Turno
 
-Anatomía: nombre del director **en el margen** (§8.4), no dentro · cuerpo en Literata `base`/1.55, medida `68ch` · filete de identidad de 2px en `border-inline-start` · pie con hora (`--text-xs`, `ink-400`, **nunca `opacity-30`**), chip de voto y acciones.
+Anatomía: nombre del director **en el margen** (§8.4), no dentro · cuerpo en Literata `base`/1.55, medida `60ch` (§4.2) · filete de identidad de 2px en `border-inline-start` · pie con hora (`--text-xs`, `ink-400`, **nunca `opacity-30`**), chip de voto y acciones.
 
 | Estado | Tratamiento |
 |---|---|
@@ -881,7 +902,7 @@ Bloque completo para `frontend/src/index.css`. Es código real, listo para pegar
 
 Patrón *(actualizado por la auditoría v3 — B1)*: los valores crudos viven en `:root` (tema **oscuro, por defecto**: es el tema del producto hoy, y el fallo seguro con el atributo ausente debe ser el tema que existe) y en `[data-theme="light"]` (opt-in, lo activa el conmutador de la fase 6.11); el `@theme inline` los referencia para generar utilidades que **cambian con el tema**. Esto es obligatorio en Tailwind v4: un `@theme` normal congela el valor y el tema claro no funcionaría.
 
-> **Este bloque está compilado y verificado**, no escrito a mano y confiado: se procesó con el `@tailwindcss/postcss` 4.3.3 del propio proyecto contra un fichero sonda que usa cada utilidad. Resultado: 0 avisos de PostCSS, 109.975 bytes emitidos, y las 21 utilidades del contrato generan el valor declarado (`.text-micro` → `0.75rem`, `.rounded-sm` → `4px`, `.max-w-measure` → `68ch`, `.shadow-e3` → `var(--shadow-e3)`, `.ease-settle` → `cubic-bezier(0.16, 1, 0.30, 1)`, `.duration-(--duration-pop)` → `var(--duration-pop)`), más la variante `dark`, `.doc-prose h2`, el `clip-path` de `.acta-sheet`, el bloque de `prefers-reduced-motion` y la regla base de `:focus-visible`. El comando para repetirlo está en §13.1.
+> **Este bloque está compilado y verificado**, no escrito a mano y confiado: se procesó con el `@tailwindcss/postcss` 4.3.3 del propio proyecto contra un fichero sonda que usa cada utilidad. Resultado: 0 avisos de PostCSS, 109.975 bytes emitidos, y las 21 utilidades del contrato generan el valor declarado (`.text-micro` → `0.75rem`, `.rounded-sm` → `4px`, `.max-w-measure` → `60ch` (era `68ch`; corregido y medido en §4.2), `.shadow-e3` → `var(--shadow-e3)`, `.ease-settle` → `cubic-bezier(0.16, 1, 0.30, 1)`, `.duration-(--duration-pop)` → `var(--duration-pop)`), más la variante `dark`, `.doc-prose h2`, el `clip-path` de `.acta-sheet`, el bloque de `prefers-reduced-motion` y la regla base de `:focus-visible`. El comando para repetirlo está en §13.1.
 
 ```css
 @import "tailwindcss";
@@ -1105,7 +1126,7 @@ Patrón *(actualizado por la auditoría v3 — B1)*: los valores crudos viven en
 
   /* layout */
   --spacing:4px;
-  --container-measure:68ch;
+  --container-measure:60ch;   /* 72,5 caracteres medidos en Literata 16px — ver §4.2 */
   --breakpoint-sm:40rem;  --breakpoint-md:48rem;  --breakpoint-lg:64rem;
   --breakpoint-xl:80rem;  --breakpoint-2xl:96rem;
 }

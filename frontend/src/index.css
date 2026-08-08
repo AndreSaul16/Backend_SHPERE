@@ -75,7 +75,14 @@
      §13 no los definía, así que el implementador tendría que inventar dónde
      viven. Van en :root porque no pertenecen a ningún namespace de @theme,
      salvo --container-measure, que sí está abajo. */
-  --measure-doc:min(68ch, 100% - 32px);
+  /* 60ch y no 68ch — corregido por la fase 4, MEDIDO en el navegador.
+     `ch` es el ancho del glifo «0», y en Literata a 16px vale 9,264px; el
+     carácter medio de prosa española es bastante más estrecho, así que 68ch
+     daban 82 caracteres por línea (19 líneas de prosa real medidas con Range),
+     fuera de la ventana 65-75 que exige el criterio de aceptación de 3.7.
+     60ch = 555,8px = 72,5 caracteres de media, que es lo que el paréntesis de
+     DESIGN §4.2 decía desde el principio. Ver la nota de §4.2. */
+  --measure-doc:min(60ch, 100% - 32px);
   --measure-form:44rem;
   --container-app:100%;
   --rail-order:56px;
@@ -296,7 +303,10 @@
      copiarlo literal habría metido una regresión de accesibilidad que la app
      hoy NO tiene, porque hoy no declara --spacing y hereda el default. */
   --spacing:0.25rem;
-  --container-measure:68ch;
+  /* La medida que de verdad aplica `.doc-prose`. Va con `--measure-doc`: son
+     el mismo número, y separarlos daría dos medidas distintas para la misma
+     hoja. 60ch = 72,5 caracteres medidos en Literata 16px (ver arriba). */
+  --container-measure:60ch;
   /* Idénticos a los valores por defecto de v4: se dejan como documentación del
      contrato de §4.3, no porque cambien nada (R13). */
   --breakpoint-sm:40rem;  --breakpoint-md:48rem;  --breakpoint-lg:64rem;
@@ -417,7 +427,7 @@
 
   /* El turno del transcript también es documento (§P1), pero no es la portada
      de un acta. La escala de encabezados de la hoja está diseñada para una
-     columna de 68ch; dentro de una burbuja al 88% de 390px la columna real son
+     columna de 60ch; dentro de una burbuja al 88% de 390px la columna real son
      ~250px, y ahí un h1 a 33px no cabe ni en una línea: «Recomendación» salía
      partido como «Recomendació / n». Se baja un peldaño la escala —y el aire de
      encima, que a 33px es una portada y aquí sería un hueco—. La jerarquía se

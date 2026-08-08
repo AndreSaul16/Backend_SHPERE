@@ -369,13 +369,13 @@ function MessageBubbleInterno({ message, agent, agentColor, sessionAvatar, isTyp
                     )}
 
                     {/* 3.7 · §4.3 — la medida del transcript es la del
-                        documento: `min(68ch, 100% - 32px)`. Antes esta línea
+                        documento: `min(60ch, 100% - 32px)`. Antes esta línea
                         traía `max-w-none`, que anulaba la medida de
                         `.doc-prose` y dejaba que la burbuja se estirase a los
                         ~820px del contenedor: 100 y pico caracteres por línea,
                         el doble del techo de lectura cómoda. `--turno` baja un
                         peldaño la escala de encabezados, porque la de la hoja
-                        está diseñada para una columna de 68ch y aquí, a 390px,
+                        está diseñada para la medida del documento y aquí, a 390px,
                         la columna real son ~250px. */}
                     <div className="doc-prose doc-prose--turno break-words">
                         {/* 4.7 · D21 — el parseo ya no vive aquí.
