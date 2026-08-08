@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useEffect, useReducer, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -23,9 +23,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TextAreaField, TextField } from '@/components/ui/Field';
-import { useChatStore } from '@/store/useChatStore';
 import {
-    API_URL,
     CATEGORY_META,
     MODEL_OPTIONS,
     PRESET_COLORS,
@@ -33,11 +31,15 @@ import {
     resolveTemplateIcon,
     slideVariants,
 } from './agent-wizard/constants';
-import type { AgentTemplate, FileEntry, WizardStep } from './agent-wizard/types';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+import type { AgentTemplate, FileEntry, WizardForm, WizardStep } from './agent-wizard/types';
+import {
+    canProceed,
+    initialWizardState,
+    newFileEntry,
+    wizardReducer,
+} from './agent-wizard/wizardReducer';
+import { useAgentSubmission } from './agent-wizard/useAgentSubmission';
+import { useAgentTemplates } from './agent-wizard/useAgentTemplates';
 
 interface AgentCreationWizardProps {
     isOpen: boolean;
@@ -45,315 +47,81 @@ interface AgentCreationWizardProps {
     onAgentCreated: (agentId: string) => void;
 }
 
-let fileIdCounter = 0;
-const nextFileId = () => `file_${++fileIdCounter}_${Date.now()}`;
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 export function AgentCreationWizard({ isOpen, onClose, onAgentCreated }: AgentCreationWizardProps) {
-    // Store
-    const addCustomAgent = useChatStore((s) => s.addCustomAgent);
+    // Todo el estado del asistente, en un reducer (D41): un `reset` en vez de
+    // catorce setters, y ningún campo que se pueda quedar sin borrar.
+    const [state, dispatch] = useReducer(wizardReducer, initialWizardState);
+    const { step, direction, files, isDragOver, isSubmitting, submitError } = state;
 
-    // Wizard navigation
-    const [step, setStep] = useState<WizardStep>(0);
-    const [direction, setDirection] = useState(1);
+    // El catálogo es estado del servidor y vive fuera del reducer.
+    const catalog = useAgentTemplates(isOpen);
 
-    // Step 0: method
-    const [method, setMethod] = useState<'template' | 'scratch' | null>(null);
-    const [templates, setTemplates] = useState<AgentTemplate[]>([]);
-    const [templatesLoading, setTemplatesLoading] = useState(false);
-    const [templatesError, setTemplatesError] = useState<string | null>(null);
-    const [selectedTemplate, setSelectedTemplate] = useState<AgentTemplate | null>(null);
-    const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+    const handleSubmit = useAgentSubmission(state, dispatch, onAgentCreated, onClose);
 
-    // Step 1: configuration
-    const [name, setName] = useState('');
-    const [description, setDescription] = useState('');
-    const [systemPrompt, setSystemPrompt] = useState('');
-    const [color, setColor] = useState(PRESET_COLORS[0]);
-    const [temperature, setTemperature] = useState(0.7);
-    const [model, setModel] = useState('deepseek-v4-pro');
-
-    // Step 2: knowledge base
-    const [files, setFiles] = useState<FileEntry[]>([]);
     const dropRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [isDragOver, setIsDragOver] = useState(false);
-
-    // Step 3: submit
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [submitError, setSubmitError] = useState<string | null>(null);
 
     // -----------------------------------------------------------------------
-    // Fetch templates on mount
-    // -----------------------------------------------------------------------
-
-    useEffect(() => {
-        if (!isOpen) return;
-        let cancelled = false;
-
-        const fetchTemplates = async () => {
-            setTemplatesLoading(true);
-            setTemplatesError(null);
-            try {
-                const res = await fetch(`${API_URL}/agents/templates`);
-                if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-                const data = await res.json();
-                if (!cancelled) setTemplates(Array.isArray(data) ? data : []);
-            } catch (err: any) {
-                if (!cancelled) setTemplatesError(err.message ?? 'Error al cargar plantillas');
-            } finally {
-                if (!cancelled) setTemplatesLoading(false);
-            }
-        };
-
-        fetchTemplates();
-        return () => { cancelled = true; };
-    }, [isOpen]);
-
-    // -----------------------------------------------------------------------
-    // Reset state when modal closes
+    // Borrado al cerrar
     // -----------------------------------------------------------------------
 
     useEffect(() => {
         if (!isOpen) {
-            // Delay reset so exit animation plays
-            const t = setTimeout(() => {
-                setStep(0);
-                setDirection(1);
-                setMethod(null);
-                setSelectedTemplate(null);
-                setCategoryFilter(null);
-                setName('');
-                setDescription('');
-                setSystemPrompt('');
-                setColor(PRESET_COLORS[0]);
-                setTemperature(0.7);
-                setModel('deepseek-v4-pro');
-                setFiles([]);
-                setIsSubmitting(false);
-                setSubmitError(null);
-            }, 300);
+            // Con retraso, para que la animación de salida no enseñe el
+            // formulario vaciándose por debajo.
+            const t = setTimeout(() => dispatch({ type: 'reset' }), 300);
             return () => clearTimeout(t);
         }
     }, [isOpen]);
 
     // -----------------------------------------------------------------------
-    // Navigation helpers
+    // Navegación
     // -----------------------------------------------------------------------
 
-    const goTo = useCallback((target: WizardStep) => {
-        setDirection(target > step ? 1 : -1);
-        setStep(target);
-    }, [step]);
-
-    const canProceed = (): boolean => {
-        switch (step) {
-            case 0: return method !== null;
-            case 1: return name.trim().length > 0 && systemPrompt.trim().length > 0;
-            case 2: return true; // files are optional
-            case 3: return !isSubmitting;
-            default: return false;
-        }
-    };
-
+    const goTo = (target: WizardStep) => dispatch({ type: 'goTo', step: target });
     const handleNext = () => {
-        if (step < 3 && canProceed()) goTo((step + 1) as WizardStep);
+        if (step < 3 && canProceed(state)) goTo((step + 1) as WizardStep);
     };
-
     const handleBack = () => {
         if (step > 0) goTo((step - 1) as WizardStep);
     };
 
     // -----------------------------------------------------------------------
-    // Template selection
+    // Ficheros
     // -----------------------------------------------------------------------
 
-    const handleSelectTemplate = (template: AgentTemplate) => {
-        setSelectedTemplate(template);
-        setMethod('template');
-        setName(template.name);
-        setDescription(template.description);
-        setSystemPrompt(template.system_prompt);
-        setTemperature(template.default_temperature);
-        setModel(template.default_model);
-        // auto-advance to step 1
-        setDirection(1);
-        setStep(1);
-    };
+    const addFiles = (incoming: FileList | File[]) =>
+        dispatch({ type: 'addFiles', entries: Array.from(incoming).map(newFileEntry) });
 
-    const handleStartFromScratch = () => {
-        setMethod('scratch');
-        setSelectedTemplate(null);
-        setName('');
-        setDescription('');
-        setSystemPrompt('');
-        setTemperature(0.7);
-        setModel('deepseek-chat');
-        setDirection(1);
-        setStep(1);
-    };
-
-    // -----------------------------------------------------------------------
-    // File handling (drag & drop + picker)
-    // -----------------------------------------------------------------------
-
-    const addFiles = useCallback((incoming: FileList | File[]) => {
-        const newEntries: FileEntry[] = Array.from(incoming).map((f) => ({
-            id: nextFileId(),
-            file: f,
-            status: 'pending' as const,
-            progress: 0,
-        }));
-        setFiles((prev) => [...prev, ...newEntries]);
-    }, []);
-
-    const removeFile = useCallback((id: string) => {
-        setFiles((prev) => prev.filter((f) => f.id !== id));
-    }, []);
-
-    const handleDrop = useCallback((e: React.DragEvent) => {
+    const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
-        setIsDragOver(false);
+        dispatch({ type: 'setDragOver', over: false });
         if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
-    }, [addFiles]);
+    };
 
-    const handleDragOver = useCallback((e: React.DragEvent) => {
+    const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
-        setIsDragOver(true);
-    }, []);
+        dispatch({ type: 'setDragOver', over: true });
+    };
 
-    const handleDragLeave = useCallback((e: React.DragEvent) => {
+    const handleDragLeave = (e: React.DragEvent) => {
         e.preventDefault();
-        setIsDragOver(false);
-    }, []);
-
-    // -----------------------------------------------------------------------
-    // Submit: Create agent + upload documents
-    // -----------------------------------------------------------------------
-
-    const handleSubmit = async () => {
-        setIsSubmitting(true);
-        setSubmitError(null);
-
-        try {
-            // 1. Create the agent via store action (which calls chatService.createCustomAgent)
-            await addCustomAgent({
-                identity: {
-                    name: name.trim(),
-                    role: 'specialist',
-                    color,
-                },
-                brain_config: {
-                    model,
-                    temperature,
-                    system_prompt: systemPrompt.trim(),
-                },
-                owner_user_id: 'default_user',
-                is_public: false,
-            });
-
-            // Retrieve the newly created agent ID from the store
-            const customAgents = useChatStore.getState().customAgents;
-            const createdAgent = customAgents[0]; // addCustomAgent prepends
-            const agentId = createdAgent?.id;
-
-            if (!agentId) {
-                throw new Error('No se pudo obtener el ID del agente creado');
-            }
-
-            // 2. Upload files sequentially (if any)
-            if (files.length > 0) {
-                for (const entry of files) {
-                    setFiles((prev) =>
-                        prev.map((f) =>
-                            f.id === entry.id ? { ...f, status: 'uploading', progress: 0 } : f
-                        )
-                    );
-
-                    try {
-                        await uploadDocument(agentId, entry.file, (progress) => {
-                            setFiles((prev) =>
-                                prev.map((f) =>
-                                    f.id === entry.id ? { ...f, progress } : f
-                                )
-                            );
-                        });
-
-                        setFiles((prev) =>
-                            prev.map((f) =>
-                                f.id === entry.id ? { ...f, status: 'success', progress: 100 } : f
-                            )
-                        );
-                    } catch (uploadErr: any) {
-                        setFiles((prev) =>
-                            prev.map((f) =>
-                                f.id === entry.id
-                                    ? { ...f, status: 'error', errorMessage: uploadErr.message ?? 'Error al subir' }
-                                    : f
-                            )
-                        );
-                    }
-                }
-            }
-
-            onAgentCreated(agentId);
-            onClose();
-        } catch (err: any) {
-            setSubmitError(err.message ?? 'Error al crear el agente');
-        } finally {
-            setIsSubmitting(false);
-        }
+        dispatch({ type: 'setDragOver', over: false });
     };
 
     // -----------------------------------------------------------------------
-    // Document upload helper
+    // Derivados
     // -----------------------------------------------------------------------
 
-    const uploadDocument = async (
-        agentId: string,
-        file: File,
-        onProgress: (pct: number) => void,
-    ): Promise<void> => {
-        const formData = new FormData();
-        formData.append('file', file);
+    const filteredTemplates = state.categoryFilter
+        ? catalog.templates.filter((t) => t.category === state.categoryFilter)
+        : catalog.templates;
 
-        return new Promise((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', `${API_URL}/agents/${agentId}/documents`);
-
-            xhr.upload.addEventListener('progress', (e) => {
-                if (e.lengthComputable) {
-                    onProgress(Math.round((e.loaded / e.total) * 100));
-                }
-            });
-
-            xhr.addEventListener('load', () => {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    resolve();
-                } else {
-                    reject(new Error(`Upload failed: ${xhr.status}`));
-                }
-            });
-
-            xhr.addEventListener('error', () => reject(new Error('Network error')));
-            xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
-
-            xhr.send(formData);
-        });
-    };
-
-    // -----------------------------------------------------------------------
-    // Derived values
-    // -----------------------------------------------------------------------
-
-    const filteredTemplates = categoryFilter
-        ? templates.filter((t) => t.category === categoryFilter)
-        : templates;
-
-    const categories = Array.from(new Set(templates.map((t) => t.category)));
+    const categories = Array.from(new Set(catalog.templates.map((t) => t.category)));
 
     // -----------------------------------------------------------------------
     // Render
@@ -385,7 +153,7 @@ export function AgentCreationWizard({ isOpen, onClose, onAgentCreated }: AgentCr
                     </Button>
 
                     {step < 3 ? (
-                        <Button variant="primary" onClick={handleNext} disabled={!canProceed()}>
+                        <Button variant="primary" onClick={handleNext} disabled={!canProceed(state)}>
                             Siguiente
                             <ChevronRight className="h-4 w-4" aria-hidden="true" />
                         </Button>
@@ -448,32 +216,22 @@ export function AgentCreationWizard({ isOpen, onClose, onAgentCreated }: AgentCr
                                         key="step-0"
                                         direction={direction}
                                         templates={filteredTemplates}
-                                        templatesLoading={templatesLoading}
-                                        templatesError={templatesError}
+                                        templatesLoading={catalog.loading}
+                                        templatesError={catalog.error}
                                         categories={categories}
-                                        categoryFilter={categoryFilter}
-                                        onCategoryFilter={setCategoryFilter}
-                                        onSelectTemplate={handleSelectTemplate}
-                                        onStartFromScratch={handleStartFromScratch}
+                                        categoryFilter={state.categoryFilter}
+                                        onCategoryFilter={(category) => dispatch({ type: 'filterCategory', category })}
+                                        onSelectTemplate={(template) => dispatch({ type: 'selectTemplate', template })}
+                                        onStartFromScratch={() => dispatch({ type: 'startFromScratch' })}
                                     />
                                 )}
                                 {step === 1 && (
                                     <StepConfigure
                                         key="step-1"
                                         direction={direction}
-                                        name={name}
-                                        setName={setName}
-                                        description={description}
-                                        setDescription={setDescription}
-                                        systemPrompt={systemPrompt}
-                                        setSystemPrompt={setSystemPrompt}
-                                        color={color}
-                                        setColor={setColor}
-                                        temperature={temperature}
-                                        setTemperature={setTemperature}
-                                        model={model}
-                                        setModel={setModel}
-                                        isTemplate={method === 'template'}
+                                        form={state.form}
+                                        onChange={(patch) => dispatch({ type: 'patchForm', patch })}
+                                        isTemplate={state.method === 'template'}
                                     />
                                 )}
                                 {step === 2 && (
@@ -484,12 +242,12 @@ export function AgentCreationWizard({ isOpen, onClose, onAgentCreated }: AgentCr
                                         isDragOver={isDragOver}
                                         dropRef={dropRef}
                                         fileInputRef={fileInputRef}
-                                        suggestedFiles={selectedTemplate?.suggested_files ?? []}
+                                        suggestedFiles={state.selectedTemplate?.suggested_files ?? []}
                                         onDrop={handleDrop}
                                         onDragOver={handleDragOver}
                                         onDragLeave={handleDragLeave}
                                         onAddFiles={addFiles}
-                                        onRemoveFile={removeFile}
+                                        onRemoveFile={(id) => dispatch({ type: 'removeFile', id })}
                                         onSkip={handleNext}
                                     />
                                 )}
@@ -497,17 +255,11 @@ export function AgentCreationWizard({ isOpen, onClose, onAgentCreated }: AgentCr
                                     <StepReview
                                         key="step-3"
                                         direction={direction}
-                                        name={name}
-                                        description={description}
-                                        systemPrompt={systemPrompt}
-                                        color={color}
-                                        temperature={temperature}
-                                        model={model}
+                                        form={state.form}
                                         files={files}
-                                        templateName={selectedTemplate?.name ?? null}
+                                        templateName={state.selectedTemplate?.name ?? null}
                                         isSubmitting={isSubmitting}
                                         submitError={submitError}
-                                        onSubmit={handleSubmit}
                                     />
                                 )}
                             </AnimatePresence>
@@ -696,31 +448,14 @@ function StepChooseMethod({
 
 interface StepConfigureProps {
     direction: number;
-    name: string;
-    setName: (v: string) => void;
-    description: string;
-    setDescription: (v: string) => void;
-    systemPrompt: string;
-    setSystemPrompt: (v: string) => void;
-    color: string;
-    setColor: (v: string) => void;
-    temperature: number;
-    setTemperature: (v: number) => void;
-    model: string;
-    setModel: (v: string) => void;
+    /** El formulario ENTERO, no doce props sueltas: es lo que el reducer posee. */
+    form: WizardForm;
+    onChange: (patch: Partial<WizardForm>) => void;
     isTemplate: boolean;
 }
 
-function StepConfigure({
-    direction,
-    name, setName,
-    description, setDescription,
-    systemPrompt, setSystemPrompt,
-    color, setColor,
-    temperature, setTemperature,
-    model, setModel,
-    isTemplate,
-}: StepConfigureProps) {
+function StepConfigure({ direction, form, onChange, isTemplate }: StepConfigureProps) {
+    const { name, description, systemPrompt, color, temperature, model } = form;
     return (
         <motion.div
             custom={direction}
@@ -736,7 +471,7 @@ function StepConfigure({
                 id="wizard-name"
                 required
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => onChange({ name: e.target.value })}
                 placeholder="Ej: Analista Financiero, Redactor SEO..."
             />
 
@@ -744,7 +479,7 @@ function StepConfigure({
                 label="Descripción breve"
                 id="wizard-description"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => onChange({ description: e.target.value })}
                 placeholder="Una línea que describa para qué sirve este agente"
             />
 
@@ -762,7 +497,7 @@ function StepConfigure({
                 id="wizard-system-prompt"
                 required
                 value={systemPrompt}
-                onChange={(e) => setSystemPrompt(e.target.value)}
+                onChange={(e) => onChange({ systemPrompt: e.target.value })}
                 placeholder="Instrucciones detalladas que definen la personalidad, expertise y comportamiento del agente..."
                 rows={6}
                 controlClassName="resize-none font-mono leading-relaxed"
@@ -792,7 +527,7 @@ function StepConfigure({
                             <button
                                 key={c}
                                 type="button"
-                                onClick={() => setColor(c)}
+                                onClick={() => onChange({ color: c })}
                                 aria-pressed={color === c}
                                 aria-label={`Color ${c}`}
                                 className={cn(
@@ -831,7 +566,7 @@ function StepConfigure({
                             max={2}
                             step={0.1}
                             value={temperature}
-                            onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                            onChange={(e) => onChange({ temperature: parseFloat(e.target.value) })}
                             aria-valuetext={`${temperature.toFixed(1)} de 2`}
                             className="w-full accent-accent h-1.5 bg-surface-inset rounded-full appearance-none cursor-pointer
                                        [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4
@@ -855,7 +590,7 @@ function StepConfigure({
                             <button
                                 key={opt.value}
                                 type="button"
-                                onClick={() => setModel(opt.value)}
+                                onClick={() => onChange({ model: opt.value })}
                                 aria-pressed={model === opt.value}
                                 className={cn(
                                     'w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left',
@@ -1152,32 +887,22 @@ function StepKnowledge({
 
 interface StepReviewProps {
     direction: number;
-    name: string;
-    description: string;
-    systemPrompt: string;
-    color: string;
-    temperature: number;
-    model: string;
+    form: WizardForm;
     files: FileEntry[];
     templateName: string | null;
     isSubmitting: boolean;
     submitError: string | null;
-    onSubmit: () => void;
 }
 
 function StepReview({
     direction,
-    name,
-    description,
-    systemPrompt,
-    color,
-    temperature,
-    model,
+    form,
     files,
     templateName,
     isSubmitting,
     submitError,
 }: StepReviewProps) {
+    const { name, description, systemPrompt, color, temperature, model } = form;
     const modelLabel = MODEL_OPTIONS.find((m) => m.value === model)?.label ?? model;
 
     return (
