@@ -44,14 +44,24 @@ def _dead_letter(failed_col, event_id: str, event_type: str, obj, reason: str) -
 
     A2: NO perdemos la compra en silencio. `reason` es lo único que distingue
     los motivos (metadata corrupta, perfil ausente, …), así que es obligatorio.
+
+    Upsert por `event_id`, no insert: un huérfano deja el evento reprocesable, y
+    cada reentrega (timeout de red, replay manual — el procedimiento de
+    recuperación de PW-002) volvía a escribir. Esto es un buzón que un humano lee
+    para devolver dinero: N filas por un mismo pago invitan a compensarlo N veces.
+    `$setOnInsert` conserva el PRIMER motivo; `event_id` no hace falta repetirlo
+    porque el upsert lo siembra desde el filtro de igualdad.
     """
-    failed_col.insert_one({
-        "event_id": event_id,
-        "type": event_type,
-        "reason": reason,
-        "stripe_object": obj,
-        "created_at": datetime.now(timezone.utc),
-    })
+    failed_col.update_one(
+        {"event_id": event_id},
+        {"$setOnInsert": {
+            "type": event_type,
+            "reason": reason,
+            "stripe_object": obj,
+            "created_at": datetime.now(timezone.utc),
+        }},
+        upsert=True,
+    )
 
 
 def _ts_to_dt(ts):

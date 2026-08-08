@@ -388,6 +388,64 @@ async def test_orphan_subscription_replay_grants_after_profile_created(
     assert orphan_env.tx.count_documents({"stripe_event_id": E}) == 1
 
 
+# ── PW-007: failed_payments es un buzón, no un log ──────────────────────────
+#
+# Un huérfano deja el evento en "processing" y NO devuelve 500, así que la
+# reentrega llega por timeout de red o por replay manual — que es justo el
+# procedimiento de recuperación oficial (PW-002). Cada entrega escribía una fila
+# nueva: N filas por un mismo pago invitan a compensarlo N veces.
+
+@pytest.mark.asyncio
+async def test_orphan_redelivery_writes_a_single_dead_letter_row(
+    async_client: AsyncClient, orphan_env
+):
+    E, U, SKU = "evt_pw007_dedupe", "usr_pw007_dedupe", "deep_dive"
+    event = orphan_env.event(E, U, "payment", SKU)
+
+    assert orphan_env.users.find_one({"firebase_uid": U}) is None
+
+    with patch("stripe.Webhook.construct_event", return_value=event):
+        for _ in range(3):
+            r = await async_client.post(
+                "/api/v1/webhooks/stripe", json=event,
+                headers={"stripe-signature": "v"},
+            )
+            assert r.status_code == 200
+            assert r.json()["status"] == "user_profile_not_found"
+
+    # Una fila por evento, no una por reintento: es lo que un humano lee para
+    # devolver el dinero.
+    assert orphan_env.failed.count_documents({"event_id": E}) == 1
+    assert orphan_env.failed.find_one({"event_id": E})["reason"] == "user_profile_not_found"
+
+
+@pytest.mark.asyncio
+async def test_dead_letter_does_not_collapse_distinct_events(
+    async_client: AsyncClient, orphan_env
+):
+    """La deduplicación es POR evento: dos pagos huérfanos distintos siguen
+    siendo dos filas. Sin esto, un upsert por un filtro demasiado ancho
+    escondería pagos reales."""
+    E1, U1 = "evt_pw007_a", "usr_pw007_a"
+    E2, U2 = "evt_pw007_b", "usr_pw007_b"
+    SKU = "deep_dive"
+    ev1 = orphan_env.event(E1, U1, "payment", SKU)
+    ev2 = orphan_env.event(E2, U2, "payment", SKU)
+
+    for event in (ev1, ev2):
+        with patch("stripe.Webhook.construct_event", return_value=event):
+            for _ in range(2):
+                r = await async_client.post(
+                    "/api/v1/webhooks/stripe", json=event,
+                    headers={"stripe-signature": "v"},
+                )
+                assert r.status_code == 200
+
+    assert orphan_env.failed.count_documents({"event_id": E1}) == 1
+    assert orphan_env.failed.count_documents({"event_id": E2}) == 1
+    assert orphan_env.failed.count_documents({"event_id": {"$in": [E1, E2]}}) == 2
+
+
 # ── PW-003: el perfil desaparece entre la guarda y el grant ──────────────────
 
 @pytest.mark.asyncio
