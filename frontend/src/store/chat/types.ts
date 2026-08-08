@@ -82,6 +82,15 @@ export interface AgentsSlice {
  */
 export interface SessionsSlice {
     sessions: ChatSession[];
+    /**
+     * Si el historial ya ha vuelto del backend (con o sin juntas dentro).
+     *
+     * Existe para que la barra lateral pueda distinguir «todavía no sé» de «no
+     * tienes ninguna junta». Sin este dato una cuenta nueva y una carga en
+     * vuelo se ven igual —una sección ausente— y el usuario nuevo aterriza en
+     * una barra lateral que parece rota (tarea 3.6).
+     */
+    historialCargado: boolean;
     currentSessionId: string | null;
     selectedAgentId: string | null;
     sessionsByAgent: Record<string, string>; // agentId → sessionId (aislamiento de chats)

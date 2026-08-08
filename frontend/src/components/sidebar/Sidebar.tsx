@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { TextField } from "@/components/ui/Field";
 import { AvatarImage } from "@/components/ui/AvatarImage";
 import { notify, reasonOf, toast } from "@/lib/toastBus";
+import { agruparPorFecha } from "./historialPorFecha";
 
 /**
  * Extract initials from displayName (e.g., "María García" → "MG")
@@ -38,7 +39,8 @@ export function Sidebar() {
         fetchSessions,
         toggleAgentModal,
         coreAgents,
-        customAgents
+        customAgents,
+        historialCargado,
     } = useChatStore();
     const allAgents = [...coreAgents, ...customAgents];
     const userAvatar = useUserAvatar();
@@ -229,6 +231,11 @@ export function Sidebar() {
         return sessions.filter((s) => normalize(s.title ?? "").includes(q));
     }, [sessions, query]);
 
+    /* 3.6 — el historial agrupado por fecha. La fecha sale de la fila y sube al
+       encabezado del grupo: con veinte juntas, la lista repetía veinte veces la
+       misma fecha debajo del título y no se veía qué era de hoy. */
+    const grupos = useMemo(() => agruparPorFecha(filteredSessions), [filteredSessions]);
+
 
     return (
         <div className="flex flex-col h-full bg-transparent">
@@ -278,8 +285,49 @@ export function Sidebar() {
                     </button>
                 </div>
 
-                {/* Section: Historial (Sessions) */}
-                {sessions.length > 0 && (
+                {/* Section: Historial (Sessions) — 3.6.
+                    Si ya hay juntas en el store no se enseña esqueleto aunque la
+                    petición siga en vuelo: habrían llegado de la caché o de una
+                    carga anterior, y tapar contenido que ya existe con un
+                    barrido es peor que no tener esqueleto.
+                    Tres estados, y ninguno es «la sección no está»: mientras el
+                    backend contesta hay esqueleto; sin juntas, un vacío con su
+                    acción; con juntas, la lista agrupada por fecha. Antes una
+                    cuenta nueva no veía NADA aquí, ni siquiera un hueco, y el
+                    producto parecía a medio cargar. */}
+                {!historialCargado && sessions.length === 0 ? (
+                    <div className="px-4 space-y-2" aria-hidden="true">
+                        <div className="h-3 w-20 rounded-xs skeleton" />
+                        {[0, 1, 2].map((i) => (
+                            <div key={i} className="flex items-center gap-3 py-2">
+                                <div className="h-8 w-8 shrink-0 rounded-full skeleton" />
+                                <div className="h-3 flex-1 rounded-xs skeleton" />
+                            </div>
+                        ))}
+                        <p className="sr-only" aria-live="polite">Cargando tu historial de juntas…</p>
+                    </div>
+                ) : sessions.length === 0 ? (
+                    /* §9.14: glifo de línea, una frase que explica y una acción
+                       primaria. Sin bucle: un vacío que parpadea pide perdón. */
+                    <div className="px-4 py-6 text-center flex flex-col items-center gap-3">
+                        <span className="flex h-11 w-11 items-center justify-center rounded-sm border border-brass-600 bg-accent/12 text-accent">
+                            <MessageSquare className="h-5 w-5" aria-hidden="true" />
+                        </span>
+                        <div className="space-y-1">
+                            <p className="text-sm font-semibold text-content-strong">Aún no has convocado ninguna junta</p>
+                            <p className="text-xs leading-relaxed text-content-muted">
+                                Plantea una decisión y tus directores debatirán hasta dejarte un acta.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => toggleAgentModal(true)}
+                            className="rounded-sm border border-brass-600 px-3 py-1.5 text-xs font-semibold text-accent transition-colors duration-(--duration-tap) hover:bg-accent/12"
+                        >
+                            Convocar la primera
+                        </button>
+                    </div>
+                ) : (
                     <div>
                         <h3 className="px-4 text-micro font-bold text-content-muted uppercase mb-2">
                             Historial
@@ -291,8 +339,11 @@ export function Sidebar() {
                                 Ninguna junta se llama así. Prueba con otra palabra del título.
                             </p>
                         ) : (
-                        <div className="space-y-0.5 sm:space-y-1">
-                            {filteredSessions.map((session) => (
+                        <div className="space-y-4">
+                            {grupos.map((grupo) => (
+                            <section key={grupo.clave} aria-label={grupo.etiqueta} className="space-y-0.5 sm:space-y-1">
+                            <h4 className="px-4 pb-1 text-micro uppercase text-content-quiet">{grupo.etiqueta}</h4>
+                            {grupo.sesiones.map((session) => (
                                 <div key={session.session_id} className="relative group/item" data-row>
                                     <Link
                                         to={`/chat/${session.session_id}`}
@@ -333,9 +384,6 @@ export function Sidebar() {
                                                         <span className="h-1 w-1 rounded-full bg-accent animate-bounce"></span>
                                                     </span>
                                                 )}
-                                            </p>
-                                            <p className="text-micro text-content-muted truncate">
-                                                {new Date(session.created_at).toLocaleDateString()}
                                             </p>
                                         </div>
                                     </Link>
@@ -421,6 +469,8 @@ export function Sidebar() {
                                         )}
                                     </AnimatePresence>
                                 </div>
+                            ))}
+                            </section>
                             ))}
                         </div>
                         )}

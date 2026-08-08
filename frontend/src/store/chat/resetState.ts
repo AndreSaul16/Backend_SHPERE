@@ -30,6 +30,8 @@ export const createResetSlice = (set: ChatSet): ResetSlice => ({
         selectedAgentId: null,
         streamingSessionIds: [],
         sessions: [],
+        // Al cambiar de cuenta el historial vuelve a ser desconocido, no vacío.
+        historialCargado: false,
         customAgents: [],
         sessionsByAgent: {},
         activeArtifactId: null,

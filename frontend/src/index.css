@@ -595,6 +595,19 @@
     color: var(--content);
   }
 
+  /* §9.12 el esqueleto: barrido de `--stroke-hairline` a 1400ms sobre el
+     relleno de e2. Es un bucle honesto —hay una carga real en curso— y muere
+     con ella. Con movimiento reducido queda estático: la forma del contenido
+     que viene ya es la información. */
+  .skeleton{ position: relative; overflow: hidden; background: var(--surface-2); }
+  .skeleton::after{
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, var(--stroke-hairline), transparent);
+    animation: sweep 1400ms var(--ease-mech) infinite;
+  }
+  @media (prefers-reduced-motion: reduce){ .skeleton::after{ animation: none; } }
+
   /* D53 · §10 — la marca: anillo de sello con el arco de la mesa dentro.
      El dibujo vive en `public/logo.svg` (el mismo que el favicon) y aquí se usa
      como recorte, para que el color lo ponga el token y no el fichero: un SVG

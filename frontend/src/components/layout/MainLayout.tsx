@@ -3,6 +3,7 @@ import { Menu, X, GripVertical } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useChatStore } from "@/store/useChatStore";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { RegionBoundary } from "@/components/shared/RegionBoundary";
 
@@ -26,11 +27,42 @@ const MIN_PANEL_WIDTH = 380;
 const MAX_PANEL_WIDTH = 760;
 const DEFAULT_PANEL_WIDTH = 480;
 
+/**
+ * El ancho del panel sobrevive a la recarga (tarea 3.5).
+ *
+ * Era estado local: quien ensanchaba el panel para leer el acta a gusto lo
+ * perdía en cada recarga y volvía a los 480px. Un ajuste que hay que rehacer
+ * cada vez no es un ajuste.
+ *
+ * Se lee con un inicializador perezoso —nada de tocar `localStorage` en el
+ * render— y se valida al leer: un valor corrupto o de una versión anterior no
+ * puede dejar el panel en 12px.
+ */
+const CLAVE_ANCHO_PANEL = 'sphere:ancho-panel-artefactos';
+
+function anchoGuardado(): number {
+    try {
+        const bruto = window.localStorage.getItem(CLAVE_ANCHO_PANEL);
+        if (!bruto) return DEFAULT_PANEL_WIDTH;
+        const n = Number.parseInt(bruto, 10);
+        if (!Number.isFinite(n)) return DEFAULT_PANEL_WIDTH;
+        return Math.min(MAX_PANEL_WIDTH, Math.max(MIN_PANEL_WIDTH, n));
+    } catch {
+        // Safari en privado tira al leer `localStorage`. El panel funciona igual.
+        return DEFAULT_PANEL_WIDTH;
+    }
+}
+
 export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayoutProps) {
     const { isSidebarOpen, toggleSidebar, isArtifactPanelOpen } = useChatStore();
+    /* §4.3: por debajo de `xl` el panel es una hoja a pantalla completa; a
+       partir de ahí, columna redimensionable. Antes esto se decidía leyendo
+       `window.innerWidth` durante el render, que no vuelve a mirarse nunca:
+       ensanchar la ventana dejaba el panel a pantalla completa hasta recargar. */
+    const esColumna = useMediaQuery('(min-width: 80rem)');
 
     // Panel width state (desktop only)
-    const [panelWidth, setPanelWidth] = useState(DEFAULT_PANEL_WIDTH);
+    const [panelWidth, setPanelWidth] = useState(anchoGuardado);
     const [isResizing, setIsResizing] = useState(false);
 
     // Handle mouse drag for resizing
@@ -54,6 +86,12 @@ export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayo
     const handleMouseUp = useCallback(() => {
         setIsResizing(false);
     }, []);
+
+    // Se escribe cuando el ancho se asienta, no en cada píxel del arrastre.
+    useEffect(() => {
+        if (isResizing) return;
+        try { window.localStorage.setItem(CLAVE_ANCHO_PANEL, String(panelWidth)); } catch { /* modo privado */ }
+    }, [panelWidth, isResizing]);
 
     // §9.13: ←/→ mueven 16px, Home/End van a los extremos. El panel crece hacia
     // la izquierda, así que ← ensancha y → estrecha: la flecha empuja el canto,
@@ -109,7 +147,7 @@ export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayo
     }, [isResizing, handleMouseMove, handleMouseUp]);
 
     return (
-        <div className={cn("flex h-[100dvh] w-full bg-transparent overflow-hidden", className)}>
+        <div className={cn("flex h-dvh w-full min-w-0 overflow-hidden bg-transparent", className)}>
             {/* Mobile Menu Button - Dynamic Position */}
             <button
                 onClick={() => toggleSidebar()}
@@ -118,7 +156,7 @@ export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayo
                 aria-controls="app-sidebar"
                 className={cn(
                     "lg:hidden fixed top-3.5 z-50 p-2.5 bg-surface-1 border border-stroke-edge rounded-sm text-content-strong hover:bg-surface-2 transition-colors duration-(--duration-tap) shadow-e3",
-                    isSidebarOpen ? "left-[240px]" : "left-4"
+                    isSidebarOpen ? "left-[min(248px,78vw)]" : "left-4"
                 )}
             >
                 {isSidebarOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
@@ -126,7 +164,7 @@ export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayo
 
             {/* Left Sidebar - Responsive */}
             <aside id="app-sidebar" className={cn(
-                "fixed lg:relative inset-y-0 left-0 z-40 w-[280px] lg:w-[320px] h-full border-r border-stroke-hairline flex-shrink-0 bg-surface-1 transform transition-transform duration-(--duration-panel) ease-(--ease-travel)",
+                "fixed lg:relative inset-y-0 left-0 z-40 w-[min(288px,86vw)] lg:w-72 h-full border-r border-stroke-hairline flex-shrink-0 bg-surface-1 transform transition-transform duration-(--duration-panel) ease-(--ease-travel)",
                 isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
             )}>
                 {/* Eje 3 · la barra lateral se cae sola. Antes un fallo aquí
@@ -167,7 +205,7 @@ export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayo
                         isArtifactPanelOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none xl:hidden",
                         isResizing ? "transition-none" : "duration-300"
                     )}
-                    style={{ width: window.innerWidth >= 1280 ? `${panelWidth}px` : undefined }}
+                    style={{ width: esColumna ? `${panelWidth}px` : undefined }}
                 >
                     {/* Tirador de redimensionar — DESIGN §9.13.
                         Era «un `div` con `onMouseDown` y nada más: no hay forma

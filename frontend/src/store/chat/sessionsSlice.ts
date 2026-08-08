@@ -64,6 +64,7 @@ export function olvidarBorradosPendientes(): void {
 
 export const createSessionsSlice = (set: ChatSet, get: ChatGet): SessionsSlice => ({
     sessions: [],
+    historialCargado: false,
     currentSessionId: null,
     selectedAgentId: 'group-chat',
     sessionsByAgent: {}, // Mapeo agente → sesión para aislamiento de chats
@@ -71,14 +72,17 @@ export const createSessionsSlice = (set: ChatSet, get: ChatGet): SessionsSlice =
     fetchSessions: async () => {
         try {
             const sessions = await chatService.getSessions();
-            set({ sessions });
+            set({ sessions, historialCargado: true });
         } catch (error: any) {
             // Sin aviso a propósito: este fallo ya tiene canal visible. El
             // `errorStates.fetch_agents` que se escribe aquí abajo lo pinta
             // `ErrorOverlay`, que está montado en `App`. Un toast encima sería
             // el mismo error contado dos veces.
             const sphereError = new NetworkError('No se pudo cargar tu historial de juntas', 'fetch_agents', error);
-            set(conError('fetch_agents', sphereError.message));
+            // Cargado también cuando falla: el esqueleto no se queda a vivir.
+            // El fallo tiene su propio canal (`ErrorOverlay`), y por debajo la
+            // barra enseña el vacío con su acción en vez de latir para siempre.
+            set((state) => ({ ...conError('fetch_agents', sphereError.message)(state), historialCargado: true }));
         }
     },
 

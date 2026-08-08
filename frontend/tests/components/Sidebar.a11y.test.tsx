@@ -79,6 +79,7 @@ describe('Sidebar — buscador, menú y confirmación', () => {
                 session('s2', 'Análisis de mercado'),
                 session('s3', 'Contratación'),
             ],
+            historialCargado: true,
             currentSessionId: 's1',
             streamingSessionIds: [],
             coreAgents: [],
@@ -91,6 +92,35 @@ describe('Sidebar — buscador, menú y confirmación', () => {
     afterEach(() => {
         // Un plazo vivo entre casos borraría una sesión del caso siguiente.
         olvidarBorradosPendientes();
+    });
+
+    // ── 3.6: los tres estados del historial ───────────────────────────────
+    it('mientras el backend contesta hay esqueleto, no una sección ausente', () => {
+        useChatStore.setState({ sessions: [], historialCargado: false });
+        renderSidebar();
+
+        expect(screen.getByText('Cargando tu historial de juntas…')).toBeInTheDocument();
+        expect(screen.queryByText(/Aún no has convocado/)).toBeNull();
+    });
+
+    it('una cuenta nueva ve un vacío con acción, no un hueco', async () => {
+        const user = userEvent.setup();
+        useChatStore.setState({ sessions: [], historialCargado: true });
+        renderSidebar();
+
+        expect(screen.getByText('Aún no has convocado ninguna junta')).toBeInTheDocument();
+        // §9.14: el vacío trae su acción, y la acción funciona.
+        await user.click(screen.getByRole('button', { name: 'Convocar la primera' }));
+        expect(useChatStore.getState().isAgentModalOpen).toBe(true);
+    });
+
+    it('con juntas, el historial sale agrupado por fecha', () => {
+        renderSidebar();
+        // Las tres del montaje son del 1 de julio de 2026: caen todas en el
+        // mismo cubo, y su encabezado nombra la región de la lista.
+        const grupo = screen.getByRole('region', { name: 'Antes' });
+        expect(within(grupo).getByText('Precios 2026')).toBeInTheDocument();
+        expect(within(grupo).getByText('Contratación')).toBeInTheDocument();
     });
 
     // ── D10 ───────────────────────────────────────────────────────────────
