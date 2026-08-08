@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { memo, useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
@@ -15,6 +15,7 @@ import { AvatarImage } from '@/components/ui/AvatarImage';
 import { DocTable } from '@/components/shared/DocTable';
 import { CodigoMarkdown } from '@/components/shared/CodigoMarkdown';
 import { VoteChip } from './VoteChip';
+import { parseMessageParts } from '@/utils/parseMessageParts';
 
 /**
  * Acción de la fila del turno (§9.11 «acciones»). Un solo sitio para las cinco:
@@ -24,6 +25,39 @@ import { VoteChip } from './VoteChip';
  */
 const ROW_ACTION_CLASS =
     'flex h-8 w-8 items-center justify-center rounded-sm text-content-muted transition-colors hover:bg-stroke-hairline hover:text-content-strong';
+
+/**
+ * Tarea 2.3 · §P1 «el documento manda sobre el chat».
+ *
+ * El transcript se pinta dentro de `.doc-prose`, así que encabezados, listas,
+ * citas, enlaces, negritas, itálicas, `hr`, `img` y código salen ya con la
+ * tipografía del documento. Aquí SÓLO quedan los tres casos que el CSS no puede
+ * resolver solo.
+ *
+ * 4.7: vive en el scope del MÓDULO y no dentro del componente. Declarado dentro,
+ * era un objeto nuevo en cada render, así que `react-markdown` no podía
+ * reutilizar nada entre dos tokens y volvía a construir el árbol de componentes
+ * entero. Un objeto estable es la mitad de lo que hace que `React.memo` de abajo
+ * sirva para algo.
+ */
+const COMPONENTES_MARKDOWN = {
+    // `react-markdown` mete los bloques dentro del <p> del párrafo y el DOM lo
+    // rechaza. No es estilo: es validez del árbol.
+    p: ({ children, ...props }: any) => {
+        const hasBlock = React.Children.toArray(children).some(
+            child => React.isValidElement(child) && ['pre', 'ul', 'ol', 'blockquote'].includes((child.type as any).name || (child.type as any))
+        );
+        if (hasBlock) return <>{children}</>;
+        return <p {...props}>{children}</p>;
+    },
+    // F4 · §9.7: una tabla ancha se desplaza dentro de su contenedor; jamás
+    // rompe la burbuja.
+    table: DocTable,
+    // 4.4: el bloque cercado lo colorea el MISMO Prism ligero que el panel de
+    // artefactos. Antes esto lo hacía `rehype-highlight` con el tema de
+    // `highlight.js`: dos motores de resaltado en la misma pantalla.
+    code: CodigoMarkdown,
+};
 
 interface MessageBubbleProps {
     message: Message;
@@ -115,13 +149,28 @@ function ThinkingBlock({ thinking, isStreaming, hasContent, hexColor, label }: {
     );
 }
 
-export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyping, isLast, isPinned, rating, onRegenerate, onPin, onRate, onDelete }: MessageBubbleProps) {
+function MessageBubbleInterno({ message, agent, agentColor, sessionAvatar, isTyping, isLast, isPinned, rating, onRegenerate, onPin, onRate, onDelete }: MessageBubbleProps) {
     const isUser = message.role === 'user';
     const isSystem = message.role === 'system';
     const userAvatar = useUserAvatar();
     const reducido = useReducedMotion();
     const artifacts = useChatStore(state => state.artifacts);
     const [copied, setCopied] = useState(false);
+
+    /**
+     * 4.7 — el turno partido en piezas, y sólo cuando el turno cambia.
+     *
+     * Sin `useMemo` esto corría en cada render: durante el streaming, una vez
+     * por token, por burbuja, sobre TODO el contenido acumulado hasta ese
+     * instante. Con `React.memo` abajo, las burbujas que no cambian ya no
+     * renderizan; con esto, la que sí cambia parsea una vez por token en vez de
+     * una vez por render (que con los re-renders del store eran varias).
+     *
+     * Este proyecto NO tiene React Compiler instalado —no está
+     * `babel-plugin-react-compiler` ni configurado en `vite.config.ts`—, así que
+     * la memoización manual sigue siendo necesaria y no es ruido.
+     */
+    const partes = useMemo(() => parseMessageParts(message.content), [message.content]);
 
     /**
      * D36 — una copia que falla lo dice.
@@ -329,192 +378,54 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                         está diseñada para una columna de 68ch y aquí, a 390px,
                         la columna real son ~250px. */}
                     <div className="doc-prose doc-prose--turno break-words">
-                        {/* Process message content, detecting artifact + tool placeholders */}
-                        {(() => {
-                            const combinedPattern = /\[ARTIFACT:([^:]+):([^\]]+)\]|\[TOOL_START:([^\]]+)\]|\[TOOL_RESULT:([^:]+):([^\]]*)\]|\[TOOL_ERROR:([^:]+):([^\]]*)\]/g;
-                            const parts: React.ReactNode[] = [];
-                            let lastIndex = 0;
-                            let match;
-                            let partKey = 0;
-
-                            // Track tool states for rendering cards
-                            const toolStates: Record<string, { status: 'running' | 'completed' | 'failed'; result?: string }> = {};
-
-                            const content = message.content;
-
-                            /**
-                             * Tarea 2.3 · §P1 «el documento manda sobre el chat».
-                             *
-                             * El transcript se pinta dentro de `.doc-prose`, así
-                             * que encabezados, listas, citas, enlaces, negritas,
-                             * itálicas, `hr`, `img` y código salen ya con la
-                             * tipografía del documento: Literata a `base`,
-                             * h1/h2/h3 diferenciados, viñetas y enlaces en latón,
-                             * cita con barra oxblood. Aquí SÓLO quedan los dos
-                             * casos que el CSS no puede resolver solo.
-                             *
-                             * Lo que había antes eran seis sobrecargas que
-                             * peleaban con `.doc-prose` y le ganaban por
-                             * especificidad, todas escritas en la paleta
-                             * anterior (`electric-cyan` en el código en línea y
-                             * en la cita, viñetas y espaciado propios). El
-                             * resultado era un markdown con dos sistemas
-                             * tipográficos a la vez: por eso se quitan en vez de
-                             * repintarse.
-                             */
-                            const markdownComponents = {
-                                // `react-markdown` mete los bloques dentro del
-                                // <p> del párrafo y el DOM lo rechaza. No es
-                                // estilo: es validez del árbol.
-                                p: ({ children, ...props }: any) => {
-                                    const hasBlock = React.Children.toArray(children).some(
-                                        child => React.isValidElement(child) && ['pre', 'ul', 'ol', 'blockquote'].includes((child.type as any).name || (child.type as any))
-                                    );
-                                    if (hasBlock) return <>{children}</>;
-                                    return <p {...props}>{children}</p>;
-                                },
-                                // F4 · §9.7: una tabla ancha se desplaza dentro
-                                // de su contenedor; jamás rompe la burbuja.
-                                table: DocTable,
-                                // 4.4: el bloque cercado lo colorea el MISMO
-                                // Prism ligero que el panel de artefactos. Antes
-                                // esto lo hacía `rehype-highlight` con el tema
-                                // de `highlight.js`: dos motores de resaltado
-                                // en la misma pantalla, con dos paletas.
-                                code: CodigoMarkdown,
-                            };
-
-                            while ((match = combinedPattern.exec(content)) !== null) {
-                                // Add text before the placeholder
-                                if (match.index > lastIndex) {
-                                    const textBefore = content.slice(lastIndex, match.index);
-                                    if (textBefore.trim()) {
-                                        parts.push(
-                                            <ReactMarkdown
-                                                key={`text-${partKey++}`}
-                                                remarkPlugins={[remarkGfm]}
-                                                rehypePlugins={[rehypeSanitize]}
-                                                components={markdownComponents}
-                                            >
-                                                {textBefore}
-                                            </ReactMarkdown>
-                                        );
-                                    }
-                                }
-
-                                if (match[1]) {
-                                    // ARTIFACT match: [ARTIFACT:id:title]
-                                    const artifactId = match[1];
-                                    const artifact = artifacts.find(a => a.id === artifactId);
-                                    if (artifact) {
-                                        parts.push(
-                                            <ArtifactCard
-                                                key={`artifact-${artifactId}`}
-                                                content={artifact.content}
-                                                language={artifact.language || ''}
-                                                title={artifact.title}
-                                                artifactId={artifactId}
-                                            />
-                                        );
-                                    }
-                                } else if (match[3]) {
-                                    // TOOL_START match: [TOOL_START:name]
-                                    const toolName = match[3];
-                                    toolStates[toolName] = { status: 'running' };
-                                    parts.push(
-                                        <ToolExecutionCard
-                                            key={`tool-start-${partKey++}`}
-                                            toolName={toolName}
-                                            status="running"
-                                        />
-                                    );
-                                } else if (match[4]) {
-                                    // TOOL_RESULT match: [TOOL_RESULT:name:result]
-                                    const toolName = match[4];
-                                    const toolResult = match[5] || '';
-                                    toolStates[toolName] = { status: 'completed', result: toolResult };
-                                    // Replace the running card with a completed one
-                                    const runningIdx = parts.findIndex(
-                                        (p) => React.isValidElement(p) && (p.props as Record<string, unknown>)?.toolName === toolName && (p.props as Record<string, unknown>)?.status === 'running'
-                                    );
-                                    if (runningIdx >= 0) {
-                                        parts[runningIdx] = (
-                                            <ToolExecutionCard
-                                                key={`tool-done-${partKey++}`}
-                                                toolName={toolName}
-                                                status="completed"
-                                                result={toolResult}
-                                            />
-                                        );
-                                    } else {
-                                        parts.push(
-                                            <ToolExecutionCard
-                                                key={`tool-done-${partKey++}`}
-                                                toolName={toolName}
-                                                status="completed"
-                                                result={toolResult}
-                                            />
-                                        );
-                                    }
-                                } else if (match[6]) {
-                                    // TOOL_ERROR match: [TOOL_ERROR:name:error]
-                                    const toolName = match[6];
-                                    const toolError = match[7] || '';
-                                    toolStates[toolName] = { status: 'failed', result: toolError };
-                                    // Replace the running card with a failed one
-                                    const runningIdx = parts.findIndex(
-                                        (p) => React.isValidElement(p) && (p.props as Record<string, unknown>)?.toolName === toolName && (p.props as Record<string, unknown>)?.status === 'running'
-                                    );
-                                    const failedCard = (
-                                        <ToolExecutionCard
-                                            key={`tool-fail-${partKey++}`}
-                                            toolName={toolName}
-                                            status="failed"
-                                            error={toolError}
-                                        />
-                                    );
-                                    if (runningIdx >= 0) {
-                                        parts[runningIdx] = failedCard;
-                                    } else {
-                                        parts.push(failedCard);
-                                    }
-                                }
-
-                                lastIndex = match.index + match[0].length;
-                            }
-
-                            // Add remaining text after last placeholder
-                            if (lastIndex < content.length) {
-                                const remaining = content.slice(lastIndex);
-                                if (remaining.trim()) {
-                                    parts.push(
-                                        <ReactMarkdown
-                                            key={`text-${partKey++}`}
-                                            remarkPlugins={[remarkGfm]}
-                                            rehypePlugins={[rehypeSanitize]}
-                                            components={markdownComponents}
-                                        >
-                                            {remaining}
-                                        </ReactMarkdown>
-                                    );
-                                }
-                            }
-
-                            // If no placeholders found, render normally
-                            if (parts.length === 0) {
+                        {/* 4.7 · D21 — el parseo ya no vive aquí.
+                            Eran ~180 líneas de regex y construcción de array
+                            DENTRO del JSX, o sea rehechas en cada render: una
+                            vez por token, por burbuja, sobre el contenido
+                            completo acumulado. Ahora es `parseMessageParts`
+                            (dato puro, con test propio) memoizado por
+                            contenido, y aquí sólo queda el reparto a
+                            componentes. */}
+                        {partes.map((parte, i) => {
+                            if (parte.tipo === 'texto') {
                                 return (
                                     <ReactMarkdown
+                                        key={`texto-${i}`}
                                         remarkPlugins={[remarkGfm]}
                                         rehypePlugins={[rehypeSanitize]}
-                                        components={markdownComponents}
+                                        components={COMPONENTES_MARKDOWN}
                                     >
-                                        {message.content}
+                                        {parte.texto}
                                     </ReactMarkdown>
                                 );
                             }
-
-                            return parts;
-                        })()}
+                            if (parte.tipo === 'artefacto') {
+                                const artifact = artifacts.find(a => a.id === parte.artifactId);
+                                // Sin tarjeta si el artefacto no está en el
+                                // store: es lo que hacía el código anterior y
+                                // se conserva. Ocurre al recargar un hilo cuyo
+                                // artefacto no se ha rehidratado todavía.
+                                if (!artifact) return null;
+                                return (
+                                    <ArtifactCard
+                                        key={`artifact-${parte.artifactId}`}
+                                        content={artifact.content}
+                                        language={artifact.language || ''}
+                                        title={artifact.title}
+                                        artifactId={parte.artifactId}
+                                    />
+                                );
+                            }
+                            return (
+                                <ToolExecutionCard
+                                    key={`tool-${i}-${parte.nombre}`}
+                                    toolName={parte.nombre}
+                                    status={parte.estado}
+                                    result={parte.resultado}
+                                    error={parte.error}
+                                />
+                            );
+                        })}
                         {/* Cursor Fantasma */}
                         {isTyping && isLast && !isUser && (
                             <motion.span
@@ -623,3 +534,45 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
         </div>
     );
 }
+
+/**
+ * 4.7 · D21 — la burbuja que no cambia no se vuelve a pintar.
+ *
+ * El transcript entero se re-renderiza en cada token de streaming: `ChatPanel`
+ * lee `messagesBySession` y el store fabrica un array nuevo por token, así que
+ * el `.map()` produce elementos nuevos para las 100 burbujas aunque 99 sean
+ * idénticas. Sin este `memo`, cada una de esas 99 volvía a montar su markdown,
+ * su tabla, su resaltado y su parser.
+ *
+ * El comparador es explícito y NO es `shallow` a secas por dos motivos:
+ *
+ *  - `message` es un objeto nuevo por token SÓLO para la burbuja que recibe el
+ *    token; para el resto, el store conserva la referencia (`m.id === id ? … :
+ *    m`). Así que comparar `message` por referencia es exactamente lo correcto
+ *    y no hace falta mirar dentro.
+ *  - Los cuatro manejadores (`onPin`, `onRate`, `onRegenerate`, `onDelete`)
+ *    LLEGAN NUEVOS en cada render de `ChatPanel` — son flechas escritas en el
+ *    JSX. Compararlos por referencia dejaría el `memo` en decorado: no ahorraría
+ *    ni un render. Se comparan por PRESENCIA (los hay o no los hay), que es lo
+ *    único que cambia lo que se pinta: `onRegenerate` sólo se pasa a la última
+ *    burbuja, y ese cambio sí se detecta.
+ *
+ * Ignorar la identidad de una función que sí cambió de comportamiento sería un
+ * bug — pero aquí no puede pasar: las cuatro cierran sobre `msg.id`, que es lo
+ * mismo que la identidad de `message`, ya comparada.
+ */
+export const MessageBubble = memo(MessageBubbleInterno, (antes, ahora) => (
+    antes.message === ahora.message &&
+    antes.agent === ahora.agent &&
+    antes.agentColor === ahora.agentColor &&
+    antes.sessionAvatar === ahora.sessionAvatar &&
+    antes.isTyping === ahora.isTyping &&
+    antes.isLast === ahora.isLast &&
+    antes.searchQuery === ahora.searchQuery &&
+    antes.isPinned === ahora.isPinned &&
+    antes.rating === ahora.rating &&
+    !!antes.onRegenerate === !!ahora.onRegenerate &&
+    !!antes.onPin === !!ahora.onPin &&
+    !!antes.onRate === !!ahora.onRate &&
+    !!antes.onDelete === !!ahora.onDelete
+));
