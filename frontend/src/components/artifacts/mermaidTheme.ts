@@ -147,7 +147,14 @@ export async function aplicarTemaMermaid(tema: string): Promise<Mermaid> {
     mermaid.initialize({
         startOnLoad: false,
         securityLevel: 'strict',
-        theme: 'dark',
+        /* 6.11: la base sigue al tema de la app. Todas las variables de abajo
+           salen de los tokens vivos, así que el diagrama recolorea solo; pero
+           la base de mermaid decide además cosas que no están en esa lista
+           (contraste del texto de las notas, sombreados de los `subgraph`), y
+           dejarla clavada en `dark` con el papel puesto era pintar texto claro
+           sobre nodos claros. `base` es la que mermaid documenta como la que se
+           personaliza. */
+        theme: tema === 'light' ? 'base' : 'dark',
         themeVariables: {
             primaryColor: token('--surface-2', '#142119'),
             primaryTextColor: token('--content', '#EEEDE8'),

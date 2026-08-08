@@ -23,12 +23,19 @@ import './index.css'
 import { ErrorBoundary } from './components/shared/ErrorBoundary'
 import { StartupError } from './components/shared/StartupError'
 import { inicializarDensidad } from './lib/densidad'
+import { inicializarTema } from './lib/tema'
 
 // 5.7 · Q11 — la densidad se fija ANTES del primer pintado. Hacerlo en un
 // efecto de React haría que la primera pintura fuera con las filas de 44px y
 // la segunda con las de 34: un salto de layout en cada arranque para quien ha
 // elegido compacto.
 inicializarDensidad()
+
+// 6.11 · D61 — el tema también se fija antes del primer pintado, y por el mismo
+// motivo: leerlo en un efecto de React pintaría la primera pantalla en paño y
+// la segunda en papel. Devuelve la baja del oyente de `prefers-color-scheme`,
+// que aquí no se usa porque este oyente vive lo que vive la pestaña.
+inicializarTema()
 
 const root = createRoot(document.getElementById('root')!)
 

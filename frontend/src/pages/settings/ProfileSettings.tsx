@@ -12,6 +12,8 @@ import { aplicarDensidad, leerDensidad, type Densidad } from "@/lib/densidad";
 import { UnsavedGuardDialog } from "@/components/ui/UnsavedGuardDialog";
 import { BarraDeGuardado } from "@/components/ui/BarraDeGuardado";
 import { contarCambios } from "@/lib/cambiosSinGuardar";
+import { ConmutadorDeTema } from "@/components/ui/ConmutadorDeTema";
+import { adoptarTemaDelPerfil } from "@/lib/tema";
 
 export function ProfileSettings() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -34,7 +36,14 @@ export function ProfileSettings() {
     setLoading(true);
     profileService
       .getProfile()
-      .then((p) => { setProfile(p); setGuardado(JSON.stringify(p)); setError(null); })
+      .then((p) => {
+        setProfile(p);
+        setGuardado(JSON.stringify(p));
+        setError(null);
+        // 6.11: sólo si este aparato no tiene ya su propia elección — ver la
+        // regla de precedencia en `lib/tema.ts`.
+        adoptarTemaDelPerfil(p.ui_preferences?.theme);
+      })
       .catch(() =>
         setError({
           title: "No se ha podido cargar tu perfil",
@@ -277,20 +286,14 @@ export function ProfileSettings() {
       </Section>
 
       <Section icon={<Palette className="h-5 w-5 text-accent" aria-hidden="true" />} title="Interfaz">
+        {/* 6.11 · D61 — el `<select>` de tema ofrecía «Claro» y «Sistema» y
+            ninguna de las dos hacía nada: el CSS del tema claro llevaba cinco
+            fases escrito y nadie ponía el atributo. Ahora es el conmutador de
+            tres estados, se aplica al elegir y se recuerda en este aparato; el
+            campo del perfil se sigue escribiendo para que una sesión en un
+            aparato nuevo herede la última elección de la cuenta. */}
+        <ConmutadorDeTema onElegir={(t) => updateSection("ui_preferences", { theme: t })} />
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Tema">
-            <select
-              className={inputCls}
-              value={profile.ui_preferences?.theme || "system"}
-              onChange={(e) =>
-                updateSection("ui_preferences", { theme: e.target.value as any })
-              }
-            >
-              <option value="system">Sistema</option>
-              <option value="dark">Oscuro</option>
-              <option value="light">Claro</option>
-            </select>
-          </Field>
           <Field label="Idioma">
             <select
               className={inputCls}

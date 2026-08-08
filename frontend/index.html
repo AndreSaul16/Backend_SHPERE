@@ -1,5 +1,8 @@
 <!doctype html>
-<html lang="es">
+<!-- `data-theme="dark"` explícito (B1 de la auditoría del plan): el fallo
+     seguro con el atributo ausente tiene que ser el tema que la app ya tiene.
+     `main.tsx` lo reescribe con la elección real antes del primer pintado. -->
+<html lang="es" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
