@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/Button";
 import { useDraft } from "@/hooks/useDraft";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { StreamInterrupted } from "./StreamInterrupted";
+import { RegionBoundary } from "@/components/shared/RegionBoundary";
 
 export function ChatPanel() {
     const navigate = useNavigate();
@@ -523,6 +524,16 @@ export function ChatPanel() {
                 onScroll={handleScroll}
                 className="flex-1 overflow-y-auto p-6 scrollbar-none"
             >
+                {/* Eje 3 · el transcript es la región más grande y la que más
+                    contenido ajeno pinta (markdown, tablas, diagramas de un
+                    turno). Si revienta, se cae ÉL: la cabecera, el war-room y
+                    sobre todo el compositor —con su borrador— siguen en pie, y
+                    cambiar de junta lo recompone solo. */}
+                <RegionBoundary
+                    region="esta conversación"
+                    reassurance="Tu borrador sigue guardado abajo. Abre otra junta o vuelve a intentarlo."
+                    resetKeys={[currentSessionId]}
+                >
                 <div className="max-w-4xl mx-auto space-y-8">
                     {messages.length === 0 ? (
                         <motion.div
@@ -611,6 +622,7 @@ export function ChatPanel() {
                         </>
                     )}
                 </div>
+                </RegionBoundary>
             </div>
 
             {/* Regiones vivas (§12.6). Siempre en el DOM: un `aria-live` que se

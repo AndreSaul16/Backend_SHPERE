@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useChatStore } from "@/store/useChatStore";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
+import { RegionBoundary } from "@/components/shared/RegionBoundary";
 
 interface MainLayoutProps {
     sidebar: ReactNode;
@@ -128,7 +129,16 @@ export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayo
                 "fixed lg:relative inset-y-0 left-0 z-40 w-[280px] lg:w-[320px] h-full border-r border-stroke-hairline flex-shrink-0 bg-surface-1 transform transition-transform duration-(--duration-panel) ease-(--ease-travel)",
                 isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
             )}>
-                {sidebar}
+                {/* Eje 3 · la barra lateral se cae sola. Antes un fallo aquí
+                    —una sesión con forma inesperada, un avatar imposible— se
+                    llevaba por delante la conversación entera, que es lo único
+                    que el usuario no puede permitirse perder. */}
+                <RegionBoundary
+                    region="la lista de juntas"
+                    reassurance="Tu conversación sigue abierta a la derecha. Puedes seguir trabajando en ella."
+                >
+                    {sidebar}
+                </RegionBoundary>
             </aside>
 
             {/* Mobile Backdrop for Sidebar */}
@@ -201,7 +211,12 @@ export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayo
 
                     {/* Panel Content */}
                     <div className="h-full xl:pl-3">
-                        {artifactPanel}
+                        <RegionBoundary
+                            region="el panel de artefactos"
+                            reassurance="La conversación y el acta siguen en su sitio; sólo se ha caído este panel."
+                        >
+                            {artifactPanel}
+                        </RegionBoundary>
                     </div>
                 </aside>
             )}

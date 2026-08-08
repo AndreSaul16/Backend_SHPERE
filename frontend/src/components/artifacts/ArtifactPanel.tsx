@@ -4,6 +4,7 @@ import { X, FileCode, FileText, Table, GitBranch, File } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChatStore } from '@/store/useChatStore';
 import { ArtifactRenderer } from './ArtifactRenderer';
+import { RegionBoundary } from '@/components/shared/RegionBoundary';
 import { ActaActions } from './ActaActions';
 import { cn } from '@/lib/utils';
 import type { ArtifactType } from '@/types/artifact';
@@ -172,8 +173,20 @@ export function ArtifactPanel() {
                                 {activeArtifact.type === 'markdown' && /acta/i.test(activeArtifact.title) && (
                                     <ActaActions title={activeArtifact.title} content={activeArtifact.content} />
                                 )}
+                                {/* Eje 3 · el visor es el vecindario peligroso
+                                    del panel: un mermaid mal formado o una
+                                    tabla con una fila rara lanzan al renderizar.
+                                    Aislado aquí, lo que se cae es el documento;
+                                    la tira de pestañas sigue, y cambiar de
+                                    artefacto lo recompone solo (`resetKeys`). */}
                                 <div className="flex-1 min-h-0">
-                                    <ArtifactRenderer artifact={activeArtifact} />
+                                    <RegionBoundary
+                                        region="este artefacto"
+                                        reassurance="El resto de artefactos y la conversación siguen intactos. Prueba con otra pestaña."
+                                        resetKeys={[activeArtifact.id]}
+                                    >
+                                        <ArtifactRenderer artifact={activeArtifact} />
+                                    </RegionBoundary>
                                 </div>
                             </motion.div>
                         ) : artifacts.length === 0 ? (
