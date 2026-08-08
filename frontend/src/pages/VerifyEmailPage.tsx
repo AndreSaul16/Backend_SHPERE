@@ -6,15 +6,21 @@
  * correo y comprobar el estado.
  */
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { MailCheck, RefreshCw, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { AuthAlert, AuthNotice, AuthShell } from "@/components/auth/AuthShell";
+import { destinoDeRegreso } from "@/lib/rutaDeRegreso";
 
 export function VerifyEmailPage() {
     const { user, resendVerification, reloadUser, signOut } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
+    /* 6.2 · El destino sobrevive también a la verificación: quien abrió un
+       enlace a /billing sin verificar pasa por aquí, y al verificar vuelve
+       allí, no a la portada. */
+    const destino = destinoDeRegreso(location.state) ?? "/";
     const [cooldown, setCooldown] = useState(0);
     const [checking, setChecking] = useState(false);
     const [resent, setResent] = useState(false);
@@ -24,9 +30,9 @@ export function VerifyEmailPage() {
     useEffect(() => {
         if (!user) { navigate("/login", { replace: true }); return; }
         if (user.providerId !== "password" || user.emailVerified) {
-            navigate("/", { replace: true });
+            navigate(destino, { replace: true });
         }
-    }, [user, navigate]);
+    }, [user, navigate, destino]);
 
     // Cooldown del botón de reenvío.
     useEffect(() => {
@@ -39,10 +45,10 @@ export function VerifyEmailPage() {
     useEffect(() => {
         const iv = setInterval(async () => {
             const ok = await reloadUser();
-            if (ok) navigate("/", { replace: true });
+            if (ok) navigate(destino, { replace: true });
         }, 5000);
         return () => clearInterval(iv);
-    }, [reloadUser, navigate]);
+    }, [reloadUser, navigate, destino]);
 
     const handleResend = async () => {
         setError(null);
@@ -62,7 +68,7 @@ export function VerifyEmailPage() {
         setError(null);
         try {
             const ok = await reloadUser();
-            if (ok) navigate("/", { replace: true });
+            if (ok) navigate(destino, { replace: true });
             else setError("Aún no detectamos la verificación. Revisa tu correo (y la carpeta de spam).");
         } finally {
             setChecking(false);

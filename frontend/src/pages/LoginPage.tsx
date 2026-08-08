@@ -5,12 +5,13 @@
  * El marcado común con `/register` y `/verify-email` vive en `<AuthShell>`.
  */
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { PasswordField, TextField } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { buttonClass } from "@/components/ui/buttonStyles";
 import { AuthAlert, AuthShell, SocialButtons, type SocialProvider } from "@/components/auth/AuthShell";
+import { destinoDeRegreso } from "@/lib/rutaDeRegreso";
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
@@ -20,6 +21,12 @@ export function LoginPage() {
 
   const { signInWithEmail, signInWithGoogle, signInWithGithub, signInWithMicrosoft } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  /* 6.2 · Adónde se vuelve tras identificarse. `RequireAuth` deja aquí la ruta
+     que el usuario pedía cuando le cortamos el paso; si no hay ninguna (entró
+     por la puerta principal), la portada. */
+  const destino = destinoDeRegreso(location.state) ?? "/";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +35,7 @@ export function LoginPage() {
 
     try {
       await signInWithEmail(email, password);
-      navigate("/");
+      navigate(destino, { replace: true });
     } catch (err: any) {
       const code = err?.code || "";
       const messages: Record<string, string> = {
@@ -57,7 +64,7 @@ export function LoginPage() {
       } else {
         await signInWithMicrosoft();
       }
-      navigate("/");
+      navigate(destino, { replace: true });
     } catch (err: any) {
       if (err?.code === "auth/popup-closed-by-user") {
         setError("Ventana cerrada. Inténtalo de nuevo.");
