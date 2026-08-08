@@ -99,12 +99,12 @@ Chain strategy: pending
 
 ## Fase 5: Verificación final
 
-- [ ] 5.1 Comando exacto:
+- [x] 5.1 Comando exacto:
 ```
 cd backend && MONGODB_URL=mongodb://localhost:27017 DB_NAME=sphere_test REDIS_URL=redis://localhost:6379/0 ENVIRONMENT=development OPENAI_API_KEY=sk-test-ci DEEPSEEK_API_KEY=sk-test-ci STRIPE_SECRET_KEY=sk_test_ci STRIPE_WEBHOOK_SECRET=whsec_ci /tmp/claude-1000/-home-jarvis-code-SPHERE/547aee8f-16bd-43c9-9f66-4f13b1f9915f/scratchpad/vci/bin/python -m pytest tests/ -q
 ```
-- [ ] 5.2 Correrlo **dos veces seguidas**: ambas `324 passed, 0 failed` (318 + 6). Una 2ª corrida en
+- [x] 5.2 Correrlo **dos veces seguidas**: ambas `324 passed, 0 failed` (318 + 6). Una 2ª corrida en
       rojo = contaminación entre corridas (PW-002 y PW-005 comparten `stripe_events_processed`) →
       arreglar la limpieza *previa* del fixture 1.1, no el test.
-- [ ] 5.3 Confirmar que el diff de producción toca **solo** `webhooks.py`
+- [x] 5.3 Confirmar que el diff de producción toca **solo** `webhooks.py`
       (`git diff --name-only -- backend/app`).
