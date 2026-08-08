@@ -595,6 +595,15 @@
     color: var(--content);
   }
 
+  /* 3.8 — el compositor crece con lo escrito, hasta ocho líneas, y a partir de
+     ahí desplaza. Donde el navegador sabe dimensionar el campo por su contenido
+     lo hace él, fuera del hilo de JS; donde no, `ChatPanel` mide el alto en un
+     efecto. El techo va aquí para que la red y el camino nativo lo compartan. */
+  .compositor{
+    field-sizing: content;
+    max-block-size: 12rem; /* ~8 líneas a 15px/1.6 */
+  }
+
   /* §9.12 el esqueleto: barrido de `--stroke-hairline` a 1400ms sobre el
      relleno de e2. Es un bucle honesto —hay una carga real en curso— y muere
      con ella. Con movimiento reducido queda estático: la forma del contenido

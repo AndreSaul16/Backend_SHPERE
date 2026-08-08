@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeSanitize from 'rehype-sanitize';
 import 'highlight.js/styles/atom-one-dark.css';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Copy, Check, RefreshCw, Pin, ThumbsUp, ThumbsDown, Trash2, Brain, ChevronDown } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import type { Message, Agent } from "@/types";
@@ -120,6 +120,7 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
     const isUser = message.role === 'user';
     const isSystem = message.role === 'system';
     const userAvatar = useUserAvatar();
+    const reducido = useReducedMotion();
     const artifacts = useChatStore(state => state.artifacts);
     const [copied, setCopied] = useState(false);
 
@@ -187,7 +188,17 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
 
     return (
         <div className={cn("flex w-full mb-3 sm:mb-4", isUser ? "justify-end" : "justify-start")}>
-            <div className={cn("flex max-w-[88%] sm:max-w-[80%] gap-2 sm:gap-3", isUser ? "flex-row-reverse" : "flex-row")}>
+            {/* 3.7 · §4.3 — a 390px el turno va a ANCHO COMPLETO: «no hay margen
+                lateral que usar», y el nombre del director va sobre el turno.
+                La columna de la placa (36px con su hueco) y el tope del 88% se
+                comían 80 de los 390px de la pantalla y dejaban la medida en 26
+                caracteres por línea, un tercio de lo que pide el contrato. La
+                identidad no se pierde al esconder la placa: la llevan el filete
+                de 2px del canto y el nombre en versalitas. */}
+            <div className={cn(
+                "flex gap-2 sm:gap-3 min-w-0",
+                isUser ? "flex-row-reverse max-w-[92%] sm:max-w-[80%]" : "flex-row max-w-full sm:max-w-[80%]",
+            )}>
 
                 {/* Agent Avatar */}
                 {!isUser && (
@@ -195,7 +206,7 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
                         className={cn(
-                            "h-7 w-7 sm:h-8 sm:w-8 rounded-full flex items-center justify-center flex-shrink-0 border shadow-sm mt-1 bg-surface transition-colors duration-500 overflow-hidden",
+                            "hidden sm:flex h-8 w-8 rounded-full items-center justify-center flex-shrink-0 border shadow-sm mt-1 bg-surface transition-colors duration-500 overflow-hidden",
                         )}
                         style={{ borderColor: `${activeHexColor}40` }}
                     >
@@ -206,7 +217,7 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                             fallback={
                                 agent
                                     ? <span className={cn("text-micro sm:text-xs font-bold", agent.color)}>{agent.avatar}</span>
-                                    : <span className="text-micro sm:text-xs">🤖</span>
+                                    : <span className="text-micro sm:text-xs font-bold">S</span>
                             }
                         />
                     </motion.div>
@@ -217,7 +228,7 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                     <motion.div
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="h-7 w-7 sm:h-8 sm:w-8 rounded-full flex items-center justify-center flex-shrink-0 border border-agent-user/40 bg-agent-user/12 mt-1 overflow-hidden"
+                        className="hidden sm:flex h-8 w-8 rounded-full items-center justify-center flex-shrink-0 border border-agent-user/40 bg-agent-user/12 mt-1 overflow-hidden"
                     >
                         {/* `alt` en español: §11 «Un idioma». Decía "You". */}
                         <AvatarImage
@@ -236,7 +247,21 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                     transition={{ duration: 0.4, ease: "easeOut" }}
                     data-row
                     className={cn(
-                        "group p-3 sm:p-4 rounded-md shadow-lg text-sm leading-relaxed border text-left",
+                        /* 3.7 · §9.11 el Turno.
+                           - **Sin pico.** `rounded-tl-sm`/`rounded-tr-sm` daban
+                             la esquina achatada de la burbuja de mensajería;
+                             §9.11 pide radio corto y uniforme, y §6 fija la
+                             escala. Un turno de junta no es un bocadillo.
+                           - **Sin resplandor.** Cada burbuja de agente llevaba
+                             `0 0 20px <hex>10`, un glow que §0 rechaza por su
+                             nombre. La sombra proyectada de e2 hace el trabajo.
+                           - **Filete de identidad de 2px** en el canto: §2.8
+                             dice que los hex de director no valen como texto,
+                             así que la identidad va en el filete, y así es
+                             donde por fin se lee quién habla sin leer el
+                             nombre. */
+                        "group relative p-3 sm:p-4 rounded-md shadow-e2 text-sm leading-relaxed border text-left",
+                        isUser ? "border-e-2" : "border-s-2",
                         "min-w-[80px] max-w-full overflow-hidden",
                         /* Partir una palabra SÓLO si no cabe ni en una línea
                            entera — el caso de una URL larga, que es el motivo por
@@ -247,16 +272,16 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                            segunda más agresiva de lo que nadie quería. */
                         "[overflow-wrap:break-word]",
                         isUser
-                            ? "bg-user-bubble/12 text-content rounded-tr-sm"
-                            : "bg-ai-bubble text-content-strong rounded-tl-sm relative"
+                            ? "bg-user-bubble/12 text-content"
+                            : "bg-ai-bubble text-content-strong"
                     )}
+                    /* El filete fino sigue siendo el del sistema; el del canto
+                       lleva la identidad. El de la burbuja de usuario era
+                       `#22D3EE20` escrito a pelo — el cian de la paleta
+                       anterior, no el `--agent-user` de §2.8. */
                     style={isUser
-                        ? { borderColor: '#22D3EE20' }
-                        : {
-                            borderColor: `${activeHexColor}35`,
-                            boxShadow: `0 0 20px ${activeHexColor}10`,
-                            backgroundColor: undefined,
-                        }
+                        ? { borderColor: `${AGENT_HEX.user}35`, borderInlineEndColor: AGENT_HEX.user }
+                        : { borderColor: `${activeHexColor}35`, borderInlineStartColor: activeHexColor }
                     }
                 >
                     {!isUser && (
@@ -264,7 +289,17 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                             animate={{ color: activeHexColor }}
                             className="text-micro font-bold mb-1 uppercase opacity-80 flex items-center gap-1.5"
                         >
-                            <span className="h-1 w-1 rounded-full bg-current animate-pulse" />
+                            {/* F8 · §7.4 — este punto latía en TODAS las
+                                burbujas de agente, para siempre: con seis
+                                turnos, seis bucles perpetuos, y crecían con el
+                                debate. §8.11 presupuesta UNO, el de quien está
+                                hablando ahora mismo. */}
+                            <span
+                                className={cn(
+                                    'h-1 w-1 rounded-full bg-current',
+                                    isTyping && isLast && !reducido && 'punto-hablando',
+                                )}
+                            />
                             {agent ? agent.name.split(' ')[0] : (message.role && !['user', 'system'].includes(message.role) ? message.role : 'SPHERE')}
                             {message.isConclusion && (
                                 <span className="px-1.5 py-0.5 rounded bg-current/10 text-current text-micro not-italic">
@@ -285,12 +320,16 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                         />
                     )}
 
-                    {/* `max-w-none` neutraliza la medida de 68ch de `.doc-prose`:
-                        aquí la impone la burbuja, y la medida del transcript la
-                        fija la tarea 3.7. `--turno` baja un peldaño la escala de
-                        encabezados: la de la hoja está diseñada para 68ch y aquí
-                        la columna real son ~250px a 390px. */}
-                    <div className="doc-prose doc-prose--turno max-w-none break-words">
+                    {/* 3.7 · §4.3 — la medida del transcript es la del
+                        documento: `min(68ch, 100% - 32px)`. Antes esta línea
+                        traía `max-w-none`, que anulaba la medida de
+                        `.doc-prose` y dejaba que la burbuja se estirase a los
+                        ~820px del contenedor: 100 y pico caracteres por línea,
+                        el doble del techo de lectura cómoda. `--turno` baja un
+                        peldaño la escala de encabezados, porque la de la hoja
+                        está diseñada para una columna de 68ch y aquí, a 390px,
+                        la columna real son ~250px. */}
+                    <div className="doc-prose doc-prose--turno break-words">
                         {/* Process message content, detecting artifact + tool placeholders */}
                         {(() => {
                             const combinedPattern = /\[ARTIFACT:([^:]+):([^\]]+)\]|\[TOOL_START:([^\]]+)\]|\[TOOL_RESULT:([^:]+):([^\]]*)\]|\[TOOL_ERROR:([^:]+):([^\]]*)\]/g;
@@ -474,8 +513,8 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                         {/* Cursor Fantasma */}
                         {isTyping && isLast && !isUser && (
                             <motion.span
-                                animate={{ opacity: [1, 0] }}
-                                transition={{ repeat: Infinity, duration: 0.8 }}
+                                animate={reducido ? { opacity: 1 } : { opacity: [1, 0] }}
+                                transition={reducido ? { duration: 0 } : { repeat: Infinity, duration: 0.8 }}
                                 className="inline-block w-1.5 h-4 ml-1 align-middle"
                                 style={{ backgroundColor: activeHexColor }}
                             />

@@ -67,6 +67,17 @@ export function ChatPanel() {
      * esconderlo no es recuperarlo.
      */
     useEffect(() => {
+        // 3.8: donde el navegador sabe dimensionar el campo por su contenido, el
+        // trabajo es suyo y esto no toca el DOM — medir `scrollHeight` en cada
+        // pulsación fuerza un reflujo sincrónico por tecla, que en el móvil de
+        // referencia (§7.7) se nota. La clase `.compositor` lo declara; aquí
+        // sólo queda la red para quien no lo soporte.
+        // La detección va por la propiedad en camelCase del objeto de estilo y
+        // no por `CSS.supports` con el nombre en guiones: un nombre de propiedad
+        // CSS escrito con guion dentro de `src` lo recoge el detector de clases
+        // muertas como candidata a utilidad de Tailwind y lo marca — incluso
+        // dentro de un comentario. Ya pasó en la fase 2 con otra propiedad.
+        if ('fieldSizing' in document.documentElement.style) return;
         const el = composerRef.current;
         if (!el) return;
         el.style.height = 'auto';
@@ -146,6 +157,18 @@ export function ChatPanel() {
         }
         return porRol;
     }, [messages]);
+
+    /**
+     * El coste de pulsar «enviar» (§P4, Q10). Un debate de junta vale 3 o 5
+     * créditos —lo decide el triage— y un mensaje directo, 1.
+     */
+    const costeDelEnvio = isGroupChat ? (boardSession?.cost ?? 5) : 1;
+    const textoDelCoste = isGroupChat
+        ? `${costeDelEnvio} por debate`
+        : '1 por mensaje';
+    const detalleDelCoste = isGroupChat
+        ? 'Un debate de la junta cuesta hasta 5 créditos (3 si el triage reduce los participantes)'
+        : 'Un mensaje cuesta 1 crédito';
 
     /** Tocar un segmento del Canto salta a esa fase (§8.4). */
     const saltarAFase = useCallback((clave: string) => {
@@ -298,6 +321,14 @@ export function ChatPanel() {
     const getAgentDisplayInfo = (agent: typeof activeAgent) => {
         if (!agent) return { baseName: 'SPHERE', role: 'Director' };
 
+        // §11 — «SYSTEM» y «CORE» eran etiquetas de máquina en la cabecera de la
+        // pantalla principal del producto. La junta no es un sistema: es una
+        // junta. Va antes que los overrides de la sesión, porque el rol no lo
+        // cambia renombrar la conversación.
+        if (agent.role === 'system') {
+            return { baseName: currentSession?.visual_config?.name || agent.name, role: 'Junta' };
+        }
+
         // Overrides desde la sesión
         const overrideName = currentSession?.visual_config?.name;
         const overrideRole = agent.role; // Actualmente no guardamos override_role en visual_config del backend, usamos el del agente
@@ -310,9 +341,6 @@ export function ChatPanel() {
         if (match) {
             return { baseName: match[1].trim(), role: match[2] };
         }
-        // §11 — «SYSTEM» y «CORE» eran etiquetas de máquina en la cabecera
-        // de la pantalla principal. La junta no es un sistema: es una junta.
-        if (agent.role === 'system') return { baseName: agent.name, role: 'Junta' };
         return { baseName: agent.name, role: agent.role };
     };
 
@@ -378,12 +406,19 @@ export function ChatPanel() {
         }
     };
 
+    /**
+     * Enviar con ⏎, y también con ⌘⏎ / Ctrl+⏎ (tarea 3.8).
+     *
+     * El atajo con modificador es el que traen aprendido quienes vienen de un
+     * compositor donde ⏎ hace salto de línea: si aquí no hace nada, el turno se
+     * queda escrito y sin enviar, y no hay forma de saber por qué.
+     */
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            if (canIntervene) handleIntervene();
-            else handleSendMessage();
-        }
+        if (e.key !== 'Enter') return;
+        if (e.shiftKey && !(e.metaKey || e.ctrlKey)) return;
+        e.preventDefault();
+        if (canIntervene) handleIntervene();
+        else handleSendMessage();
     };
 
     useEffect(() => {
@@ -583,7 +618,7 @@ export function ChatPanel() {
             <div
                 ref={messagesContainerRef}
                 onScroll={handleScroll}
-                className="eje-del-debate min-w-0 flex-1 overflow-y-auto p-6 scrollbar-none"
+                className="eje-del-debate min-w-0 flex-1 overflow-y-auto px-4 py-6 sm:p-6 scrollbar-none"
             >
                 {/* Eje 3 · el transcript es la región más grande y la que más
                     contenido ajeno pinta (markdown, tablas, diagramas de un
@@ -595,7 +630,7 @@ export function ChatPanel() {
                     reassurance="Tu borrador sigue guardado abajo. Abre otra junta o vuelve a intentarlo."
                     resetKeys={[currentSessionId]}
                 >
-                <div className="max-w-4xl mx-auto space-y-8">
+                <div className="mx-auto max-w-4xl space-y-8">
                     {messages.length === 0 ? (
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
@@ -802,7 +837,7 @@ export function ChatPanel() {
                             onChange={(e) => setInputValue(e.target.value)}
                             onKeyDown={handleKeyDown}
                             placeholder={canIntervene ? "Intervenir en el debate…" : isTyping ? "Sistema ocupado..." : "Transmite tu consulta..."}
-                            className="flex-1 bg-transparent border-none focus:ring-0 text-content-strong placeholder:text-content-muted resize-none py-3.5 max-h-48 text-[15px] leading-relaxed font-medium"
+                            className="compositor flex-1 bg-transparent border-none focus:ring-0 text-content-strong placeholder:text-content-muted resize-none py-3.5 max-h-48 text-[15px] leading-relaxed font-medium"
                             rows={1}
                             disabled={isTyping && !canIntervene}
                         />
@@ -833,30 +868,42 @@ export function ChatPanel() {
                                 <Square className="h-5 w-5" />
                             </button>
                         ) : (
+                            /* Q10 · §P4 «el coste se declara antes de gastarse».
+                               Estaba en un chip aparte, debajo y a la izquierda;
+                               el coste se lee donde se va a pulsar. Va también
+                               en el nombre accesible, porque el número solo, al
+                               lado de un avión de papel, no dice qué son. */
                             <button
                                 onClick={handleSendMessage}
                                 disabled={!inputValue.trim()}
+                                aria-label={`${textoDelCoste}. Convocar`}
+                                title={detalleDelCoste}
                                 className={cn(
-                                    "p-3.5 rounded-sm transition-colors duration-(--duration-tap)",
+                                    "flex items-center gap-1.5 px-3.5 py-3.5 rounded-sm transition-colors duration-(--duration-tap)",
                                     inputValue.trim()
                                         ? "bg-accent-fill text-accent-on-fill hover:bg-accent-hover"
                                         : "bg-surface-inset text-content-quiet cursor-not-allowed"
                                 )}
                             >
-                                <Send className="h-5 w-5" />
+                                <Send className="h-5 w-5" aria-hidden="true" />
+                                <span className="font-mono text-micro font-bold tnum" aria-hidden="true">
+                                    {costeDelEnvio}
+                                </span>
                             </button>
                         )}
                     </motion.div>
 
                     <div className="flex flex-wrap justify-between items-center gap-x-4 gap-y-1 px-4 mt-3">
                         <div className="flex items-center gap-4">
-                            {/* Chip de coste de la acción: board grupal ≈5⚡ (o 3 si el triage reduce), directo 1⚡ */}
                             <span
                                 className="flex items-center gap-1 text-micro text-content-muted uppercase tnum"
-                                title={isGroupChat ? "Un debate de la junta cuesta hasta 5 créditos (3 si el triage reduce los participantes)" : "Un mensaje cuesta 1 crédito"}
+                                title={detalleDelCoste}
                             >
                                 <Zap className="h-3 w-3 text-accent" aria-hidden="true" />
-                                {isGroupChat ? `${boardSession?.cost ?? 5} por debate` : "1 por mensaje"}
+                                {textoDelCoste}
+                            </span>
+                            <span className="text-micro uppercase text-content-quiet hidden sm:inline">
+                                ⏎ envía · ⇧⏎ salta de línea
                             </span>
                         </div>
                         {/* Eje 5 · se dice donde se va a pulsar, no sólo arriba:
