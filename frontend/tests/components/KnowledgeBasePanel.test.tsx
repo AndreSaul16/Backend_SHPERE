@@ -89,7 +89,7 @@ describe('KnowledgeBasePanel — regresión P0 (b7452be)', () => {
         expect(screen.queryByText(/Error fetching documents/i)).not.toBeInTheDocument();
     });
 
-    it('propaga el error al usuario si el listado responde 401', async () => {
+    it('un listado que falla se cuenta con salida, y sin volcar el error del backend', async () => {
         server.use(
             http.get(LIST_URL, () =>
                 HttpResponse.json({ detail: 'Not authenticated' }, { status: 401 }),
@@ -98,7 +98,15 @@ describe('KnowledgeBasePanel — regresión P0 (b7452be)', () => {
 
         render(<KnowledgeBasePanel agentId={AGENT_ID} />);
 
-        expect(await screen.findByText(/Error fetching documents: 401/i)).toBeInTheDocument();
+        // §11: qué pasó, qué se conserva y qué hacer. Antes esto pintaba
+        // literalmente «Error fetching documents: 401» y nada más: en inglés,
+        // con el código dentro, sin decir si se había perdido algo y sin
+        // ninguna salida.
+        expect(await screen.findByText('No se han podido cargar los documentos')).toBeInTheDocument();
+        expect(screen.getByText(/Ninguno se ha borrado/)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Reintentar/ })).toBeInTheDocument();
+        expect(screen.queryByText(/Error fetching documents/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Not authenticated/i)).not.toBeInTheDocument();
     });
 
     // ---------------------------------------------------------------------

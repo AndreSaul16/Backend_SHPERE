@@ -13,13 +13,13 @@ import {
   Link2,
   Unlink,
   CheckCircle2,
-  XCircle,
   Copy,
   Check,
   Trash2,
   ExternalLink,
   KeyRound,
 } from "lucide-react";
+import { InlineError, type FalloDeSeccion } from "@/components/ui/InlineError";
 import {
   integrationsService,
   type IntegrationsList,
@@ -74,7 +74,8 @@ export function IntegrationsSettings() {
   const [apps, setApps] = useState<OAuthAppsList | null>(null);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Redactado donde se produce: el «qué se conserva» sólo lo sabe el sitio.
+  const [error, setError] = useState<FalloDeSeccion | null>(null);
   const [params, setParams] = useSearchParams();
 
   // Form state por provider
@@ -92,8 +93,13 @@ export function IntegrationsSettings() {
       ]);
       setData(list);
       setApps(appsList);
-    } catch (e) {
-      setError(String(e));
+    } catch {
+      setError({
+        title: "No se han podido cargar tus integraciones",
+        detail:
+          "Ninguna conexión se ha perdido: es un fallo al traer la lista. Tus agentes siguen pudiendo usarlas.",
+        onRetry: () => { void load(); },
+      });
     } finally {
       setLoading(false);
     }
@@ -129,7 +135,12 @@ export function IntegrationsSettings() {
     const cid = (clientIds[provider] || "").trim();
     const secret = (clientSecrets[provider] || "").trim();
     if (!cid || !secret) {
-      setError("Introduce el Client ID y el Client Secret.");
+      setError({
+        title: "Faltan datos para registrar la aplicación",
+        detail:
+          "Introduce el Client ID y el Client Secret que te ha dado el proveedor. No se ha enviado nada.",
+        tone: "warning",
+      });
       return;
     }
     setWorking(provider);
@@ -139,8 +150,14 @@ export function IntegrationsSettings() {
       setClientIds((p) => ({ ...p, [provider]: "" }));
       setClientSecrets((p) => ({ ...p, [provider]: "" }));
       await load();
-    } catch (e) {
-      setError(String(e));
+    } catch {
+      setError({
+        title: `No se ha podido registrar tu aplicación de ${provider}`,
+        detail:
+          "Las credenciales que has escrito siguen en el formulario y no se ha guardado nada a medias.",
+        onRetry: () => { void handleRegister(provider); },
+        retryLabel: "Volver a registrarla",
+      });
     } finally {
       setWorking(null);
     }
@@ -152,8 +169,14 @@ export function IntegrationsSettings() {
     try {
       await integrationsService.connect(provider);
       // El flujo redirige al provider; si no, recargamos
-    } catch (e) {
-      setError(String(e));
+    } catch {
+      setError({
+        title: `No se ha podido empezar la conexión con ${provider}`,
+        detail:
+          "No se ha autorizado nada ni se ha compartido ningún dato. Vuelve a intentarlo.",
+        onRetry: () => { void handleConnect(provider); },
+        retryLabel: "Volver a conectar",
+      });
       setWorking(null);
     }
   };
@@ -164,8 +187,14 @@ export function IntegrationsSettings() {
     try {
       await integrationsService.disconnect(provider);
       await load();
-    } catch (e) {
-      setError(String(e));
+    } catch {
+      setError({
+        title: `No se ha podido desconectar ${provider}`,
+        detail:
+          "La conexión sigue activa y tus agentes pueden seguir usándola. Vuelve a intentarlo.",
+        onRetry: () => { void handleDisconnect(provider); },
+        retryLabel: "Volver a desconectar",
+      });
     } finally {
       setWorking(null);
     }
@@ -177,8 +206,14 @@ export function IntegrationsSettings() {
     try {
       await integrationsService.deleteApp(provider);
       await load();
-    } catch (e) {
-      setError(String(e));
+    } catch {
+      setError({
+        title: `No se ha podido borrar tu aplicación de ${provider}`,
+        detail:
+          "Sigue registrada con sus credenciales tal cual. Vuelve a intentarlo.",
+        onRetry: () => { void handleDeleteApp(provider); },
+        retryLabel: "Volver a borrarla",
+      });
     } finally {
       setWorking(null);
     }
@@ -198,12 +233,7 @@ export function IntegrationsSettings() {
         </div>
       )}
 
-      {error && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-oxblood-500/10 border border-oxblood-500/30 text-danger text-sm">
-          <XCircle className="h-4 w-4 shrink-0" />
-          {error}
-        </div>
-      )}
+      {error && <InlineError {...error} />}
 
       <p className="text-sm text-content-muted">
         Cada integración usa <strong>tu propia OAuth app</strong>: créala en el

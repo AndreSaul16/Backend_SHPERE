@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Save, RotateCcw, Bot } from "lucide-react";
 import { agentOverridesService, type AgentOverride } from "@/services/api";
 import { TextAreaField, TextField } from "@/components/ui/Field";
+import { InlineError, type FalloDeSeccion } from "@/components/ui/InlineError";
 
 // §2.8: la identidad de cada director es su token, no un color crudo de
 // Tailwind elegido a ojo — los cuatro de antes no eran ni siquiera los colores
@@ -21,7 +22,8 @@ export function AgentOverridesSettings() {
   const [overrides, setOverrides] = useState<Record<string, AgentOverride>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Redactado en el sitio del fallo: quien lo escribe sabe qué se intentaba.
+  const [error, setError] = useState<FalloDeSeccion | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -30,8 +32,14 @@ export function AgentOverridesSettings() {
       const map: Record<string, AgentOverride> = {};
       list.forEach((o) => (map[o.agent_role] = o));
       setOverrides(map);
-    } catch (e) {
-      setError(String(e));
+      setError(null);
+    } catch {
+      setError({
+        title: "No se han podido cargar tus ajustes de los directores",
+        detail:
+          "Tus personalizaciones siguen guardadas: es un fallo al traerlas. Los directores funcionan mientras tanto con su comportamiento base.",
+        onRetry: () => { void load(); },
+      });
     } finally {
       setLoading(false);
     }
@@ -39,6 +47,10 @@ export function AgentOverridesSettings() {
 
   useEffect(() => {
     load();
+    // Sólo al montar. `load` se referencia ahora a sí misma como salida del
+    // aviso de fallo, así que la regla la ve reactiva; volver a cargar cada vez
+    // que cambie su identidad sería un bucle de peticiones.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleChange = (role: string, patch: Partial<AgentOverride>) => {
@@ -60,8 +72,15 @@ export function AgentOverridesSettings() {
         model_override: ov.model_override || undefined,
       });
       setOverrides((prev) => ({ ...prev, [role]: updated }));
-    } catch (e) {
-      setError(String(e));
+      setError(null);
+    } catch {
+      setError({
+        title: `No se han podido guardar los ajustes de ${role}`,
+        detail:
+          "Lo que has escrito sigue en el formulario, sin perderse. Vuelve a guardar.",
+        onRetry: () => { void handleSave(role); },
+        retryLabel: "Volver a guardar",
+      });
     } finally {
       setSaving(null);
     }
@@ -77,8 +96,15 @@ export function AgentOverridesSettings() {
         delete next[role];
         return next;
       });
-    } catch (e) {
-      setError(String(e));
+      setError(null);
+    } catch {
+      setError({
+        title: `No se han podido restablecer los ajustes de ${role}`,
+        detail:
+          "Tu personalización sigue activa tal cual estaba. Vuelve a intentarlo.",
+        onRetry: () => { void handleReset(role); },
+        retryLabel: "Volver a restablecer",
+      });
     } finally {
       setSaving(null);
     }
@@ -94,11 +120,7 @@ export function AgentOverridesSettings() {
         prompt base, se propaga a ti salvo en los campos que hayas modificado.
       </p>
 
-      {error && (
-        <div className="p-3 rounded-xl bg-oxblood-500/10 border border-oxblood-500/30 text-danger text-sm">
-          {error}
-        </div>
-      )}
+      {error && <InlineError {...error} />}
 
       {CORE_ROLES.map((role) => {
         const ov = overrides[role.id];

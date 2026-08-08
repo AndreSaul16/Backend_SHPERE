@@ -13,10 +13,10 @@ import {
   Users,
   AlertTriangle,
   CheckCircle2,
-  XCircle,
 } from "lucide-react";
 import { ScheduledBoardsSection } from "./ScheduledBoardsSection";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { InlineError } from "@/components/ui/InlineError";
 import { useBoardSettingsStore } from "@/store/useBoardSettingsStore";
 
 export function BoardMeetingSettings() {
@@ -82,10 +82,12 @@ export function BoardMeetingSettings() {
         </div>
       )}
       {error && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-oxblood-500/10 border border-oxblood-500/30 text-danger">
-          <XCircle className="h-4 w-4" />
-          {error}
-        </div>
+        <InlineError
+          title={error.title}
+          detail={error.detail}
+          onRetry={() => { void load(); }}
+          retryLabel="Volver a consultarlo"
+        />
       )}
 
       {/* Toggle */}

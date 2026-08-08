@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { AvatarImage } from "@/components/ui/AvatarImage";
 import { notify, reasonOf } from "@/lib/toastBus";
 import { useBoardSettingsStore } from "@/store/useBoardSettingsStore";
+import { InlineError } from "@/components/ui/InlineError";
 
 
 export function ChatSettingsPage() {
@@ -544,9 +545,12 @@ export function ChatSettingsPage() {
                                 </button>
                             </div>
                             {boardError && (
-                                <p className="text-xs text-danger bg-dissent/10 border border-dissent/30 rounded-xl px-3 py-2">
-                                    {boardError}
-                                </p>
+                                <InlineError
+                                    title={boardError.title}
+                                    detail={boardError.detail}
+                                    onRetry={() => { void loadBoardSettings(); }}
+                                    retryLabel="Volver a consultarlo"
+                                />
                             )}
                             {/* §12.6: el resultado de guardar se anuncia. El
                                 mensaje de error de arriba aparecía en silencio. */}
@@ -554,7 +558,7 @@ export function ChatSettingsPage() {
                                 {boardSaving
                                     ? "Guardando la preferencia de debate…"
                                     : boardError
-                                        ? boardError
+                                        ? `${boardError.title}. ${boardError.detail}`
                                         : boardEnabled
                                             ? "Debate entre agentes activado."
                                             : "Debate entre agentes desactivado."}

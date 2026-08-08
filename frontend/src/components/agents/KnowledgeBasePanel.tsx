@@ -10,13 +10,13 @@ import {
     Database,
     Layers,
     HardDrive,
-    AlertCircle,
     FilePlus,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { chatService, authHeaders } from '@/services/api';
 import { reasonOf, toast } from '@/lib/toastBus';
+import { InlineError } from '@/components/ui/InlineError';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -104,6 +104,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
     const [documents, setDocuments] = useState<AgentDocument[]>([]);
     const [uploading, setUploading] = useState<UploadingFile[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    // `null` = sin fallo. Cadena (aunque vacía) = ha fallado, con o sin motivo.
     const [fetchError, setFetchError] = useState<string | null>(null);
     const [isDragOver, setIsDragOver] = useState(false);
 
@@ -119,8 +120,12 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
             const data = await chatService.getAgentDocuments(agentId);
             setDocuments(Array.isArray(data?.documents) ? data.documents : []);
             setFetchError(null);
-        } catch (err) {
-            setFetchError((err as Error).message);
+        } catch {
+            // Sin motivo técnico en pantalla: `req()` lanza
+            // «500 common.internal_error: …», un volcado con el código interno
+            // dentro. §11 lo prohíbe y no le sirve de nada a quien lo lee.
+            // Antes ESTO —`(err as Error).message`— era el mensaje entero.
+            setFetchError('');
         } finally {
             setIsLoading(false);
         }
@@ -360,11 +365,12 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                 )}
 
                 {/* Error state */}
-                {!isLoading && fetchError && (
-                    <div className="flex items-center gap-3 p-4 rounded-md bg-oxblood-500/10 border border-oxblood-500/20">
-                        <AlertCircle className="h-5 w-5 text-danger shrink-0" />
-                        <p className="text-sm text-danger">{fetchError}</p>
-                    </div>
+                {!isLoading && fetchError !== null && (
+                    <InlineError
+                        title="No se han podido cargar los documentos"
+                        detail="Ninguno se ha borrado: es un fallo al traer la lista. El agente sigue usando los que ya tenía indexados."
+                        onRetry={() => { setIsLoading(true); void fetchDocuments(); }}
+                    />
                 )}
 
                 {/* Empty state */}

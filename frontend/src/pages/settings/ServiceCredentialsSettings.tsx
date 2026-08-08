@@ -6,8 +6,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { serviceCredentialsService } from "@/services/api";
 import type { ServiceCredentialsResponse } from "@/services/api";
-import { reasonOf } from "@/lib/toastBus";
+import { motivoLegible } from "@/lib/errors";
 import { PasswordField, TextField } from "@/components/ui/Field";
+import { InlineError, type FalloDeSeccion } from "@/components/ui/InlineError";
 import {
   Key,
   Calendar,
@@ -39,7 +40,9 @@ export function ServiceCredentialsSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [testing, setTesting] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Antes era una cadena y se pintaba tal cual: el «qué se conserva» y la
+  // salida no existían. Ahora el fallo se redacta donde se produce.
+  const [error, setError] = useState<FalloDeSeccion | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   // Form state per service
@@ -53,7 +56,16 @@ export function ServiceCredentialsSettings() {
     try {
       setData(await serviceCredentialsService.list());
     } catch (e) {
-      setError(reasonOf(e) ?? "No se pudieron cargar las credenciales.");
+      setError({
+        title: "No se han podido cargar tus credenciales",
+        detail:
+          "Ninguna se ha borrado ni se ha visto comprometida: es un fallo al traer la lista.",
+        // El motivo del backend SÍ se enseña aquí, en pequeño y debajo: un
+        // fallo de credenciales suele ser accionable («la clave no es válida»).
+        // Lo que no se enseña es el prefijo con el código interno.
+        reason: motivoLegible(e),
+        onRetry: () => { void load(); },
+      });
     } finally {
       setLoading(false);
     }
@@ -77,7 +89,14 @@ export function ServiceCredentialsSettings() {
       setApiKeys((prev) => ({ ...prev, [service]: "" }));
       await load();
     } catch (e) {
-      setError(reasonOf(e) ?? "No se pudo guardar la credencial.");
+      setError({
+        title: `No se ha podido guardar la credencial de ${service}`,
+        detail:
+          "La clave que has escrito sigue en el campo y la anterior, si la había, no se ha tocado.",
+        reason: motivoLegible(e),
+        onRetry: () => { void handleSave(service); },
+        retryLabel: "Volver a guardarla",
+      });
     } finally {
       setSaving(null);
     }
@@ -91,7 +110,13 @@ export function ServiceCredentialsSettings() {
       setSuccess(`${service} eliminado correctamente`);
       await load();
     } catch (e) {
-      setError(reasonOf(e) ?? "No se pudo eliminar la credencial.");
+      setError({
+        title: `No se ha podido eliminar la credencial de ${service}`,
+        detail: "Sigue guardada y activa. Vuelve a intentarlo.",
+        reason: motivoLegible(e),
+        onRetry: () => { void handleDelete(service); },
+        retryLabel: "Volver a eliminarla",
+      });
     } finally {
       setSaving(null);
     }
@@ -108,7 +133,7 @@ export function ServiceCredentialsSettings() {
         ...prev,
         [service]: {
           success: false,
-          message: reasonOf(e) ?? "No se pudo probar la credencial.",
+          message: motivoLegible(e) ?? "No se pudo probar la credencial.",
         },
       }));
     } finally {
@@ -142,12 +167,7 @@ export function ServiceCredentialsSettings() {
           {success}
         </div>
       )}
-      {error && (
-        <div role="alert" className="flex items-center gap-2 p-3 rounded-xl bg-dissent/10 border border-dissent/30 text-dissent">
-          <XCircle className="h-4 w-4" aria-hidden="true" />
-          {error}
-        </div>
-      )}
+      {error && <InlineError {...error} />}
 
       {/* Service cards */}
       <div className="grid grid-cols-1 gap-4">

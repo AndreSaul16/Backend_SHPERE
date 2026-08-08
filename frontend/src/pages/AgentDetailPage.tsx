@@ -20,6 +20,8 @@ import { TextAreaField, TextField } from "@/components/ui/Field";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { reasonOf, toast } from "@/lib/toastBus";
 import { KnowledgeBasePanel } from "@/components/agents/KnowledgeBasePanel";
+import { InlineError } from "@/components/ui/InlineError";
+import { buttonClass } from "@/components/ui/buttonStyles";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -155,7 +157,9 @@ export function AgentDetailPage() {
                     })
                 );
             } catch (err: any) {
-                if (!cancelled) setFetchError(err.message ?? "Error desconocido");
+                // El motivo va al detalle, nunca de titular (§11). Antes ESTO
+                // era todo el mensaje: «Error 500: Internal Server Error».
+                if (!cancelled) setFetchError(err?.message ?? "");
             } finally {
                 if (!cancelled) setIsLoading(false);
             }
@@ -240,15 +244,22 @@ export function AgentDetailPage() {
     }
 
     // ── Error State ──────────────────────────────────────────────────────
-    if (fetchError) {
+    if (fetchError !== null) {
         return (
-            <div className="flex flex-col items-center justify-center h-full gap-4 bg-midnight/40 px-4">
-                <div className="p-4 bg-oxblood-500/10 border border-oxblood-500/20 rounded-md text-center space-y-3 max-w-md">
-                    <AlertTriangle className="h-8 w-8 text-danger mx-auto" />
-                    <p className="text-sm text-danger font-medium">{fetchError}</p>
+            <div className="flex h-full flex-col items-center justify-center gap-4 bg-midnight/40 px-4">
+                <div className="w-full max-w-md space-y-3">
+                    <InlineError
+                        title="No se ha podido abrir este agente"
+                        detail="Su configuración sigue guardada tal cual: esto es un fallo al traerla, no una pérdida."
+                        reason={fetchError || undefined}
+                        onRetry={() => window.location.reload()}
+                        retryLabel="Volver a cargarlo"
+                    />
+                    {/* Dos salidas, no una: reintentar por si fue un tropiezo, y
+                        volver al chat por si el agente ya no existe. */}
                     <button
                         onClick={() => navigate("/chat")}
-                        className="px-4 py-2 bg-surface border border-stroke-hairline rounded-xl text-sm text-content-muted hover:text-content-strong transition-colors"
+                        className={buttonClass({ variant: "secondary", className: "w-full" })}
                     >
                         Volver al chat
                     </button>

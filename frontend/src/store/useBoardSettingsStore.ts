@@ -34,8 +34,13 @@ interface BoardSettingsState {
     loaded: boolean;
     loading: boolean;
     saving: boolean;
-    /** §11: qué pasó y qué se conservó. Nunca un `String(e)` crudo. */
-    error: string | null;
+    /**
+     * §11 partido en dos: el título dice QUÉ pasó y el detalle QUÉ se conserva.
+     * Iba en una sola cadena y la pantalla la pintaba entera como si fuera un
+     * título; separarlo es lo que permite que la sección ofrezca además la
+     * salida (`<InlineError onRetry>`), que es lo que faltaba.
+     */
+    error: { title: string; detail: string } | null;
 
     load: () => Promise<void>;
     /** Devuelve `true` si el cambio quedó guardado. */
@@ -72,7 +77,10 @@ export const useBoardSettingsStore = create<BoardSettingsState>()((set) => ({
         } catch {
             set({
                 loading: false,
-                error: 'No se pudo consultar si la junta debate. Vuelve a intentarlo.',
+                error: {
+                    title: 'No se ha podido consultar si la junta debate',
+                    detail: 'Tu preferencia sigue guardada tal cual: es un fallo al consultarla.',
+                },
             });
         }
     },
@@ -100,7 +108,10 @@ export const useBoardSettingsStore = create<BoardSettingsState>()((set) => ({
             // interruptor no se mueve y no miente sobre lo que hay guardado.
             set({
                 saving: false,
-                error: 'No se pudo guardar el cambio. El debate sigue como estaba.',
+                error: {
+                    title: 'No se ha podido guardar el cambio',
+                    detail: 'El debate sigue como estaba y el interruptor no se ha movido. Vuelve a intentarlo.',
+                },
             });
             return false;
         }

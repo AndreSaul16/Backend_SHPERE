@@ -7,7 +7,7 @@
  */
 import { motion } from 'framer-motion';
 import {
-    AlertCircle,
+
     Bot,
     Check,
     File,
@@ -18,6 +18,7 @@ import {
     XCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { InlineError } from '@/components/ui/InlineError';
 import { MODEL_OPTIONS, slideVariants } from './constants';
 import type { FileEntry, WizardForm } from './types';
 
@@ -147,14 +148,16 @@ export function StepReview({
 
             {/* Error message */}
             {submitError && (
-                <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-3 p-4 rounded-md bg-oxblood-500/5 border border-oxblood-500/20"
-                >
-                    <AlertCircle className="h-5 w-5 text-danger shrink-0" />
-                    <p className="text-sm text-danger">{submitError}</p>
-                </motion.div>
+                /* §11: qué pasó y qué se conserva. El reintento es el propio
+                   botón «Crear agente», que sigue justo debajo con todo lo que
+                   el usuario ha configurado intacto — y eso es lo que hay que
+                   decirle, porque un asistente de cinco pasos que falla al
+                   final da miedo. */
+                <InlineError
+                    title="No se ha podido crear el agente"
+                    detail="Todo lo que has configurado sigue aquí, paso por paso. Vuelve a darle a «Crear agente»."
+                    reason={submitError}
+                />
             )}
 
             {/* Submission progress for files */}

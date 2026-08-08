@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Trash2, Plus, Users, Shield, Check } from "lucide-react";
 import { contactsService, type Contact } from "@/services/api";
 import { SelectField, TextField } from "@/components/ui/Field";
+import { InlineError, type FalloDeSeccion } from "@/components/ui/InlineError";
 
 const CONTACT_TYPES: Record<string, string> = {
   email: "Email",
@@ -25,7 +26,9 @@ const AVAILABLE_PERMISSIONS = [
 export function ContactsSettings() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // El fallo se guarda ya redactado: quien lo escribe es quien sabe qué se
+  // estaba intentando. Antes era un `String(e)` y salía «Error: TypeError».
+  const [error, setError] = useState<FalloDeSeccion | null>(null);
 
   // Form state
   const [newType, setNewType] = useState<string>("email");
@@ -38,8 +41,13 @@ export function ContactsSettings() {
     setLoading(true);
     try {
       setContacts(await contactsService.list());
-    } catch (e) {
-      setError(String(e));
+      setError(null);
+    } catch {
+      setError({
+        title: "No se ha podido cargar tu lista de contactos",
+        detail: "Ningún contacto se ha borrado: es un fallo al traer la lista.",
+        onRetry: () => { void load(); },
+      });
     } finally {
       setLoading(false);
     }
@@ -47,6 +55,10 @@ export function ContactsSettings() {
 
   useEffect(() => {
     load();
+    // Sólo al montar. `load` se referencia ahora a sí misma como salida del
+    // aviso de fallo, así que la regla la ve reactiva; volver a cargar cada vez
+    // que cambie su identidad sería un bucle de peticiones.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const togglePerm = (perm: string) => {
@@ -70,8 +82,14 @@ export function ContactsSettings() {
       setNewName("");
       setNewPerms([]);
       await load();
-    } catch (e) {
-      setError(String(e));
+    } catch {
+      setError({
+        title: "No se ha podido añadir el contacto",
+        detail:
+          "Lo que has escrito sigue en el formulario: revísalo y vuelve a darle a añadir.",
+        onRetry: () => { void handleAdd(); },
+        retryLabel: "Volver a añadirlo",
+      });
     } finally {
       setSaving(false);
     }
@@ -81,8 +99,14 @@ export function ContactsSettings() {
     try {
       await contactsService.remove(id);
       await load();
-    } catch (e) {
-      setError(String(e));
+    } catch {
+      setError({
+        title: "No se ha podido eliminar el contacto",
+        detail:
+          "Sigue en la lista y sus permisos siguen activos. Vuelve a intentarlo.",
+        onRetry: () => { void handleRemove(id); },
+        retryLabel: "Volver a eliminarlo",
+      });
     }
   };
 
@@ -98,11 +122,7 @@ export function ContactsSettings() {
         </div>
       </div>
 
-      {error && (
-        <div className="p-3 rounded-xl bg-oxblood-500/10 border border-oxblood-500/30 text-danger text-sm">
-          {error}
-        </div>
-      )}
+      {error && <InlineError {...error} />}
 
       {/* Añadir contacto */}
       <section className="p-5 rounded-md bg-surface/30 border border-surface-highlight space-y-4">

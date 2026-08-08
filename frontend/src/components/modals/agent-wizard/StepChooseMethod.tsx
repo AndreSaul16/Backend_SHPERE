@@ -7,7 +7,8 @@
  * después de elegir no tendría nada que hacer.
  */
 import { motion } from 'framer-motion';
-import { AlertCircle, ChevronRight, Loader2, PenLine, Sparkles } from 'lucide-react';
+import { ChevronRight, Loader2, PenLine, Sparkles } from 'lucide-react';
+import { InlineError } from '@/components/ui/InlineError';
 import { cn } from '@/lib/utils';
 import { CATEGORY_META, resolveTemplateIcon, slideVariants } from './constants';
 import type { AgentTemplate } from './types';
@@ -120,10 +121,16 @@ export function StepChooseMethod({
             )}
 
             {templatesError && (
-                <div className="flex items-center justify-center py-12 gap-3 text-danger">
-                    <AlertCircle className="h-5 w-5" aria-hidden="true" />
-                    <span className="text-sm">{templatesError}</span>
-                </div>
+                /* Sin plantillas el asistente sigue sirviendo: la salida es
+                   crear el agente desde cero, y hay que decirlo. Antes esto era
+                   un renglón rojo con el motivo técnico y punto. */
+                <InlineError
+                    className="my-6"
+                    tone="warning"
+                    title="No se han podido cargar las plantillas"
+                    detail="Puedes crear tu agente desde cero con el botón de arriba: el asistente funciona igual sin ellas."
+                    reason={templatesError}
+                />
             )}
 
             {!templatesLoading && !templatesError && templates.length === 0 && (

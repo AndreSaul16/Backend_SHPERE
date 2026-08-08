@@ -7,20 +7,38 @@ import { Save, User, Briefcase, MessageSquare, Wallet, Palette } from "lucide-re
 import { profileService, type UserProfile } from "@/services/api";
 import { Field as FormField } from "@/components/ui/Field";
 import { fieldControlClass } from "@/components/ui/fieldStyles";
+import { InlineError, type FalloDeSeccion } from "@/components/ui/InlineError";
 
 export function ProfileSettings() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Redactado donde se produce. Antes era `String(e)` y la pantalla de carga
+  // fallida se resolvía con un `<p>Error: TypeError: Failed to fetch</p>` y
+  // nada más: sin reintentar, sin volver, sin nada.
+  const [error, setError] = useState<FalloDeSeccion | null>(null);
 
-  useEffect(() => {
+  const cargar = () => {
+    setLoading(true);
     profileService
       .getProfile()
-      .then((p) => setProfile(p))
-      .catch((e) => setError(String(e)))
+      .then((p) => { setProfile(p); setError(null); })
+      .catch(() =>
+        setError({
+          title: "No se ha podido cargar tu perfil",
+          detail:
+            "Tus datos siguen guardados en tu cuenta: esto es un fallo al traerlos, no una pérdida.",
+          onRetry: cargar,
+        }),
+      )
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    cargar();
+    // Sólo al montar: `cargar` es la salida del propio aviso, no una dependencia.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const update = <K extends keyof UserProfile>(key: K, value: UserProfile[K]) => {
@@ -51,16 +69,22 @@ export function ProfileSettings() {
       });
       setProfile(updated);
       setSavedAt(Date.now());
-    } catch (e) {
-      setError(String(e));
+      setError(null);
+    } catch {
+      setError({
+        title: "No se han podido guardar los cambios de tu perfil",
+        detail:
+          "Todo lo que has escrito sigue en pantalla, sin perderse. Vuelve a guardar.",
+        onRetry: () => { void handleSave(); },
+        retryLabel: "Volver a guardar",
+      });
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) return <p className="text-content-muted">Cargando perfil...</p>;
-  if (error && !profile)
-    return <p className="text-danger">Error: {error}</p>;
+  if (error && !profile) return <InlineError {...error} />;
   if (!profile) return null;
 
   return (
@@ -269,7 +293,7 @@ export function ProfileSettings() {
         </Field>
       </Section>
 
-      {error && <p className="text-danger text-sm">{error}</p>}
+      {error && <InlineError {...error} />}
 
       <div className="flex items-center gap-3">
         <button
@@ -296,7 +320,7 @@ export function ProfileSettings() {
         {saving
           ? "Guardando los cambios del perfil…"
           : error
-            ? `No se pudieron guardar los cambios. ${error}`
+            ? `${error.title}. ${error.detail}`
             : savedAt
               ? "Cambios del perfil guardados."
               : ""}

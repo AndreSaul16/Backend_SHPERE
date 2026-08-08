@@ -3,6 +3,7 @@ import { CreditCard, Zap, Sparkles, ArrowLeft, Loader2, HardDrive, FileText, Ref
 import { Link } from 'react-router-dom';
 import { useBillingStore } from '../store/useBillingStore';
 import { Button } from '@/components/ui/Button';
+import { InlineError, type FalloDeSeccion } from '@/components/ui/InlineError';
 import { authHeaders, profileService, type StorageUsage } from '../services/api';
 import { capture, ANALYTICS_EVENTS } from '@/lib/analytics';
 
@@ -39,18 +40,23 @@ function barColor(pct: number): string {
     return 'bg-electric-cyan';
 }
 
-/** Extrae un mensaje de error legible de una respuesta HTTP fallida. */
-async function readErrorMessage(response: Response, fallback: string): Promise<string> {
+/**
+ * Motivo del fallo, SÓLO si el backend lo ha redactado.
+ *
+ * Esto devolvía `text || fallback`, o sea que un 502 de un proxy pintaba HTML
+ * crudo en la pantalla de pagos, y un `detail` de FastAPI escupía la excepción.
+ * §11 prohíbe volcar el mensaje crudo del backend: aquí se acepta únicamente
+ * `detail.message`, que es el campo que el backend redacta a propósito para que
+ * lo lea una persona (ver `services/errorHandler.ts`). Todo lo demás se
+ * descarta y el motivo se queda sin decir, que es mejor que decir un volcado.
+ */
+async function readErrorMessage(response: Response): Promise<string | undefined> {
     try {
-        const text = await response.text();
-        try {
-            const json = JSON.parse(text);
-            return json?.detail?.message || json?.detail || json?.message || fallback;
-        } catch {
-            return text || fallback;
-        }
+        const json = await response.json();
+        const msg = json?.detail?.message;
+        return typeof msg === 'string' && msg.trim() ? msg : undefined;
     } catch {
-        return fallback;
+        return undefined;
     }
 }
 
@@ -95,7 +101,9 @@ export const BillingPage: React.FC = () => {
         refresh,
     } = useBillingStore();
 
-    const [actionError, setActionError] = useState<string | null>(null);
+    // Redactado aquí, con su «no se te ha cobrado nada»: en una pantalla de
+    // pagos eso es lo primero que el usuario necesita saber.
+    const [actionError, setActionError] = useState<FalloDeSeccion | null>(null);
     // F7: se agotó la espera del esqueleto (ver `ESPERA_MAXIMA_MS`).
     const [tardaDemasiado, setTardaDemasiado] = useState(false);
     const [pendingPlan, setPendingPlan] = useState<string | null>(null);
@@ -120,7 +128,11 @@ export const BillingPage: React.FC = () => {
     const handleCheckout = async (planId: string) => {
         if (pendingPlan) return;
         if (!consentAccepted) {
-            setActionError('Debes aceptar las condiciones de compra antes de continuar.');
+            setActionError({
+                title: 'Falta aceptar las condiciones de compra',
+                detail: 'Marca la casilla de arriba y vuelve a elegir tu plan. No se ha iniciado ningún pago.',
+                tone: 'warning',
+            });
             return;
         }
         setActionError(null);
@@ -134,21 +146,33 @@ export const BillingPage: React.FC = () => {
                 body: JSON.stringify({ plan_id: planId }),
             });
             if (!response.ok) {
-                const msg = await readErrorMessage(response, 'No se pudo iniciar el pago. Inténtalo de nuevo.');
-                setActionError(msg);
+                setActionError({
+                    title: 'No se ha podido iniciar el pago',
+                    detail: 'No se te ha cobrado nada y tu plan sigue igual. Vuelve a elegirlo dentro de un momento.',
+                    reason: await readErrorMessage(response),
+                    onDismiss: () => setActionError(null),
+                });
                 return;
             }
             const data = await response.json();
             if (data.url) {
                 window.location.href = data.url;
             } else {
-                setActionError('Respuesta inesperada del servidor de pagos.');
+                setActionError({
+                    title: 'La pasarela de pago no ha respondido como esperábamos',
+                    detail: 'No se te ha cobrado nada. Vuelve a intentarlo; si se repite, escríbenos antes de reintentar más veces.',
+                    onDismiss: () => setActionError(null),
+                });
             }
         } catch {
             // Sin aviso: el mensaje sale bajo los planes, a un palmo del botón
             // que se acaba de pulsar. §11 pide decir además qué se conservó, y
             // en un pago lo que importa es que no se ha cobrado nada.
-            setActionError('No se pudo abrir la pasarela de pago. No se te ha cobrado nada; vuelve a intentarlo.');
+            setActionError({
+                title: 'No se ha podido abrir la pasarela de pago',
+                detail: 'No se te ha cobrado nada y tu plan sigue igual. Vuelve a intentarlo.',
+                onDismiss: () => setActionError(null),
+            });
         } finally {
             setPendingPlan(null);
         }
@@ -237,12 +261,7 @@ export const BillingPage: React.FC = () => {
                 )}
 
                 {/* Error de acción (checkout) */}
-                {actionError && (
-                    <div className="bg-oxblood-500/10 border border-oxblood-500/30 rounded-md p-4 mb-8 flex items-center justify-between gap-3">
-                        <p className="text-danger text-sm">{actionError}</p>
-                        <button onClick={() => setActionError(null)} className="text-danger hover:text-content-strong text-sm">✕</button>
-                    </div>
-                )}
+                {actionError && <InlineError className="mb-8" {...actionError} />}
 
                 {/* Resumen: Balance de créditos + Almacenamiento */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">

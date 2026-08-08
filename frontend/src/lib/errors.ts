@@ -23,6 +23,29 @@ export class SphereError extends Error {
 }
 
 /**
+ * El motivo de un fallo, sin las tripas.
+ *
+ * `services/api.ts` lanza sus errores como `«500 common.internal_error: La API
+ * está caída»`: estado HTTP, código interno y, al final, el texto que el
+ * backend SÍ redacta para que lo lea una persona. Las pantallas pintaban la
+ * cadena entera, y §11 lo prohíbe por dos motivos a la vez —«nada de volcar el
+ * error.message crudo» y «los identificadores internos no se muestran»—.
+ *
+ * Esto se queda sólo con la última parte, y sólo para el hueco de «motivo» de
+ * `<InlineError>`, que va en letra pequeña y debajo. Nunca para un título.
+ * Devuelve `undefined` si lo que queda no aporta nada.
+ */
+export function motivoLegible(err: unknown): string | undefined {
+    const bruto = err instanceof Error ? err.message : typeof err === 'string' ? err : '';
+    // «NNN dominio.codigo: » al principio — el prefijo que pone `req()`.
+    const limpio = bruto.replace(/^\d{3}\s+[a-z_]+\.[a-z_]+:\s*/i, '').trim();
+    if (!limpio) return undefined;
+    // Si tras limpiar sigue siendo un código o un estado a secas, no es motivo.
+    if (/^[a-z_]+\.[a-z_]+$/i.test(limpio) || /^\d{3}$/.test(limpio)) return undefined;
+    return limpio;
+}
+
+/**
  * Fallos relacionados con la red o el backend
  */
 export class NetworkError extends SphereError {

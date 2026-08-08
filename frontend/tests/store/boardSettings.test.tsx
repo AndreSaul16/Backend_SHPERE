@@ -146,11 +146,15 @@ describe('D47 — un solo ajuste de debate para las dos vistas', () => {
         server.use(http.patch(URL_AJUSTES, () => new HttpResponse(null, { status: 500 })));
         fireEvent.click(interruptorChat());
 
-        await waitFor(() =>
-            expect(screen.getAllByText(/No se pudo guardar el cambio/).length).toBeGreaterThan(0),
-        );
-        // §11: «qué se conservó». El ajuste sigue como estaba, y las dos vistas
-        // lo dicen igual.
+        // Las tres comprobaciones van DENTRO del mismo `waitFor`: el aviso es
+        // efímero —una recarga posterior de los ajustes lo limpia—, así que
+        // comprobarlas en tiempos distintos las haría dependientes del reloj.
+        // §11: qué pasó, qué se conservó, y una salida.
+        await waitFor(() => {
+            expect(screen.getAllByText(/No se ha podido guardar el cambio/).length).toBeGreaterThan(0);
+            expect(screen.getAllByText(/El debate sigue como estaba/).length).toBeGreaterThan(0);
+            expect(screen.getAllByRole('button', { name: /Volver a consultarlo/ }).length).toBeGreaterThan(0);
+        });
         expect(interruptorChat()).toHaveAttribute('aria-checked', 'true');
         expect(interruptorAjustes()).toHaveAttribute('aria-checked', 'true');
     });
@@ -178,7 +182,10 @@ describe('D47 — el store de ajustes de junta', () => {
 
         const s = useBoardSettingsStore.getState();
         expect(s.loaded).toBe(false);
-        expect(s.error).toMatch(/No se pudo consultar/);
+        // El fallo va partido en dos: qué pasó y qué se conserva. La pantalla
+        // pinta el título como título y añade la salida.
+        expect(s.error?.title).toMatch(/No se ha podido consultar/);
+        expect(s.error?.detail).toMatch(/sigue guardada/);
     });
 
     it('`reset` deja el ajuste sin cargar (cambio de cuenta, A6)', async () => {
