@@ -81,18 +81,6 @@ export function ProfilePage() {
 
     return (
         <div className="flex flex-col h-full bg-midnight/40 relative overflow-hidden">
-            {/* Background Living Effect */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                <div
-                    className="aurora-blob w-[70%] h-[70%] top-[-20%] right-[-10%]"
-                    style={{ backgroundColor: 'rgba(30, 58, 95, 0.4)' }}
-                />
-                <div
-                    className="aurora-blob w-[50%] h-[50%] bottom-[-10%] left-[-5%]"
-                    style={{ backgroundColor: 'rgba(13, 74, 74, 0.35)', animationDelay: '-10s' }}
-                />
-            </div>
-
             {/* Header */}
             <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-surface flex items-center justify-between bg-surface-0 sticky top-0 z-10">
                 <div className="flex items-center gap-3 sm:gap-4">

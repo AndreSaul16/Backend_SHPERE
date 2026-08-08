@@ -283,18 +283,6 @@ export function ChatSettingsPage() {
 
     return (
         <div className="flex flex-col h-full bg-midnight/40 relative overflow-hidden">
-            {/* Background Living Effect */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                <div
-                    className="aurora-blob w-[60%] h-[60%] top-[-15%] left-[-10%]"
-                    style={{ backgroundColor: 'rgba(30, 58, 95, 0.5)' }}
-                />
-                <div
-                    className="aurora-blob w-[45%] h-[45%] bottom-[-10%] right-[-5%]"
-                    style={{ backgroundColor: 'rgba(13, 74, 74, 0.4)', animationDelay: '-6s' }}
-                />
-            </div>
-
             {/* Header */}
             <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-surface flex items-center justify-between bg-surface-0 sticky top-0 z-10">
                 <div className="flex items-center gap-3 sm:gap-4">

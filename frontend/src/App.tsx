@@ -14,7 +14,6 @@ import { LoginPage } from "@/pages/LoginPage";
 import { RegisterPage } from "@/pages/RegisterPage";
 import { VerifyEmailPage } from "@/pages/VerifyEmailPage";
 import { SettingsPage } from "@/pages/SettingsPage";
-import { AuroraBackground } from "@/components/AuroraBackground";
 import { ErrorOverlay } from "@/components/common/ErrorOverlay";
 import { ConnectionBanner } from "@/components/common/ConnectionBanner";
 import { useChatStore } from "@/store/useChatStore";
@@ -145,8 +144,7 @@ function AuthenticatedApp() {
 function App() {
   return (
     <AuthProvider>
-      <div className="relative min-h-screen">
-        <AuroraBackground />
+      <div className="relative min-h-dvh">
         {/* Eje 5 · el estado de la red se dice antes de que el usuario pulse. */}
         <ConnectionBanner />
         <ErrorOverlay />

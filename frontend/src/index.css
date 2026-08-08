@@ -607,7 +607,7 @@
    §P3 sólo autoriza en el velo de un modal y como máximo a 3px.
 
    Al retirarlas, comprobar que no queda ningún uso:
-     grep -rn 'glass-panel\|glass-card\|glass-input\|hover-lift\|active-scale\|aurora-' src
+     grep -rn 'glass-panel\|glass-card\|glass-input\|hover-lift\|active-scale' src
 */
 @layer components{
   /* e2 de §5: relleno + filete + filete interior + sombra proyectada.
@@ -658,15 +658,9 @@
   .active-scale{ transition: transform var(--duration-tap) var(--ease-settle); }
   .active-scale:active{ transform: scale(0.985); }
 
-  /* Contenedor de los blobs: sólo layout, inofensivo. */
-  .aurora-container{ position:absolute; inset:0; z-index:-10; overflow:hidden; }
-
-  /* §7.4 prohíbe expresamente los bucles del aurora («los cuatro bucles
-     heredados no vuelven») y §8.5 dice que el grano del paño los SUSTITUYE, y
-     el grano ya está vivo en `body`. Así que el shim correcto no es repintar
-     los blobs: es apagarlos. Se quedan 6 divs inertes en 3 páginas hasta que
-     3.1 borre el marcado, y a cambio se liberan 6 capas compuestas con
-     blur(100px) desde hoy. La clase sigue definida para que el detector de
-     clases muertas no la marque. */
-  .aurora-blob{ display: none; }
+  /* Aquí vivían las dos clases del fondo animado heredado. La fase 2 las apagó
+     (`display:none`) y la 3.1 ha borrado su marcado: el componente, su test y
+     los seis divs sueltos de tres páginas. §8.5 (el grano del paño) es su
+     sustituto y ya vive en `body`. No vuelven: §7.4 las nombra por su nombre
+     entre los bucles prohibidos. */
 }
