@@ -30,3 +30,15 @@ afterAll(() => server.close());
 // Mock de DOM APIs que JSDOM no soporta
 window.HTMLElement.prototype.scrollIntoView = vi.fn();
 window.HTMLElement.prototype.scrollTo = vi.fn();
+
+// jsdom no implementa ResizeObserver. La tira de pestañas del panel de
+// artefactos lo usa para saber si desborda (§9.8, el desvanecido de los
+// cantos); sin este doble, montar el panel revienta con un ReferenceError.
+// Nunca dispara: en jsdom no hay layout que medir, y el estado por defecto
+// —«no desborda»— es el que corresponde.
+class ResizeObserverDoble {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+}
+globalThis.ResizeObserver ??= ResizeObserverDoble as unknown as typeof ResizeObserver;

@@ -477,6 +477,14 @@
     outline: 2px solid var(--focus-ring); outline-offset: 2px;
   }
 
+  /* §9.8 «Desbordamiento: scroll horizontal con degradado de desvanecimiento en
+     los dos cantos». La clase la pone el componente sólo cuando la tira mide
+     más que su caja: un desvanecido permanente mentiría sobre que hay más. */
+  .tab-strip-fade{
+    mask-image: linear-gradient(to right, transparent 0, #000 16px,
+                                #000 calc(100% - 16px), transparent 100%);
+  }
+
   .doc-prose hr{ margin-block:2em; border:0; border-block-start:1px solid var(--stroke-edge); }
   .doc-prose img{ max-inline-size:100%; height:auto; border-radius:var(--radius-sm);
                   border:1px solid var(--stroke-hairline); }

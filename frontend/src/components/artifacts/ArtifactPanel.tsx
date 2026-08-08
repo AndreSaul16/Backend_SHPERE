@@ -1,5 +1,5 @@
 // Artifacts Panel - Main Workspace Component
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { X, FileCode, FileText, Table, GitBranch, File } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChatStore } from '@/store/useChatStore';
@@ -45,6 +45,25 @@ export function ArtifactPanel() {
         tabRefs.current[siguiente.id]?.focus();
     }, [artifacts, activeArtifactId, setActiveArtifact]);
 
+    // §9.8 «Desbordamiento: scroll horizontal con degradado de desvanecimiento
+    // en los dos cantos». Y lo primero: la pestaña activa tiene que verse. Con
+    // seis artefactos en un panel de 480px la tira desborda, y sin esto el
+    // documento que se está leyendo quedaba fuera de cuadro.
+    const tiraRef = useRef<HTMLDivElement | null>(null);
+    const [tiraDesborda, setTiraDesborda] = useState(false);
+    useEffect(() => {
+        tabRefs.current[activeArtifactId ?? '']?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }, [activeArtifactId]);
+    useEffect(() => {
+        const tira = tiraRef.current;
+        if (!tira) return;
+        const medir = () => setTiraDesborda(tira.scrollWidth > tira.clientWidth + 1);
+        medir();
+        const ro = new ResizeObserver(medir);
+        ro.observe(tira);
+        return () => ro.disconnect();
+    }, [artifacts.length]);
+
     return (
         <div className="flex flex-col h-full bg-transparent overflow-hidden">
             {/* Header */}
@@ -87,11 +106,15 @@ export function ArtifactPanel() {
                     Home/End para moverse. */}
                 {artifacts.length > 0 && (
                     <div
+                        ref={tiraRef}
                         role="tablist"
                         aria-label="Artefactos de la sesión"
                         aria-orientation="horizontal"
                         onKeyDown={handleTabKeyDown}
-                        className="flex items-stretch gap-1 px-2 border-b border-stroke-hairline bg-surface-1 overflow-x-auto scrollbar-none flex-shrink-0"
+                        className={cn(
+                            "flex items-stretch gap-1 px-2 border-b border-stroke-hairline bg-surface-1 overflow-x-auto scrollbar-none flex-shrink-0",
+                            tiraDesborda && "tab-strip-fade",
+                        )}
                     >
                         {artifacts.map((artifact) => {
                             const Icon = ARTIFACT_ICONS[artifact.type] || File;
