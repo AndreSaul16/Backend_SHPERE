@@ -82,6 +82,27 @@ def test_ci_yml_backend_env_vars():
     assert str(env.get("PYTHONUNBUFFERED")) == "1"
     assert env.get("ENVIRONMENT") == "development"
 
+    # Stripe: sin estas dos, settings.stripe_configured es False y billing.py
+    # corta con 503 antes de llegar a los mocks — 6 tests en rojo por entorno.
+    # Deben ser literales falsos: si alguien los cambia por ${{ secrets.* }},
+    # CI pasaría a poder tocar Stripe de verdad.
+    for key, prefix in (
+        ("STRIPE_SECRET_KEY", "sk_test_"),
+        ("STRIPE_WEBHOOK_SECRET", "whsec_"),
+    ):
+        value = env.get(key)
+        assert value is not None, f"Falta {key} en el env: del job test-backend"
+        value = str(value)
+        assert value.strip(), f"{key} está vacío: stripe_configured seguiría en False"
+        assert "${{" not in value, (
+            f"{key} referencia un secreto del repositorio ({value!r}). "
+            f"CI debe usar credenciales falsas en claro, nunca reales."
+        )
+        assert value.startswith(prefix), (
+            f"{key} debe ser una credencial de test con prefijo {prefix!r}, "
+            f"got: {value!r}"
+        )
+
 
 def test_ci_yml_has_frontend_job():
     """CI-002: test-frontend job exists with node 20 matrix."""

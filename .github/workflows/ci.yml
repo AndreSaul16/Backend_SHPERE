@@ -45,6 +45,17 @@ jobs:
       ENVIRONMENT: development
       OPENAI_API_KEY: sk-test-ci
       DEEPSEEK_API_KEY: sk-test-ci
+      # Credenciales de Stripe FALSAS y en claro, nunca ${{ secrets.* }}.
+      # Sin ellas settings.stripe_configured es False y billing.py corta con 503
+      # antes de que los mocks entren en juego. Ninguna llamada real sale a
+      # Stripe: construct_event está parcheado en los tests de webhook y la
+      # única llamada saliente (Subscription.retrieve) vive en la rama
+      # mode=="subscription", que ningún test construye.
+      STRIPE_SECRET_KEY: sk_test_ci
+      STRIPE_WEBHOOK_SECRET: whsec_ci
+      # Rama por defecto del repo, para que test_ci_infra valide la intención de
+      # los triggers sin codificar un nombre de rama.
+      SPHERE_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
