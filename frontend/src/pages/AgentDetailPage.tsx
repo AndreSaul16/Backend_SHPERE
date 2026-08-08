@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UnsavedGuardDialog } from "@/components/ui/UnsavedGuardDialog";
+import { BarraDeGuardado } from "@/components/ui/BarraDeGuardado";
+import { contarCambios } from "@/lib/cambiosSinGuardar";
 import { TextAreaField, TextField } from "@/components/ui/Field";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { reasonOf, toast } from "@/lib/toastBus";
@@ -115,6 +117,24 @@ export function AgentDetailPage() {
     );
 
     const isDirty = computeHash() !== originalHash;
+
+    /* 6.5 — cuántos campos, no si los hay. `originalHash` ya era la referencia
+       de «lo último que dijo el servidor»; contar contra ella no añade estado
+       nuevo, sólo deja de tirar información que ya teníamos. */
+    const cambiosPendientes = originalHash
+        ? contarCambios(JSON.parse(originalHash), JSON.parse(computeHash()))
+        : 0;
+
+    /** Volver a lo guardado. Reversible: basta con volver a editar. */
+    const descartarCambios = useCallback(() => {
+        if (!originalHash) return;
+        const o = JSON.parse(originalHash) as {
+            name: string; description: string; color: string;
+            systemPrompt: string; temperature: number; model: AllowedModel;
+        };
+        setName(o.name); setDescription(o.description); setColor(o.color);
+        setSystemPrompt(o.systemPrompt); setTemperature(o.temperature); setModel(o.model);
+    }, [originalHash]);
 
     // ── Fetch Agent ──────────────────────────────────────────────────────
     useEffect(() => {
@@ -654,6 +674,18 @@ export function AgentDetailPage() {
                             Eliminar Agente
                         </button>
                     </motion.section>
+                    {/* 6.5 · La barra adherida. El botón de guardar de la
+                        cabecera se queda —es donde la mano lo busca al llegar—
+                        pero este formulario mide dos pantallas y media: quien
+                        acaba de reescribir el prompt de sistema está al final,
+                        no arriba, y hasta hoy tenía que subir. */}
+                    <BarraDeGuardado
+                        cambios={cambiosPendientes}
+                        guardando={isSaving}
+                        onGuardar={() => { void handleSave(); }}
+                        onDescartar={descartarCambios}
+                        objeto={name || "este director"}
+                    />
                 </div>
             </div>
 

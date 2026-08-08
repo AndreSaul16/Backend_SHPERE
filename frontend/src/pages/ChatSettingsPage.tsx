@@ -12,6 +12,7 @@ import { notify, reasonOf } from "@/lib/toastBus";
 import { useBoardSettingsStore } from "@/store/useBoardSettingsStore";
 import { InlineError } from "@/components/ui/InlineError";
 import { UnsavedGuardDialog } from "@/components/ui/UnsavedGuardDialog";
+import { BarraDeGuardado } from "@/components/ui/BarraDeGuardado";
 
 
 export function ChatSettingsPage() {
@@ -95,6 +96,9 @@ export function ChatSettingsPage() {
     // donde está mirando quien acaba de pulsarlo. Un toast repetiría lo que ya
     // se lee ahí mismo.
     const toggleBoardMeeting = () => setBoardEnabled(!boardEnabled);
+
+    /* 6.5 — lo único que esta pantalla puede tener pendiente. */
+    const nombreSinGuardar = localName.trim() !== baseName.trim();
 
     const openMemberEdit = (member: typeof groupMembers[0]) => {
         const match = member.name.match(/^(.+?)\s*\(([A-Z]+)\)$/);
@@ -297,7 +301,7 @@ export function ChatSettingsPage() {
                 avatar, interruptor de debate) se guardan al instante y no
                 tienen nada pendiente que perder. */}
             <UnsavedGuardDialog
-                sucio={localName.trim() !== baseName.trim()}
+                sucio={nombreSinGuardar}
                 objeto={baseName || "esta junta"}
                 consecuencia="El nombre que acabas de escribir aún no se ha guardado."
             />
@@ -624,6 +628,22 @@ export function ChatSettingsPage() {
                             </p>
                         </section>
                     )}
+
+                    {/* 6.5 · La barra adherida. Aquí el recuento es como
+                        mucho 1: color, avatar e interruptor de debate se
+                        guardan al instante y no tienen nada pendiente. Lo
+                        único diferido es el nombre, que sale con un rebote de
+                        500 ms. Decir «1 cambio sin guardar» en vez de nada es
+                        justo lo que faltaba para que el usuario supiera que el
+                        botón de arriba todavía tiene trabajo. */}
+                    <BarraDeGuardado
+                        cambios={nombreSinGuardar ? 1 : 0}
+                        guardando={savingAll}
+                        onGuardar={() => { void handleSave(); }}
+                        onDescartar={() => setLocalName(baseName)}
+                        objeto={baseName || "esta junta"}
+                        data-testid="barra-de-guardado-chat"
+                    />
 
                     {/* Member Edit Modal — §9.4. Era un <div> sin role="dialog",
                         sin trampa de foco y sin Escape. */}

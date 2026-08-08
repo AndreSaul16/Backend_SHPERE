@@ -3,13 +3,15 @@
  * financial_preferences, ui_preferences.
  */
 import { cloneElement, useEffect, useState } from "react";
-import { Save, User, Briefcase, MessageSquare, Wallet, Palette } from "lucide-react";
+import { User, Briefcase, MessageSquare, Wallet, Palette } from "lucide-react";
 import { profileService, type UserProfile } from "@/services/api";
 import { Field as FormField } from "@/components/ui/Field";
 import { fieldControlClass } from "@/components/ui/fieldStyles";
 import { InlineError, type FalloDeSeccion } from "@/components/ui/InlineError";
 import { aplicarDensidad, leerDensidad, type Densidad } from "@/lib/densidad";
 import { UnsavedGuardDialog } from "@/components/ui/UnsavedGuardDialog";
+import { BarraDeGuardado } from "@/components/ui/BarraDeGuardado";
+import { contarCambios } from "@/lib/cambiosSinGuardar";
 
 export function ProfileSettings() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -93,6 +95,18 @@ export function ProfileSettings() {
     }
   };
 
+  /* 6.5 — cuántos campos difieren de lo último que dijo el servidor. Se
+     compara contra `guardado`, que es la misma referencia que ya usaba el
+     diálogo de salida de D63: una sola verdad para «qué está sin guardar». */
+  const cambiosPendientes =
+    guardado === "" || !profile ? 0 : contarCambios(JSON.parse(guardado), profile);
+
+  /** Volver a lo último guardado. Sin confirmación: es reversible guardando. */
+  const descartar = () => {
+    if (guardado === "") return;
+    setProfile(JSON.parse(guardado) as UserProfile);
+  };
+
   if (loading) return <p className="text-content-muted">Cargando perfil...</p>;
   if (error && !profile) return <InlineError {...error} />;
   if (!profile) return null;
@@ -100,7 +114,7 @@ export function ProfileSettings() {
   return (
     <div className="space-y-6">
       <UnsavedGuardDialog
-        sucio={guardado !== "" && JSON.stringify(profile) !== guardado}
+        sucio={cambiosPendientes > 0}
         objeto="tus ajustes de perfil"
       />
       <Section icon={<User className="h-5 w-5 text-electric-cyan" />} title="Identidad">
@@ -314,21 +328,19 @@ export function ProfileSettings() {
 
       {error && <InlineError {...error} />}
 
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={saving}
-          aria-busy={saving}
-          className="flex items-center gap-2 px-4 py-2 bg-electric-cyan/10 text-electric-cyan rounded-xl hover:bg-electric-cyan hover:text-midnight transition-all font-medium disabled:opacity-50"
-        >
-          <Save className="h-4 w-4" aria-hidden="true" />
-          {saving ? "Guardando..." : "Guardar cambios"}
-        </button>
-        {savedAt && !saving && (
-          <span className="text-xs text-success" aria-hidden="true">Guardado ✓</span>
-        )}
-      </div>
+      {/* 6.5 · La barra va adherida al canto inferior: este formulario tiene
+          cinco secciones y diecinueve controles, y el botón de guardar vivía al
+          final de todas ellas. Quien cambiaba la moneda base tenía que bajar
+          hasta el fondo, y si se le olvidaba, el diálogo de salida le decía
+          «hay cambios» sin decirle cuántos. */}
+      <BarraDeGuardado
+        cambios={cambiosPendientes}
+        guardando={saving}
+        onGuardar={() => { void handleSave(); }}
+        onDescartar={descartar}
+        guardadoEn={savedAt}
+        objeto="tu perfil"
+      />
 
       {/* §12.6: «el resultado de guardar» se anuncia. El check verde de al lado
           no dice nada a un lector de pantalla, y el error tampoco: era un <p>
