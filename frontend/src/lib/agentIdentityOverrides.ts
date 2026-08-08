@@ -23,6 +23,32 @@
  * visual por navegador, exactamente como el avatar de usuario
  * (`useUserAvatar`) y el repo de GitHub de `ActaActions`, que ya viven en
  * `localStorage`. Se borra al cambiar de cuenta desde `clearStores` (A6).
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * LIMITACIÓN DECLARADA (tarea 6.6 · D28) — re-verificada en la fase 6 contra
+ * `Backend_SHPERE/backend/app/presentation/api/v1/auth.py`. Sigue sin existir
+ * el endpoint. La edición **sobrevive a la recarga** (que es el criterio) pero
+ * **no viaja entre navegadores ni dispositivos**: quien renombre a su CTO en el
+ * portátil lo verá con el nombre de fábrica en el móvil.
+ *
+ * El endpoint que haría falta, si alguien lo implementa después:
+ *
+ *   PUT  /me/agent-identity/{agent_id}
+ *   body { "name": string | null, "hex_color": string | null }   // null = quitar
+ *   200  { "agent_id": string, "name": string | null, "hex_color": string | null }
+ *
+ *   GET  /me/agent-identity
+ *   200  [ { "agent_id": …, "name": …, "hex_color": … } ]
+ *
+ * `agent_id` es el id del cliente (`ceo`, `cto`, … de `MOCK_AGENTS`, o el
+ * `_id` de un agente propio), así que la colección puede ser la misma que la de
+ * `user_agent_overrides` con dos campos más — es literalmente el mismo
+ * documento por `(user_id, agent_role)`. Ampliar `AgentOverrideRequest` con
+ * `display_name` y `hex_color` y aceptar ambos en `upsert_agent_override`
+ * bastaría; no hace falta ruta nueva. Cuando exista, este módulo se convierte
+ * en la caché optimista de esa llamada y `withAgentIdentityOverrides` no
+ * cambia: sólo cambia de dónde sale `read()`.
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 import type { Agent } from '../types';
 

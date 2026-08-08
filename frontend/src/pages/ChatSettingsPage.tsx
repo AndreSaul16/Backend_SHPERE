@@ -670,6 +670,7 @@ export function ChatSettingsPage() {
                                 value={editName}
                                 onChange={(e) => setEditName(e.target.value)}
                                 placeholder="Ej: Hernesto"
+                                hint="Se guarda en este navegador: sobrevive a la recarga, pero no viaja a tus otros dispositivos."
                             />
 
                             <div className="space-y-1.5">
