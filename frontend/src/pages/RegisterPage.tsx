@@ -109,7 +109,7 @@ export function RegisterPage() {
     >
       {error && <AuthAlert>{error}</AuthAlert>}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
         <TextField
           label="Correo electrónico"
           id="register-email"
@@ -120,6 +120,7 @@ export function RegisterPage() {
           placeholder="tu@correo.com"
           required
           disabled={loading}
+          className="sm:space-y-2"
         />
         <PasswordField
           label="Contraseña"
@@ -134,6 +135,7 @@ export function RegisterPage() {
           required
           minLength={6}
           disabled={loading}
+          className="sm:space-y-2"
         />
         <PasswordField
           label="Confirmar contraseña"
@@ -147,12 +149,13 @@ export function RegisterPage() {
           required
           minLength={6}
           disabled={loading}
+          className="sm:space-y-2"
         />
 
         <Button
           type="submit"
           variant="primary"
-          className="w-full"
+          className="w-full sm:h-12"
           loading={loading}
           loadingLabel="Creando cuenta…"
         >

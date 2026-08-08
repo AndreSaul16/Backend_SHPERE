@@ -73,11 +73,13 @@ export function VerifyEmailPage() {
         <AuthShell title="Verifica tu correo" centered>
             <div className="text-center">
                 {/* §10: glifo de línea, no emoji; §2.3: el latón es el filete. */}
-                <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-sm border border-brass-600 bg-accent/12 text-accent">
-                    <MailCheck className="h-6 w-6" aria-hidden="true" />
+                <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-sm border border-brass-600 bg-accent/12 text-accent sm:mb-6 sm:h-14 sm:w-14">
+                    <MailCheck className="h-6 w-6 sm:h-7 sm:w-7" aria-hidden="true" />
                 </div>
 
-                <p className="mb-6 text-sm leading-relaxed text-content-muted">
+                {/* El correo del usuario puede ser larguísimo y no lleva espacios:
+                    a 320px desbordaba la tarjeta. `break-words` lo parte. */}
+                <p className="mb-6 text-sm leading-relaxed break-words text-content-muted sm:mb-8 sm:text-base">
                     Te hemos enviado un enlace de verificación a{" "}
                     <strong className="text-content-strong">{user?.email}</strong>. Ábrelo para
                     activar tu cuenta y recibir tus{" "}
@@ -87,35 +89,39 @@ export function VerifyEmailPage() {
                 {resent && <AuthNotice>Correo reenviado.</AuthNotice>}
                 {error && <AuthAlert>{error}</AuthAlert>}
 
-                <div className="space-y-3">
+                {/* A 390px las dos acciones van apiladas y a ancho completo; a
+                    partir de `sm` comparten fila, porque son alternativas del
+                    mismo momento («ya lo hice» / «mándamelo otra vez») y verlas
+                    juntas es lo que deja claro que son una elección. */}
+                <div className="space-y-3 sm:flex sm:gap-3 sm:space-y-0">
                     <Button
                         variant="primary"
-                        className="w-full"
+                        className="w-full sm:flex-1"
                         onClick={handleCheck}
                         loading={checking}
                         loadingLabel="Comprobando…"
                     >
                         <RefreshCw className="h-4 w-4" aria-hidden="true" />
-                        Ya he verificado mi correo
+                        Ya he verificado
                     </Button>
                     <Button
                         variant="secondary"
-                        className="w-full"
+                        className="w-full sm:flex-1"
                         onClick={handleResend}
                         disabled={cooldown > 0}
                     >
-                        {cooldown > 0 ? `Reenviar en ${cooldown} s` : "Reenviar correo de verificación"}
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full"
-                        onClick={() => { signOut(); navigate("/login", { replace: true }); }}
-                    >
-                        <LogOut className="h-4 w-4" aria-hidden="true" />
-                        Cerrar sesión
+                        {cooldown > 0 ? `Reenviar en ${cooldown} s` : "Reenviar correo"}
                     </Button>
                 </div>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="mt-3 w-full sm:mt-4"
+                    onClick={() => { signOut(); navigate("/login", { replace: true }); }}
+                >
+                    <LogOut className="h-4 w-4" aria-hidden="true" />
+                    Cerrar sesión
+                </Button>
             </div>
         </AuthShell>
     );

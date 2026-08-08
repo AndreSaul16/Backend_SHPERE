@@ -24,6 +24,15 @@
  *   macizo de la pantalla». Una placa de latón grande compitiendo con el botón
  *   rompe esa regla, así que el wordmark es tinta grabada con un filete de
  *   latón debajo.
+ *
+ * **6.1 · La expansión a escritorio (§4.3: 390px es el caso base).** Hasta la
+ * fase 6 las tres pantallas eran literalmente el mismo píxel a 390 y a 1280: una
+ * tarjeta de 448px flotando en un campo de paño vacío. La expansión no es
+ * «hacer la tarjeta más grande» —un formulario de dos campos con 900px de ancho
+ * es peor— sino repartir: a partir de `lg` el wordmark y la frase se van a una
+ * columna propia a la izquierda y la tarjeta se queda a su tamaño a la derecha,
+ * que es lo que el ancho sobrante pedía. Por debajo de `lg` la cabecera sigue
+ * encima y centrada, exactamente como estaba.
  */
 import type { ReactNode } from 'react';
 import { AlertCircle } from 'lucide-react';
@@ -43,24 +52,28 @@ export interface AuthShellProps {
 
 export function AuthShell({ tagline, title, children, footer, centered }: AuthShellProps) {
     return (
-        <div className="flex min-h-dvh flex-col justify-center px-4 py-10">
-            <div className="mx-auto w-full max-w-md">
-                <header className="mb-8 flex flex-col items-center text-center">
-                    <h1 className="text-3xl font-semibold uppercase tracking-[0.2em] text-content-strong">
+        <div className="flex min-h-dvh flex-col justify-center px-4 py-10 sm:px-6 sm:py-14 lg:px-10">
+            <div className="mx-auto flex w-full max-w-md flex-col gap-0 lg:max-w-4xl lg:flex-row lg:items-center lg:gap-16">
+                <header className="mb-8 flex flex-col items-center text-center sm:mb-10 lg:mb-0 lg:flex-1 lg:items-start lg:text-left">
+                    <h1 className="text-3xl font-semibold uppercase tracking-[0.2em] text-content-strong sm:text-4xl lg:text-5xl">
                         Sphere
                     </h1>
                     {/* El filete de latón: el único metal, y aquí es canto, no campo. */}
-                    <span aria-hidden="true" className="mt-3 block h-px w-10 bg-accent" />
-                    {tagline && <p className="mt-4 text-sm text-content-muted">{tagline}</p>}
+                    <span aria-hidden="true" className="mt-3 block h-px w-10 bg-accent sm:mt-4 sm:w-14 lg:w-20" />
+                    {tagline && (
+                        <p className="mt-4 text-sm text-content-muted sm:text-base lg:mt-6 lg:max-w-xs lg:text-lg">
+                            {tagline}
+                        </p>
+                    )}
                 </header>
 
                 <section
                     aria-labelledby="auth-title"
-                    className="rounded-md border border-stroke-edge bg-surface-2 p-5 shadow-e2 sm:p-6"
+                    className="rounded-md border border-stroke-edge bg-surface-2 p-5 shadow-e2 sm:p-6 md:p-8 lg:w-full lg:max-w-md lg:shrink-0"
                 >
                     <h2
                         id="auth-title"
-                        className={`mb-5 text-xl font-semibold text-content-strong ${centered ? 'text-center' : ''}`}
+                        className={`mb-5 text-xl font-semibold text-content-strong sm:mb-6 sm:text-2xl ${centered ? 'text-center' : ''}`}
                     >
                         {title}
                     </h2>
@@ -130,23 +143,26 @@ export function SocialButtons({
 }) {
     return (
         <>
-            <div className="my-6 flex items-center gap-3" aria-hidden="true">
+            <div className="my-6 flex items-center gap-3 sm:my-7" aria-hidden="true">
                 <span className="h-px flex-1 bg-stroke-hairline" />
                 <span className="text-micro uppercase text-content-muted">{separatorLabel}</span>
                 <span className="h-px flex-1 bg-stroke-hairline" />
             </div>
 
-            <div className="space-y-3">
+            {/* A 390px los tres van apilados y a ancho completo: el pulgar no
+                acierta tres dianas en una fila de 358px. A partir de `sm` caben
+                en una sola fila y ahorran 96px de alto de tarjeta. */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-2">
                 {PROVIDERS.map((provider) => (
                     <Button
                         key={provider}
                         variant="secondary"
-                        className="w-full"
+                        className="w-full min-w-0 sm:px-2"
                         disabled={disabled}
                         onClick={() => onSelect(provider)}
                     >
                         <SocialIcon provider={provider} />
-                        {SOCIAL_LABELS[provider]}
+                        <span className="truncate">{SOCIAL_LABELS[provider]}</span>
                     </Button>
                 ))}
             </div>

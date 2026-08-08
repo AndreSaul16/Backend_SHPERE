@@ -84,7 +84,7 @@ export function LoginPage() {
     >
       {error && <AuthAlert>{error}</AuthAlert>}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
         <TextField
           label="Correo electrónico"
           id="login-email"
@@ -95,6 +95,7 @@ export function LoginPage() {
           placeholder="tu@correo.com"
           required
           disabled={loading}
+          className="sm:space-y-2"
         />
         <PasswordField
           label="Contraseña"
@@ -106,12 +107,16 @@ export function LoginPage() {
           required
           minLength={6}
           disabled={loading}
+          className="sm:space-y-2"
         />
 
         {/* 5.14 · D26. El enlace vive PEGADO al campo de contraseña, que es
             donde se descubre el problema, y no en el pie: quien no recuerda la
-            clave no baja a leer el pie, vuelve a intentarlo. */}
-        <div className="flex justify-end">
+            clave no baja a leer el pie, vuelve a intentarlo.
+            6.1: a 320px «¿Has olvidado tu contraseña?» no cabe en una línea
+            junto al canto derecho sin quedar partido a media palabra, así que
+            hasta `sm` va a la izquierda y con su propio salto. */}
+        <div className="flex justify-start text-sm sm:justify-end">
           <Link to="/reset-password" className={buttonClass({ variant: "link" })}>
             ¿Has olvidado tu contraseña?
           </Link>
@@ -120,7 +125,7 @@ export function LoginPage() {
         <Button
           type="submit"
           variant="primary"
-          className="w-full"
+          className="w-full sm:h-12"
           loading={loading}
           loadingLabel="Entrando…"
         >
