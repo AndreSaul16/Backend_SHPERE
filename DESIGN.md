@@ -194,10 +194,12 @@ Nivel único por tema, en `L=0.72` (oscuro) y `L≈0.55` (claro), para que todos
 
 | Rol | Oscuro OKLCH | Hex | vs `baize-900` | Claro OKLCH | Hex | vs `paper-100` |
 |---|---|---|---|---|---|---|
-| `success` | `oklch(0.72 0.15 150)` | `#53BE70` | **7.76:1** AAA | `oklch(0.53 0.14 150)` | `#11813C` | **4.56:1** AA |
-| `warning` | `oklch(0.72 0.15 75)` | `#DA950B` | **7.17:1** AAA | `oklch(0.55 0.19 75)` | `#AF5800` | **4.57:1** AA |
-| `danger` | `oklch(0.72 0.16 25)` | `#F97770` | **6.84:1** AA | `oklch(0.565 0.19 25)` | `#CE3537` | **4.60:1** AA |
-| `info` | `oklch(0.72 0.13 232)` | `#37B2E8` | **7.52:1** AAA | `oklch(0.535 0.12 232)` | `#0078A6` | **4.55:1** AA |
+| `success` | `oklch(0.72 0.15 150)` | `#53BE70` | **7.76:1** AAA | `oklch(0.50 0.14 150)` | `#007834` | **5.16:1** AA |
+| `warning` | `oklch(0.72 0.15 75)` | `#DA950B` | **7.17:1** AAA | `oklch(0.52 0.19 75)` | `#A54F00` | **5.19:1** AA |
+| `danger` | `oklch(0.72 0.16 25)` | `#F97770` | **6.84:1** AA | `oklch(0.535 0.19 25)` | `#C3292E` | **5.25:1** AA |
+| `info` | `oklch(0.72 0.13 232)` | `#37B2E8` | **7.52:1** AAA | `oklch(0.505 0.12 232)` | `#006F9D` | **5.13:1** AA |
+
+> *(Rama clara recalibrada por la auditoría de la FASE 8, medido en DOM vivo: los valores originales — L 0.53-0.565, «≈4.55:1» — estaban calculados SÓLO contra `paper-100`, pero los semánticos viven también sobre `paper-200` (sidebar/cabeceras e1: el saldo de créditos medía 4.32:1) y sobre su propio tinte al 12% en los chips de §9.9 (el chip CONDICIONAL medía 4.11:1). La L baja un paso uniforme (−0.03) para que los cuatro midan ≥ 4.5:1 sobre `paper-100`, `paper-200` **y** su tinte de chip sobre `paper-50`, conservando el mismo peso óptico entre sí. La rama oscura no cambia.)*
 
 ### 2.8 Identidades de agente
 
@@ -1013,8 +1015,8 @@ Patrón *(actualizado por la auditoría v3 — B1)*: los valores crudos viven en
 
   --dissent:var(--oxblood-600); --dissent-strong:var(--oxblood-700);
   --certify:var(--aniline-600);
-  --success:oklch(0.53 0.14 150); --warning:oklch(0.55 0.19 75);
-  --danger:oklch(0.565 0.19 25);  --info:oklch(0.535 0.12 232);
+  --success:oklch(0.50 0.14 150); --warning:oklch(0.52 0.19 75);
+  --danger:oklch(0.535 0.19 25);  --info:oklch(0.505 0.12 232);
 
   --agent-ceo:oklch(0.565 0.19 300); --agent-cto:oklch(0.515 0.13 185);
   --agent-cfo:oklch(0.555 0.19 265); --agent-cmo:oklch(0.570 0.19 345);
@@ -1296,8 +1298,8 @@ Patrón *(actualizado por la auditoría v3 — B1)*: los valores crudos viven en
     --stroke-hairline: color-mix(in oklab, var(--graphite-900) 12%, transparent);
     --stroke-edge: color-mix(in oklab, var(--graphite-900) 16%, transparent);
     --stroke-control: color-mix(in oklab, var(--graphite-900) 50%, transparent);
-    --success: oklch(0.53 0.14 150); --warning: oklch(0.55 0.19 75);
-    --danger: oklch(0.565 0.19 25);  --info: oklch(0.535 0.12 232);
+    --success: oklch(0.50 0.14 150); --warning: oklch(0.52 0.19 75);
+    --danger: oklch(0.535 0.19 25);  --info: oklch(0.505 0.12 232);
 
     color: var(--content);
   }

@@ -162,8 +162,8 @@
 
   --dissent:var(--oxblood-600); --dissent-strong:var(--oxblood-700);
   --certify:var(--aniline-600);
-  --success:oklch(0.53 0.14 150); --warning:oklch(0.55 0.19 75);
-  --danger:oklch(0.565 0.19 25);  --info:oklch(0.535 0.12 232);
+  --success:oklch(0.50 0.14 150); --warning:oklch(0.52 0.19 75);
+  --danger:oklch(0.535 0.19 25);  --info:oklch(0.505 0.12 232);
 
   --agent-ceo:oklch(0.565 0.19 300); --agent-cto:oklch(0.515 0.13 185);
   --agent-cfo:oklch(0.555 0.19 265); --agent-cmo:oklch(0.570 0.19 345);
@@ -612,8 +612,8 @@
     --stroke-hairline: color-mix(in oklab, var(--graphite-900) 12%, transparent);
     --stroke-edge: color-mix(in oklab, var(--graphite-900) 16%, transparent);
     --stroke-control: color-mix(in oklab, var(--graphite-900) 50%, transparent);
-    --success: oklch(0.53 0.14 150); --warning: oklch(0.55 0.19 75);
-    --danger: oklch(0.565 0.19 25);  --info: oklch(0.535 0.12 232);
+    --success: oklch(0.50 0.14 150); --warning: oklch(0.52 0.19 75);
+    --danger: oklch(0.535 0.19 25);  --info: oklch(0.505 0.12 232);
 
     color: var(--content);
   }
