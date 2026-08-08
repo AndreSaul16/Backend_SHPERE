@@ -265,14 +265,18 @@ export function BoardTable({ board, agents, intervencionPorRol }: BoardTableProp
     const lamparaY = esSala ? (arco[indice]?.arriba ?? 0) - 24 : 0;
 
     return (
-        <section aria-label="La mesa de la junta" className="lg:flex lg:items-start lg:gap-4">
+        <section aria-label="La mesa de la junta" className="lg:flex lg:flex-wrap lg:items-start lg:gap-x-4">
             {/* 5.12 · Q13 — la pista de la mesa, la primera vez que hay mesa.
                 El orden de los asientos es la primera pregunta que se hace
                 cualquiera al ver la banda, y no se contestaba en ningún sitio. */}
+            {/* FASE 8 — era `lg:absolute lg:z-20` y en la Sala caía ENCIMA de
+                las placas: a 1280 y a 1440 tapaba CEO, CTO y CFO (57-84% de su
+                área, medido) y el click del primer uso se lo quedaba la nota.
+                Ahora ocupa su propia fila bajo la mesa. */}
             {pistaMesa.mostrar && (
                 <Pista
                     onDescartar={pistaMesa.descartar}
-                    className="mb-2 lg:absolute lg:z-20 lg:max-w-xs"
+                    className="mb-2 lg:order-last lg:mb-0 lg:mt-2 lg:basis-full"
                     testId="pista-mesa"
                 >
                     El CEO preside la mesa; a su lado se sientan los directores convocados
