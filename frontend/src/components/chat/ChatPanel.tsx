@@ -8,7 +8,6 @@ import { MessageBubble } from "./MessageBubble";
 import { BoardWarRoom } from "./BoardWarRoom";
 import { AgendaRail, type SegmentoDelDia } from "./AgendaRail";
 import { fasesDe } from "./agendaPhases";
-import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { cn } from "@/lib/utils";
 import { exportAsMarkdown, downloadAsFile } from "@/utils/exportChat";
 import { CreditsIndicator } from "@/components/CreditsIndicator";
@@ -665,9 +664,6 @@ export function ChatPanel() {
                                 Convoca una sesión y verás quién vota qué, y con cuánta confianza.
                             </p>
                         </div>
-
-                        {/* Onboarding first-run: checklist de 3 pasos */}
-                        <OnboardingChecklist onPrimaryAction={() => toggleAgentModal(true)} />
 
                         {/* §9.1: el primario es relleno macizo de latón con texto
                             `baize-950` (8.96:1). No lleva degradado ni sombra

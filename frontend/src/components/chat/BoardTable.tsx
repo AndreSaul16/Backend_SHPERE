@@ -8,6 +8,8 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { conMovimiento, CURVA, DURACION, SPRING_PLATE } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import { ConfidenceNeedle } from './ConfidenceNeedle';
+import { Pista } from '@/components/ui/Pista';
+import { useFirstTimeHint } from '@/hooks/useFirstTimeHint';
 import { VoteChip } from './VoteChip';
 
 /**
@@ -202,10 +204,20 @@ export function BoardTable({ board, agents, intervencionPorRol }: BoardTableProp
         return lista;
     }, [board.participants, board.devil]);
 
+    /* 5.12 · Q13 — las dos pistas de la mesa. Los hooks van antes del early
+       return de abajo: llamarlos condicionalmente rompería las reglas de
+       hooks, y el `activo` es justo lo que evita que se gasten cuando la cosa
+       que explican todavía no está en pantalla. */
     const hablando = roles.find((r) => board.statusByRole[r] === 'speaking') ?? null;
     const enFoco = (fijado && roles.includes(fijado) ? fijado : null) ?? hablando ?? roles[0] ?? null;
     const indice = Math.max(0, roles.indexOf(enFoco ?? ''));
     const arco = useMemo(() => rumbos(roles.length), [roles.length]);
+
+    const pistaMesa = useFirstTimeHint('mesa', roles.length > 0);
+    const pistaAguja = useFirstTimeHint(
+        'aguja',
+        enFoco !== null && typeof board.votes[enFoco]?.confidence === 'number',
+    );
 
     if (roles.length === 0 || enFoco === null) return null;
 
@@ -253,6 +265,19 @@ export function BoardTable({ board, agents, intervencionPorRol }: BoardTableProp
 
     return (
         <section aria-label="La mesa de la junta" className="lg:flex lg:items-start lg:gap-4">
+            {/* 5.12 · Q13 — la pista de la mesa, la primera vez que hay mesa.
+                El orden de los asientos es la primera pregunta que se hace
+                cualquiera al ver la banda, y no se contestaba en ningún sitio. */}
+            {pistaMesa.mostrar && (
+                <Pista
+                    onDescartar={pistaMesa.descartar}
+                    className="mb-2 lg:absolute lg:z-20 lg:max-w-xs"
+                    testId="pista-mesa"
+                >
+                    El CEO preside la mesa; a su lado se sientan los directores convocados
+                    para esta decisión. El punto de latón marca a quien tiene la palabra.
+                </Pista>
+            )}
             {/* ── El Palco: la banda con TODOS los asientos ──────────────── */}
             <div
                 className={cn(
@@ -355,6 +380,18 @@ export function BoardTable({ board, agents, intervencionPorRol }: BoardTableProp
                     <div className="mt-2">
                         <VoteChip decision={votoEnFoco.decision} confidence={votoEnFoco.confidence} />
                     </div>
+                )}
+
+                {/* 5.12 · Q13 — la pista de la aguja, la primera vez que hay un
+                    voto que mirar. Enseñar el umbral de 70 CUANDO la aguja se
+                    mueve es la única vez que el usuario tiene contexto para
+                    entenderlo; el checklist lo explicaba en abstracto en la
+                    pantalla de bienvenida, o sea nunca. */}
+                {pistaAguja.mostrar && (
+                    <Pista onDescartar={pistaAguja.descartar} className="mt-2" testId="pista-aguja">
+                        La aguja mide la confianza del voto. Pasado el 70 se tiñe de oxblood:
+                        una certeza alta, a favor o en contra, es lo que más pesa en el acta.
+                    </Pista>
                 )}
 
                 {intervencionPorRol?.[enFoco] && (

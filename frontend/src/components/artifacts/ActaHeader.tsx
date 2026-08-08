@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { useChatStore } from '@/store/useChatStore';
 import { ActaSeal } from './ActaSeal';
+import { Pista } from '@/components/ui/Pista';
+import { useFirstTimeHint } from '@/hooks/useFirstTimeHint';
 
 /**
  * La cabecera de la hoja del acta — DESIGN §5.3 y tarea 2.1: «fecha y
@@ -64,7 +66,19 @@ export function ActaHeader({ actaId, date }: ActaHeaderProps) {
     if (recuento.contra) partes.push(`${recuento.contra} en contra`);
     if (recuento.condicional) partes.push(`${recuento.condicional} condicional`);
 
+    // 5.12 · Q13 — la tercera pista: la primera vez que se cierra un acta. El
+    // sello es el momento en que el debate se convierte en constancia, y hasta
+    // ahora nadie decía que ese documento se puede sacar de la aplicación.
+    const pistaSello = useFirstTimeHint('sello', cerrada);
+
     return (
+        <>
+        {pistaSello.mostrar && (
+            <Pista onDescartar={pistaSello.descartar} className="mb-4" testId="pista-sello">
+                El acta está cerrada y sellada. Puedes presentarla a pantalla completa,
+                mandarla a Notion o abrir sus próximos pasos como issues.
+            </Pista>
+        )}
         <header className="mb-6 flex items-start justify-between gap-4 border-b border-stroke-hairline pb-4">
             <div className="min-w-0 space-y-1">
                 <p className="text-micro font-sans uppercase text-content-quiet">
@@ -90,5 +104,6 @@ export function ActaHeader({ actaId, date }: ActaHeaderProps) {
                 <ActaSeal sessionId={currentSessionId ?? actaId} date={date} className="-mt-1" />
             )}
         </header>
+        </>
     );
 }
