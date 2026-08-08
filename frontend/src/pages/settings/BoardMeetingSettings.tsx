@@ -61,7 +61,7 @@ export function BoardMeetingSettings() {
       <div className="flex items-start gap-3 p-4 rounded-md border border-stroke-edge bg-surface-2">
         <Users className="h-5 w-5 text-accent mt-0.5 flex-shrink-0" aria-hidden="true" />
         <div className="text-sm text-content-muted">
-          <p className="font-medium text-content-strong mb-1">Board Meeting Mode</p>
+          <p className="font-medium text-content-strong mb-1">Modo junta directiva</p>
           <p>
             Cuando está activado, los agentes discuten entre sí antes de responderte.
             El CEO abre la discusión, el CTO, CFO y CMO aportan sus perspectivas,
@@ -94,7 +94,7 @@ export function BoardMeetingSettings() {
       <div className="p-5 rounded-md bg-surface/30 border border-surface-highlight space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-semibold text-content-strong">Activar Board Meeting</h3>
+            <h3 className="font-semibold text-content-strong">Activar la junta directiva</h3>
             <p className="text-xs text-content-muted mt-1">
               Los agentes discutirán entre sí antes de darte una respuesta
             </p>

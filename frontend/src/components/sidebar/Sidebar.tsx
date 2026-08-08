@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, Plus, MoreVertical, Trash2, Share2, Settings, CreditCard, ShieldCheck } from "lucide-react";
+import { CreditCard, MessageSquare, MoreVertical, Plus, Search, Settings, Share2, ShieldCheck, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -234,7 +234,15 @@ export function Sidebar() {
         <div className="flex flex-col h-full bg-transparent">
             {/* Header / Search */}
             <div className="p-3 sm:p-4 border-b border-stroke-hairline sticky top-0 bg-surface-1 z-10">
-                <h2 className="text-lg sm:text-xl font-bold text-content-strong mb-3 sm:mb-4 tracking-tight">SPHERE</h2>
+                {/* D53 — la marca de §10 en su sitio: el anillo de sello con el
+                    arco de la mesa. Se pinta como recorte de `logo.svg` y no
+                    como imagen incrustada, para que tome el latón del tema: un
+                    SVG externo referenciado desde una imagen no hereda
+                    `currentColor` y la marca saldría negra sobre el paño. */}
+                <h2 className="mb-3 flex items-center gap-2 text-lg font-bold tracking-tight text-content-strong sm:mb-4 sm:text-xl">
+                    <span className="marca-sphere text-accent" aria-hidden="true" />
+                    SPHERE
+                </h2>
                 <div className="relative group">
                     <Search
                         className="absolute left-3 top-[1.15rem] h-4 w-4 text-content-muted group-focus-within:text-accent transition-colors"
@@ -302,7 +310,7 @@ export function Sidebar() {
                                                 const baseAgent = allAgents.find(a => a.id === session.base_agent_id);
                                                 const placa = baseAgent?.avatar
                                                     ? <span className="text-sm">{baseAgent.avatar}</span>
-                                                    : <span className="text-micro" role="img" aria-label="Conversación">💬</span>;
+                                                    : <MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />;
                                                 return (
                                                     <AvatarImage
                                                         src={session.visual_config?.avatar}

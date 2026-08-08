@@ -165,8 +165,8 @@ export function DataGrid({ artifact }: DataGridProps) {
 
             {/* Footer Summary */}
             <div className="px-6 py-3 bg-surface-1 border-t border-stroke-hairline">
-                <p className="text-micro text-content-muted font-mono uppercase">
-                    REC: {rows.length} · COLS: {headers.length} · SOURCE: SPHERE_ENGINE_V2
+                <p className="text-micro text-content-muted font-mono uppercase tnum">
+                    {rows.length === 1 ? '1 fila' : `${rows.length} filas`} · {headers.length === 1 ? '1 columna' : `${headers.length} columnas`}
                 </p>
             </div>
         </div>

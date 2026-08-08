@@ -31,7 +31,7 @@ export function createBoardStreamHandlers(ctx: StreamContext): BoardStreamCallba
             // Insertamos una nota de sistema JUSTO ANTES de la burbuja
             // activa (estilo "X entró al grupo" de WhatsApp).
             try {
-                const note = `🏛️ **Junta Directiva en sesión** — debatiendo entre ${data.agents.join(', ')}.`;
+                const note = `**Junta Directiva en sesión** — debatiendo entre ${data.agents.join(', ')}.`;
                 set((state) => {
                     const msgs = state.messagesBySession[sessionId] || [];
                     const idx = msgs.findIndex(m => m.id === burbujas.activaId);

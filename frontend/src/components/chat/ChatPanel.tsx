@@ -296,7 +296,7 @@ export function ChatPanel() {
     }, [messages, currentSession, agents]);
 
     const getAgentDisplayInfo = (agent: typeof activeAgent) => {
-        if (!agent) return { baseName: 'SPHERE Engine', role: 'CORE' };
+        if (!agent) return { baseName: 'SPHERE', role: 'Director' };
 
         // Overrides desde la sesión
         const overrideName = currentSession?.visual_config?.name;
@@ -310,6 +310,9 @@ export function ChatPanel() {
         if (match) {
             return { baseName: match[1].trim(), role: match[2] };
         }
+        // §11 — «SYSTEM» y «CORE» eran etiquetas de máquina en la cabecera
+        // de la pantalla principal. La junta no es un sistema: es una junta.
+        if (agent.role === 'system') return { baseName: agent.name, role: 'Junta' };
         return { baseName: agent.name, role: agent.role };
     };
 
@@ -491,7 +494,7 @@ export function ChatPanel() {
                             <p className="text-micro text-content-muted uppercase truncate">
                                 {isGroupChat
                                     ? `${groupMembers.length} Expertos Activos`
-                                    : "Canal Encriptado de Extremo a Extremo"}
+                                    : "Conversación privada"}
                             </p>
                         </div>
                     </div>
@@ -502,10 +505,10 @@ export function ChatPanel() {
                     <div className="hidden lg:flex mr-2">
                         <CreditsIndicator />
                     </div>
-                    <button onClick={() => setIsSearchOpen(v => !v)} className={cn("p-2 rounded-sm hover:bg-stroke-hairline transition-all active-scale", isSearchOpen ? "text-accent" : "text-content-muted hover:text-content-strong")} title="Buscar">
+                    <button onClick={() => setIsSearchOpen(v => !v)} className={cn("p-2 rounded-sm hover:bg-stroke-hairline transition-all active-scale", isSearchOpen ? "text-accent" : "text-content-muted hover:text-content-strong")} title="Buscar en la conversación">
                         <Search className="h-4 w-4" />
                     </button>
-                    <button onClick={() => setShowPinnedOnly(v => !v)} className={cn("p-2 rounded-sm hover:bg-stroke-hairline transition-all active-scale", showPinnedOnly ? "text-warning" : "text-content-muted hover:text-content-strong")} title="Solo pinneados">
+                    <button onClick={() => setShowPinnedOnly(v => !v)} className={cn("p-2 rounded-sm hover:bg-stroke-hairline transition-all active-scale", showPinnedOnly ? "text-warning" : "text-content-muted hover:text-content-strong")} title="Sólo los anclados">
                         <Pin className="h-4 w-4" />
                     </button>
                     <button onClick={handleExport} className="p-2 rounded-sm hover:bg-stroke-hairline transition-all text-content-muted hover:text-content-strong active-scale" title="Exportar">

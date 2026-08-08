@@ -53,7 +53,7 @@ export const MOCK_AGENTS: Agent[] = [
         id: 'group-chat',
         name: 'Junta Directiva',
         role: 'system',
-        avatar: '🏛️',
+        avatar: 'J',   // §10: inicial en la placa, nunca emoji
         description: 'Orquestación completa - El Router decide quién responde.',
         color: 'text-content-muted',
         hexColor: AGENT_HEX.group, // latón: la junta es la sala, no un color más
@@ -113,7 +113,7 @@ export const BOARD_DEVIL_AGENT: Agent = {
     id: 'devil-1',
     name: 'Némesis (Abogado del Diablo)',
     role: 'DEVIL',
-    avatar: '⚔️',
+    avatar: 'N',   // Némesis. §10: inicial en la placa, nunca emoji
     description: 'Estresa la decisión: busca el fallo que el consenso ignora.',
     color: 'text-agent-devil',
     hexColor: AGENT_HEX.DEVIL,

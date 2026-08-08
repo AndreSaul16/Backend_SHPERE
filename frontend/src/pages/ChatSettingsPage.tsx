@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { ArrowLeft, Save, Camera, Zap, Pencil, Users, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Camera, Zap, Palette, Pencil, Users, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { AGENT_HEX, useChatStore, getGroupMembers } from "@/store/useChatStore";
@@ -468,8 +468,8 @@ export function ChatSettingsPage() {
                                             onChange={(e) => handleColorChange(e.target.value)}
                                             className="absolute inset-[10%] w-[80%] h-[80%] opacity-0 cursor-pointer z-10"
                                         />
-                                        <div className="text-[32px] pointer-events-none z-0" style={{ color: activeAgent.hexColor }}>
-                                            🎨
+                                        <div className="pointer-events-none z-0" style={{ color: activeAgent.hexColor }}>
+                                            <Palette className="h-8 w-8" aria-hidden="true" />
                                         </div>
                                     </div>
                                     <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-midnight border border-surface-highlight rounded-xl shadow-2xl pointer-events-none flex items-center gap-2 min-w-[100px] justify-center">
@@ -497,7 +497,7 @@ export function ChatSettingsPage() {
                         <section className="p-6 sm:p-8 rounded-md bg-surface-2 border border-stroke-edge space-y-4">
                             <div className="flex items-center gap-2">
                                 <Users className="h-4 w-4 text-accent" aria-hidden="true" />
-                                <h2 className="text-content-muted text-xs sm:text-sm uppercase tracking-widest font-mono">Board Meeting</h2>
+                                <h2 className="text-content-muted text-xs sm:text-sm uppercase tracking-widest font-mono">Junta directiva</h2>
                             </div>
                             <div className="flex items-center justify-between">
                                 <div>
@@ -558,7 +558,7 @@ export function ChatSettingsPage() {
                     {isGroupChat && (
                         <section className="p-6 sm:p-8 rounded-md bg-surface-2 border border-stroke-edge space-y-4 sm:space-y-6">
                             <div className="flex items-center gap-2">
-                                <span className="text-lg">👥</span>
+                                <Users className="h-4 w-4 text-content-muted" aria-hidden="true" />
                                 <h2 className="text-content-muted text-xs sm:text-sm uppercase tracking-widest font-mono">Miembros del Grupo</h2>
                             </div>
 

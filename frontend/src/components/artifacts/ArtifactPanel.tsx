@@ -70,17 +70,22 @@ export function ArtifactPanel() {
         <div className="flex flex-col h-full bg-transparent overflow-hidden">
             {/* Header */}
             <div className="h-16 px-6 border-b border-stroke-hairline flex items-center justify-between bg-surface-1">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-luxury-purple/10 rounded-lg">
-                        <FileCode className="h-5 w-5 text-luxury-purple" />
+                {/* D54/D55 · §11 — «ARTIFACT WORKSPACE · 6 OBJETOS DETECTADOS»
+                    era inglés y jerga de sonda espacial sobre la pantalla donde
+                    vive el entregable del producto. El acta y sus anexos no son
+                    objetos detectados: son lo que la junta ha dejado por
+                    escrito. Y el latón sustituye al morado heredado (§2.3). */}
+                <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-2 bg-accent/12 rounded-sm border border-brass-600">
+                        <FileCode className="h-5 w-5 text-accent" aria-hidden="true" />
                     </div>
-                    <div>
-                        <h3 className="text-sm font-bold text-content-strong uppercase tracking-widest">
-                            Artifact Workspace
+                    <div className="min-w-0">
+                        <h3 className="text-sm font-semibold text-content-strong truncate">
+                            Documentos de la junta
                         </h3>
                         {artifacts.length > 0 && (
-                            <p className="text-micro text-content-muted font-mono mt-0.5">
-                                {artifacts.length} OBJETOS DETECTADOS
+                            <p className="text-micro text-content-muted font-mono mt-0.5 tnum uppercase">
+                                {artifacts.length === 1 ? '1 documento' : `${artifacts.length} documentos`}
                             </p>
                         )}
                     </div>
@@ -191,23 +196,24 @@ export function ArtifactPanel() {
                                 </div>
                             </motion.div>
                         ) : artifacts.length === 0 ? (
+                            /* §9.14: glifo de línea, sin bucle ni resplandor —
+                               «un vacío que parpadea pide perdón», y el
+                               `blur-3xl` morado era además una capa compuesta
+                               permanente por un estado en el que no pasa nada. */
                             <div className="flex-1 flex flex-col items-center justify-center gap-6 p-8 text-center h-full">
-                                <div className="relative">
-                                    <div className="absolute inset-0 bg-luxury-purple/20 blur-3xl rounded-full" />
-                                    <div className="relative h-24 w-24 rounded-md bg-stroke-highlight border border-stroke-edge flex items-center justify-center shadow-2xl">
-                                        <GitBranch className="h-10 w-10 text-content-muted animate-pulse" aria-hidden="true" />
-                                    </div>
+                                <div className="flex h-14 w-14 items-center justify-center rounded-sm border border-brass-600 bg-accent/12 text-accent">
+                                    <GitBranch className="h-7 w-7" aria-hidden="true" />
                                 </div>
                                 <div className="space-y-2 max-w-xs">
-                                    <h4 className="text-content-strong font-bold text-lg">Área de Visualización</h4>
+                                    <h4 className="text-content-strong font-semibold text-lg tracking-tight">Aún no hay documentos</h4>
                                     <p className="text-content-muted text-sm leading-relaxed">
-                                        Los objetos de código, diagramas y tablas generados por SPHERE aparecerán aquí para su inspección.
+                                        El acta, el código y los diagramas que redacte la junta se abrirán aquí.
                                     </p>
                                 </div>
                             </div>
                         ) : (
                             <div className="flex-1 flex items-center justify-center text-content-muted text-sm font-mono h-full">
-                                SELECCIONA UN OBJETO PARA INSPECCIONAR
+                                Elige un documento arriba para leerlo
                             </div>
                         )}
                     </AnimatePresence>

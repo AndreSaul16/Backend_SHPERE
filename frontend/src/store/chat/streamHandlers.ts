@@ -141,7 +141,7 @@ export function createStreamHandlers(ctx: StreamContext): StreamCallbacks {
                             // ninguna: informaba y dejaba al usuario parado.
                             ? {
                                 ...msg,
-                                content: msg.content + '\n\n⚠️ *La respuesta se cortó aquí.*',
+                                content: msg.content + '\n\n*La respuesta se cortó aquí.*',
                                 interrupted: true,
                             }
                             : msg

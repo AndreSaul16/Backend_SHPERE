@@ -486,7 +486,7 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                     {isPinned && (
                         <div className="flex items-center gap-1 mt-1">
                             <Pin className="h-3 w-3 text-warning" />
-                            <span className="text-micro text-warning/70 uppercase">Pinned</span>
+                            <span className="text-micro text-warning/70 uppercase">Anclado</span>
                         </div>
                     )}
 

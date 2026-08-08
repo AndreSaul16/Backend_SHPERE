@@ -20,8 +20,8 @@ describe('ArtifactPanel - Comportamiento de UI', () => {
 
     it('debe mostrar el estado vacío cuando no hay artefactos', () => {
         render(<ArtifactPanel />);
-        expect(screen.getByText(/Área de Visualización/i)).toBeDefined();
-        expect(screen.getByText(/aparecerán aquí para su inspección/i)).toBeDefined();
+        expect(screen.getByText(/Aún no hay documentos/i)).toBeDefined();
+        expect(screen.getByText(/se abrirán aquí/i)).toBeDefined();
     });
 
     it('debe listar los artefactos y permitir seleccionar uno', () => {
@@ -50,6 +50,6 @@ describe('ArtifactPanel - Comportamiento de UI', () => {
         });
 
         render(<ArtifactPanel />);
-        expect(screen.getByText(/SELECCIONA UN OBJETO PARA INSPECCIONAR/i)).toBeDefined();
+        expect(screen.getByText(/Elige un documento arriba para leerlo/i)).toBeDefined();
     });
 });

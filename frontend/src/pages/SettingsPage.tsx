@@ -28,7 +28,7 @@ interface TabDef {
 const TABS: TabDef[] = [
   { id: "profile", label: "Perfil", icon: <User className="h-4 w-4" />, render: () => <ProfileSettings /> },
   { id: "integrations", label: "Conexiones", icon: <Link2 className="h-4 w-4" />, render: () => <ConnectionsSettings /> },
-  { id: "board-meeting", label: "Board Meeting", icon: <MessageSquare className="h-4 w-4" />, render: () => <BoardMeetingSettings /> },
+  { id: "board-meeting", label: "Junta directiva", icon: <MessageSquare className="h-4 w-4" />, render: () => <BoardMeetingSettings /> },
   { id: "agent-overrides", label: "Agentes", icon: <Bot className="h-4 w-4" />, render: () => <AgentOverridesSettings /> },
   { id: "contacts", label: "Contactos", icon: <UsersIcon className="h-4 w-4" />, render: () => <ContactsSettings /> },
 ];

@@ -192,6 +192,6 @@ describe('DataGrid — celdas vacías y troceo (D35)', () => {
 
         // Con el bug las columnas seguían siendo 3 pero las celdas no cuadraban
         // con ellas; el recuento de filas se mantiene y sirve de guardia.
-        expect(screen.getByText(/REC: 2 · COLS: 3/)).toBeDefined();
+        expect(screen.getByText(/2 filas · 3 columnas/)).toBeDefined();
     });
 });

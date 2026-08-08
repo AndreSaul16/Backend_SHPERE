@@ -119,12 +119,12 @@ export function CodeBlock({ artifact }: CodeBlockProps) {
 
             {/* Status Bar */}
             <div className="px-6 py-2 border-t border-stroke-hairline bg-surface-1 flex justify-between items-center">
-                <p className="text-micro text-content-muted font-mono">
-                    SIZE: {(artifact.content.length / 1024).toFixed(1)} KB · LINES: {artifact.content.split('\n').length}
+                <p className="text-micro text-content-muted font-mono tnum">
+                    {(artifact.content.length / 1024).toFixed(1)} KB · {artifact.content.split('\n').length} líneas
                 </p>
                 <div className="flex items-center gap-2">
                     <div className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
-                    <span className="text-micro text-content-muted font-mono uppercase">Read Only Mode</span>
+                    <span className="text-micro text-content-muted font-mono uppercase">Sólo lectura</span>
                 </div>
             </div>
         </div>

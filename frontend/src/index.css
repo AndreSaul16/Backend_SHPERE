@@ -595,6 +595,20 @@
     color: var(--content);
   }
 
+  /* D53 · §10 — la marca: anillo de sello con el arco de la mesa dentro.
+     El dibujo vive en `public/logo.svg` (el mismo que el favicon) y aquí se usa
+     como recorte, para que el color lo ponga el token y no el fichero: un SVG
+     externo dentro de un `<img>` no hereda el color de su sitio de uso. */
+  .marca-sphere{
+    display: inline-block;
+    inline-size: 1.5rem; block-size: 1.5rem;
+    background-color: currentColor;
+    mask-image: url("/logo.svg");
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-position: center;
+  }
+
   /* ── §8.1 La Mesa / el Palco ──────────────────────────────────────────── */
 
   /* La lámpara de la mesa: UNA capa, un gradiente radial estático de un solo

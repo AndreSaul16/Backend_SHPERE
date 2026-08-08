@@ -115,7 +115,7 @@ export function MermaidDiagram({ artifact }: MermaidDiagramProps) {
             {/* Footer */}
             <div className="px-6 py-3 bg-surface-1 border-t border-stroke-hairline">
                 <p className="text-micro text-content-muted font-sans uppercase">
-                    Diagrama Mermaid · vectorial
+                    Diagrama vectorial · se descarga como SVG
                 </p>
             </div>
         </div>
