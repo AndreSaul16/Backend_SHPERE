@@ -7,6 +7,7 @@ import { Copy, Check, RefreshCw, Pin, ThumbsUp, ThumbsDown, Trash2, Brain, Chevr
 import { cn } from "@/lib/utils";
 import type { Message, Agent } from "@/types";
 import { ArtifactCard } from './ArtifactCard';
+import { VersionesDelTurno } from './VersionesDelTurno';
 import { ToolExecutionCard } from './ToolExecutionCard';
 import { AGENT_HEX, useChatStore } from '@/store/useChatStore';
 import { useUserAvatar } from '@/hooks/useUserAvatar';
@@ -436,6 +437,16 @@ function MessageBubbleInterno({ message, agent, agentColor, sessionAvatar, isTyp
                             />
                         )}
                     </div>
+
+                    {/* 5.11 · Q12 — las versiones de un turno regenerado. Sólo
+                        cuando las hay: una barra «v1 / v2» en cada burbuja
+                        sería ruido en el 99% de los turnos. */}
+                    {!isUser && message.versionesPrevias?.length ? (
+                        <VersionesDelTurno
+                            versiones={message.versionesPrevias}
+                            actual={message.content}
+                        />
+                    ) : null}
 
                     {/* Pin indicator */}
                     {isPinned && (

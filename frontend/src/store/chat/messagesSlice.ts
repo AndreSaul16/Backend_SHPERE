@@ -61,10 +61,28 @@ export const createMessagesSlice = (set: ChatSet, get: ChatGet): MessagesSlice =
         // Regeneración: eliminar desde el mensaje clickeado para adelante,
         // SIN crear nuevo mensaje de usuario. El backend recibe el historial
         // truncado y continúa naturalmente desde donde quedó.
+        /**
+         * Q12 (5.11) — lo que se regenera NO se tira.
+         *
+         * `regenerateFromId` trunca el hilo desde esa burbuja, así que hasta
+         * ahora la respuesta anterior desaparecía sin dejar rastro: quien había
+         * gastado créditos en dos versiones se quedaba con una y sin forma de
+         * comparar. Se guarda su contenido —y las versiones que ella misma ya
+         * arrastraba— para colgárselo a la burbuja nueva.
+         *
+         * Un turno vacío no cuenta como versión: regenerar un turno que se
+         * cortó antes de escribir nada no tiene «v1» que ofrecer.
+         */
+        let versionesHeredadas: string[] = [];
+
         if (regenerateFromId) {
             set((state) => {
                 const msgs = [...(state.messagesBySession[sessionId!] || [])];
                 const fromIdx = msgs.findIndex(m => m.id === regenerateFromId);
+                const anterior = fromIdx >= 0 ? msgs[fromIdx] : undefined;
+                if (anterior?.content?.trim()) {
+                    versionesHeredadas = [...(anterior.versionesPrevias ?? []), anterior.content];
+                }
                 // Si no se encuentra, no tocar nada (no debería pasar)
                 const truncated = fromIdx >= 0 ? msgs.slice(0, fromIdx) : msgs;
                 return {
@@ -118,6 +136,8 @@ export const createMessagesSlice = (set: ChatSet, get: ChatGet): MessagesSlice =
                 content: '',
                 timestamp: new Date(),
                 agentId: isGroup ? 'ceo-1' : (selectedAgentId || undefined),
+                // Q12: la versión anterior viaja con la nueva burbuja.
+                ...(versionesHeredadas.length ? { versionesPrevias: versionesHeredadas } : {}),
             };
 
             set((state) => ({

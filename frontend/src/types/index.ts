@@ -73,6 +73,18 @@ export interface Message {
      * lo que queda es el texto del aviso dentro del propio contenido.
      */
     interrupted?: boolean;
+    /**
+     * Versiones anteriores de ESTE turno, en orden (v1 primero) — Q12 (5.11).
+     *
+     * «Regenerar» truncaba el hilo desde la burbuja y la respuesta anterior
+     * desaparecía: si habías gastado créditos en dos versiones, la primera se
+     * perdía en silencio. Ahora viaja aquí y la burbuja ofrece «v1 / v2».
+     *
+     * No se persiste en el backend: el historial guarda el hilo final, así que
+     * al recargar queda la versión buena y el conmutador desaparece. Es la
+     * decisión honesta hasta que el servidor tenga dónde guardarlas.
+     */
+    versionesPrevias?: string[];
 }
 
 export interface ChatSession {
