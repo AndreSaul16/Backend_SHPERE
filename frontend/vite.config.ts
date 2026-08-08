@@ -3,24 +3,17 @@ import react from '@vitejs/plugin-react'
 
 import path from "path"
 
-// Build-time metadata for deploy status page.
-// Injected as global constants available at runtime.
-const GIT_COMMIT_SHA = process.env.GIT_COMMIT_SHA
-    || process.env.RAILWAY_GIT_COMMIT_SHA
-    || 'unknown';
-const BUILD_TIMESTAMP = new Date().toISOString();
-const VERSION = '1.0.0';
-const RAILWAY_SERVICE_NAME = process.env.RAILWAY_SERVICE_NAME || 'Frontend_SPHERE';
+// D42 — aquí vivían cuatro `define` de metadatos de build
+// (`__GIT_COMMIT_SHA__`, `__BUILD_TIMESTAMP__`, `__VERSION__`,
+// `__RAILWAY_SERVICE_NAME__`) y sus cuatro `declare const` en `vite-env.d.ts`.
+// Los consumía la StatusPage, que se revirtió: `grep` sobre `src` da CERO usos.
+// `__BUILD_TIMESTAMP__` además cambiaba en cada arranque del servidor de
+// desarrollo, así que era una constante inyectada que invalidaba caché sin que
+// nadie la leyera. Config zombi: se borra.
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  define: {
-    '__GIT_COMMIT_SHA__': JSON.stringify(GIT_COMMIT_SHA),
-    '__BUILD_TIMESTAMP__': JSON.stringify(BUILD_TIMESTAMP),
-    '__VERSION__': JSON.stringify(VERSION),
-    '__RAILWAY_SERVICE_NAME__': JSON.stringify(RAILWAY_SERVICE_NAME),
-  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
