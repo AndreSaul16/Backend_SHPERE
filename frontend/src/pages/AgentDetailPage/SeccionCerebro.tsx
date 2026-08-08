@@ -10,6 +10,7 @@ import { motion } from 'framer-motion';
 import { Brain, Cpu, Thermometer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TextAreaField } from '@/components/ui/Field';
+import { panelClass } from '@/components/ui/cardStyles';
 import { MODELOS } from '@/lib/modelos';
 import type { BorradorDeAgente } from './tipos';
 
@@ -27,7 +28,7 @@ export const SeccionCerebro = memo(function SeccionCerebro({ borrador, cambiar }
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="p-6 sm:p-8 rounded-md bg-surface-2 border border-stroke-edge space-y-6"
+            className={panelClass({ className: 'space-y-6' })}
         >
             <div className="flex items-center gap-2">
                 <Brain className="h-4 w-4 text-accent" />

@@ -9,6 +9,7 @@ import { Palette, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AGENT_HEX } from '@/store/useChatStore';
 import { TextAreaField, TextField } from '@/components/ui/Field';
+import { panelClass } from '@/components/ui/cardStyles';
 import type { BorradorDeAgente } from './tipos';
 
 interface Props {
@@ -29,7 +30,7 @@ export const SeccionIdentidad = memo(function SeccionIdentidad({ borrador, cambi
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05 }}
-            className="p-6 sm:p-8 rounded-md bg-surface-2 border border-stroke-edge space-y-6"
+            className={panelClass({ className: 'space-y-6' })}
         >
             <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-luxury-purple" />

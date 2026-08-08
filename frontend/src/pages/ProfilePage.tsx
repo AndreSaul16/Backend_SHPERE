@@ -9,6 +9,7 @@ import { profileService } from "@/services/api";
 import { useAuth } from "@/contexts/auth";
 import { TextField } from "@/components/ui/Field";
 import { AvatarImage } from "@/components/ui/AvatarImage";
+import { panelClass } from "@/components/ui/cardStyles";
 import { UnsavedGuardDialog } from "@/components/ui/UnsavedGuardDialog";
 
 export function ProfilePage() {
@@ -143,7 +144,7 @@ export function ProfilePage() {
                 <div className="max-w-3xl mx-auto space-y-6 sm:space-y-8">
 
                     {/* Hero Profile Section */}
-                    <section className="flex flex-col items-center gap-4 sm:gap-6 p-4 sm:p-6 md:p-8 rounded-md bg-surface-2 border border-stroke-edge relative overflow-hidden text-center">
+                    <section className={panelClass({ className: 'flex flex-col items-center gap-4 sm:gap-6 relative overflow-hidden text-center' })}>
                         {/* Avatar with Upload */}
                         <div className="relative group">
                             <input

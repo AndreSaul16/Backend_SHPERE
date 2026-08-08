@@ -17,6 +17,7 @@ import { KnowledgeBasePanel } from '@/components/agents/KnowledgeBasePanel';
 import { InlineError } from '@/components/ui/InlineError';
 import { buttonClass } from '@/components/ui/buttonStyles';
 import { EsqueletoDeFormulario } from '@/components/ui/Esqueleto';
+import { panelClass } from '@/components/ui/cardStyles';
 import { useAgentDetail } from './useAgentDetail';
 import { SeccionIdentidad } from './SeccionIdentidad';
 import { SeccionCerebro } from './SeccionCerebro';
@@ -146,7 +147,7 @@ export function AgentDetailPage() {
                         initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.15 }}
-                        className="rounded-md bg-surface-2 border border-stroke-edge overflow-hidden"
+                        className={panelClass({ padding: 'none', className: 'overflow-hidden' })}
                     >
                         <div className="flex items-center gap-2 px-6 sm:px-8 pt-6 sm:pt-8 pb-2">
                             <BookOpen className="h-4 w-4 text-luxury-purple" />

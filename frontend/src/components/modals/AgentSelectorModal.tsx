@@ -45,6 +45,7 @@ import { reasonOf, toast } from '@/lib/toastBus';
 import { useBoardSettingsStore } from '@/store/useBoardSettingsStore';
 import { EstadoVacio } from '@/components/ui/EstadoVacio';
 import { SearchX } from 'lucide-react';
+import { panelClass } from '@/components/ui/cardStyles';
 
 const getRoleIcon = (role: Role) => {
     switch (role) {
@@ -190,7 +191,7 @@ export function AgentSelectorModal() {
                                                 type="button"
                                                 whileTap={{ scale: 0.985 }}
                                                 onClick={() => handleSelectAgent(groupChat.id)}
-                                                className="w-full flex items-center gap-4 p-5 rounded-md bg-surface-2 border border-stroke-edge hover:border-brass-600 transition-colors text-left relative overflow-hidden group"
+                                                className={panelClass({ padding: 'compact', interactive: true, className: 'w-full flex items-center gap-4 relative overflow-hidden group' })}
                                             >
                                                 <div className="h-14 w-14 rounded-sm bg-brass-600/20 border border-brass-400/40 flex items-center justify-center">
                                                     {/* D53 · §10: el mismo glifo con el que la
@@ -237,7 +238,7 @@ export function AgentSelectorModal() {
                                                         whileTap={{ scale: 0.985 }}
                                                         key={agent.id}
                                                         onClick={() => handleSelectAgent(agent.id)}
-                                                        className="flex items-center gap-4 p-5 rounded-md bg-surface-2 border border-stroke-edge hover:border-brass-600 transition-colors text-left relative overflow-hidden group"
+                                                        className={panelClass({ padding: 'compact', interactive: true, className: 'flex items-center gap-4 relative overflow-hidden group' })}
                                                     >
                                                         <div className={cn(
                                                             "h-14 w-14 rounded-sm flex items-center justify-center border border-stroke-edge bg-surface-3",
@@ -259,7 +260,7 @@ export function AgentSelectorModal() {
                                                     <button
                                                         type="button"
                                                         onClick={() => handleSelectAgent(agent.id)}
-                                                        className="w-full flex items-center gap-4 p-5 pe-14 rounded-md bg-surface-2 border border-stroke-edge hover:border-brass-600 transition-colors text-left"
+                                                        className={panelClass({ padding: 'compact', interactive: true, className: 'w-full flex items-center gap-4 pe-14' })}
                                                     >
                                                         <div className="h-14 w-14 rounded-sm bg-surface-3 border border-stroke-edge flex items-center justify-center font-bold text-accent">
                                                             {agent.avatar}

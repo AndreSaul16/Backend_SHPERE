@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { AGENT_HEX, getGroupMembers, useAgentes, useChatStore } from "@/store/useChatStore";
 import { cn } from "@/lib/utils";
+import { panelClass } from "@/components/ui/cardStyles";
 import type { VisualConfig } from "@/types";
 import { TextField } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
@@ -335,7 +336,7 @@ export function ChatSettingsPage() {
                 <div className="max-w-xl mx-auto space-y-6 sm:space-y-8">
 
                     {/* Agent Avatar & Identity Section */}
-                    <section className="flex flex-col items-center gap-4 sm:gap-6 p-6 sm:p-8 rounded-md bg-surface-2 border border-stroke-edge text-center">
+                    <section className={panelClass({ className: 'flex flex-col items-center gap-4 sm:gap-6 text-center' })}>
                         <h2 className="text-content-muted text-xs sm:text-sm uppercase tracking-widest font-mono">
                             {isGroupChat ? 'Identidad del Grupo' : 'Identidad del Agente'}
                         </h2>
@@ -414,7 +415,7 @@ export function ChatSettingsPage() {
                     </section>
 
                     {/* Color Settings Section */}
-                    <section className="p-6 sm:p-8 rounded-md bg-surface-2 border border-stroke-edge space-y-4 sm:space-y-6">
+                    <section className={panelClass({ className: 'space-y-4 sm:space-y-6' })}>
                         <div className="flex items-center gap-2">
                             <Zap className="h-4 w-4 text-electric-cyan" />
                             <h2 className="text-content-muted text-xs sm:text-sm uppercase tracking-widest font-mono">
@@ -513,7 +514,7 @@ export function ChatSettingsPage() {
 
                     {/* Board Meeting Toggle - Only for Group Chats */}
                     {isGroupChat && (
-                        <section className="p-6 sm:p-8 rounded-md bg-surface-2 border border-stroke-edge space-y-4">
+                        <section className={panelClass({ className: 'space-y-4' })}>
                             <div className="flex items-center gap-2">
                                 <Users className="h-4 w-4 text-accent" aria-hidden="true" />
                                 <h2 className="text-content-muted text-xs sm:text-sm uppercase tracking-widest font-mono">Junta directiva</h2>
@@ -575,7 +576,7 @@ export function ChatSettingsPage() {
 
                     {/* Group Members Section - Only for Group Chats */}
                     {isGroupChat && (
-                        <section className="p-6 sm:p-8 rounded-md bg-surface-2 border border-stroke-edge space-y-4 sm:space-y-6">
+                        <section className={panelClass({ className: 'space-y-4 sm:space-y-6' })}>
                             <div className="flex items-center gap-2">
                                 <Users className="h-4 w-4 text-content-muted" aria-hidden="true" />
                                 <h2 className="text-content-muted text-xs sm:text-sm uppercase tracking-widest font-mono">Miembros del Grupo</h2>
