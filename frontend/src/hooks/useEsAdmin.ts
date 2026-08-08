@@ -28,3 +28,25 @@ export function useEsAdmin(): boolean {
 
     return esAdmin;
 }
+
+/**
+ * La misma sonda, con tres estados: `undefined` mientras contesta.
+ *
+ * Hace falta donde la respuesta decide qué PANTALLA se pinta, no sólo si se
+ * pinta un enlace: con dos estados, `/admin` enseñaba «Sin acceso» durante un
+ * instante también a quien sí lo tiene, y eso es peor que una espera.
+ */
+export function useEsAdminConEspera(): boolean | undefined {
+    const [esAdmin, setEsAdmin] = useState<boolean | undefined>(undefined);
+
+    useEffect(() => {
+        let vivo = true;
+        void import('@/services/api')
+            .then(({ adminService }) => adminService.isAdmin())
+            .then((admin) => { if (vivo) setEsAdmin(admin); })
+            .catch(() => { if (vivo) setEsAdmin(false); });
+        return () => { vivo = false; };
+    }, []);
+
+    return esAdmin;
+}

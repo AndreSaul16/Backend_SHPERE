@@ -93,7 +93,7 @@ export function MermaidDiagram({ artifact }: MermaidDiagramProps) {
             </div>
 
             {/* Diagram Content */}
-            <div className="flex-1 overflow-auto p-12 flex items-center justify-center scrollbar-thin scrollbar-thumb-white/10">
+            <div className="flex-1 overflow-auto p-4 sm:p-8 md:p-12 flex items-center justify-center scrollbar-thin scrollbar-thumb-white/10">
                 {error ? (
                     <div className="flex flex-col items-center gap-4 text-center p-6 bg-oxblood-500/5 rounded-md border border-oxblood-500/10 max-w-md">
                         <AlertTriangle className="h-10 w-10 text-danger" aria-hidden="true" />

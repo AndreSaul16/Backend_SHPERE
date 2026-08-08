@@ -332,7 +332,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
 
             {/* Summary Stats */}
             {totalFiles > 0 && (
-                <div className="grid grid-cols-3 gap-3 px-6 py-4 border-b border-stroke-hairline">
+                <div className="grid grid-cols-3 gap-2 px-4 py-4 sm:gap-3 sm:px-6 border-b border-stroke-hairline">
                     {[
                         { icon: FileText, label: 'Archivos', value: totalFiles },
                         { icon: Layers, label: 'Chunks', value: totalChunks.toLocaleString() },

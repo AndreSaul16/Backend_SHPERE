@@ -176,7 +176,7 @@ export function ProfileSettings() {
             }
           />
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Stage">
             <select
               className={inputCls}
@@ -214,7 +214,7 @@ export function ProfileSettings() {
         icon={<MessageSquare className="h-5 w-5 text-success" />}
         title="Estilo de comunicación"
       >
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Tono">
             <select
               className={inputCls}
@@ -254,7 +254,7 @@ export function ProfileSettings() {
       </Section>
 
       <Section icon={<Wallet className="h-5 w-5 text-warning" />} title="Finanzas">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Moneda base">
             <select
               className={inputCls}
@@ -294,7 +294,7 @@ export function ProfileSettings() {
             campo del perfil se sigue escribiendo para que una sesión en un
             aparato nuevo herede la última elección de la cuenta. */}
         <ConmutadorDeTema onElegir={(t) => updateSection("ui_preferences", { theme: t })} />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Idioma">
             <select
               className={inputCls}

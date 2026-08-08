@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
 import { server } from '../setup';
 import { AdminPage } from '../../src/pages/AdminPage';
+import { useBillingStore } from '../../src/store/useBillingStore';
 
 const USERS = 'http://localhost:8000/api/v1/admin/users';
 
@@ -110,5 +111,23 @@ describe('AdminPage — tabla accesible y guardas (6.9)', () => {
         render(<MemoryRouter><AdminPage /></MemoryRouter>);
         await screen.findByText('Sin acceso');
         expect(screen.getByRole('link', { name: /Volver al chat/ }).getAttribute('href')).toBe('/');
+    });
+});
+
+/**
+ * 6.9 (visto en el navegador) — entrar a /admin sin permiso pintaba «Sin
+ * acceso» Y ENCIMA el muro «Te has quedado sin créditos», porque el 403 pasaba
+ * por el manejador global → `perm.plan_not_allowed` → `openPaywall`. Arreglar
+ * la sonda de la barra lateral (F1) no cubrió esto: la ruta sigue siendo
+ * alcanzable escribiendo la URL. Un «no eres administrador» no es un problema
+ * de saldo.
+ */
+describe('AdminPage — el 403 no es un muro de pago', () => {
+    it('la negativa de acceso no abre el paywall', async () => {
+        useBillingStore.setState({ paywall: { open: false, reason: null } });
+        server.use(http.get(USERS, () => HttpResponse.json({ detail: 'nope' }, { status: 403 })));
+        render(<MemoryRouter><AdminPage /></MemoryRouter>);
+        await screen.findByText('Sin acceso');
+        await waitFor(() => expect(useBillingStore.getState().paywall.open).toBe(false));
     });
 });

@@ -106,7 +106,7 @@ export function StepKnowledge({
                     onDragLeave={onDragLeave}
                     onClick={() => fileInputRef.current?.click()}
                     className={cn(
-                        'flex w-full flex-col items-center justify-center gap-4 p-10 rounded-md border-2 border-dashed cursor-pointer transition-all',
+                        'flex w-full flex-col items-center justify-center gap-4 p-6 sm:p-10 rounded-md border-2 border-dashed cursor-pointer transition-all',
                         isDragOver
                             ? 'border-accent/60 bg-accent/5'
                             : 'border-stroke-edge bg-surface-2 hover:border-brass-600 hover:bg-surface-3',

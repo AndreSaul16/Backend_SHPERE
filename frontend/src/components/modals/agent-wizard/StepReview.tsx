@@ -80,7 +80,7 @@ export function StepReview({
                 </div>
 
                 {/* Details grid */}
-                <div className="p-6 grid grid-cols-2 gap-4">
+                <div className="p-4 grid grid-cols-1 gap-4 sm:p-6 sm:grid-cols-2">
                     <ReviewField
                         label="Modelo"
                         value={modelLabel}

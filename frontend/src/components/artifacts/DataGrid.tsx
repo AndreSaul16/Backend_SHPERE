@@ -124,15 +124,23 @@ export function DataGrid({ artifact }: DataGridProps) {
                 </button>
             </div>
 
-            {/* Table Content */}
-            <div className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+            {/* Table Content — 6.15 · §9.7/§12.12: el contenedor se desplaza en
+                horizontal y no admitía foco, así que a 320px las columnas de la
+                derecha eran inalcanzables sin ratón. `tabIndex` + `role` es lo
+                que las devuelve al teclado; el mismo remedio que `DocTable`. */}
+            <div
+                role="region"
+                aria-label="Tabla de datos, desplazable"
+                tabIndex={0}
+                className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-(--focus-ring)"
+            >
                 <table className="w-full text-[13px] border-collapse">
                     <thead className="sticky top-0 z-10">
                         <tr className="bg-[#16161c]">
                             {headers.map((header, i) => (
                                 <th
                                     key={i}
-                                    className="px-6 py-4 text-left text-micro font-bold text-content-muted uppercase border-b border-stroke-hairline"
+                                    className="px-3 sm:px-6 py-3 sm:py-4 text-left text-micro font-bold text-content-muted uppercase border-b border-stroke-hairline whitespace-nowrap"
                                 >
                                     {header}
                                 </th>

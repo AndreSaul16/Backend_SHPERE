@@ -14,10 +14,20 @@
  *    la cuenta de otra persona, con una sola pulsación y sin decir de cuánto a
  *    cuánto. Ahora pasa por `ConfirmDialog` y el diálogo dice el saldo de
  *    partida, el movimiento y el saldo resultante.
- * 3. **La guarda de rol era un callejón sin salida.** Quien llegaba a `/admin`
- *    sin permiso veía «Sin acceso» y ya: ni una salida, ni un enlace. Y la
- *    denegación sólo se detectaba si el fallo llegaba con un «403» dentro del
- *    texto del error, cosa que depende de cómo lo redacte `api.ts`.
+ * 3. **La guarda de rol era un callejón sin salida, y encima cobraba.** Visto
+ *    en el navegador: entrar a `/admin` con una cuenta normal pintaba «Sin
+ *    acceso» **y sobre ella el muro «Te has quedado sin créditos»**. La causa
+ *    es que la página disparaba `adminService.users()` —una acción deliberada,
+ *    que por contrato SÍ avisa al manejador global— antes de saber si esta
+ *    cuenta tiene panel; y ese 403 se traduce a `perm.plan_not_allowed` →
+ *    `openPaywall`. Arreglar la sonda de la barra lateral (F1) no cubría esto:
+ *    la ruta sigue siendo alcanzable escribiendo la URL.
+ *
+ *    La guarda va ahora ANTES de la primera llamada, con la sonda que no tiene
+ *    efectos globales (`useEsAdmin`). Cuesta una petición de más para el
+ *    administrador de verdad, y a cambio ningún usuario normal ve un muro de
+ *    pago por escribir `/admin`. Además la negativa ofrece una salida: antes
+ *    era el mensaje y nada más.
  */
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
@@ -28,6 +38,7 @@ import {
     type AdminMetrics,
 } from "@/services/api";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useEsAdminConEspera } from "@/hooks/useEsAdmin";
 import { cn } from "@/lib/utils";
 
 type Tab = "users" | "metrics";
@@ -58,6 +69,10 @@ function esDenegado(e: unknown): boolean {
 }
 
 export function AdminPage() {
+    /* `undefined` mientras la sonda contesta: sin este tercer estado, la
+       pantalla parpadeaba «Sin acceso» durante un instante a los que SÍ lo
+       tienen. */
+    const permiso = useEsAdminConEspera();
     const [denied, setDenied] = useState(false);
     const [tab, setTab] = useState<Tab>("users");
 
@@ -97,8 +112,9 @@ export function AdminPage() {
     }, []);
 
     useEffect(() => {
-        loadUsers();
-    }, [loadUsers]);
+        // La primera llamada no sale hasta saber que hay permiso.
+        if (permiso === true) loadUsers();
+    }, [loadUsers, permiso]);
 
     useEffect(() => {
         if (tab === "metrics" && !metrics && !denied) {
@@ -155,7 +171,18 @@ export function AdminPage() {
         }
     };
 
-    if (denied) {
+    if (permiso === undefined) {
+        return (
+            <div className="flex h-full items-center justify-center p-8">
+                <p role="status" className="flex items-center gap-2 text-sm text-content-muted">
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    Comprobando tus permisos…
+                </p>
+            </div>
+        );
+    }
+
+    if (permiso === false || denied) {
         // §11: qué pasó, qué se conserva y una salida. Antes era un callejón:
         // el mensaje y nada más, con la única salida de dar atrás en el
         // navegador o reescribir la URL.
