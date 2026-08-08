@@ -100,7 +100,7 @@ export function DataGrid({ artifact }: DataGridProps) {
     if (headers.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-content-muted font-mono text-xs">
-                DATOS INCOMPLETOS O MAL FORMATEADOS
+                La tabla no se ha podido leer: el contenido no es una tabla markdown.
             </div>
         );
     }
@@ -112,15 +112,16 @@ export function DataGrid({ artifact }: DataGridProps) {
                 <div className="flex items-center gap-3">
                     <TableIcon className="h-4 w-4 text-content-muted" aria-hidden="true" />
                     <span className="text-micro font-mono text-content-muted uppercase">
-                        Data Analysis View
+                        Vista de datos
                     </span>
                 </div>
                 <button
                     onClick={handleDownload}
-                    className="p-2 rounded-xl hover:bg-stroke-highlight transition-all text-content-muted hover:text-electric-cyan"
-                    title="Exportar CSV"
+                    aria-label="Exportar como CSV"
+                    title="Exportar como CSV"
+                    className="p-2 rounded-sm hover:bg-stroke-hairline transition-colors duration-(--duration-tap) text-content-muted hover:text-content-strong"
                 >
-                    <Download className="h-4 w-4" />
+                    <Download className="h-4 w-4" aria-hidden="true" />
                 </button>
             </div>
 
@@ -134,7 +135,7 @@ export function DataGrid({ artifact }: DataGridProps) {
                 tabIndex={0}
                 className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-(--focus-ring)"
             >
-                <table className="w-full text-[13px] border-collapse">
+                <table className="w-full text-sm border-collapse">
                     <thead className="sticky top-0 z-10">
                         <tr className="bg-surface-1">
                             {headers.map((header, i) => (
@@ -147,18 +148,30 @@ export function DataGrid({ artifact }: DataGridProps) {
                             ))}
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/[0.03]">
+                    <tbody className="divide-y divide-stroke-hairline">
                         {rows.map((row, rowIdx) => (
                             <tr
                                 key={rowIdx}
                                 className="group hover:bg-surface-1 transition-colors"
                             >
                                 {row.map((cell, cellIdx) => {
-                                    const isNumeric = !isNaN(Number(cell.replace(/[^0-9.-]+/g, ""))) && cell !== '';
+                                    /* FASE 8 — dos defectos medidos:
+                                       (1) el detector de cifra despojaba TODO
+                                       lo no numérico antes de comprobar, así
+                                       que «Soporte lanzamiento» → «» → 0 y
+                                       cada celda de texto salía como cifra;
+                                       (2) el color era electric-cyan/80 (el
+                                       acento vía shim al 80%), que en tema
+                                       claro medía 2.98:1 sobre el papel. La
+                                       cifra va en content con tnum; el texto,
+                                       en content-muted. */
+                                    const isNumeric = /^[-+]?[\d.,\s]+\s*(?:%|€|\$)?$/.test(cell.trim()) && /\d/.test(cell);
                                     return (
                                         <td
                                             key={cellIdx}
-                                            className={`px-6 py-4 text-content-muted group-hover:text-content-strong transition-colors ${isNumeric ? 'text-right font-mono text-electric-cyan/80' : 'text-left'
+                                            className={`px-6 py-4 transition-colors ${isNumeric
+                                                ? 'text-right font-mono tnum text-content group-hover:text-content-strong'
+                                                : 'text-left text-content-muted group-hover:text-content-strong'
                                                 }`}
                                         >
                                             {cell}
