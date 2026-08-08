@@ -954,6 +954,17 @@ Patrón *(actualizado por la auditoría v3 — B1)*: los valores crudos viven en
   /* duraciones — NO en @theme: Tailwind v4 no tiene namespace --duration-* */
   --duration-tap:90ms;    --duration-pop:160ms;   --duration-reveal:220ms;
   --duration-panel:320ms; --duration-scene:560ms;
+
+  /* layout (§4.2) — añadidos al bloque por la FASE 8: ya vivían en index.css
+     (la corrección R7 de la auditoría del plan) y el bloque no los recogía */
+  --measure-doc:min(60ch, 100% - 32px);
+  --measure-form:44rem;
+  --container-app:100%;
+  --rail-order:56px;
+  --gutter-sidebar:288px;
+  --panel-artifact-min:380px;
+  --panel-artifact-default:480px;
+  --panel-artifact-max:760px;
 }
 
 /* ═══ TEMA OSCURO (POR DEFECTO — B1: el fallo seguro es el tema que existe) ═ */
@@ -961,6 +972,9 @@ Patrón *(actualizado por la auditoría v3 — B1)*: los valores crudos viven en
   --surface-0:var(--baize-950); --surface-1:var(--baize-900);
   --surface-2:var(--baize-850); --surface-3:var(--baize-800);
   --surface-inset:var(--baize-700); --surface-doc:var(--paper-50);
+  /* añadidos por la fase 7, documentados por la FASE 8: */
+  --surface-code:var(--baize-950);   /* fondo del visor de código; conmuta con el tema de Prism (lib/resaltado) */
+  --content-gutter:color-mix(in oklab, var(--ink-50) 22%, transparent); /* numeración de líneas: regla graduada, no texto */
 
   --content-strong:var(--ink-50); --content:var(--ink-100);
   --content-muted:var(--ink-300); --content-quiet:var(--ink-500); /* 4.59:1 suelo — SÓLO sobre e0/e1; sobre e2+ usar ink-400 */
@@ -998,6 +1012,8 @@ Patrón *(actualizado por la auditoría v3 — B1)*: los valores crudos viven en
   --surface-0:var(--paper-100); --surface-1:var(--paper-200);
   --surface-2:var(--paper-50);  --surface-3:var(--paper-50);
   --surface-inset:var(--paper-300); --surface-doc:var(--paper-50);
+  --surface-code:var(--paper-50);
+  --content-gutter:color-mix(in oklab, var(--graphite-900) 32%, transparent);
 
   --content-strong:var(--graphite-900); --content:var(--graphite-800);
   --content-muted:var(--graphite-700);  --content-quiet:var(--graphite-600);
@@ -1038,6 +1054,8 @@ Patrón *(actualizado por la auditoría v3 — B1)*: los valores crudos viven en
   --color-surface-0:var(--surface-0);   --color-surface-1:var(--surface-1);
   --color-surface-2:var(--surface-2);   --color-surface-3:var(--surface-3);
   --color-surface-inset:var(--surface-inset); --color-surface-doc:var(--surface-doc);
+  --color-surface-code:var(--surface-code);
+  --color-content-gutter:var(--content-gutter);
   --color-content-strong:var(--content-strong); --color-content:var(--content);
   --color-content-muted:var(--content-muted);   --color-content-quiet:var(--content-quiet);
 
@@ -1306,6 +1324,10 @@ Patrón *(actualizado por la auditoría v3 — B1)*: los valores crudos viven en
 }
 ```
 
+### 13.0 El SHIM de nombres del sistema viejo — deuda declarada, medida en la FASE 8
+
+El `@theme` de `index.css` contiene además **siete alias transicionales** que este bloque no prescribe: `--color-midnight`, `--color-surface`, `--color-surface-highlight`, `--color-electric-cyan`, `--color-luxury-purple`, `--color-user-bubble`, `--color-ai-bubble` — los nombres del sistema anterior apuntados a los tokens nuevos (p. ej. `electric-cyan → var(--accent)`). Se añadieron en la fase 0 para que la app adoptara la paleta de golpe (ver el comentario `SHIM` en `index.css`), con la promesa «se retiran en la fase 6, cuando ya no queden usos». **La fase 6 no los retiró**: al cierre de la FASE 8 quedan ~210 usos en `src` (`electric-cyan` ×80 líneas, `surface-highlight` ×77, `midnight` ×26, `luxury-purple` ×25). Visualmente son la paleta nueva — el alias resuelve al token — pero son vocabulario muerto que permite escribir el sistema viejo sin que nada avise. Retirarlos (un codemod alias→token + borrar el bloque SHIM) queda como deuda para después del despliegue; mientras existan, este párrafo es su única legitimación.
+
 ### 13.1 Contrato de tokens — lo prohibido, verificable con grep
 
 | Regla | Comprobación (debe dar 0) |
@@ -1317,7 +1339,7 @@ Patrón *(actualizado por la auditoría v3 — B1)*: los valores crudos viven en
 | Sin radios fuera del sistema | `grep -rE 'rounded-\[[0-9]+px\]\|rounded-(2xl\|3xl)' frontend/src` |
 | Sin `outline-none` sin sustituto | `grep -rn 'outline-none' frontend/src` ≤ nº de `focus-visible` adyacentes |
 | Sin fuentes remotas | `grep -rn 'fonts.googleapis' frontend/src frontend/index.html` |
-| Sin `backdrop-blur` fuera del velo de modal | `grep -rn 'backdrop-blur' frontend/src` ≤ 1 |
+| Sin `backdrop-blur` fuera del velo e4 | `grep -rn 'backdrop-blur' frontend/src` ≤ 2 en `.tsx` *(el velo de §5 vive en dos superficies e4: el modal y el cajón móvil de §9.13 — mismo velo, mismo `blur(3px)`; medido en la FASE 8)* |
 | Sin `tailwind.config.js` | `test ! -f frontend/tailwind.config.js` |
 | Sin emojis como interfaz | revisión manual de `grep -rP '[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}]' frontend/src` — sólo `debateTemplates.ts` |
 | Sin claves de token numéricas | `grep -nE '--(duration\|text\|radius\|shadow\|ease)-[0-9]+\s*:' frontend/src/index.css` |
