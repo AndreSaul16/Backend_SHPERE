@@ -36,6 +36,16 @@ export const conError = (context: ErrorContext, message: string | null) =>
         errorStates: { ...state.errorStates, [context]: message },
     });
 
-export const createErrorsSlice = (): ErrorsSlice => ({
+export const createErrorsSlice = (set: (fn: (state: { errorStates: ErrorStates }) => { errorStates: ErrorStates }) => void): ErrorsSlice => ({
     errorStates: { ...ERRORES_EN_BLANCO },
+
+    /**
+     * Cierra UN aviso.
+     *
+     * Existe porque hasta ahora nadie podía: lo que se escribía en `errorStates`
+     * se quedaba hasta que otra acción lo pisara, y `ErrorOverlay` lo pintaba
+     * fijo en una esquina sin botón de cerrar. Un error que no se puede quitar
+     * ni resolver es un callejón sin salida, aunque sea pequeño.
+     */
+    clearError: (context) => set(conError(context, null)),
 });

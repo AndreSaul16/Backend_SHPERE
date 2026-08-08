@@ -142,6 +142,8 @@ export interface UiSlice {
 /** El canal de errores por método, compartido por todos los slices. */
 export interface ErrorsSlice {
     errorStates: ErrorStates;
+    /** Cierra un aviso concreto. Lo usa `ErrorOverlay` al descartar o reintentar. */
+    clearError: (context: ErrorContext) => void;
 }
 
 /** El borrado al cambiar de cuenta (A6). Cruza todos los slices. */

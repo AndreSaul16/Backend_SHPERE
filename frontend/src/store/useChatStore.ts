@@ -37,7 +37,7 @@ import { createUiSlice } from './chat/uiSlice';
 import type { ChatState } from './chat/types';
 
 export const useChatStore = create<ChatState>((set, get) => ({
-    ...createErrorsSlice(),
+    ...createErrorsSlice(set),
     ...createAgentsSlice(set, get),
     ...createSessionsSlice(set, get),
     ...createMessagesSlice(set, get),
