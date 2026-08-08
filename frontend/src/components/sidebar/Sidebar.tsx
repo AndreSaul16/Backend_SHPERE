@@ -11,6 +11,7 @@ import { TextField } from "@/components/ui/Field";
 import { AvatarImage } from "@/components/ui/AvatarImage";
 import { notify, reasonOf, toast } from "@/lib/toastBus";
 import { agruparPorFecha } from "./historialPorFecha";
+import { precargaAlApuntar } from "@/lib/rutasPerezosas";
 
 /**
  * Extract initials from displayName (e.g., "María García" → "MG")
@@ -347,6 +348,7 @@ export function Sidebar() {
                                 <div key={session.session_id} className="relative group/item" data-row>
                                     <Link
                                         to={`/chat/${session.session_id}`}
+                                        {...precargaAlApuntar('chat')}
                                         onClick={handleNavClick}
                                         aria-current={currentSessionId === session.session_id ? "page" : undefined}
                                         className={cn(
@@ -488,6 +490,7 @@ export function Sidebar() {
                 {user ? (
                     <Link
                         to="/profile"
+                        {...precargaAlApuntar('perfil')}
                         onClick={() => toggleSidebar(false)}
                         className="flex items-center gap-2.5 sm:gap-3 p-2 rounded-xl border border-transparent hover:border-surface-highlight hover:bg-surface/40 transition-all duration-300 group shadow-lg hover:shadow-electric-cyan/5"
                     >
@@ -530,6 +533,7 @@ export function Sidebar() {
                 )}
                 <Link
                     to="/billing"
+                    {...precargaAlApuntar('facturacion')}
                     onClick={() => toggleSidebar(false)}
                     className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-content-muted hover:text-content-strong hover:bg-surface/40 border border-transparent hover:border-surface-highlight transition-all text-sm"
                 >
@@ -550,6 +554,7 @@ export function Sidebar() {
                 </Link>
                 <Link
                     to="/settings"
+                    {...precargaAlApuntar('ajustes')}
                     onClick={() => toggleSidebar(false)}
                     className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-content-muted hover:text-content-strong hover:bg-surface/40 border border-transparent hover:border-surface-highlight transition-all text-sm"
                 >
@@ -559,6 +564,7 @@ export function Sidebar() {
                 {isAdmin && (
                     <Link
                         to="/admin"
+                        {...precargaAlApuntar('admin')}
                         onClick={() => toggleSidebar(false)}
                         className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-content-muted hover:text-content-strong hover:bg-surface/40 border border-transparent hover:border-surface-highlight transition-all text-sm"
                     >

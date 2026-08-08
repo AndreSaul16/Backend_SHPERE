@@ -1,27 +1,100 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { RequireAuth } from "@/components/RequireAuth";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Sidebar } from "@/components/sidebar/Sidebar";
-import { ChatPanel } from "@/components/chat/ChatPanel";
-import { ArtifactPanel } from "@/components/artifacts/ArtifactPanel";
-import { AgentSelectorModal } from "@/components/modals/AgentSelectorModal";
-import { ProfilePage } from "@/pages/ProfilePage";
-import { ChatSettingsPage } from "@/pages/ChatSettingsPage";
-import { AgentDetailPage } from "@/pages/AgentDetailPage";
-import { LoginPage } from "@/pages/LoginPage";
-import { RegisterPage } from "@/pages/RegisterPage";
-import { VerifyEmailPage } from "@/pages/VerifyEmailPage";
-import { SettingsPage } from "@/pages/SettingsPage";
 import { ErrorOverlay } from "@/components/common/ErrorOverlay";
 import { ConnectionBanner } from "@/components/common/ConnectionBanner";
 import { useChatStore } from "@/store/useChatStore";
 import { PaywallModal } from "@/components/modals/PaywallModal";
-import { BillingPage } from "@/pages/BillingPage";
-import { SharedSessionPage } from "@/pages/SharedSessionPage";
-import { AdminPage } from "@/pages/AdminPage";
+import { AgentSelectorModal } from "@/components/modals/AgentSelectorModal";
 import { ToastProvider } from "@/components/ui/Toast";
+import { MODULOS_DE_RUTA } from "@/lib/rutasPerezosas";
+import {
+  EsqueletoDeAutenticacion,
+  EsqueletoDeChat,
+  EsqueletoDeDocumento,
+  EsqueletoDePagina,
+} from "@/components/shared/EsqueletosDeRuta";
+
+/**
+ * Tarea 4.1 · D17a — las trece rutas se parten.
+ *
+ * Este fichero tenía CERO `React.lazy`: las once páginas, el panel de chat y el
+ * panel de artefactos entraban enteros en la carga inicial. O sea que quien
+ * abría `/login` —que es todo el mundo la primera vez— descargaba también el
+ * panel de administración, la facturación, el detalle de agente y el asistente
+ * de creación antes de poder escribir su correo.
+ *
+ * Lo que se queda EAGER, y por qué:
+ *
+ * - `MainLayout` y `Sidebar`: son el chrome de las rutas protegidas, están en
+ *   pantalla en todas ellas y no se pueden partir sin que la navegación entre
+ *   dos rutas protegidas repinte el marco entero.
+ * - `RequireAuth`: es el primer pixel de toda carga en frío; partirlo sería
+ *   añadir una espera antes de la espera.
+ * - Los cuatro elementos de raíz (`ConnectionBanner`, `ErrorOverlay`,
+ *   `ToastProvider`, `PaywallModal`): viven fuera del enrutador porque su
+ *   trabajo es estar SIEMPRE montados.
+ *
+ * `AgentSelectorModal` también se queda: desde 4.5 el peso que tenía (el
+ * asistente) ya viaja aparte, y lo que queda es la lista de directores, que es
+ * la acción principal de la pantalla de bienvenida.
+ *
+ * Cada `<Suspense>` lleva el esqueleto del LAYOUT de su ruta (riesgo R3), nunca
+ * un spinner centrado: así el sitio queda reservado y la navegación no se lee
+ * como una recarga.
+ */
+const ChatPanel = lazy(() => MODULOS_DE_RUTA.chat().then((m) => ({ default: m.ChatPanel })));
+const ArtifactPanel = lazy(() => MODULOS_DE_RUTA.panelDeArtefactos().then((m) => ({ default: m.ArtifactPanel })));
+const ProfilePage = lazy(() => MODULOS_DE_RUTA.perfil().then((m) => ({ default: m.ProfilePage })));
+const ChatSettingsPage = lazy(() => MODULOS_DE_RUTA.ajustesDeConversacion().then((m) => ({ default: m.ChatSettingsPage })));
+const AgentDetailPage = lazy(() => MODULOS_DE_RUTA.detalleDeAgente().then((m) => ({ default: m.AgentDetailPage })));
+const SettingsPage = lazy(() => MODULOS_DE_RUTA.ajustes().then((m) => ({ default: m.SettingsPage })));
+const BillingPage = lazy(() => MODULOS_DE_RUTA.facturacion().then((m) => ({ default: m.BillingPage })));
+const AdminPage = lazy(() => MODULOS_DE_RUTA.admin().then((m) => ({ default: m.AdminPage })));
+const LoginPage = lazy(() => MODULOS_DE_RUTA.entrar().then((m) => ({ default: m.LoginPage })));
+const RegisterPage = lazy(() => MODULOS_DE_RUTA.registro().then((m) => ({ default: m.RegisterPage })));
+const VerifyEmailPage = lazy(() => MODULOS_DE_RUTA.verificarEmail().then((m) => ({ default: m.VerifyEmailPage })));
+const SharedSessionPage = lazy(() => MODULOS_DE_RUTA.conversacionCompartida().then((m) => ({ default: m.SharedSessionPage })));
+
+/**
+ * Una ruta protegida: guarda de sesión, shell de tres columnas y el esqueleto
+ * de espera de ESA ruta.
+ *
+ * El `<Suspense>` va DENTRO de `MainLayout` y no fuera a propósito: fuera, el
+ * rail y la cabecera desaparecerían mientras baja la página y volverían a
+ * aparecer — un parpadeo del chrome entero en cada navegación, que es
+ * exactamente el síntoma que R3 avisa.
+ */
+function RutaConShell({ children, esqueleto, panelDeArtefactos }: {
+  children: ReactNode;
+  esqueleto: ReactNode;
+  panelDeArtefactos?: ReactNode;
+}) {
+  return (
+    <RequireAuth>
+      <MainLayout
+        sidebar={<Sidebar />}
+        chat={<Suspense fallback={esqueleto}>{children}</Suspense>}
+        artifactPanel={panelDeArtefactos}
+      />
+    </RequireAuth>
+  );
+}
+
+/** El chat y su panel de artefactos, que son las dos mitades de la misma ruta. */
+function RutaDeChat() {
+  return (
+    <RutaConShell
+      esqueleto={<EsqueletoDeChat />}
+      panelDeArtefactos={<Suspense fallback={null}><ArtifactPanel /></Suspense>}
+    >
+      <ChatPanel />
+    </RutaConShell>
+  );
+}
 
 function AuthenticatedApp() {
   const { fetchSessions, fetchCustomAgents } = useChatStore();
@@ -37,103 +110,44 @@ function AuthenticatedApp() {
   return (
     <Routes>
       {/* Public routes */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/login" element={<Suspense fallback={<EsqueletoDeAutenticacion />}><LoginPage /></Suspense>} />
+      <Route path="/register" element={<Suspense fallback={<EsqueletoDeAutenticacion />}><RegisterPage /></Suspense>} />
       {/* Verificación de email (cuentas password sin verificar) */}
-      <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/verify-email" element={<Suspense fallback={<EsqueletoDeAutenticacion />}><VerifyEmailPage /></Suspense>} />
       {/* Conversación compartida (público read-only, fuera de RequireAuth) */}
-      <Route path="/share/:token" element={<SharedSessionPage />} />
+      <Route path="/share/:token" element={<Suspense fallback={<EsqueletoDeDocumento />}><SharedSessionPage /></Suspense>} />
 
       {/* Protected routes */}
-      <Route
-        path="/"
-        element={
-          <RequireAuth>
-            <MainLayout
-              sidebar={<Sidebar />}
-              chat={<ChatPanel />}
-              artifactPanel={<ArtifactPanel />}
-            />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/chat/:sessionId"
-        element={
-          <RequireAuth>
-            <MainLayout
-              sidebar={<Sidebar />}
-              chat={<ChatPanel />}
-              artifactPanel={<ArtifactPanel />}
-            />
-          </RequireAuth>
-        }
-      />
+      <Route path="/" element={<RutaDeChat />} />
+      <Route path="/chat/:sessionId" element={<RutaDeChat />} />
       <Route
         path="/profile"
-        element={
-          <RequireAuth>
-            <MainLayout
-              sidebar={<Sidebar />}
-              chat={<ProfilePage />}
-            />
-          </RequireAuth>
-        }
+        element={<RutaConShell esqueleto={<EsqueletoDePagina />}><ProfilePage /></RutaConShell>}
       />
       <Route
         path="/chat/settings"
-        element={
-          <RequireAuth>
-            <MainLayout
-              sidebar={<Sidebar />}
-              chat={<ChatSettingsPage />}
-            />
-          </RequireAuth>
-        }
+        element={<RutaConShell esqueleto={<EsqueletoDePagina />}><ChatSettingsPage /></RutaConShell>}
       />
       <Route
         path="/agents/:agentId"
-        element={
-          <RequireAuth>
-            <MainLayout
-              sidebar={<Sidebar />}
-              chat={<AgentDetailPage />}
-            />
-          </RequireAuth>
-        }
+        element={<RutaConShell esqueleto={<EsqueletoDePagina />}><AgentDetailPage /></RutaConShell>}
       />
       {/* Settings: ruta base + sub-rutas por sección */}
       <Route
         path="/settings"
-        element={
-          <RequireAuth>
-            <MainLayout sidebar={<Sidebar />} chat={<SettingsPage />} />
-          </RequireAuth>
-        }
+        element={<RutaConShell esqueleto={<EsqueletoDePagina />}><SettingsPage /></RutaConShell>}
       />
       <Route
         path="/settings/:section"
-        element={
-          <RequireAuth>
-            <MainLayout sidebar={<Sidebar />} chat={<SettingsPage />} />
-          </RequireAuth>
-        }
+        element={<RutaConShell esqueleto={<EsqueletoDePagina />}><SettingsPage /></RutaConShell>}
       />
       <Route
         path="/billing"
-        element={
-          <RequireAuth>
-            <MainLayout sidebar={<Sidebar />} chat={<BillingPage />} />
-          </RequireAuth>
-        }
+        element={<RutaConShell esqueleto={<EsqueletoDePagina />}><BillingPage /></RutaConShell>}
       />
       <Route
         path="/admin"
-        element={
-          <RequireAuth>
-            <MainLayout sidebar={<Sidebar />} chat={<AdminPage />} />
-          </RequireAuth>
-        }
+        element={<RutaConShell esqueleto={<EsqueletoDePagina />}><AdminPage /></RutaConShell>}
       />
       {/* Catch-all: rutas desconocidas (p.ej. /status, ya retirada) → home. */}
       <Route path="*" element={<Navigate to="/" replace />} />
