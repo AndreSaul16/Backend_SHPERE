@@ -4,6 +4,8 @@ import type { BoardSessionState } from "@/store/useChatStore";
 import { conMovimiento, CURVA, DURACION } from "@/lib/motion";
 import { fasesDe } from "./agendaPhases";
 import { BoardTable } from "./BoardTable";
+import { DisagreementBar } from "./DisagreementBar";
+import { gradoDeDesacuerdo } from "./desacuerdo";
 
 /**
  * La cabecera de la junta: la Mesa (§8.1) y lo que la mesa no puede decir sola.
@@ -38,6 +40,10 @@ export function BoardWarRoom({
     const fases = fasesDe(board);
     const faseActual = fases.find((f) => f.clave === board.phase);
 
+    // Q8: el veredicto también se anuncia. Quien no ve la barra tiene que
+    // recibir la lectura, no sólo la aritmética.
+    const veredicto = gradoDeDesacuerdo(board.votes);
+
     const tallyText = (() => {
         if (!board.tally) return null;
         const { SI = 0, NO = 0, CONDICIONAL = 0 } = board.tally;
@@ -65,6 +71,13 @@ export function BoardWarRoom({
                     contenedor pasa a `flex-wrap`, el recuento suelta el
                     `truncate` y el coste se va al final con `ml-auto`. El alto
                     mínimo deja de ser fijo por lo mismo. */}
+                {/* 5.5 · Q8 — el grado de desacuerdo, encima del recuento.
+                    El recuento dice CUÁNTOS; esto dice QUÉ significa. Va
+                    primero porque es lo que se quiere saber al abrir un debate
+                    viejo, y porque §P2 pide que el conflicto se encuentre antes
+                    que la conformidad. */}
+                <DisagreementBar votes={board.votes} className="mt-2" />
+
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 mt-2 min-h-[14px]">
                     <AnimatePresence>
                         {tallyText && (
@@ -94,7 +107,7 @@ export function BoardWarRoom({
                     la vez que su contenido. */}
                 <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="live-tally">
                     {tallyText
-                        ? `${tallyText}${board.earlyExit ? ' — consenso, debate abreviado' : ''}. Fase: ${faseActual?.etiqueta ?? 'en curso'}.`
+                        ? `${veredicto.nivel !== 'sin-datos' ? `${veredicto.etiqueta}. ` : ''}${tallyText}${board.earlyExit ? ' — consenso, debate abreviado' : ''}. Fase: ${faseActual?.etiqueta ?? 'en curso'}.`
                         : ''}
                 </p>
             </div>
