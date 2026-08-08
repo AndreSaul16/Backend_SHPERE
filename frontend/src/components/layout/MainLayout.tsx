@@ -1,5 +1,4 @@
 import { type ReactNode, useState, useCallback, useEffect } from "react";
-import { useLocation } from "react-router-dom";
 import { Menu, X, GripVertical } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -15,6 +14,16 @@ interface MainLayoutProps {
     chat: ReactNode;
     artifactPanel?: ReactNode;
     className?: string;
+    /**
+     * D51 — qué ruta se está pintando, para rearmar la frontera del hueco
+     * central al cambiar de una a otra. Sin esto, un fallo al pintar
+     * `/billing` dejaba rota también la ruta siguiente: React no vuelve a
+     * montar un subárbol que una frontera dio por caído.
+     *
+     * Llega como prop y no de `useLocation()` porque el shell no depende del
+     * enrutador —se monta en pruebas sin `<Router>`— y no va a empezar ahora.
+     */
+    llaveDeRuta?: string;
 }
 
 /**
@@ -56,7 +65,7 @@ function anchoGuardado(): number {
     }
 }
 
-export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayoutProps) {
+export function MainLayout({ sidebar, chat, artifactPanel, className, llaveDeRuta }: MainLayoutProps) {
     /* 4.6 · D20: el shell de tres columnas se suscribía al store entero, así que
        un token de streaming repintaba el marco de la aplicación —rail, tirador,
        velo y panel— sesenta veces por segundo para leer dos interruptores que no
@@ -64,10 +73,7 @@ export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayo
     const isSidebarOpen = useChatStore((s) => s.isSidebarOpen);
     const toggleSidebar = useChatStore((s) => s.toggleSidebar);
     const isArtifactPanelOpen = useChatStore((s) => s.isArtifactPanelOpen);
-    /* D51 — cambiar de ruta rearma la frontera del hueco central. Sin esto,
-       un fallo al pintar `/billing` dejaba rota también la ruta siguiente:
-       React no vuelve a montar un subárbol que una frontera dio por caído. */
-    const { pathname } = useLocation();
+
     const toggleArtifactPanel = useChatStore((s) => s.toggleArtifactPanel);
 
     /* 5.3 · Q9 — los dos conmutadores del shell.
@@ -227,7 +233,7 @@ export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayo
 
             {/* Center Chat - Flexible */}
             <main className="flex-1 h-full relative flex flex-col min-w-0 z-10 bg-transparent">
-                <ErrorBoundary resetKeys={[pathname]}>
+                <ErrorBoundary resetKeys={[llaveDeRuta]}>
                     {chat}
                 </ErrorBoundary>
             </main>

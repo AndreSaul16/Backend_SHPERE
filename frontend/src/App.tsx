@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, type ReactNode } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { RequireAuth } from "@/components/RequireAuth";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -75,12 +75,15 @@ function RutaConShell({ children, esqueleto, panelDeArtefactos }: {
   esqueleto: ReactNode;
   panelDeArtefactos?: ReactNode;
 }) {
+  // D51 — la ruta viva es la llave que rearma la frontera del hueco central.
+  const { pathname } = useLocation();
   return (
     <RequireAuth>
       <MainLayout
         sidebar={<Sidebar />}
         chat={<Suspense fallback={esqueleto}>{children}</Suspense>}
         artifactPanel={panelDeArtefactos}
+        llaveDeRuta={pathname}
       />
     </RequireAuth>
   );
