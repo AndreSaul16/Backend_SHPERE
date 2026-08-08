@@ -1,4 +1,6 @@
+import { useCallback, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { Columns2 } from "lucide-react";
 import type { Agent } from "@/types";
 import type { BoardSessionState } from "@/store/useChatStore";
 import { conMovimiento, CURVA, DURACION } from "@/lib/motion";
@@ -6,6 +8,8 @@ import { fasesDe } from "./agendaPhases";
 import { BoardTable } from "./BoardTable";
 import { DisagreementBar } from "./DisagreementBar";
 import { gradoDeDesacuerdo } from "./desacuerdo";
+import { DirectorCompare } from "./DirectorCompare";
+import { comboDe, useAtajo } from "@/hooks/useShortcuts";
 
 /**
  * La cabecera de la junta: la Mesa (§8.1) y lo que la mesa no puede decir sola.
@@ -37,6 +41,13 @@ export function BoardWarRoom({
     intervencionPorRol?: Record<string, string>;
 }) {
     const reducido = useReducedMotion();
+
+    /* 5.9 · Q2 — el comparador. Vive aquí porque aquí está la mesa: el atajo
+       sólo existe donde hay una junta con debate, y en `/settings` pulsar ⇧C no
+       puede abrir una ventana sobre datos que no hay. */
+    const [comparando, setComparando] = useState(false);
+    useAtajo(comboDe('comparar'), useCallback(() => setComparando(true), []));
+
     const fases = fasesDe(board);
     const faseActual = fases.find((f) => f.clave === board.phase);
 
@@ -59,6 +70,12 @@ export function BoardWarRoom({
             transition={conMovimiento(reducido, { duration: DURACION.reveal, ease: CURVA.settle })}
             className="border-b border-stroke-hairline bg-surface-1 z-10"
         >
+            <DirectorCompare
+                open={comparando}
+                onClose={() => setComparando(false)}
+                board={board}
+                agents={agents}
+            />
             <div className="max-w-5xl mx-auto px-4 py-2 sm:px-6">
                 <BoardTable board={board} agents={agents} intervencionPorRol={intervencionPorRol} />
 
@@ -93,7 +110,19 @@ export function BoardWarRoom({
                             </motion.span>
                         )}
                     </AnimatePresence>
-                    <span className="text-micro font-mono text-content-muted uppercase ml-auto shrink-0 tnum">
+                    {/* 5.9 · Q2 — la puerta del comparador sin teclado. A 390px
+                        no hay ⇧C que pulsar, y sin este botón la función no
+                        existiría para la mayoría del tráfico. */}
+                    <button
+                        type="button"
+                        onClick={() => setComparando(true)}
+                        className="ml-auto flex shrink-0 items-center gap-1 rounded-xs border border-stroke-edge px-2 py-0.5 font-mono text-micro uppercase text-content-muted transition-colors duration-(--duration-tap) hover:border-brass-600 hover:text-content-strong"
+                    >
+                        <Columns2 className="h-3 w-3" aria-hidden="true" />
+                        Comparar
+                        <kbd className="ms-1 hidden text-content-quiet sm:inline">⇧C</kbd>
+                    </button>
+                    <span className="text-micro font-mono text-content-muted uppercase shrink-0 tnum">
                         {board.cost} créditos
                     </span>
                 </div>

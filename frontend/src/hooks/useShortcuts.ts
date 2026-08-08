@@ -52,6 +52,7 @@ export const ATAJOS: DefinicionDeAtajo[] = [
 
     { id: 'turno-siguiente', combo: 'j', que: 'Ir al turno siguiente', grupo: 'Lectura', donde: 'En una junta' },
     { id: 'turno-anterior', combo: 'k', que: 'Ir al turno anterior', grupo: 'Lectura', donde: 'En una junta' },
+    { id: 'comparar', combo: 'shift+c', que: 'Comparar dos directores', grupo: 'Lectura', donde: 'En una junta con debate' },
     { id: 'presentacion', combo: 'p', que: 'Abrir el acta en modo presentación', grupo: 'Lectura', donde: 'Con un acta abierta' },
 
     { id: 'ayuda', combo: '?', que: 'Ver esta hoja de atajos', grupo: 'Ayuda' },
