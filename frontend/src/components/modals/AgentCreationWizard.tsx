@@ -7,7 +7,6 @@ import {
     ChevronLeft,
     Sparkles,
     FileText,
-    Brain,
     Palette,
     Upload,
     Check,
@@ -15,15 +14,6 @@ import {
     Loader2,
     SkipForward,
     Trash2,
-    GraduationCap,
-    Scale,
-    HeartPulse,
-    TrendingUp,
-    Cpu,
-    Pen,
-    Users,
-    ShoppingCart,
-    LayoutTemplate,
     PenLine,
     Thermometer,
     Bot,
@@ -33,7 +23,17 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TextAreaField, TextField } from '@/components/ui/Field';
-import { AGENT_HEX, useChatStore } from '@/store/useChatStore';
+import { useChatStore } from '@/store/useChatStore';
+import {
+    API_URL,
+    CATEGORY_META,
+    MODEL_OPTIONS,
+    PRESET_COLORS,
+    STEPS,
+    resolveTemplateIcon,
+    slideVariants,
+} from './agent-wizard/constants';
+import type { AgentTemplate, FileEntry, WizardStep } from './agent-wizard/types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -45,117 +45,8 @@ interface AgentCreationWizardProps {
     onAgentCreated: (agentId: string) => void;
 }
 
-interface AgentTemplate {
-    template_id: string;
-    name: string;
-    category: string;
-    description: string;
-    icon: string;
-    system_prompt: string;
-    suggested_files: string[];
-    default_temperature: number;
-    default_model: string;
-    tags: string[];
-}
-
-type WizardStep = 0 | 1 | 2 | 3;
-
-interface FileEntry {
-    id: string;
-    file: File;
-    status: 'pending' | 'uploading' | 'success' | 'error';
-    progress: number;
-    errorMessage?: string;
-}
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const STEPS = [
-    { label: 'Metodo', icon: LayoutTemplate },
-    { label: 'Configurar', icon: Brain },
-    { label: 'Conocimiento', icon: FileText },
-    { label: 'Revisar', icon: CheckCircle2 },
-] as const;
-
-// §2: el latón es el único metal estructural. Los ocho colores crudos que
-// había aquí eran decoración: la categoría la distingue su glifo, que es el
-// segundo canal que pide P5.
-const CATEGORY_META: Record<string, { label: string; icon: typeof Scale; color: string }> = {
-    legal:     { label: 'Legal',      icon: Scale,         color: 'text-accent' },
-    health:    { label: 'Salud',      icon: HeartPulse,    color: 'text-accent' },
-    finance:   { label: 'Finanzas',   icon: TrendingUp,    color: 'text-accent' },
-    tech:      { label: 'Tecnologia', icon: Cpu,           color: 'text-accent' },
-    creative:  { label: 'Creativo',   icon: Pen,           color: 'text-accent' },
-    hr:        { label: 'RRHH',       icon: Users,         color: 'text-accent' },
-    sales:     { label: 'Ventas',     icon: ShoppingCart,  color: 'text-accent' },
-    education: { label: 'Educacion',  icon: GraduationCap, color: 'text-accent' },
-};
-
-// §2.8: las seis identidades del contrato más el latón. Los doce hex de antes
-// eran la paleta del sistema viejo (cian neón, morado, magenta) y ninguno
-// estaba calculado contra el paño.
-const PRESET_COLORS = [
-    AGENT_HEX.custom, AGENT_HEX.CTO, AGENT_HEX.CFO,
-    AGENT_HEX.CEO, AGENT_HEX.CMO, AGENT_HEX.DEVIL,
-    AGENT_HEX.user,
-];
-
-const MODEL_OPTIONS = [
-    { value: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro', description: 'Razonamiento máximo (recomendado)' },
-    { value: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash', description: 'Rápido y económico' },
-];
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Resolve a Lucide icon component from a template icon string. */
-const resolveTemplateIcon = (iconName: string) => {
-    const map: Record<string, typeof Scale> = {
-        scale: Scale,
-        heart: HeartPulse,
-        'heart-pulse': HeartPulse,
-        'trending-up': TrendingUp,
-        trending: TrendingUp,
-        cpu: Cpu,
-        pen: Pen,
-        'pen-line': PenLine,
-        users: Users,
-        'shopping-cart': ShoppingCart,
-        'graduation-cap': GraduationCap,
-        brain: Brain,
-        sparkles: Sparkles,
-        bot: Bot,
-        file: FileText,
-    };
-    return map[iconName.toLowerCase()] ?? Sparkles;
-};
-
 let fileIdCounter = 0;
 const nextFileId = () => `file_${++fileIdCounter}_${Date.now()}`;
-
-// ---------------------------------------------------------------------------
-// Slide animation variants
-// ---------------------------------------------------------------------------
-
-const slideVariants = {
-    enter: (direction: number) => ({
-        x: direction > 0 ? 80 : -80,
-        opacity: 0,
-    }),
-    center: {
-        x: 0,
-        opacity: 1,
-    },
-    exit: (direction: number) => ({
-        x: direction > 0 ? -80 : 80,
-        opacity: 0,
-    }),
-};
 
 // ---------------------------------------------------------------------------
 // Component
