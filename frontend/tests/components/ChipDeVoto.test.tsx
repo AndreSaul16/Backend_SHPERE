@@ -41,7 +41,10 @@ describe('F6 — el chip de voto distingue el disenso', () => {
         pintar({ decision: 'NO', confidence: 91 });
 
         const c = chip(/EN CONTRA/);
-        expect(c.className).toContain('text-dissent');
+        // FASE 8: el texto va en --danger (mismo tono oxblood, nivel semántico)
+        // porque dissent sobre su tinte del 12% medía 4.02:1. El chip sigue
+        // siendo inconfundiblemente oxblood por filete y relleno.
+        expect(c.className).toContain('text-danger');
         expect(c.className).toContain('bg-dissent/12');
         // Nada de color de sesión clavado en el estilo del chip.
         expect(c.getAttribute('style')).toBeNull();

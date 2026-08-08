@@ -20,7 +20,11 @@ import type { BoardVote } from '@/types';
  */
 const VOTE_CHIP: Record<BoardVote['decision'], { clase: string; texto: string; glifo: string }> = {
     // Oxblood, relleno y peso: es lo que hay que ver primero.
-    NO: { clase: 'border-dissent/50 bg-dissent/12 text-dissent font-bold', texto: 'EN CONTRA', glifo: '✗' },
+    // El TEXTO va en --danger, no en --dissent: sobre el propio tinte del 12%
+    // el oxblood-400 medía 4.02:1 en oscuro (axe y barrido de la FASE 8) — el
+    // mismo defecto que §9.1/§9.2 ya corrigieron para el botón destructivo y
+    // el mensaje de error. El filete y el relleno siguen siendo dissent.
+    NO: { clase: 'border-dissent/50 bg-dissent/12 text-danger font-bold', texto: 'EN CONTRA', glifo: '✗' },
     // Ámbar: hay decisión, pero cuelga de una condición.
     CONDICIONAL: { clase: 'border-warning/45 bg-warning/12 text-warning font-bold', texto: 'CONDICIONAL', glifo: '~' },
     // Conformidad: neutra y callada. Es el fondo contra el que destaca el disenso.
