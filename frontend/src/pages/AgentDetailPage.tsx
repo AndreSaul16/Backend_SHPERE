@@ -25,6 +25,7 @@ import { reasonOf, toast } from "@/lib/toastBus";
 import { KnowledgeBasePanel } from "@/components/agents/KnowledgeBasePanel";
 import { InlineError } from "@/components/ui/InlineError";
 import { buttonClass } from "@/components/ui/buttonStyles";
+import { EsqueletoDeFormulario } from "@/components/ui/Esqueleto";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -254,12 +255,15 @@ export function AgentDetailPage() {
 
     // ── Loading State ────────────────────────────────────────────────────
     if (isLoading) {
+        /* 6.13 · §9.12: la ficha de un director es un formulario largo de forma
+           conocida. Con el giro centrado, al llegar los datos la pantalla
+           cambiaba entera de golpe; con la silueta, el contenido aterriza en su
+           sitio. */
         return (
-            <div className="flex flex-col items-center justify-center h-full gap-4 bg-midnight/40">
-                <Loader2 className="h-8 w-8 animate-spin text-electric-cyan" />
-                <p className="text-sm text-content-muted font-mono tracking-wider">
-                    Cargando agente...
-                </p>
+            <div className="h-full overflow-y-auto p-4 sm:p-8">
+                <div className="mx-auto max-w-2xl">
+                    <EsqueletoDeFormulario etiqueta="Cargando la ficha del director" filas={5} />
+                </div>
             </div>
         );
     }

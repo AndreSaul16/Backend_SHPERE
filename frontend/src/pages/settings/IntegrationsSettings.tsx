@@ -32,6 +32,7 @@ import {
   useControlDeAcordeon,
   type ControlDeAcordeon,
 } from "@/pages/settings/conexionesAcordeon";
+import { EsqueletoDeTarjetas } from "@/components/ui/Esqueleto";
 
 const PROVIDER_META: Record<
   string,
@@ -226,7 +227,8 @@ export function IntegrationsSettings({ control: controlExterno }: { control?: Co
     }
   };
 
-  if (loading && !data) return <p className="text-content-muted">Cargando...</p>;
+  if (loading && !data)
+    return <EsqueletoDeTarjetas etiqueta="Cargando tus integraciones" filas={4} />;
 
   const providers = data?.available || Object.keys(PROVIDER_META);
   const appByProvider = new Map((apps?.apps || []).map((a) => [a.provider, a]));

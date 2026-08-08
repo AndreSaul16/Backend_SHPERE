@@ -18,6 +18,7 @@ import { ScheduledBoardsSection } from "./ScheduledBoardsSection";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { InlineError } from "@/components/ui/InlineError";
 import { useBoardSettingsStore } from "@/store/useBoardSettingsStore";
+import { EsqueletoDeFormulario } from "@/components/ui/Esqueleto";
 
 export function BoardMeetingSettings() {
   const { enabled, loaded, loading, saving, error, load, setEnabled } =
@@ -53,7 +54,8 @@ export function BoardMeetingSettings() {
 
   // Sólo el primer arranque muestra «Cargando»: un refresco posterior no puede
   // borrar de la pantalla un ajuste que ya se sabe.
-  if (loading && !loaded) return <p className="text-content-muted">Cargando...</p>;
+  if (loading && !loaded)
+    return <EsqueletoDeFormulario etiqueta="Cargando los ajustes de la junta" filas={2} />;
 
   return (
     <div className="space-y-6">

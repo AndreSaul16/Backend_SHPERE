@@ -33,6 +33,7 @@ import {
   SearchX,
 } from "lucide-react";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
+import { EsqueletoDeTarjetas } from "@/components/ui/Esqueleto";
 
 const SERVICE_ICONS: Record<string, React.ReactNode> = {
   google_calendar: <Calendar className="h-5 w-5" />,
@@ -150,7 +151,8 @@ export function ServiceCredentialsSettings({ control: controlExterno }: { contro
     }
   };
 
-  if (loading && !data) return <p className="text-content-muted">Cargando...</p>;
+  if (loading && !data)
+    return <EsqueletoDeTarjetas etiqueta="Cargando tus credenciales" filas={4} />;
 
   return (
     <div className="space-y-6">

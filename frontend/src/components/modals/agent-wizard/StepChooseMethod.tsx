@@ -7,11 +7,12 @@
  * después de elegir no tendría nada que hacer.
  */
 import { motion } from 'framer-motion';
-import { ChevronRight, Loader2, PenLine, Sparkles } from 'lucide-react';
+import { ChevronRight, PenLine, Sparkles } from 'lucide-react';
 import { InlineError } from '@/components/ui/InlineError';
 import { cn } from '@/lib/utils';
 import { CATEGORY_META, resolveTemplateIcon, slideVariants } from './constants';
 import type { AgentTemplate } from './types';
+import { EsqueletoDeTarjetas } from '@/components/ui/Esqueleto';
 
 interface StepChooseMethodProps {
     direction: number;
@@ -113,11 +114,13 @@ export function StepChooseMethod({
             )}
 
             {/* Templates grid */}
+            {/* 6.13 · §9.12: la forma de lo que viene SÍ se conoce —una rejilla
+                de plantillas con su glifo, su nombre y su frase—, así que el
+                giro con la palabra «Cargando» se sustituye por su silueta. Con
+                el giro, además, al llegar las plantillas la rejilla aparecía de
+                golpe y empujaba el pie del asistente hacia abajo. */}
             {templatesLoading && (
-                <div className="flex items-center justify-center py-12 gap-3 text-content-muted">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    <span className="text-sm">Cargando plantillas...</span>
-                </div>
+                <EsqueletoDeTarjetas etiqueta="Cargando las plantillas de agente" filas={4} className="py-4" />
             )}
 
             {templatesError && (

@@ -7,6 +7,7 @@ import { Save, RotateCcw, Bot } from "lucide-react";
 import { agentOverridesService, type AgentOverride } from "@/services/api";
 import { TextAreaField, TextField } from "@/components/ui/Field";
 import { InlineError, type FalloDeSeccion } from "@/components/ui/InlineError";
+import { EsqueletoDeTarjetas } from "@/components/ui/Esqueleto";
 
 // §2.8: la identidad de cada director es su token, no un color crudo de
 // Tailwind elegido a ojo — los cuatro de antes no eran ni siquiera los colores
@@ -110,7 +111,7 @@ export function AgentOverridesSettings() {
     }
   };
 
-  if (loading) return <p className="text-content-muted">Cargando...</p>;
+  if (loading) return <EsqueletoDeTarjetas etiqueta="Cargando tus directores" filas={4} />;
 
   return (
     <div className="space-y-6">

@@ -14,6 +14,7 @@ import { BarraDeGuardado } from "@/components/ui/BarraDeGuardado";
 import { contarCambios } from "@/lib/cambiosSinGuardar";
 import { ConmutadorDeTema } from "@/components/ui/ConmutadorDeTema";
 import { adoptarTemaDelPerfil } from "@/lib/tema";
+import { EsqueletoDeFormulario } from "@/components/ui/Esqueleto";
 
 export function ProfileSettings() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -116,7 +117,7 @@ export function ProfileSettings() {
     setProfile(JSON.parse(guardado) as UserProfile);
   };
 
-  if (loading) return <p className="text-content-muted">Cargando perfil...</p>;
+  if (loading) return <EsqueletoDeFormulario etiqueta="Cargando tu perfil" filas={5} />;
   if (error && !profile) return <InlineError {...error} />;
   if (!profile) return null;
 

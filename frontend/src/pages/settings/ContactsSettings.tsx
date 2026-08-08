@@ -8,6 +8,7 @@ import { contactsService, type Contact } from "@/services/api";
 import { SelectField, TextField } from "@/components/ui/Field";
 import { InlineError, type FalloDeSeccion } from "@/components/ui/InlineError";
 import { EstadoVacio } from '@/components/ui/EstadoVacio';
+import { EsqueletoDeFilas } from "@/components/ui/Esqueleto";
 
 const CONTACT_TYPES: Record<string, string> = {
   email: "Email",
@@ -214,7 +215,7 @@ export function ContactsSettings() {
         </div>
 
         {loading ? (
-          <p className="text-content-muted text-sm">Cargando...</p>
+          <EsqueletoDeFilas etiqueta="Cargando tus contactos" />
         ) : contacts.length === 0 ? (
           /* 6.12 · §9.14: era una frase suelta en medio de un hueco. Ahora
              tiene glifo, título, la frase y UNA acción — que aquí es llevar el
