@@ -6,6 +6,7 @@ import { useChatStore } from '@/store/useChatStore';
 import { ArtifactRenderer } from './ArtifactRenderer';
 import { RegionBoundary } from '@/components/shared/RegionBoundary';
 import { ActaActions } from './ActaActions';
+import { esActa } from '@/utils/acta';
 import { cn } from '@/lib/utils';
 import type { ArtifactType } from '@/types/artifact';
 
@@ -170,7 +171,7 @@ export function ArtifactPanel() {
                                 exit={{ opacity: 0, y: -10 }}
                                 className="h-full flex flex-col"
                             >
-                                {activeArtifact.type === 'markdown' && /acta/i.test(activeArtifact.title) && (
+                                {esActa(activeArtifact) && (
                                     <ActaActions title={activeArtifact.title} content={activeArtifact.content} />
                                 )}
                                 {/* Eje 3 · el visor es el vecindario peligroso

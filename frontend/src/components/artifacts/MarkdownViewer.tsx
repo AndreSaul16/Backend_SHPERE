@@ -2,6 +2,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Download, FileText } from 'lucide-react';
 import { DocTable } from '@/components/shared/DocTable';
+import { ActaHeader } from './ActaHeader';
+import { esActa } from '@/utils/acta';
 import type { Artifact } from '@/types/artifact';
 
 interface MarkdownViewerProps {
@@ -9,6 +11,8 @@ interface MarkdownViewerProps {
 }
 
 export function MarkdownViewer({ artifact }: MarkdownViewerProps) {
+    const acta = esActa(artifact);
+
     const handleDownload = () => {
         const filename = `${artifact.title.replace(/\s+/g, '_').toLowerCase()}.md`;
         const blob = new Blob([artifact.content], { type: 'text/markdown' });
@@ -26,13 +30,13 @@ export function MarkdownViewer({ artifact }: MarkdownViewerProps) {
             <div className="flex items-center justify-between px-6 py-3 bg-surface-1 border-b border-stroke-hairline">
                 <div className="flex items-center gap-3">
                     <FileText className="h-4 w-4 text-content-muted" aria-hidden="true" />
-                    <span className="text-micro font-mono text-content-muted uppercase">
-                        Document Preview
+                    <span className="text-micro font-sans text-content-muted uppercase">
+                        {acta ? 'Acta' : 'Documento'}
                     </span>
                 </div>
                 <button
                     onClick={handleDownload}
-                    className="p-2 rounded-xl hover:bg-stroke-highlight transition-all text-content-muted hover:text-electric-cyan"
+                    className="p-2 rounded-sm hover:bg-stroke-highlight transition-colors text-content-muted hover:text-accent"
                     title="Descargar .md"
                 >
                     <Download className="h-4 w-4" />
@@ -54,6 +58,10 @@ export function MarkdownViewer({ artifact }: MarkdownViewerProps) {
                     1.13:1, viñetas a 2.10:1). La cabecera con fecha y recuento y
                     la medida definitiva son de la tarea 2.1. */}
                 <article className="acta-sheet mx-auto p-6 sm:p-8">
+                    {/* Tarea 2.1: fecha y recuento, y el sitio donde aterriza el
+                        Sello (§8.3). Sólo en el acta: un artefacto markdown
+                        cualquiera no tiene junta que datar ni votos que contar. */}
+                    {acta && <ActaHeader actaId={artifact.id} date={artifact.createdAt} />}
                     <div className="doc-prose">
                         {/* F4: la tabla del acta se desplaza dentro de su
                             contenedor (§9.7), nunca rompe la hoja. */}
