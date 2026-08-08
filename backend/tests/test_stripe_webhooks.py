@@ -1,8 +1,12 @@
+import threading
+
 import pytest
 import stripe
 from httpx import AsyncClient
 from types import SimpleNamespace
 from unittest.mock import patch
+
+from pymongo.collection import Collection
 
 @pytest.fixture
 def mock_stripe_event():
@@ -181,6 +185,59 @@ async def test_malformed_checkout_goes_to_dead_letter(async_client: AsyncClient,
 _FAKE_PERIOD_END = {"current_period_end": 1893456000}
 
 
+class _WriteRecorder:
+    """Registra toda escritura que LLEGA a Mongo, por colección.
+
+    PW-001 afirma algo sobre un ESTADO INTERMEDIO ("no se inserta el claim"), y
+    el estado final no lo distingue: la compensación de PW-003 inserta y borra,
+    y acaba exactamente igual que la guarda. Hace falta observar el
+    comportamiento, no el resultado.
+
+    Se graba en el boundary de pymongo (`Collection`, API pública de terceros) en
+    vez de espiar `webhooks._claim_grant`, que es un helper privado nuestro:
+    así el test sobrevive a renombrarlo, hacerlo inline o mover el webhook a una
+    capa de aplicación, y afirma el hecho que le importa a negocio — que no se
+    tocó `credit_transactions`.
+
+    El parche es de CLASE, así que sin más filtro grabaría también lo que escriba
+    cualquier otro hilo — Motor ejecuta pymongo en un ThreadPoolExecutor, y una
+    operación en vuelo de otro test podría colarse en la ventana y hacer fallar
+    este. Solo se graba el hilo que abre el grabador, que es donde corre el
+    endpoint (`async def` sobre el mismo loop que el test) y sus escrituras sync.
+    """
+
+    _NAMES = ("insert_one", "update_one", "delete_one", "find_one_and_update")
+
+    def __init__(self):
+        self.writes: list[tuple[str, str]] = []
+        self._real = {n: getattr(Collection, n) for n in self._NAMES}
+
+    def __enter__(self):
+        rec = self
+        rec._thread = threading.get_ident()
+
+        def make(name, real):
+            def wrapper(self, *a, **kw):
+                if threading.get_ident() == rec._thread:
+                    rec.writes.append((self.name, name))
+                return real(self, *a, **kw)
+            return wrapper
+
+        self._patches = [patch.object(Collection, n, make(n, r))
+                         for n, r in self._real.items()]
+        for p in self._patches:
+            p.start()
+        return self
+
+    def __exit__(self, *exc):
+        for p in self._patches:
+            p.stop()
+        return False
+
+    def on(self, collection: str) -> list[str]:
+        return [op for col, op in self.writes if col == collection]
+
+
 @pytest.fixture
 def orphan_env(sync_db):
     """Entorno aislado para los tests de grant huérfano.
@@ -244,8 +301,6 @@ def orphan_env(sync_db):
 
 @pytest.mark.asyncio
 async def test_orphan_topup_no_grant_no_claim(async_client: AsyncClient, orphan_env):
-    from app.presentation.api.v1 import webhooks as webhooks_mod
-
     E, U, SKU = "evt_pw001_topup", "usr_pw001_topup", "deep_dive"
     event = orphan_env.event(E, U, "payment", SKU)
 
@@ -253,8 +308,7 @@ async def test_orphan_topup_no_grant_no_claim(async_client: AsyncClient, orphan_
     assert orphan_env.users.find_one({"firebase_uid": U}) is None
 
     with patch("stripe.Webhook.construct_event", return_value=event), \
-         patch("app.presentation.api.v1.webhooks._claim_grant",
-               wraps=webhooks_mod._claim_grant) as claim_spy:
+         _WriteRecorder() as rec:
         r = await async_client.post(
             "/api/v1/webhooks/stripe", json=event,
             headers={"stripe-signature": "v"},
@@ -262,10 +316,10 @@ async def test_orphan_topup_no_grant_no_claim(async_client: AsyncClient, orphan_
 
     assert r.status_code == 200
     assert orphan_env.tx.count_documents({"stripe_event_id": E}) == 0
-    # El claim no se llega a INTENTAR. Sin esto el test lo pasaría también la
-    # compensación de PW-003 (que inserta y borra), y la guarda de perfil dejaría
-    # de estar observada: mismo estado final, distinto comportamiento.
-    assert claim_spy.call_count == 0
+    # Ni un intento de escritura llegó a la colección. Sin esto el test lo pasaría
+    # también la compensación de PW-003 (que inserta y borra), y la guarda de
+    # perfil dejaría de estar observada: mismo estado final, distinto comportamiento.
+    assert rec.on("credit_transactions") == []
     failed = orphan_env.failed.find_one({"event_id": E})
     assert failed is not None
     assert failed["reason"] == "user_profile_not_found"
@@ -273,8 +327,6 @@ async def test_orphan_topup_no_grant_no_claim(async_client: AsyncClient, orphan_
 
 @pytest.mark.asyncio
 async def test_orphan_subscription_no_grant_no_claim(async_client: AsyncClient, orphan_env):
-    from app.presentation.api.v1 import webhooks as webhooks_mod
-
     E, U, P = "evt_pw001_sub", "usr_pw001_sub", "free"
     event = orphan_env.event(E, U, "subscription", P)
     S = event["data"]["object"]["subscription"]
@@ -283,8 +335,7 @@ async def test_orphan_subscription_no_grant_no_claim(async_client: AsyncClient, 
 
     with patch("stripe.Webhook.construct_event", return_value=event), \
          patch("stripe.Subscription.retrieve", return_value=_FAKE_PERIOD_END) as retrieve_spy, \
-         patch("app.presentation.api.v1.webhooks._claim_grant",
-               wraps=webhooks_mod._claim_grant) as claim_spy:
+         _WriteRecorder() as rec:
         r = await async_client.post(
             "/api/v1/webhooks/stripe", json=event,
             headers={"stripe-signature": "v"},
@@ -292,7 +343,7 @@ async def test_orphan_subscription_no_grant_no_claim(async_client: AsyncClient, 
 
     assert r.status_code == 200
     assert orphan_env.tx.count_documents({"stripe_event_id": E}) == 0
-    assert claim_spy.call_count == 0
+    assert rec.on("credit_transactions") == []
     # Un huérfano se corta antes del dispatch de `mode`: no gastamos una llamada
     # a la API de Stripe por un pago que no vamos a aplicar.
     assert retrieve_spy.call_count == 0
