@@ -1,52 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
 import { Download, AlertTriangle, GitBranch } from 'lucide-react';
+import { aplicarTemaMermaid, siguienteIdDeDibujo, temaActual } from './mermaidTheme';
 import type { Artifact } from '@/types/artifact';
-
-/**
- * DESIGN §10: «`themeVariables` se deriva de los tokens leyendo
- * `getComputedStyle(document.documentElement)`, nunca con hex literales — hoy
- * `MermaidDiagram.tsx:11-22` tiene 11 hex clavados, así que un cambio de paleta
- * arreglaría la app y dejaría todos los diagramas en la paleta antigua».
- *
- * Y eso es exactamente lo que había pasado: los diagramas seguían en cian
- * `#00F5D4` y morado `#9D85FF` cuando el resto del producto ya era paño y
- * latón. Leyendo la variable, el diagrama sigue al tema — incluido el claro —
- * sin tocar este fichero.
- */
-function token(name: string, fallback: string): string {
-    if (typeof window === 'undefined' || !document.documentElement) return fallback;
-    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-    return value || fallback;
-}
-
-/** Se llama en el primer render, no en la carga del módulo: en la carga del
- *  módulo el `<html>` puede no tener todavía la hoja de estilos aplicada. */
-let temaAplicado = false;
-function aplicarTemaMermaid() {
-    if (temaAplicado) return;
-    temaAplicado = true;
-    mermaid.initialize({
-        startOnLoad: false,
-        securityLevel: 'strict',
-        theme: 'dark',
-        themeVariables: {
-            primaryColor: token('--surface-2', '#142119'),
-            primaryTextColor: token('--content', '#EEEDE8'),
-            primaryBorderColor: token('--accent', '#D7A94F'),
-            lineColor: token('--accent', '#D7A94F'),
-            secondaryColor: token('--surface-1', '#0D1811'),
-            tertiaryColor: token('--surface-3', '#1C2A21'),
-            background: 'transparent',
-            mainBkg: token('--surface-2', '#142119'),
-            nodeBorder: token('--accent', '#D7A94F'),
-            clusterBkg: token('--surface-1', '#0D1811'),
-            titleColor: token('--content-strong', '#FBFAF7'),
-            edgeLabelBackground: token('--surface-0', '#060F09'),
-        },
-        fontFamily: '"JetBrains Mono", monospace',
-    });
-}
 
 interface MermaidDiagramProps {
     artifact: Artifact;
@@ -57,27 +13,49 @@ export function MermaidDiagram({ artifact }: MermaidDiagramProps) {
     const [error, setError] = useState<string | null>(null);
     const [svgContent, setSvgContent] = useState<string>('');
 
-    useEffect(() => {
-        const renderDiagram = async () => {
-            if (!containerRef.current) return;
+    // El tema con el que está dibujado el SVG que hay en pantalla. Cambiarlo
+    // vuelve a disparar el efecto, que es lo que recolorea el diagrama.
+    const [tema, setTema] = useState(temaActual);
 
+    useEffect(() => {
+        const observador = new MutationObserver(() => setTema(temaActual()));
+        observador.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+        return () => observador.disconnect();
+    }, []);
+
+    useEffect(() => {
+        let vigente = true;
+        const id = siguienteIdDeDibujo();
+
+        const renderDiagram = async () => {
             try {
-                setError(null);
-                aplicarTemaMermaid();
-                const id = `mermaid-${artifact.id.replace(/-/g, '_')}`;
+                aplicarTemaMermaid(tema);
                 const { svg } = await mermaid.render(id, artifact.content);
+                if (!vigente) return;
+                setError(null);
                 setSvgContent(svg);
             } catch {
+                if (!vigente) return;
                 // Sin aviso: el fallo ya ocupa el hueco del propio diagrama, y
                 // no es una acción del usuario que haya fallado sino texto que
                 // el modelo escribió mal. El motivo de mermaid no se enseña:
                 // no hay nada que el usuario pueda hacer con él.
                 setError('No se pudo dibujar el diagrama: el texto no es Mermaid válido');
+                // Y el SVG anterior se va: dejarlo puesto enseñaría un diagrama
+                // que ya no corresponde al texto que hay delante.
+                setSvgContent('');
+            } finally {
+                // Mermaid deja su elemento de medida en el documento cuando el
+                // dibujo falla. Se barre siempre: no cuesta nada y evita que la
+                // página acumule cadáveres por cada diagrama mal escrito.
+                document.getElementById(id)?.remove();
+                document.getElementById(`d${id}`)?.remove();
             }
         };
 
         renderDiagram();
-    }, [artifact.content, artifact.id]);
+        return () => { vigente = false; };
+    }, [artifact.content, tema]);
 
     const handleDownload = () => {
         if (!svgContent) return;
@@ -97,14 +75,14 @@ export function MermaidDiagram({ artifact }: MermaidDiagramProps) {
             <div className="flex items-center justify-between px-6 py-3 bg-surface-1 border-b border-stroke-hairline">
                 <div className="flex items-center gap-3">
                     <GitBranch className="h-4 w-4 text-content-muted" aria-hidden="true" />
-                    <span className="text-micro font-mono text-content-muted uppercase">
-                        Architecture Preview
+                    <span className="text-micro font-sans text-content-muted uppercase">
+                        Diagrama
                     </span>
                 </div>
                 {svgContent && (
                     <button
                         onClick={handleDownload}
-                        className="p-2 rounded-xl hover:bg-stroke-highlight transition-all text-content-muted hover:text-electric-cyan"
+                        className="p-2 rounded-sm hover:bg-stroke-highlight transition-colors text-content-muted hover:text-accent"
                         title="Descargar SVG"
                     >
                         <Download className="h-4 w-4" />
@@ -136,8 +114,8 @@ export function MermaidDiagram({ artifact }: MermaidDiagramProps) {
 
             {/* Footer */}
             <div className="px-6 py-3 bg-surface-1 border-t border-stroke-hairline">
-                <p className="text-micro text-content-muted font-mono uppercase">
-                    ENGINE: MERMAID_JS · RENDER: SVG_VECTOR · STATUS: DYNAMIC
+                <p className="text-micro text-content-muted font-sans uppercase">
+                    Diagrama Mermaid · vectorial
                 </p>
             </div>
         </div>
