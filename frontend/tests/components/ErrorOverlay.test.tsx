@@ -5,7 +5,8 @@ import { useChatStore } from '../../src/store/useChatStore';
 import { ERRORES_EN_BLANCO } from '../../src/store/chat/errorsSlice';
 
 vi.mock('framer-motion', () => ({
-    AnimatePresence: ({ children }: any) => children,
+    useReducedMotion: () => false,
+        AnimatePresence: ({ children }: any) => children,
     motion: {
         div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
     },

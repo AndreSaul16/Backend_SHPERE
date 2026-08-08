@@ -5,7 +5,8 @@ import { useChatStore } from '../../src/store/useChatStore';
 
 // Mock de framer-motion
 vi.mock('framer-motion', () => ({
-    AnimatePresence: ({ children }: any) => children,
+    useReducedMotion: () => false,
+        AnimatePresence: ({ children }: any) => children,
     motion: {
         div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
         span: ({ children, ...props }: any) => <span {...props}>{children}</span>,

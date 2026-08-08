@@ -594,6 +594,90 @@
 
     color: var(--content);
   }
+
+  /* ── §8.1 La Mesa / el Palco ──────────────────────────────────────────── */
+
+  /* La lámpara de la mesa: UNA capa, un gradiente radial estático de un solo
+     stop cálido. Lo que se anima es el envoltorio (transform), nunca esto.
+     No usa `--lamp` porque ese token es transparente en tema claro —allí la
+     lámpara de la sala se apaga a propósito— y la mesa sí necesita marcar quién
+     tiene la palabra en los dos temas. */
+  .palco-lampara{
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 50%;
+    inline-size: 132px;
+    translate: -50% 0;
+    background: radial-gradient(closest-side,
+      color-mix(in oklab, var(--brass-400) 22%, transparent),
+      transparent 100%);
+  }
+
+  /* §8.11: el punto de «está hablando». Es el único bucle presupuestado de la
+     superficie del transcript y sólo corre mientras hay un turno real en curso.
+     Con movimiento reducido, la regla global de §7.6 lo deja quieto y encendido:
+     la información («este habla») se conserva sin movimiento. */
+  @keyframes latido-turno{ 0%,100%{ opacity:.35 } 50%{ opacity:1 } }
+  .punto-hablando{ animation: latido-turno 1400ms var(--ease-settle) infinite; }
+
+  /* ── §8.4 El Rail del Orden del Día / el Canto ────────────────────────── */
+
+  /* El uñero: 3px pegados al borde, dentro del área segura. En `lg+` se
+     ensancha a la canal de 56px (`--rail-order`) y aparecen números y nombres
+     al margen, como una transcripción de Hansard. */
+  .canto{
+    inline-size: calc(3px + env(safe-area-inset-left));
+    padding-inline-start: env(safe-area-inset-left);
+  }
+  @media (min-width: 64rem){
+    .canto{ inline-size: var(--rail-order); padding-inline-start: 0; }
+  }
+
+  /* La pista es un contenedor de tamaño: así el recorrido del cursor se puede
+     escribir en `cqh` y no hay que medir el DOM en cada fotograma de scroll. */
+  .canto-pista{ container-type: size; }
+
+  /* El cursor de latón. Recorre de 0 a «el alto de la pista menos el suyo»
+     según `--canto-p` (0→1). Sólo `translate`: se compone y no toca el layout.
+     Sin transición a propósito — el cursor NO viaja por su cuenta, refleja el
+     scroll; el suavizado lo pone el propio desplazamiento del lector, y en el
+     salto de fase lo pone `scrollIntoView`. Una transición de 320ms encima de
+     cada fotograma de scroll se lee como retraso, no como suavidad. */
+  .canto-cursor{
+    translate: 0 calc(var(--canto-p, 0) * (100cqh - 100%));
+  }
+
+  /* §8.4: donde el navegador sabe ligar una animación al scroll, el recorrido
+     sale del hilo principal y el componente no registra ni un oyente. El
+     contenedor con scroll del transcript publica la línea de tiempo y el shell
+     le abre el alcance para que el canto —que es hermano suyo, no hijo— pueda
+     consumirla. */
+  .eje-del-debate{ scroll-timeline: --eje-debate y; }
+  .con-eje-del-debate{ timeline-scope: --eje-debate; }
+
+  @supports (animation-timeline: scroll()){
+    @keyframes canto-recorrido{
+      from{ translate: 0 0 }
+      to{ translate: 0 calc(100cqh - 100%) }
+    }
+    .canto-cursor{
+      translate: none;
+      animation: canto-recorrido linear both;
+      animation-timeline: --eje-debate;
+    }
+  }
+
+  /* §7.6: con movimiento reducido el cursor «se coloca», no viaja. Se apaga la
+     animación —la regla global le impondría 1ms de duración, que sobre una
+     línea de tiempo de progreso no significa nada— y vuelve el `translate`
+     directo, que el componente alimenta por rAF. La posición, que es
+     información («voy por aquí»), se conserva entera. */
+  @media (prefers-reduced-motion: reduce){
+    .canto-cursor{
+      animation: none;
+      translate: 0 calc(var(--canto-p, 0) * (100cqh - 100%));
+    }
+  }
 }
 
 /* ╔═══════════════════════════════════════════════════════════════════════════╗

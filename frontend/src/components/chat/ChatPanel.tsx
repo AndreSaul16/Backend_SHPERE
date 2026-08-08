@@ -1,11 +1,13 @@
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { Send, Square, Paperclip, MoreVertical, Zap, ShieldCheck, Search, X, Download, Pin, Hand, Landmark } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useChatStore, getGroupMembers } from "@/store/useChatStore";
 import { chatService } from "@/services/api";
 import { MessageBubble } from "./MessageBubble";
 import { BoardWarRoom } from "./BoardWarRoom";
+import { AgendaRail, type SegmentoDelDia } from "./AgendaRail";
+import { fasesDe } from "./agendaPhases";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { cn } from "@/lib/utils";
 import { exportAsMarkdown, downloadAsFile } from "@/utils/exportChat";
@@ -110,6 +112,49 @@ export function ChatPanel() {
         || boardSession.participants.length > 0
         || Object.keys(boardSession.votes).length > 0
     );
+
+    const prefiereMenosMovimiento = useReducedMotion();
+
+    /**
+     * El orden del día como dato: cuántos turnos ha llevado cada fase.
+     *
+     * El Canto (§8.4) pinta segmentos «proporcionales a los turnos de cada
+     * fase», así que el reparto sale del hilo de verdad y no de un peso
+     * inventado. Una fase anunciada que aún no ha hablado ocupa el mínimo, para
+     * que el orden del día se lea entero desde el primer turno.
+     */
+    const segmentos = useMemo<SegmentoDelDia[]>(() => {
+        if (!boardSession) return [];
+        const cuenta = new Map<string, number>();
+        for (const m of messages) {
+            if (!m.phase) continue;
+            cuenta.set(m.phase, (cuenta.get(m.phase) ?? 0) + 1);
+        }
+        return fasesDe(boardSession).map((f) => ({ ...f, turnos: cuenta.get(f.clave) ?? 0 }));
+    }, [boardSession, messages]);
+
+    /**
+     * La última intervención de cada director, para citarla en el asiento en
+     * foco del Palco (§8.1). Se recorta aquí y no en la mesa: el que tiene el
+     * hilo es este componente.
+     */
+    const intervencionPorRol = useMemo<Record<string, string>>(() => {
+        const porRol: Record<string, string> = {};
+        for (const m of messages) {
+            if (m.role === 'user' || m.role === 'system' || !m.content) continue;
+            porRol[m.role] = m.content.replace(/<sphere_artifact[\s\S]*?<\/sphere_artifact>/g, '').trim().slice(0, 220);
+        }
+        return porRol;
+    }, [messages]);
+
+    /** Tocar un segmento del Canto salta a esa fase (§8.4). */
+    const saltarAFase = useCallback((clave: string) => {
+        const destino = messagesContainerRef.current?.querySelector<HTMLElement>(`[data-fase="${clave}"]`);
+        destino?.scrollIntoView({
+            behavior: prefiereMenosMovimiento ? 'auto' : 'smooth',
+            block: 'start',
+        });
+    }, [prefiereMenosMovimiento]);
 
     // Indicador "X está escribiendo…" — resuelve el agente que habla ahora mismo
     // a partir de la última burbuja (en board, va cambiando CEO → CTO → …).
@@ -480,7 +525,7 @@ export function ChatPanel() {
                 junta con debate (`loadSession` la reconstruye del historial). */}
             <AnimatePresence>
                 {isGroupChat && boardSession && hayMesaQueEnsenar && (
-                    <BoardWarRoom board={boardSession} agents={agents} />
+                    <BoardWarRoom board={boardSession} agents={agents} intervencionPorRol={intervencionPorRol} />
                 )}
             </AnimatePresence>
 
@@ -518,11 +563,24 @@ export function ChatPanel() {
                 )}
             </AnimatePresence>
 
-            {/* Messages Area */}
+            {/* Messages Area — y el Canto pegado a su borde (§8.4).
+                El rail es HERMANO del contenedor con scroll, no hijo: así el
+                filamento no se desplaza con el transcript y la línea de tiempo
+                de scroll con nombre que publica el eje llega hasta el cursor a
+                través del alcance que abre este envoltorio. */}
+            <div className="con-eje-del-debate flex min-h-0 flex-1">
+                {hayMesaQueEnsenar && segmentos.length > 0 && (
+                    <AgendaRail
+                        segmentos={segmentos}
+                        faseViva={boardSession?.phase ?? null}
+                        scroller={messagesContainerRef}
+                        onSaltar={saltarAFase}
+                    />
+                )}
             <div
                 ref={messagesContainerRef}
                 onScroll={handleScroll}
-                className="flex-1 overflow-y-auto p-6 scrollbar-none"
+                className="eje-del-debate min-w-0 flex-1 overflow-y-auto p-6 scrollbar-none"
             >
                 {/* Eje 3 · el transcript es la región más grande y la que más
                     contenido ajeno pinta (markdown, tablas, diagramas de un
@@ -562,7 +620,7 @@ export function ChatPanel() {
                             {filteredMessages.map((msg, idx) => {
                                 const msgAgent = msg.agentId ? agents.find(a => a.id === msg.agentId) : (msg.role !== 'user' && msg.role !== 'system' ? activeAgent : undefined);
                                 return (
-                                    <div key={msg.id} className="space-y-3">
+                                    <div key={msg.id} data-fase={msg.phase} className="space-y-3">
                                     <MessageBubble
                                         message={msg}
                                         agent={msgAgent}
@@ -623,6 +681,7 @@ export function ChatPanel() {
                     )}
                 </div>
                 </RegionBoundary>
+            </div>
             </div>
 
             {/* Regiones vivas (§12.6). Siempre en el DOM: un `aria-live` que se

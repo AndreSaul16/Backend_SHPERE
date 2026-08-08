@@ -31,17 +31,12 @@ vi.mock('framer-motion', () => {
         return <div {...domProps}>{children}</div>;
     };
     return {
+        useReducedMotion: () => false,
         AnimatePresence: ({ children }: any) => children,
-        motion: {
-            div: Component,
-            span: Component,
-            h3: Component,
-            p: Component,
-            header: Component,
-            nav: Component,
-            button: Component,
-            textarea: Component,
-        },
+        // Proxy y no una lista: la mesa y la aguja usan `motion.line`, y una
+        // lista de etiquetas obliga a recordar ampliarla cada vez que se anima
+        // un elemento nuevo.
+        motion: new Proxy({}, { get: () => Component }),
         layoutId: 'test-layout-id'
     };
 });

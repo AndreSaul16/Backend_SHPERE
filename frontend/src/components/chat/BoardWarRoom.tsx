@@ -1,52 +1,42 @@
-import { motion, AnimatePresence } from "framer-motion";
-import { Check } from "lucide-react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import type { Agent } from "@/types";
-import { AGENT_HEX, getBoardAgentByRole, type BoardSessionState } from "@/store/useChatStore";
-import { cn } from "@/lib/utils";
+import type { BoardSessionState } from "@/store/useChatStore";
+import { conMovimiento, CURVA, DURACION } from "@/lib/motion";
+import { fasesDe } from "./agendaPhases";
+import { BoardTable } from "./BoardTable";
 
 /**
- * D34 — las CINCO fases de `BoardPhase`, en el orden del grafo del backend
- * (`board_v2.py`: opening → analysis → rebuttal → devil → synthesis).
+ * La cabecera de la junta: la Mesa (§8.1) y lo que la mesa no puede decir sola.
  *
- * `devil` faltaba aquí. Como la barra se pinta comparando contra
- * `findIndex(p.key === board.phase)`, mientras hablaba el Abogado del Diablo el
- * índice era -1 y NINGUNA fase quedaba marcada como pasada ni como actual: las
- * cinco se pintaban en `text-content-quiet`, o sea todas futuras, justo en el
- * momento más tenso del debate. Y la región viva anunciaba «Fase: en curso».
+ * Qué cambió y por qué:
+ *
+ * - **Las placas y el orden del día se han ido de aquí.** Las primeras a
+ *   `BoardTable`, que es el Palco de §8.1; el segundo al Canto de §8.4, porque
+ *   la barra de fases que vivía aquí era `hidden sm:flex` — o sea que **a 390px
+ *   el orden del día desaparecía entero**, justo en el ancho que §4.3 declara
+ *   caso base.
+ * - **Ya no se anima el alto.** La banda entraba con `height: 0 → auto`, que
+ *   §7.4 prohíbe por su nombre. Entra con opacidad y 6px de recorrido, que se
+ *   componen.
+ * - **Ya no hay resplandor en bucle** bajo el que habla. El pulso vive ahora en
+ *   el punto de 4px de la placa, que es el único bucle que §8.11 presupuesta
+ *   para esta superficie.
+ *
+ * Lo que sí se queda: el recuento, el coste y la región viva. La mesa dice
+ * quién y cuánto; esto dice en qué ha quedado.
  */
-const ALL_PHASES: { key: string; label: string }[] = [
-    { key: "opening", label: "Apertura" },
-    { key: "analysis", label: "Análisis" },
-    { key: "rebuttal", label: "Réplicas" },
-    { key: "devil", label: "Objeción" },
-    { key: "synthesis", label: "Síntesis" },
-];
-
-/**
- * El asiento del Abogado del Diablo es opcional (`board_devil` en el backend),
- * así que su fase sólo entra en la barra cuando va a ocurrir de verdad: o
- * porque la junta lo lleva sentado, o porque ya está hablando. Anunciar una
- * fase que nunca llegará sería mentir sobre el orden del día.
- */
-function phasesFor(board: Pick<BoardSessionState, "devil" | "phase">) {
-    const conDevil = board.devil || board.phase === "devil";
-    return conDevil ? ALL_PHASES : ALL_PHASES.filter((p) => p.key !== "devil");
-}
-
-const VOTE_GLYPH: Record<string, string> = { SI: "✓", NO: "✗", CONDICIONAL: "~" };
-
-/**
- * Cabecera "war-room" del Board V2: muestra los directores en sesión con su estado
- * vivo (anillo pulsante de quien habla, check + voto de quien terminó) y la barra
- * de fases del debate. Solo se renderiza durante un debate activo.
- */
-export function BoardWarRoom({ board, agents }: { board: BoardSessionState; agents: Agent[] }) {
-    // Roles a mostrar: CEO siempre + participantes + DEVIL si aplica.
-    const roles = ["CEO", ...board.participants.filter((r) => r !== "CEO")];
-    if (board.devil) roles.push("DEVIL");
-
-    const phases = phasesFor(board);
-    const phaseIndex = phases.findIndex((p) => p.key === board.phase);
+export function BoardWarRoom({
+    board,
+    agents,
+    intervencionPorRol,
+}: {
+    board: BoardSessionState;
+    agents: Agent[];
+    intervencionPorRol?: Record<string, string>;
+}) {
+    const reducido = useReducedMotion();
+    const fases = fasesDe(board);
+    const faseActual = fases.find((f) => f.clave === board.phase);
 
     const tallyText = (() => {
         if (!board.tally) return null;
@@ -57,94 +47,24 @@ export function BoardWarRoom({ board, agents }: { board: BoardSessionState; agen
 
     return (
         <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="border-b border-stroke-hairline bg-surface-1 overflow-hidden z-10"
+            initial={reducido ? false : { opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={conMovimiento(reducido, { duration: DURACION.reveal, ease: CURVA.settle })}
+            className="border-b border-stroke-hairline bg-surface-1 z-10"
         >
-            <div className="max-w-4xl mx-auto px-6 py-3">
-                <div className="flex items-center justify-between gap-4">
-                    {/* Avatares de los directores en sesión */}
-                    <div className="flex items-center gap-3">
-                        {roles.map((role) => {
-                            const agent = getBoardAgentByRole(agents, role);
-                            const status = board.statusByRole[role] || "idle";
-                            const vote = board.votes[role];
-                            const hex = agent?.hexColor || AGENT_HEX.custom;
-                            return (
-                                <div key={role} className="flex flex-col items-center gap-1 w-12">
-                                    <div className="relative">
-                                        <motion.div
-                                            className="h-9 w-9 rounded-xl flex items-center justify-center text-sm font-bold border"
-                                            style={{
-                                                color: hex,
-                                                borderColor: `${hex}40`,
-                                                backgroundColor: `${hex}12`,
-                                                opacity: status === "idle" ? 0.4 : 1,
-                                            }}
-                                            animate={
-                                                status === "speaking"
-                                                    ? { boxShadow: [`0 0 0px ${hex}00`, `0 0 14px ${hex}99`, `0 0 0px ${hex}00`] }
-                                                    : { boxShadow: `0 0 0px ${hex}00` }
-                                            }
-                                            transition={status === "speaking" ? { repeat: Infinity, duration: 1.4 } : { duration: 0.3 }}
-                                        >
-                                            {agent?.avatar || role[0]}
-                                        </motion.div>
-                                        {status === "done" && (
-                                            <motion.div
-                                                initial={{ scale: 0 }}
-                                                animate={{ scale: 1 }}
-                                                className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-success border-2 border-midnight flex items-center justify-center"
-                                            >
-                                                <Check className="h-2 w-2 text-content-strong" />
-                                            </motion.div>
-                                        )}
-                                    </div>
-                                    {vote ? (
-                                        <span
-                                            className="text-micro font-mono font-bold leading-none tabular-nums"
-                                            style={{ color: hex }}
-                                            title={`${vote.decision} · ${vote.confidence}%`}
-                                        >
-                                            {VOTE_GLYPH[vote.decision] || "·"} {vote.confidence}%
-                                        </span>
-                                    ) : (
-                                        <span className="text-micro font-mono uppercase text-content-muted leading-none truncate w-full text-center">
-                                            {status === "speaking" ? "hablando" : role}
-                                        </span>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {/* Barra de fases */}
-                    <div className="hidden sm:flex items-center gap-1.5 text-micro font-mono uppercase">
-                        {phases.map((p, i) => (
-                            <div key={p.key} className="flex items-center gap-1.5">
-                                <span
-                                    className={cn(
-                                        "transition-colors",
-                                        i === phaseIndex ? "text-accent font-bold" : i < phaseIndex ? "text-content-muted" : "text-content-quiet"
-                                    )}
-                                >
-                                    {p.label}
-                                </span>
-                                {i < phases.length - 1 && <span className="text-content-quiet" aria-hidden="true">▸</span>}
-                            </div>
-                        ))}
-                    </div>
-                </div>
+            <div className="max-w-5xl mx-auto px-4 py-2 sm:px-6">
+                <BoardTable board={board} agents={agents} intervencionPorRol={intervencionPorRol} />
 
                 {/* Consenso / coste */}
-                <div className="flex items-center justify-between mt-2 min-h-[14px]">
+                <div className="flex items-center justify-between gap-3 mt-2 min-h-[14px]">
                     <AnimatePresence>
                         {tallyText && (
                             <motion.span
-                                initial={{ opacity: 0, y: 4 }}
+                                initial={reducido ? false : { opacity: 0, y: 4 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="text-micro text-accent font-mono"
+                                transition={conMovimiento(reducido, { duration: DURACION.pop, ease: CURVA.settle })}
+                                className="text-micro text-accent font-mono min-w-0 truncate"
                                 aria-hidden="true"
                             >
                                 {tallyText}
@@ -152,7 +72,7 @@ export function BoardWarRoom({ board, agents }: { board: BoardSessionState; agen
                             </motion.span>
                         )}
                     </AnimatePresence>
-                    <span className="text-micro font-mono text-content-muted uppercase ml-auto">
+                    <span className="text-micro font-mono text-content-muted uppercase ml-auto shrink-0 tnum">
                         {board.cost} créditos
                     </span>
                 </div>
@@ -166,7 +86,7 @@ export function BoardWarRoom({ board, agents }: { board: BoardSessionState; agen
                     la vez que su contenido. */}
                 <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="live-tally">
                     {tallyText
-                        ? `${tallyText}${board.earlyExit ? ' — consenso, debate abreviado' : ''}. Fase: ${phases[phaseIndex]?.label ?? 'en curso'}.`
+                        ? `${tallyText}${board.earlyExit ? ' — consenso, debate abreviado' : ''}. Fase: ${faseActual?.etiqueta ?? 'en curso'}.`
                         : ''}
                 </p>
             </div>
