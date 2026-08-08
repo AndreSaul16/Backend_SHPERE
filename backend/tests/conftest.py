@@ -8,6 +8,7 @@ DISEÑO CLAVE:
 """
 import pytest
 import asyncio
+import os
 from typing import AsyncGenerator
 from unittest.mock import patch
 import sys
@@ -22,7 +23,33 @@ from dotenv import load_dotenv
 env_path = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(dotenv_path=env_path)
 
+# Default seguro para el dev que lanza pytest sin exportar nada. Va DESPUÉS de
+# load_dotenv (que no pisa el entorno existente) y ANTES de cualquier import de
+# `app`: si `settings` se instancia primero, ya habría leído el default de
+# producción de config.py ("sphere_db").
+os.environ.setdefault("DB_NAME", "sphere_test")
 
+
+def pytest_configure(config):
+    """Aborta la sesión si DB_NAME no apunta a una base de test.
+
+    Último punto anterior a la recolección: falla con initstate=0, así que no se
+    recolecta ni ejecuta ningún test, no se abre conexión y no se escribe ningún
+    documento. pytest lo traduce a ExitCode.USAGE_ERROR (4).
+
+    Se lee settings.DB_NAME, no os.environ: es el valor que usará realmente el
+    webhook al escribir.
+    """
+    from app.core.config import settings
+
+    name = settings.DB_NAME
+    if "test" not in name.lower():
+        raise pytest.UsageError(
+            f"DB_NAME={name!r} rechazado: no parece una base de test "
+            f"(su nombre no contiene 'test'). La suite borra e inserta "
+            f"documentos, así que se niega a correr fuera de una base "
+            f"desechable. Remedio: export DB_NAME=sphere_test"
+        )
 
 
 @pytest.fixture(scope="session")
