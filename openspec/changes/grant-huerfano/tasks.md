@@ -108,3 +108,32 @@ cd backend && MONGODB_URL=mongodb://localhost:27017 DB_NAME=sphere_test REDIS_UR
       arreglar la limpieza *previa* del fixture 1.1, no el test.
 - [x] 5.3 Confirmar que el diff de producción toca **solo** `webhooks.py`
       (`git diff --name-only -- backend/app`).
+
+## Fase 6: Cierre de las reservas del verify (APTO CON RESERVAS)
+
+Línea base de esta fase: `324 passed`. Resultado: `338 passed` (324 + 4 webhook + 10 script).
+
+- [x] 6.1 **RED** — `test_topup_grant_write_error_compensates_and_replay_grants`: wallet con
+      `topup_messages_balance` de tipo string → el `$inc` lanza `WriteError` de verdad (sin
+      parchear ningún helper). Salida literal: `AssertionError: assert 0 == 50`.
+- [x] 6.2 **RED (triangulación)** — `test_subscription_grant_write_error_compensates_and_replay_grants`:
+      `wallet` escalar → el `$set` lanza. Salida: `KeyError: 'pro_messages_balance'`.
+- [x] 6.3 **GREEN** — `webhooks.py`: los dos grants van en `try/except` con `applied = False` y
+      `grant_error`. Fail-closed: el claim se compensa y el motivo se distingue
+      (`grant_write_failed` vs `user_profile_not_found`). Commit `8a627bc`/`529c9a2`.
+- [x] 6.4 **RED** — `test_orphan_redelivery_writes_a_single_dead_letter_row`: 3 reentregas.
+      Salida literal: `AssertionError: assert 3 == 1`.
+- [x] 6.5 **RED (triangulación)** — `test_dead_letter_does_not_collapse_distinct_events`: dos eventos
+      distintos siguen siendo dos filas. Salida: `AssertionError: assert 2 == 1`.
+- [x] 6.6 **GREEN** — `_dead_letter` pasa a `update_one(..., {"$setOnInsert": ...}, upsert=True)`
+      por `event_id`. Commit `8a627bc`.
+- [x] 6.7 Sustituir los espías de `_claim_grant` por `_WriteRecorder` sobre `pymongo.Collection`
+      (`assert rec.on("credit_transactions") == []`), filtrado por hilo. Se **conserva**
+      `retrieve_spy.call_count == 0`. Commit `413b69a`.
+- [x] 6.8 Pretil del script: `describe_target` (banner sin credenciales, **antes** de conectar,
+      a stderr) + `guard_target` (exige `--yes` si la base no parece de test o `ENVIRONMENT` es
+      producción; sin `ENVIRONMENT` se asume producción, como `config.py`). 10 tests nuevos en
+      `tests/test_audit_orphan_grants_script.py`. Commit `a17d4c1`.
+- [x] 6.9 Re-ejecutar la **mutación 3.1** con el grabador nuevo: ambos PW-001 mueren con
+      `AssertionError: assert ['insert_one', 'delete_one'] == []`. Revertida; `git status` limpio.
+- [x] 6.10 Dos corridas seguidas de la suite completa: `338 passed` y `338 passed`, 0 failed.
