@@ -373,10 +373,15 @@ export function Sidebar() {
                                         </div>
                                         <div className="text-left flex-1 min-w-0">
                                             <p className={cn(
-                                                "text-sm font-medium truncate flex items-center gap-2",
+                                                "flex items-center gap-2 min-w-0 text-sm font-medium",
                                                 currentSessionId === session.session_id ? "text-content-strong" : "text-content-muted group-hover:text-content-strong"
                                             )}>
-                                                {session.title}
+                                                {/* `truncate` sobre un contenedor
+                                                    flex no recorta nada: el
+                                                    título salía cortado a hueso
+                                                    contra el botón de acciones,
+                                                    sin puntos suspensivos. */}
+                                                <span className="truncate">{session.title}</span>
                                                 {streamingSessionIds.includes(session.session_id) && (
                                                     <span className="flex gap-0.5" role="img" aria-label="Debatiendo">
                                                         <span className="h-1 w-1 rounded-full bg-accent animate-bounce [animation-delay:-0.3s]"></span>
