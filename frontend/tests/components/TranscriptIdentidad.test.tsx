@@ -52,6 +52,7 @@ const mensajes: Message[] = [
 ];
 
 /** jsdom normaliza `#B290EC35` a `rgba(178, 144, 236, 0.208)`. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- se conserva; FASE 8 dejó las aserciones en var()+hex
 const rgba = (hex: string) => {
     const n = parseInt(hex.slice(1), 16);
     return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`;
@@ -73,15 +74,24 @@ describe('F5 — identidad de cada director en el transcript', () => {
 
     const render_ = () => render(<MemoryRouter><ChatPanel /></MemoryRouter>);
 
-    it('cada burbuja de junta toma el hex de §2.8 de su director', () => {
+    it('cada burbuja de junta toma la identidad de §2.8 de su director, apta para los dos temas', () => {
         render_();
 
-        const esperado = [AGENT_HEX.CEO, AGENT_HEX.CTO, AGENT_HEX.CFO, AGENT_HEX.CMO];
+        // FASE 8 — la identidad ya no viaja como hex fijo (medía 2.2-2.6:1
+        // sobre papel en tema claro): viaja como var(--agent-…) con el hex
+        // canónico de respaldo, y el tema la re-resuelve. Ver lib/colorDeAgente.
+        const esperado = [
+            ['--agent-ceo', AGENT_HEX.CEO],
+            ['--agent-cto', AGENT_HEX.CTO],
+            ['--agent-cfo', AGENT_HEX.CFO],
+            ['--agent-cmo', AGENT_HEX.CMO],
+        ] as const;
         const filetes = burbujas().map(b => b.style.borderColor);
 
         expect(filetes).toHaveLength(4);
-        esperado.forEach((hex, i) => {
-            expect(filetes[i], `burbuja ${i}`).toContain(rgba(hex));
+        esperado.forEach(([variable, hex], i) => {
+            expect(filetes[i], `burbuja ${i}`).toContain(variable);
+            expect(filetes[i], `burbuja ${i}`).toContain(hex);
         });
         // Cuatro directores, cuatro colores: el fallo era que había uno solo.
         expect(new Set(filetes).size).toBe(4);
@@ -110,9 +120,10 @@ describe('F5 — identidad de cada director en el transcript', () => {
         render_();
 
         const filete = burbujas()[0].style.borderColor;
-        expect(filete).toContain(rgba(AGENT_HEX.DEVIL));
+        expect(filete).toContain('--agent-devil');
+        expect(filete).toContain(AGENT_HEX.DEVIL);
         // Y no el latón de reserva, que es lo que salía.
-        expect(filete).not.toContain(rgba(AGENT_HEX.custom));
+        expect(filete).not.toContain(AGENT_HEX.custom);
         expect(screen.getByText('Némesis')).toBeInTheDocument();
         expect(screen.queryByText('DEVIL')).toBeNull();
     });
@@ -128,7 +139,13 @@ describe('F5 — identidad de cada director en el transcript', () => {
 
         render_();
 
-        expect(burbujas()[0].style.borderColor).toContain(rgba('#123456'));
+        // El color de sesión lo eligió el usuario: NO se sustituye por el
+        // token de tema del rol (regla de colorDeAgente).
+        // jsdom normaliza el hex dentro del color-mix a rgb(): se comprueba
+        // el triplete, que es unívoco para #123456.
+        const filete = burbujas()[0].style.borderColor;
+        expect(filete).toContain('18, 52, 86');
+        expect(filete).not.toContain('--agent-cto');
     });
 });
 

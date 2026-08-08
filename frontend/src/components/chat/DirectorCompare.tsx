@@ -26,6 +26,7 @@ import { SelectField } from '@/components/ui/Field';
 import { ConfidenceNeedle } from './ConfidenceNeedle';
 import { VoteChip } from './VoteChip';
 import { citaLlana } from '@/utils/citaLlana';
+import { colorDeAgente } from '@/lib/colorDeAgente';
 import {
     AGENT_HEX,
     getBoardAgentByRole,
@@ -178,7 +179,7 @@ function Columna({
                     <span
                         aria-hidden="true"
                         className="h-6 w-1 shrink-0 rounded-full"
-                        style={{ backgroundColor: hex }}
+                        style={{ backgroundColor: colorDeAgente(rol, hex) }}
                     />
                     {voto ? (
                         <>
@@ -209,7 +210,7 @@ function Columna({
                         <blockquote
                             key={`${rol}-${i}`}
                             className="border-l-2 pl-3 text-sm leading-relaxed text-content"
-                            style={{ borderColor: hex }}
+                            style={{ borderColor: colorDeAgente(rol, hex) }}
                         >
                             {texto}
                         </blockquote>

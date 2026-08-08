@@ -9,6 +9,7 @@ import { conMovimiento, CURVA, DURACION, SPRING_PLATE } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import { ConfidenceNeedle } from './ConfidenceNeedle';
 import { Pista } from '@/components/ui/Pista';
+import { colorDeAgente, colorDeAgenteAlpha } from '@/lib/colorDeAgente';
 import { useFirstTimeHint } from '@/hooks/useFirstTimeHint';
 import { VoteChip } from './VoteChip';
 
@@ -145,7 +146,7 @@ function Placa({
             <span
                 aria-hidden="true"
                 className="flex h-6 w-6 items-center justify-center rounded-xs border text-xs font-bold leading-none"
-                style={{ color: hex, borderColor: `${hex}59`, backgroundColor: `${hex}1F` }}
+                style={{ color: colorDeAgente(rol, hex), borderColor: colorDeAgenteAlpha(rol, hex, 35), backgroundColor: colorDeAgenteAlpha(rol, hex, 12) }}
             >
                 {inicial}
             </span>
@@ -180,7 +181,7 @@ function Placa({
             <span
                 aria-hidden="true"
                 className="absolute inset-x-1 bottom-0 h-0.5 rounded-full"
-                style={{ backgroundColor: activa || hablando ? hex : 'transparent' }}
+                style={{ backgroundColor: activa || hablando ? colorDeAgente(rol, hex) : 'transparent' }}
             />
         </motion.button>
     );
@@ -355,7 +356,7 @@ export function BoardTable({ board, agents, intervencionPorRol }: BoardTableProp
                     <span
                         aria-hidden="true"
                         className="mt-0.5 h-8 w-1 shrink-0 rounded-full"
-                        style={{ backgroundColor: hexEnFoco }}
+                        style={{ backgroundColor: colorDeAgente(enFoco, hexEnFoco) }}
                     />
                     <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-content-strong">

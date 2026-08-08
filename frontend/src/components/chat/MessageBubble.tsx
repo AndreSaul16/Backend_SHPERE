@@ -11,6 +11,7 @@ import { ArtifactCard } from './ArtifactCard';
 import { VersionesDelTurno } from './VersionesDelTurno';
 import { ToolExecutionCard } from './ToolExecutionCard';
 import { AGENT_HEX, useChatStore } from '@/store/useChatStore';
+import { colorDeAgente, colorDeAgenteAlpha } from '@/lib/colorDeAgente';
 import { useUserAvatar } from '@/hooks/useUserAvatar';
 import { notify, reasonOf } from '@/lib/toastBus';
 import { AvatarImage } from '@/components/ui/AvatarImage';
@@ -151,7 +152,7 @@ function ThinkingBlock({ thinking, isStreaming, hasContent, hexColor, label }: {
                     >
                         <div
                             className="mt-1.5 pl-3 border-l-2 text-[12px] leading-relaxed text-content-muted italic whitespace-pre-wrap [overflow-wrap:break-word]"
-                            style={{ borderColor: `${hexColor}40` }}
+                            style={{ borderColor: `color-mix(in srgb, ${hexColor} 25%, transparent)` }}
                         >
                             {thinking}
                         </div>
@@ -217,6 +218,11 @@ function MessageBubbleInterno({ message, agent, agentColor, sessionAvatar, isTyp
     // HUD Colors: prioridad sesión > agente > fallback
     const defaultColor = AGENT_HEX.custom; // latón (§2.8)
     const activeHexColor = agentColor || agent?.hexColor || defaultColor;
+    // FASE 8 — el color que llega al DOM es var(--agent-…) con el hex de
+    // respaldo: así la identidad sigue al tema (los AGENT_HEX medían
+    // 2.2-2.6:1 sobre papel en tema claro). Ver lib/colorDeAgente.ts.
+    const rolIdentidad = isUser ? 'user' : agent?.role;
+    const colorIdentidad = colorDeAgente(rolIdentidad, activeHexColor);
 
     // Board V2: etiqueta de "pensando" específica por rol y fase (en vez del genérico).
     const thinkingLabel = (() => {
@@ -268,7 +274,7 @@ function MessageBubbleInterno({ message, agent, agentColor, sessionAvatar, isTyp
                         className={cn(
                             "hidden sm:flex h-8 w-8 rounded-full items-center justify-center flex-shrink-0 border shadow-sm mt-1 bg-surface transition-colors duration-500 overflow-hidden",
                         )}
-                        style={{ borderColor: `${activeHexColor}40` }}
+                        style={{ borderColor: colorDeAgenteAlpha(rolIdentidad, activeHexColor, 25) }}
                     >
                         <AvatarImage
                             src={sessionAvatar}
@@ -340,14 +346,14 @@ function MessageBubbleInterno({ message, agent, agentColor, sessionAvatar, isTyp
                        un hex de ocho dígitos escrito a pelo — el cian de la paleta
                        anterior, no el `--agent-user` de §2.8. */
                     style={isUser
-                        ? { borderColor: `${AGENT_HEX.user}35`, borderInlineEndColor: AGENT_HEX.user }
-                        : { borderColor: `${activeHexColor}35`, borderInlineStartColor: activeHexColor }
+                        ? { borderColor: colorDeAgenteAlpha('user', AGENT_HEX.user, 21), borderInlineEndColor: colorDeAgente('user', AGENT_HEX.user) }
+                        : { borderColor: colorDeAgenteAlpha(rolIdentidad, activeHexColor, 21), borderInlineStartColor: colorIdentidad }
                     }
                 >
                     {!isUser && (
-                        <motion.div
-                            animate={{ color: activeHexColor }}
-                            className="text-micro font-bold mb-1 uppercase opacity-80 flex items-center gap-1.5"
+                        <div
+                            style={{ color: colorIdentidad }}
+                            className="text-micro font-bold mb-1 uppercase flex items-center gap-1.5 transition-colors duration-(--duration-reveal)"
                         >
                             {/* F8 · §7.4 — este punto latía en TODAS las
                                 burbujas de agente, para siempre: con seis
@@ -366,7 +372,7 @@ function MessageBubbleInterno({ message, agent, agentColor, sessionAvatar, isTyp
                                     · CONCLUSIÓN
                                 </span>
                             )}
-                        </motion.div>
+                        </div>
                     )}
 
                     {/* Línea de pensamiento (chain-of-thought) antes de la respuesta */}
@@ -375,7 +381,7 @@ function MessageBubbleInterno({ message, agent, agentColor, sessionAvatar, isTyp
                             thinking={message.thinking}
                             isStreaming={!!isTyping && !!isLast}
                             hasContent={!!message.content.trim()}
-                            hexColor={activeHexColor}
+                            hexColor={colorIdentidad}
                             label={thinkingLabel}
                         />
                     )}
@@ -444,7 +450,7 @@ function MessageBubbleInterno({ message, agent, agentColor, sessionAvatar, isTyp
                                 animate={reducido ? { opacity: 1 } : { opacity: [1, 0] }}
                                 transition={reducido ? { duration: 0 } : { repeat: Infinity, duration: 0.8 }}
                                 className="inline-block w-1.5 h-4 ml-1 align-middle"
-                                style={{ backgroundColor: activeHexColor }}
+                                style={{ backgroundColor: colorIdentidad }}
                             />
                         )}
                     </div>
