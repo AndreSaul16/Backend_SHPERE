@@ -93,9 +93,9 @@ Chain strategy: pending
 
 ## Fase 4: Script de auditoría
 
-- [ ] 4.1 Crear `backend/scripts/audit_orphan_grants.py`: read-only, lista `credit_transactions` cuyo
+- [x] 4.1 Crear `backend/scripts/audit_orphan_grants.py`: read-only, lista `credit_transactions` cuyo
       `user_id` no existe en `users`. Sin escrituras, sin import desde `backend/app/**`.
-- [ ] 4.2 Ejecutarlo contra la DB de test y confirmar salida sin mutaciones. Commit (unit 3).
+- [x] 4.2 Ejecutarlo contra la DB de test y confirmar salida sin mutaciones. Commit (unit 3).
 
 ## Fase 5: Verificación final
 
