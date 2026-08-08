@@ -395,7 +395,7 @@ describe('cierre del stream y fallos', () => {
         expect(st.boardSession).toMatchObject({ active: false, participants: ['CTO'] });
     });
 
-    it('`onError` deja el aviso EN EL HILO y conserva lo escrito', async () => {
+    it('`onError` marca el corte EN EL HILO, conserva lo escrito y deja salida', async () => {
         abrirSesion('cto-1');
         await enviar((cb) => {
             cb.onToken('a medias', null);
@@ -403,26 +403,68 @@ describe('cierre del stream y fallos', () => {
         });
 
         expect(mensajes()[1].content).toContain('a medias');
-        expect(mensajes()[1].content).toContain('Se cortó la respuesta');
+        // El texto marca dónde se cortó; el «qué hacer» lo pinta el hilo a
+        // partir de `interrupted` (botón «Reintentar el turno»).
+        expect(mensajes()[1].content).toContain('La respuesta se cortó aquí');
+        expect(mensajes()[1].interrupted).toBe(true);
         expect(useChatStore.getState().streamingSessionIds).not.toContain(SID);
         // Es el propio hilo el que avisa: no se escribe además en `errorStates`.
         expect(useChatStore.getState().errorStates.send_message).toBeNull();
     });
 
-    it('un `AbortError` no es un fallo: no escribe error ni limpia el estado', async () => {
+    /**
+     * Éste era el bug, y esto es lo que caracterizaba antes:
+     *
+     *     // Sale por `return`, así que la sesión se queda marcada como en curso.
+     *     expect(st.streamingSessionIds).toContain(SID);
+     *
+     * O sea que el test estaba VERDE describiendo el fallo. El `catch` del
+     * `AbortError` hacía `return` sin sacar el id de `streamingSessionIds`, y
+     * `stopGeneration` —que sí lo saca— sólo cubre el aborte que empieza en el
+     * botón de detener. Cualquier otro (desmontar la vista, el navegador
+     * abortando el `fetch`, un aborte de un envío que ya no es el activo) dejaba
+     * la sesión marcada como «en curso» PARA SIEMPRE: compositor deshabilitado
+     * con «Sistema ocupado…», tres puntitos de «está escribiendo» eternos y
+     * ninguna salida que no fuera recargar la página.
+     *
+     * Lo que NO cambia, y por eso sigue comprobándose: un aborte no es un fallo.
+     * No escribe `errorStates`, no marca el turno como interrumpido y no pinta
+     * un «Reintentar» — el usuario paró a propósito.
+     */
+    it('un `AbortError` apaga el indicador de escritura sin contarlo como fallo', async () => {
         abrirSesion('cto-1');
+        useChatStore.setState({ streamingArtifactBySession: { [SID]: 'a1' } });
         const abort = Object.assign(new Error('abortado'), { name: 'AbortError' });
         stream.mockRejectedValue(abort);
 
         await useChatStore.getState().sendMessage('hola');
 
         const st = useChatStore.getState();
+        // Sigue sin ser un fallo: ni aviso, ni turno marcado como cortado.
         expect(st.errorStates.send_message).toBeNull();
-        // Sale por `return`, así que la sesión se queda marcada como en curso.
-        expect(st.streamingSessionIds).toContain(SID);
+        expect(mensajes().some((m) => m.interrupted)).toBe(false);
+        // Y ahora, además, la sesión deja de estar «en curso».
+        expect(st.streamingSessionIds).not.toContain(SID);
+        expect(st.abortController).toBeNull();
+        expect(st.streamingArtifactBySession[SID]).toBeNull();
     });
 
-    it('un fallo de red sí escribe `send_message` y corta el artefacto en curso', async () => {
+    it('un `AbortError` de un envío viejo no le quita el abortador al turno nuevo', async () => {
+        abrirSesion('cto-1');
+        const abort = Object.assign(new Error('abortado'), { name: 'AbortError' });
+        stream.mockRejectedValue(abort);
+
+        // El turno nuevo ya está en vuelo con SU abortador cuando llega el
+        // rechazo del viejo: anularlo aquí dejaría al turno nuevo sin «Detener».
+        const delTurnoNuevo = new AbortController();
+        const envioViejo = useChatStore.getState().sendMessage('hola');
+        useChatStore.setState({ abortController: delTurnoNuevo });
+        await envioViejo;
+
+        expect(useChatStore.getState().abortController).toBe(delTurnoNuevo);
+    });
+
+    it('un fallo de red escribe `send_message`, corta el artefacto y marca el turno', async () => {
         abrirSesion('cto-1');
         useChatStore.setState({ streamingArtifactBySession: { [SID]: 'a1' } });
         stream.mockRejectedValue(new Error('offline'));
@@ -434,6 +476,8 @@ describe('cierre del stream y fallos', () => {
         expect(st.streamingSessionIds).not.toContain(SID);
         expect(st.abortController).toBeNull();
         expect(st.streamingArtifactBySession[SID]).toBeNull();
+        // El hilo se queda con la marca que pinta el «Reintentar el turno».
+        expect(mensajes()[1].interrupted).toBe(true);
     });
 
     it('`stopGeneration` aborta, desmarca la sesión activa y corta su artefacto', async () => {

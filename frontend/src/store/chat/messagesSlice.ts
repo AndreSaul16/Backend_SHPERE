@@ -16,6 +16,28 @@ import { nuevasBurbujas, type StreamContext } from './streamContext';
 import { createStreamHandlers } from './streamHandlers';
 import type { ChatGet, ChatSet, MessagesSlice } from './types';
 
+/**
+ * Marca como interrumpido el último turno del asistente de una sesión.
+ *
+ * No se toca el contenido: lo que se haya escrito hasta el corte se conserva
+ * tal cual, que es la mitad del mensaje que el usuario necesita («no has
+ * perdido nada»). La otra mitad —qué hacer— la pinta el hilo a partir de este
+ * indicador.
+ */
+function marcarUltimoInterrumpido(
+    porSesion: Record<string, Message[]>,
+    sessionId: string,
+): Record<string, Message[]> {
+    const hilo = porSesion[sessionId];
+    if (!hilo || hilo.length === 0) return porSesion;
+    const ultimo = hilo[hilo.length - 1];
+    if (ultimo.role === 'user') return porSesion;
+    return {
+        ...porSesion,
+        [sessionId]: [...hilo.slice(0, -1), { ...ultimo, interrupted: true }],
+    };
+}
+
 export const createMessagesSlice = (set: ChatSet, get: ChatGet): MessagesSlice => ({
     messagesBySession: {},
     streamingSessionIds: [],
@@ -73,6 +95,10 @@ export const createMessagesSlice = (set: ChatSet, get: ChatGet): MessagesSlice =
             }));
         }
 
+        // Vive fuera del `try` porque el `catch` necesita saber si el abortador
+        // que hay en el store sigue siendo el de ESTE envío.
+        let abortRef: AbortController | null = null;
+
         try {
             const selectedAgent = allAgents.find(a => a.id === selectedAgentId);
             const isGroup = selectedAgentId === GROUP_CHAT_ID;
@@ -105,6 +131,7 @@ export const createMessagesSlice = (set: ChatSet, get: ChatGet): MessagesSlice =
 
             // AbortController para permitir Stop Generation
             const abortController = new AbortController();
+            abortRef = abortController;
             set({ abortController });
 
             // El registro de burbujas es UNO y lo comparten los dos juegos de
@@ -130,18 +157,46 @@ export const createMessagesSlice = (set: ChatSet, get: ChatGet): MessagesSlice =
                 isGroup ? 5 : 1  // Coste optimista: un board meeting descuenta 5 (A4)
             );
         } catch (error: any) {
-            // No reportar error si fue una cancelación intencional (Stop Generation)
+            // Una cancelación NO es un fallo: no escribe error ni marca el turno
+            // como interrumpido. Pero sí tiene que apagar el «está escribiendo».
+            //
+            // Aquí había un `return` seco. Consecuencia real: cualquier aborte
+            // que no viniera de `stopGeneration` —desmontar la vista, cambiar de
+            // sesión, un `signal` abortado por el navegador— dejaba el id dentro
+            // de `streamingSessionIds` PARA SIEMPRE. Con eso el compositor queda
+            // deshabilitado con «Sistema ocupado…», el indicador de escritura no
+            // para nunca y la única salida es recargar. Es un callejón sin
+            // salida provocado por un `return`.
             if (error?.name === 'AbortError') {
                 if (import.meta.env.DEV) console.log('🛑 Generación detenida por el usuario');
+                set((state) => ({
+                    streamingSessionIds: state.streamingSessionIds.filter(id => id !== sessionId),
+                    // El abortador se suelta sólo si sigue siendo el de ESTE
+                    // envío: si el usuario ya ha lanzado otro turno, anularlo
+                    // aquí le quitaría el botón de detener al turno nuevo.
+                    ...(state.abortController === abortRef ? { abortController: null } : {}),
+                    streamingArtifactBySession: {
+                        ...state.streamingArtifactBySession,
+                        [sessionId!]: null,
+                    },
+                }));
                 return;
             }
             const sphereError = new NetworkError('Error en el flujo de transmisión', 'send_message', error);
             set((state) => ({
                 streamingSessionIds: state.streamingSessionIds.filter(id => id !== sessionId),
                 abortController: null,
-                errorStates: { ...state.errorStates, send_message: sphereError.message }
+                errorStates: { ...state.errorStates, send_message: sphereError.message },
+                streamingArtifactBySession: {
+                    ...state.streamingArtifactBySession,
+                    [sessionId!]: null,
+                },
+                // El turno se marca en el propio hilo: el aviso flotante se va y
+                // el usuario se queda mirando una burbuja vacía sin saber si
+                // sigue pensando. `interrupted` es lo que pinta el botón de
+                // reintentar debajo de la burbuja (§11: qué pasó y qué hacer).
+                messagesBySession: marcarUltimoInterrumpido(state.messagesBySession, sessionId!),
             }));
-            set(state => ({ streamingArtifactBySession: { ...state.streamingArtifactBySession, [sessionId!]: null } }));
         }
     },
 

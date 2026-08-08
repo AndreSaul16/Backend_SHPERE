@@ -66,6 +66,13 @@ export interface Message {
     isConclusion?: boolean; // Board meeting: síntesis ejecutiva final del CEO
     vote?: BoardVote; // Board V2: voto del director (se muestra como chip)
     phase?: BoardPhase; // Board V2: fase del debate en la que se emitió
+    /**
+     * El turno se cortó a medias (stream muerto o red caída), no lo paró el
+     * usuario. Lo pone el store y lo lee el hilo para ofrecer «Reintentar» ahí
+     * mismo, que es donde el usuario está mirando. No se persiste: al recargar,
+     * lo que queda es el texto del aviso dentro del propio contenido.
+     */
+    interrupted?: boolean;
 }
 
 export interface ChatSession {

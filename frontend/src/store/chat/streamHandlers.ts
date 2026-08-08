@@ -128,11 +128,22 @@ export function createStreamHandlers(ctx: StreamContext): StreamCallbacks {
                     ...state.messagesBySession,
                     [sessionId]: (state.messagesBySession[sessionId] || []).map(msg =>
                         msg.id === burbujas.activaId
-                            // §11: el error dice qué pasó y qué se conservó. Va
-                            // aquí, en el propio hilo, que es donde está mirando
-                            // el usuario: por eso `streamChat` ya no avisa
-                            // aparte (sería el mismo error dos veces).
-                            ? { ...msg, content: msg.content + '\n\n⚠️ **Se cortó la respuesta.** Lo escrito hasta aquí se conserva. Vuelve a enviar el mensaje para retomarlo.' }
+                            // Dos cosas distintas, no la misma dos veces:
+                            //
+                            //   · el texto marca DÓNDE se cortó, dentro de la
+                            //     propia respuesta, para que no parezca que el
+                            //     director terminó la frase así;
+                            //   · `interrupted` es lo que hace que el hilo pinte
+                            //     debajo el aviso con «Reintentar el turno», que
+                            //     es donde va lo que se conserva y qué hacer.
+                            //
+                            // Antes el texto lo decía TODO y no había acción
+                            // ninguna: informaba y dejaba al usuario parado.
+                            ? {
+                                ...msg,
+                                content: msg.content + '\n\n⚠️ *La respuesta se cortó aquí.*',
+                                interrupted: true,
+                            }
                             : msg
                     ),
                 },
