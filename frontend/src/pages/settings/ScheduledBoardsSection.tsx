@@ -10,6 +10,7 @@ import {
     type ScheduledBoardInput,
 } from "@/services/api";
 import { SelectField, TextAreaField, TextField } from "@/components/ui/Field";
+import { InlineError, type FalloDeSeccion } from "@/components/ui/InlineError";
 
 const WEEKDAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
@@ -34,7 +35,10 @@ function describe(b: ScheduledBoard): string {
 export function ScheduledBoardsSection() {
     const [boards, setBoards] = useState<ScheduledBoard[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    // Redactado donde se produce: antes era `e.message`, o sea el volcado
+    // «500 common.internal_error: …» que envuelve `api.ts`, pintado en un <p>
+    // suelto sin ninguna salida.
+    const [error, setError] = useState<FalloDeSeccion | null>(null);
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [form, setForm] = useState<ScheduledBoardInput>(EMPTY_FORM);
@@ -45,8 +49,12 @@ export function ScheduledBoardsSection() {
         setError(null);
         try {
             setBoards(await scheduledBoardsService.list());
-        } catch (e) {
-            setError(e instanceof Error ? e.message : "Error cargando juntas");
+        } catch {
+            setError({
+                title: "No se han podido cargar tus juntas programadas",
+                detail: "Ninguna se ha cancelado: seguirán ejecutándose a su hora. Es un fallo al traer la lista.",
+                onRetry: () => { void load(); },
+            });
         } finally {
             setLoading(false);
         }
@@ -92,8 +100,15 @@ export function ScheduledBoardsSection() {
             }
             setShowForm(false);
             await load();
-        } catch (e) {
-            setError(e instanceof Error ? e.message : "Error guardando junta");
+        } catch {
+            setError({
+                title: editingId
+                    ? "No se han podido guardar los cambios de la junta programada"
+                    : "No se ha podido programar la junta",
+                detail: "El formulario sigue abierto con todo lo que has escrito. Vuelve a guardarlo.",
+                onRetry: () => { void submit(); },
+                retryLabel: "Volver a guardar",
+            });
         } finally {
             setSaving(false);
         }
@@ -103,8 +118,13 @@ export function ScheduledBoardsSection() {
         try {
             await scheduledBoardsService.remove(id);
             await load();
-        } catch (e) {
-            setError(e instanceof Error ? e.message : "Error eliminando junta");
+        } catch {
+            setError({
+                title: "No se ha podido eliminar la junta programada",
+                detail: "Sigue en la lista y se ejecutará a su hora. Vuelve a intentarlo.",
+                onRetry: () => { void remove(id); },
+                retryLabel: "Volver a eliminarla",
+            });
         }
     };
 
@@ -131,7 +151,7 @@ export function ScheduledBoardsSection() {
                 </button>
             </div>
 
-            {error && <p className="text-xs text-agent-devil">{error}</p>}
+            {error && <InlineError {...error} />}
             {loading && <Loader2 className="h-4 w-4 animate-spin text-content-muted" />}
 
             {!loading && boards.length === 0 && !showForm && (
