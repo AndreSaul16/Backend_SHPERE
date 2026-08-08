@@ -62,6 +62,24 @@ export function ChatPanel() {
     const isGroupChat = selectedAgentId === 'group-chat';
     const groupMembers = getGroupMembers(agents);
 
+    /**
+     * F2 — cuándo se monta la mesa de directores.
+     *
+     * La condición era `boardSession?.active`, o sea sólo mientras el debate
+     * estaba EN VUELO: al terminar desaparecía y al reabrir la junta no volvía
+     * nunca. La mesa es de la SESIÓN, no del stream — `loadSession` la
+     * reconstruye del historial persistido.
+     *
+     * Lo que no se pinta es una mesa vacía: `sendMessage` deja un `boardSession`
+     * recién estrenado (sin participantes ni votos) hasta que el backend
+     * anuncia el debate, y ahí no hay junta que enseñar todavía.
+     */
+    const hayMesaQueEnsenar = !!boardSession && (
+        boardSession.active
+        || boardSession.participants.length > 0
+        || Object.keys(boardSession.votes).length > 0
+    );
+
     // Indicador "X está escribiendo…" — resuelve el agente que habla ahora mismo
     // a partir de la última burbuja (en board, va cambiando CEO → CTO → …).
     const lastMessage = messages.length > 0 ? messages[messages.length - 1] : undefined;
@@ -411,7 +429,7 @@ export function ChatPanel() {
                 mesa es de la sesión, no del stream: se monta siempre que haya
                 junta con debate (`loadSession` la reconstruye del historial). */}
             <AnimatePresence>
-                {isGroupChat && boardSession && (
+                {isGroupChat && boardSession && hayMesaQueEnsenar && (
                     <BoardWarRoom board={boardSession} agents={agents} />
                 )}
             </AnimatePresence>

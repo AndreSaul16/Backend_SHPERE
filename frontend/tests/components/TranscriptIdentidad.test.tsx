@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ChatPanel } from '../../src/components/chat/ChatPanel';
-import { useChatStore, AGENT_HEX } from '../../src/store/useChatStore';
+import { useChatStore, AGENT_HEX, rebuildBoardSession } from '../../src/store/useChatStore';
 import type { ChatSession, Message } from '../../src/types';
 
 /**
@@ -98,5 +98,47 @@ describe('F5 — identidad de cada director en el transcript', () => {
         render_();
 
         expect(burbujas()[0].style.borderColor).toContain(rgba('#123456'));
+    });
+});
+
+describe('F2 — la mesa de directores se monta al reabrir la junta', () => {
+    beforeEach(() => {
+        useChatStore.getState().resetState();
+        useChatStore.setState({
+            sessions: [junta],
+            currentSessionId: SESSION_ID,
+            selectedAgentId: 'group-chat',
+            messagesBySession: { [SESSION_ID]: mensajes },
+        });
+    });
+
+    it('pinta la banda con el war-room reconstruido de un debate terminado', () => {
+        const conVotos = mensajes.map((m, i) => (
+            i === 1 ? { ...m, vote: { decision: 'SI', confidence: 78 } as const, phase: 'analysis' as const } : m
+        ));
+        useChatStore.setState({
+            messagesBySession: { [SESSION_ID]: conVotos },
+            boardSession: rebuildBoardSession(conVotos),
+        });
+
+        render(<MemoryRouter><ChatPanel /></MemoryRouter>);
+
+        // La región viva del recuento sólo existe dentro de `BoardWarRoom`.
+        expect(screen.getByTestId('live-tally')).toBeInTheDocument();
+        expect(screen.getByText(/5 por debate/i)).toBeInTheDocument();
+    });
+
+    it('no pinta una mesa vacía mientras el debate aún no ha arrancado', () => {
+        useChatStore.setState({
+            boardSession: {
+                active: false, phase: null, participants: [], statusByRole: {},
+                votes: {}, tally: null, unanimous: false, earlyExit: false,
+                cost: 5, devil: false, lastIntervention: null,
+            },
+        });
+
+        render(<MemoryRouter><ChatPanel /></MemoryRouter>);
+
+        expect(screen.queryByTestId('live-tally')).not.toBeInTheDocument();
     });
 });
