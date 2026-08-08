@@ -2,7 +2,7 @@ import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { Send, Square, Paperclip, MoreVertical, Zap, ShieldCheck, Search, X, Download, Pin, Hand, Landmark } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { getGroupMembers, useAgentes, useChatStore, useEstaTransmitiendo, useMensajesDeSesion } from "@/store/useChatStore";
+import { getBoardAgentByRole, getGroupMembers, useAgentes, useChatStore, useEstaTransmitiendo, useMensajesDeSesion } from "@/store/useChatStore";
 import { chatService } from "@/services/api";
 import { MessageBubble } from "./MessageBubble";
 import { BoardWarRoom } from "./BoardWarRoom";
@@ -24,6 +24,7 @@ import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { StreamInterrupted } from "./StreamInterrupted";
 import { RegionBoundary } from "@/components/shared/RegionBoundary";
 import { useVentanaDeTurnos } from "@/hooks/useVentanaDeTurnos";
+import { citaLlana } from "@/utils/citaLlana";
 
 export function ChatPanel() {
     const navigate = useNavigate();
@@ -174,7 +175,11 @@ export function ChatPanel() {
         const porRol: Record<string, string> = {};
         for (const m of messages) {
             if (m.role === 'user' || m.role === 'system' || !m.content) continue;
-            porRol[m.role] = m.content.replace(/<sphere_artifact[\s\S]*?<\/sphere_artifact>/g, '').trim().slice(0, 220);
+            // `citaLlana` y no un `slice` a secas: lo que dice el director es
+            // markdown, y aquí se pintaba CRUDO — en el asiento en foco se leía
+            // literalmente `**Voto en contra.** Nadie ha puesto número…`. Los
+            // asteriscos no son parte de lo que dijo.
+            porRol[m.role] = citaLlana(m.content);
         }
         return porRol;
     }, [messages]);
@@ -560,8 +565,22 @@ export function ChatPanel() {
     return (
         <div className="flex flex-col h-full bg-transparent relative overflow-hidden">
             {/* Header */}
-            <header className="h-20 pl-14 lg:pl-8 pr-6 border-b border-stroke-hairline flex items-center justify-between bg-surface-1 z-20">
-                <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+            {/* 3.7 · §4.3 — la cabecera a 390px.
+                Medido en el navegador antes de tocarla: el título disponía de
+                44px para 125 («Ju…») y el subtítulo de 94 para 144 («4
+                EXPERTOS…»). La causa es aritmética: `pl-14` (56px para el
+                tirador del cajón) + placa de 44 + hueco + CUATRO botones de
+                40px + `pr-6` se comen 280 de los 390px de la pantalla, y lo que
+                queda no da para un nombre de junta.
+                Lo que se hace, por orden de daño: el hueco baja a `gap-2` y el
+                relleno lateral a `pr-2`; los botones se aprietan a 36px en
+                móvil (siguen por encima de los 44 de área táctil gracias a la
+                regla de `(pointer: coarse)` de `index.css`); y la píldora del
+                rol se va por debajo de `sm`, porque en una junta dice «Junta»
+                justo al lado de «Junta Directiva» — es la única pieza de la
+                cabecera que no aporta información nueva. */}
+            <header className="h-20 pl-14 lg:pl-8 pr-2 sm:pr-6 border-b border-stroke-hairline flex items-center justify-between bg-surface-1 z-20">
+                <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
                     <div className="relative">
                         {/* §9.10 la placa: radio corto, filete, sin degradado ni sombra. */}
                         <motion.div
@@ -578,41 +597,49 @@ export function ChatPanel() {
                         />
                     </div>
 
-                    <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-content-strong text-lg tracking-tight truncate">
+                    <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 min-w-0">
+                            <h3 className="min-w-0 font-semibold text-content-strong text-base sm:text-lg tracking-tight truncate">
                                 {isGroupChat ? activeAgent?.name : baseName}
                             </h3>
-                            <span className="px-2 py-0.5 bg-stroke-hairline text-content-muted rounded-xs text-micro font-semibold uppercase border border-stroke-hairline">
+                            {/* El rol sigue anunciándose siempre: lo lleva el
+                                `aria-label` de la cabecera, así que esconder la
+                                píldora en móvil no quita información a nadie. */}
+                            <span className="hidden sm:inline shrink-0 px-2 py-0.5 bg-stroke-hairline text-content-muted rounded-xs text-micro font-semibold uppercase border border-stroke-hairline">
                                 {role}
                             </span>
                         </div>
-                        <div className="flex items-center gap-2 mt-0.5 min-w-0">
+                        <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 min-w-0">
                             <ShieldCheck className="h-3 w-3 text-content-muted shrink-0" aria-hidden="true" />
-                            <p className="text-micro text-content-muted uppercase truncate">
+                            <p className="min-w-0 text-micro text-content-muted uppercase truncate">
+                                {/* «Expertos Activos» no cabía a 390px y se
+                                    cortaba en «4 EXPERTOS…», que además deja al
+                                    número sin sustantivo. La forma corta cabe
+                                    entera y dice lo mismo; la larga vuelve en
+                                    cuanto hay sitio. */}
                                 {isGroupChat
-                                    ? `${groupMembers.length} Expertos Activos`
+                                    ? <><span className="sm:hidden">{groupMembers.length} expertos</span><span className="hidden sm:inline">{groupMembers.length} Expertos Activos</span></>
                                     : "Conversación privada"}
                             </p>
                         </div>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
                     {/* Saldo de créditos: en pantallas estrechas vive en la Sidebar (menú hamburguesa) */}
                     <div className="hidden lg:flex mr-2">
                         <CreditsIndicator />
                     </div>
-                    <button onClick={() => setIsSearchOpen(v => !v)} className={cn("p-2 rounded-sm hover:bg-stroke-hairline transition-all active-scale", isSearchOpen ? "text-accent" : "text-content-muted hover:text-content-strong")} title="Buscar en la conversación">
+                    <button onClick={() => setIsSearchOpen(v => !v)} className={cn("p-1.5 sm:p-2 rounded-sm hover:bg-stroke-hairline transition-all active-scale", isSearchOpen ? "text-accent" : "text-content-muted hover:text-content-strong")} title="Buscar en la conversación">
                         <Search className="h-4 w-4" />
                     </button>
-                    <button onClick={() => setShowPinnedOnly(v => !v)} className={cn("p-2 rounded-sm hover:bg-stroke-hairline transition-all active-scale", showPinnedOnly ? "text-warning" : "text-content-muted hover:text-content-strong")} title="Sólo los anclados">
+                    <button onClick={() => setShowPinnedOnly(v => !v)} className={cn("p-1.5 sm:p-2 rounded-sm hover:bg-stroke-hairline transition-all active-scale", showPinnedOnly ? "text-warning" : "text-content-muted hover:text-content-strong")} title="Sólo los anclados">
                         <Pin className="h-4 w-4" />
                     </button>
-                    <button onClick={handleExport} className="p-2 rounded-sm hover:bg-stroke-hairline transition-all text-content-muted hover:text-content-strong active-scale" title="Exportar">
+                    <button onClick={handleExport} className="p-1.5 sm:p-2 rounded-sm hover:bg-stroke-hairline transition-all text-content-muted hover:text-content-strong active-scale" title="Exportar">
                         <Download className="h-4 w-4" />
                     </button>
-                    <button onClick={() => navigate('/chat/settings')} className="p-2 rounded-sm hover:bg-stroke-hairline transition-all text-content-muted hover:text-content-strong active-scale">
+                    <button onClick={() => navigate('/chat/settings')} className="p-1.5 sm:p-2 rounded-sm hover:bg-stroke-hairline transition-all text-content-muted hover:text-content-strong active-scale">
                         <MoreVertical className="h-4 w-4" />
                     </button>
                 </div>
@@ -735,7 +762,20 @@ export function ChatPanel() {
                                 </div>
                             )}
                             {turnosVisibles.map((msg, idx) => {
-                                const msgAgent = msg.agentId ? agents.find(a => a.id === msg.agentId) : (msg.role !== 'user' && msg.role !== 'system' ? activeAgent : undefined);
+                                /* El Diablo NO está en `agents`: §2.8 sólo da
+                                   identidad seleccionable a los cinco
+                                   directores, y `BOARD_DEVIL_AGENT` vive
+                                   aparte. Buscándolo sólo por `agentId` salía
+                                   `undefined`, y con él la burbuja de Némesis
+                                   se pintaba con el latón de reserva y firmaba
+                                   «DEVIL» en vez de con su nombre — mientras su
+                                   placa del Palco, que sí usa
+                                   `getBoardAgentByRole`, salía en coral. El
+                                   mismo asiento con dos identidades distintas
+                                   en la misma pantalla. */
+                                const msgAgent = (msg.agentId ? agents.find(a => a.id === msg.agentId) : undefined)
+                                    ?? getBoardAgentByRole(agents, msg.role)
+                                    ?? (msg.role !== 'user' && msg.role !== 'system' ? activeAgent : undefined);
                                 return (
                                     <div key={msg.id} data-fase={msg.phase} className="space-y-3">
                                     <MessageBubble

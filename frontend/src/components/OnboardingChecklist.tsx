@@ -45,10 +45,35 @@ export function OnboardingChecklist({ onPrimaryAction }: Props) {
         Promise.allSettled([integrationsService.list(), serviceCredentialsService.list()])
             .then(([oauth, creds]) => {
                 if (!alive) return;
-                const oauthConnected = oauth.status === "fulfilled" && oauth.value.connected.length > 0;
-                const credConnected = creds.status === "fulfilled" && creds.value.services.some((s) => s.connected);
+                /**
+                 * Las dos guardas y el `catch` cierran un error de página REAL
+                 * en `/`, visto en la verificación de la fase 3.
+                 *
+                 * Esto era `oauth.value.connected.length` y
+                 * `creds.value.services.some(...)`, a pelo. `Promise.allSettled`
+                 * sólo garantiza que la promesa no se RECHAZÓ — no dice nada de
+                 * la forma de lo que devolvió, y `req()` entrega lo que el
+                 * backend haya mandado con un 2xx: un `{}` de un endpoint que
+                 * todavía no está desplegado, un `{detail: …}`, un cuerpo
+                 * vacío. En cualquiera de esos casos `.connected` es `undefined`
+                 * y `.length` lanza un `TypeError` DENTRO de un `.then()` sin
+                 * `.catch()`: un rechazo sin dueño, en el montaje, en la primera
+                 * pantalla del producto y para todo usuario que aún no ha
+                 * terminado el onboarding.
+                 *
+                 * El valor por defecto es «NO hay conexión», no «sí»: no saber
+                 * si hay conexión no es lo mismo que tenerla, y marcar el paso
+                 * como hecho por un fallo de red esconde el que falta.
+                 */
+                const oauthConnected = oauth.status === "fulfilled"
+                    && (oauth.value?.connected?.length ?? 0) > 0;
+                const credConnected = creds.status === "fulfilled"
+                    && (creds.value?.services ?? []).some((s) => s?.connected);
                 setHasConnection(oauthConnected || credConnected);
-            });
+            })
+            // La red de seguridad definitiva: el paso de conexiones es lo MENOS
+            // importante de esta pantalla, y no puede tumbarla pase lo que pase.
+            .catch(() => { /* sin conexiones conocidas */ });
         return () => { alive = false; };
     }, []);
 

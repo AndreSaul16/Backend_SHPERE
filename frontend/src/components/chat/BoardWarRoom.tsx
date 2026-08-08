@@ -56,15 +56,23 @@ export function BoardWarRoom({
             <div className="max-w-5xl mx-auto px-4 py-2 sm:px-6">
                 <BoardTable board={board} agents={agents} intervencionPorRol={intervencionPorRol} />
 
-                {/* Consenso / coste */}
-                <div className="flex items-center justify-between gap-3 mt-2 min-h-[14px]">
+                {/* Consenso / coste.
+                    3.7 · §4.3 — el recuento NO se trunca. A 390px disponía de
+                    266px para 426 y salía «La junta votó 2 a favor · 1 en c…»:
+                    o sea que la línea que dice EN QUÉ HA QUEDADO la junta —el
+                    entregable del producto— se cortaba justo en el disenso.
+                    Medido en el navegador. Ahora envuelve en dos líneas: el
+                    contenedor pasa a `flex-wrap`, el recuento suelta el
+                    `truncate` y el coste se va al final con `ml-auto`. El alto
+                    mínimo deja de ser fijo por lo mismo. */}
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 mt-2 min-h-[14px]">
                     <AnimatePresence>
                         {tallyText && (
                             <motion.span
                                 initial={reducido ? false : { opacity: 0, y: 4 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={conMovimiento(reducido, { duration: DURACION.pop, ease: CURVA.settle })}
-                                className="text-micro text-accent font-mono min-w-0 truncate"
+                                className="text-micro text-accent font-mono min-w-0 [text-wrap:pretty]"
                                 aria-hidden="true"
                             >
                                 {tallyText}

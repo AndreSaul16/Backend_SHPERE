@@ -87,6 +87,36 @@ describe('F5 — identidad de cada director en el transcript', () => {
         expect(new Set(filetes).size).toBe(4);
     });
 
+    it('el Diablo se pinta de coral y firma con su nombre, no «DEVIL»', () => {
+        /**
+         * Defecto visto en la verificación de la fase 3, no inventariado.
+         *
+         * `BOARD_DEVIL_AGENT` NO está en `getAgents()`: §2.8 sólo da identidad
+         * seleccionable a los cinco directores y el Diablo es un asiento
+         * opcional del debate. `ChatPanel` resolvía el agente de la burbuja SÓLO
+         * por `agentId`, así que para `devil-1` salía `undefined` y la burbuja
+         * caía al latón de reserva y firmaba con el rol crudo, «DEVIL».
+         *
+         * Y en la misma pantalla, su PLACA del Palco salía en coral, porque
+         * `BoardTable` sí usa `getBoardAgentByRole`. El mismo asiento con dos
+         * identidades a la vez.
+         */
+        useChatStore.setState({
+            messagesBySession: {
+                [SESSION_ID]: [turno('m-devil', 'DEVIL', 'devil-1', 'Nadie ha puesto número al coste de equivocarse.')],
+            },
+        });
+
+        render_();
+
+        const filete = burbujas()[0].style.borderColor;
+        expect(filete).toContain(rgba(AGENT_HEX.DEVIL));
+        // Y no el latón de reserva, que es lo que salía.
+        expect(filete).not.toContain(rgba(AGENT_HEX.custom));
+        expect(screen.getByText('Némesis')).toBeInTheDocument();
+        expect(screen.queryByText('DEVIL')).toBeNull();
+    });
+
     it('en un chat 1-a-1 el color elegido para la sesión sigue mandando', () => {
         const directa: ChatSession = { ...junta, session_id: 's-cto', base_agent_id: 'cto-1', type: 'direct', visual_config: { bubble_color: '#123456' } };
         useChatStore.setState({
