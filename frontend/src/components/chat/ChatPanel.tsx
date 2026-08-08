@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { Send, Square, Paperclip, MoreVertical, Zap, ShieldCheck, Search, X, Download, Pin, Hand, Landmark } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { getBoardAgentByRole, getGroupMembers, useAgentes, useChatStore, useEstaTransmitiendo, useMensajesDeSesion } from "@/store/useChatStore";
 import { chatService } from "@/services/api";
@@ -539,6 +539,22 @@ export function ChatPanel() {
             loadSession(urlSessionId);
         }
     }, [urlSessionId]);
+
+    /**
+     * 5.2 · Q4 — una plantilla elegida en la paleta llega aquí.
+     *
+     * La paleta abre una junta nueva y trae el guion en el estado de la
+     * navegación; el compositor lo recoge y lo BORRA del historial, para que
+     * volver atrás y adelante no lo vuelva a pegar encima de lo que el usuario
+     * haya escrito entretanto.
+     */
+    const location = useLocation();
+    const plantillaPendiente = (location.state as { plantilla?: string } | null)?.plantilla;
+    useEffect(() => {
+        if (!plantillaPendiente) return;
+        setInputValue(plantillaPendiente);
+        navigate(location.pathname, { replace: true, state: null });
+    }, [plantillaPendiente, location.pathname, navigate, setInputValue]);
 
     const [isNearBottom, setIsNearBottom] = useState(true);
 

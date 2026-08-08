@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CreditCard, MessageSquare, MoreVertical, Plus, Search, Settings, Share2, ShieldCheck, Trash2 } from "lucide-react";
+import { Command, CreditCard, MessageSquare, MoreVertical, Plus, Search, Settings, Share2, ShieldCheck, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,8 @@ import { AvatarImage } from "@/components/ui/AvatarImage";
 import { notify, reasonOf, toast } from "@/lib/toastBus";
 import { agruparPorFecha } from "./historialPorFecha";
 import { precargaAlApuntar } from "@/lib/rutasPerezosas";
+import { abrirPaletaDeComandos } from "@/lib/atajosBus";
+import { comboDe, teclasDe } from "@/hooks/useShortcuts";
 
 /**
  * Extract initials from displayName (e.g., "María García" → "MG")
@@ -268,6 +270,24 @@ export function Sidebar() {
                         controlClassName="pl-9"
                     />
                 </div>
+
+                {/* 5.2 · Q4 — la puerta de la paleta para quien no tiene teclado.
+                    Un ⌘K que sólo existe como combinación deja la función
+                    inalcanzable en móvil, que es la mayoría del tráfico (§4.3).
+                    El cajón es la superficie que sí se alcanza a 390px, así que
+                    la puerta vive aquí; la combinación se enseña al lado, que es
+                    además cómo se descubre que existe. */}
+                <button
+                    type="button"
+                    onClick={() => { abrirPaletaDeComandos(); toggleSidebar(false); }}
+                    className="mt-2 flex w-full items-center gap-2 rounded-sm border border-stroke-hairline px-3 py-2 text-xs text-content-muted transition-colors duration-(--duration-tap) hover:border-brass-600 hover:text-content-strong"
+                >
+                    <Command className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    <span className="flex-1 text-left">Buscar y ejecutar</span>
+                    <span className="hidden font-mono text-micro text-content-quiet sm:inline">
+                        {teclasDe(comboDe('paleta')).join(' ')}
+                    </span>
+                </button>
             </div>
 
             {/* Content Scrollable */}

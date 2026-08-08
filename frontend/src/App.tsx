@@ -10,6 +10,7 @@ import { useChatStore } from "@/store/useChatStore";
 import { PaywallModal } from "@/components/modals/PaywallModal";
 import { AgentSelectorModal } from "@/components/modals/AgentSelectorModal";
 import { ToastProvider } from "@/components/ui/Toast";
+import { CommandPalette } from "@/components/ui/CommandPalette";
 import { MODULOS_DE_RUTA } from "@/lib/rutasPerezosas";
 import {
   EsqueletoDeAutenticacion,
@@ -115,6 +116,10 @@ function AuthenticatedApp() {
   }, [user, fetchSessions, fetchCustomAgents]);
 
   return (
+    <>
+      {/* 5.2 · Q4 — la paleta vive fuera del enrutador de rutas para que ⌘K
+          funcione en todas ellas, y sólo con sesión: lleva a rutas protegidas. */}
+      {user && <CommandPalette />}
     <Routes>
       {/* Public routes */}
       <Route path="/login" element={<Suspense fallback={<EsqueletoDeAutenticacion />}><LoginPage /></Suspense>} />
@@ -162,6 +167,7 @@ function AuthenticatedApp() {
       {/* Catch-all: rutas desconocidas (p.ej. /status, ya retirada) → home. */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   );
 }
 
