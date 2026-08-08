@@ -159,7 +159,7 @@ export function AgendaRail({ segmentos, faseViva, scroller, onSaltar }: AgendaRa
                                         className={cn(
                                             'block h-full rounded-full transition-colors duration-(--duration-reveal)',
                                             viva ? 'w-1 bg-accent' : 'w-[3px]',
-                                            !viva && (despachada ? 'bg-ink-500' : 'bg-stroke-edge'),
+                                            !viva && (despachada ? 'bg-content-quiet' : 'bg-stroke-edge'),
                                         )}
                                     />
                                     {/* La canal de 56px: número y nombre al
@@ -172,11 +172,15 @@ export function AgendaRail({ segmentos, faseViva, scroller, onSaltar }: AgendaRa
                                         <span
                                             className={cn(
                                                 'truncate font-mono text-micro uppercase leading-tight',
+                                                /* FASE 8: text-ink-500 era un token crudo del
+                                                   paño y en claro medía 3.63:1 sobre papel; el
+                                                   semántico content-quiet sigue al tema. La fase
+                                                   despachada y la pendiente ya eran el mismo gris
+                                                   en oscuro (ink-500 ≡ content-quiet): la que se
+                                                   distingue es la viva. */
                                                 viva
-                                                    ? 'font-bold text-accent'
-                                                    : despachada
-                                                      ? 'text-ink-500'
-                                                      : 'text-content-quiet',
+                                                    ? 'font-bold text-brass-800 dark:text-accent'
+                                                    : 'text-content-quiet',
                                             )}
                                         >
                                             {seg.etiqueta}

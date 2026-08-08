@@ -289,14 +289,18 @@ export function Sidebar() {
 
                 {/* Action: New Chat Button */}
                 <div className="px-3 sm:px-4 pt-2">
+                    {/* FASE 8 — era un resto del sistema viejo con shim: glow
+                        de sombra cian, círculo macizo con scale(1.1) al hover
+                        (§7.5 lo prohíbe) y texto latón a 3.28:1 sobre papel en
+                        tema claro. Pasa a la variante secundaria de §9.1: el
+                        único macizo de la pantalla es la acción primaria del
+                        compositor. */}
                     <button
                         onClick={() => toggleAgentModal(true)}
-                        className="w-full py-4 rounded-md bg-electric-cyan/10 border border-electric-cyan/30 hover:bg-electric-cyan/20 transition-all duration-300 group flex flex-col items-center justify-center gap-2 shadow-lg shadow-electric-cyan/5"
+                        className="w-full py-3 rounded-sm border border-stroke-control hover:border-brass-600 hover:bg-stroke-hairline transition-colors duration-(--duration-tap) flex items-center justify-center gap-2"
                     >
-                        <div className="h-10 w-10 rounded-full bg-electric-cyan flex items-center justify-center shadow-lg shadow-electric-cyan/20 group-hover:scale-110 transition-transform">
-                            <Plus className="h-6 w-6 text-accent-on-fill" aria-hidden="true" />
-                        </div>
-                        <span className="text-sm font-bold text-electric-cyan uppercase tracking-widest">Nuevo Chat</span>
+                        <Plus className="h-4 w-4 text-accent" aria-hidden="true" />
+                        <span className="text-sm font-semibold text-content uppercase tracking-widest">Nuevo Chat</span>
                     </button>
                 </div>
 
@@ -556,7 +560,7 @@ export function Sidebar() {
                     {billingLoaded && (
                         <span className="flex items-center gap-1 font-mono text-xs shrink-0">
                             <span className={cn(
-                                creditsTotal === 0 ? "text-dissent" : creditsTotal < 10 ? "text-warning" : "text-accent"
+                                creditsTotal === 0 ? "text-dissent" : creditsTotal < 10 ? "text-warning" : "text-brass-800 dark:text-accent"
                             )}>
                                 {pro_messages_balance}
                             </span>

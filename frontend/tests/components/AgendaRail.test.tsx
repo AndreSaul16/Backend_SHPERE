@@ -85,7 +85,8 @@ describe('§8.4 El Canto — el orden del día en el borde', () => {
             screen.getByRole('button', { name: new RegExp(`Ir a la fase .*${clave}`, 'i') });
         expect(etiqueta('Apertura').textContent).toContain('Apertura');
         const apagadas = botones.slice(0, 3).map((b) => b.querySelector('span.block')!.className);
-        for (const c of apagadas) expect(c).toContain('bg-ink-500');
+        // FASE 8: el apagado usa el semántico (en claro ink-500 crudo medía 3.63:1).
+        for (const c of apagadas) expect(c).toContain('bg-content-quiet');
         // La que aún no ha llegado no está apagada: está por venir.
         expect(botones[4].querySelector('span.block')!.className).toContain('bg-stroke-edge');
     });

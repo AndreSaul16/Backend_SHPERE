@@ -58,7 +58,7 @@ export function CreditsIndicator({ className = "", refreshMs = 60_000 }: Props) 
   const isZero = !saldoDesconocido && total === 0;
   // §2: `dissent` (oxblood-400, 5.33:1) y `accent` (latón), no los grises y
   // rojos crudos de Tailwind, que no pasan de 2.7:1 sobre el paño.
-  const color = saldoDesconocido ? "text-content-muted" : isLow ? "text-dissent" : "text-accent";
+  const color = saldoDesconocido ? "text-content-muted" : isLow ? "text-dissent" : "text-brass-800 dark:text-accent";
 
   // §12.6: el saldo cambia SIN interacción —lo refresca un intervalo y cada
   // turno lo consume—, así que hay que anunciarlo. Se anuncia una FRASE, no los

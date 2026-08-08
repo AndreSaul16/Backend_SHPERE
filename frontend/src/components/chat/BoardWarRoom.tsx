@@ -102,7 +102,7 @@ export function BoardWarRoom({
                                 initial={reducido ? false : { opacity: 0, y: 4 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={conMovimiento(reducido, { duration: DURACION.pop, ease: CURVA.settle })}
-                                className="text-micro text-accent font-mono min-w-0 [text-wrap:pretty]"
+                                className="text-micro text-brass-800 dark:text-accent font-mono min-w-0 [text-wrap:pretty]"
                                 aria-hidden="true"
                             >
                                 {tallyText}
