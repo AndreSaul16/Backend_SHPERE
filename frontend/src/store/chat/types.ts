@@ -13,7 +13,7 @@
  * reparto evita.
  */
 import type { StoreApi } from 'zustand';
-import type { Agent, Message, ChatSession, BoardPhase, BoardVote } from '../../types';
+import type { Agent, Message, ChatSession, BoardPhase, BoardVote, Role } from '../../types';
 import type { Artifact } from '../../types/artifact';
 import type { ErrorContext } from '../../lib/errors';
 
@@ -36,13 +36,36 @@ export interface BoardSessionState {
 /** Errores por método. Los pinta `ErrorOverlay`, montado en `App`. */
 export type ErrorStates = Record<ErrorContext, string | null>;
 
+/**
+ * Lo que hace falta para dar de alta un agente a medida.
+ *
+ * Era `any` (D41). El único que construye esta carga es `AgentCreationWizard`,
+ * así que éste es su contrato natural: si el asistente deja de mandar el
+ * `system_prompt` o se inventa un campo, ahora se ve al compilar y no en una
+ * petición que el backend rechaza.
+ */
+export interface NewCustomAgentInput {
+    identity: {
+        name: string;
+        role: Role;
+        color: string;
+    };
+    brain_config: {
+        model: string;
+        temperature: number;
+        system_prompt: string;
+    };
+    owner_user_id?: string;
+    is_public?: boolean;
+}
+
 /** Directores de fábrica y agentes a medida: quién puede hablar. */
 export interface AgentsSlice {
     coreAgents: Agent[];
     customAgents: Agent[];
 
     fetchCustomAgents: () => Promise<void>;
-    addCustomAgent: (data: any) => Promise<void>;
+    addCustomAgent: (data: NewCustomAgentInput) => Promise<void>;
     deleteCustomAgent: (id: string) => Promise<void>;
     getAgents: () => Agent[];
     /** D28: devuelven `false` si el retoque no se pudo persistir. */

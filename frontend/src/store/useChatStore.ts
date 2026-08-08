@@ -51,7 +51,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 // Lo que la aplicación importaba de este módulo antes del troceo sigue
 // importándose de aquí. Los slices son detalle interno.
 
-export type { BoardAgentStatus, BoardSessionState } from './chat/types';
+export type { BoardAgentStatus, BoardSessionState, NewCustomAgentInput } from './chat/types';
 export { AGENT_HEX, BOARD_DEVIL_AGENT, getBoardAgentByRole, getGroupMembers } from './chat/agentCatalog';
 export { GROUP_CHAT_ID, resolveSessionAgentId } from './chat/sessionIdentity';
 export { rebuildBoardSession } from './chat/boardSession';
