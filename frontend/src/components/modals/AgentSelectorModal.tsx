@@ -1,11 +1,43 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Search, Zap, Crown, Monitor, TrendingUp, Briefcase, Plus, Users, Trash2, Landmark } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useChatStore } from '@/store/useChatStore';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import type { Role } from '@/types';
-import { AgentCreationWizard } from './AgentCreationWizard';
+/**
+ * Tarea 4.5 · D17d — el asistente no viaja con el selector.
+ *
+ * `AgentCreationWizard` son 4 pasos, un reducer de 19 campos, la subida de
+ * documentos y el catálogo de plantillas, y estaba importado de forma estática
+ * desde un modal que se monta con la app. O sea que se descargaba entero para
+ * ABRIR UN CHAT, que es lo que hace el 99% de las veces quien abre el selector.
+ *
+ * `AgentSelectorModal` lo monta siempre (con `isOpen={false}`), así que el
+ * `lazy` se envuelve en un componente que no pide nada hasta que de verdad se
+ * abre: si no, el `import()` arrancaría igual en el montaje y no habríamos
+ * movido nada.
+ */
+const AgentCreationWizardPerezoso = lazy(() =>
+    import('./AgentCreationWizard').then((m) => ({ default: m.AgentCreationWizard }))
+);
+
+function AsistenteDeAgente(props: {
+    isOpen: boolean;
+    onClose: () => void;
+    onAgentCreated: (id: string) => void;
+}) {
+    if (!props.isOpen) return null;
+    return (
+        // Sin `fallback` visible a propósito: encima ya está el selector, que es
+        // una superficie completa. Un esqueleto de asistente sobre el selector
+        // sería una segunda pantalla de espera para una descarga que dura lo que
+        // dura pulsar el botón.
+        <Suspense fallback={null}>
+            <AgentCreationWizardPerezoso {...props} />
+        </Suspense>
+    );
+}
 import { BoardActivationModal } from './BoardActivationModal';
 import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -258,7 +290,7 @@ export function AgentSelectorModal() {
                             </motion.div>
         </Modal>
 
-        <AgentCreationWizard
+        <AsistenteDeAgente
             isOpen={isWizardOpen}
             onClose={() => setIsWizardOpen(false)}
             onAgentCreated={handleAgentCreated}
