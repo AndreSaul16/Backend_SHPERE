@@ -13,7 +13,7 @@
  * reparto evita.
  */
 import type { StoreApi } from 'zustand';
-import type { Agent, Message, ChatSession, BoardPhase, BoardVote, Role } from '../../types';
+import type { Agent, Message, ChatSession, BoardPhase, BoardVote, Role, VisualConfig } from '../../types';
 import type { Artifact } from '../../types/artifact';
 import type { ErrorContext } from '../../lib/errors';
 
@@ -101,7 +101,7 @@ export interface SessionsSlice {
     createNewSession: (agentId?: string) => Promise<string>;
     loadSession: (sessionId: string) => Promise<void>;
     selectAgent: (agentId: string) => void;
-    updateSessionMetadata: (sessionId: string, updates: { title?: string; visual_config?: any }) => Promise<void>;
+    updateSessionMetadata: (sessionId: string, updates: { title?: string; visual_config?: VisualConfig; members?: string[] }) => Promise<void>;
     deleteSession: (sessionId: string) => Promise<void>;
     /**
      * Borrado optimista con ventana para deshacer (PLAN §6 Q5).

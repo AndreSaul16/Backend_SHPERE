@@ -3,8 +3,6 @@
  * Proporciona user, idToken, signIn, signUp, signOut.
  */
 import {
-  createContext,
-  useContext,
   useEffect,
   useState,
   useCallback,
@@ -25,43 +23,8 @@ import {
 import { auth, googleProvider, githubProvider, microsoftProvider } from "@/lib/firebase";
 import { initAnalytics, identify, capture, resetAnalytics, ANALYTICS_EVENTS } from "@/lib/analytics";
 import { toast } from "@/lib/toastBus";
+import { AuthContext, type AuthUser } from "./auth";
 
-interface AuthUser {
-  uid: string;
-  email: string | null;
-  displayName: string | null;
-  photoURL: string | null;
-  emailVerified: boolean;
-  providerId: string; // 'password' | 'google.com' | 'github.com'
-}
-
-interface AuthContextType {
-  user: AuthUser | null;
-  idToken: string | null;
-  loading: boolean;
-  signInWithEmail: (email: string, password: string) => Promise<void>;
-  signUpWithEmail: (email: string, password: string) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
-  signInWithGithub: () => Promise<void>;
-  signInWithMicrosoft: () => Promise<void>;
-  signOut: () => Promise<void>;
-  resendVerification: () => Promise<void>;
-  reloadUser: () => Promise<boolean>; // devuelve emailVerified tras refrescar
-  /**
-   * Recuperación de contraseña — tarea 5.14 (D26).
-   *
-   * Hasta ahora la aplicación NO tenía ninguna salida para quien olvidaba su
-   * contraseña: el único camino era escribir a soporte. Son las tres piezas del
-   * flujo de Firebase, y ninguna necesita que haya sesión iniciada.
-   */
-  sendPasswordReset: (email: string) => Promise<void>;
-  /** Valida el código del enlace y devuelve el correo al que pertenece. */
-  verifyPasswordReset: (code: string) => Promise<string>;
-  /** Fija la contraseña nueva. El código se consume: sólo sirve una vez. */
-  confirmPasswordResetWithCode: (code: string, newPassword: string) => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -216,12 +179,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
 }

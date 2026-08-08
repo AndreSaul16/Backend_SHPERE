@@ -58,7 +58,10 @@ export function ServiceCredentialsSettings({ control: controlExterno }: { contro
   // Form state per service
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const [metadataFields, setMetadataFields] = useState<Record<string, Record<string, string>>>({});
-  const [testResults, setTestResults] = useState<Record<string, { success: boolean; message: string }>>({});
+  /* `undefined` es un valor legítimo aquí: «probando, todavía no hay
+     resultado». Estaba escrito como `undefined as any` sobre un mapa que no
+     lo admitía; ahora el tipo lo dice. */
+  const [testResults, setTestResults] = useState<Record<string, { success: boolean; message: string } | undefined>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -134,7 +137,7 @@ export function ServiceCredentialsSettings({ control: controlExterno }: { contro
 
   const handleTest = async (service: string) => {
     setTesting(service);
-    setTestResults((prev) => ({ ...prev, [service]: undefined as any }));
+    setTestResults((prev) => ({ ...prev, [service]: undefined }));
     try {
       const result = await serviceCredentialsService.test(service);
       setTestResults((prev) => ({ ...prev, [service]: result }));
@@ -315,23 +318,27 @@ export function ServiceCredentialsSettings({ control: controlExterno }: { contro
             </div>
 
             {/* Test result */}
-            {testResults[svc.service] && (
-              <div
-                role="status"
-                className={`flex items-center gap-2 p-2 rounded-lg text-xs ${
-                  testResults[svc.service].success
-                    ? "bg-success/10 text-success"
-                    : "bg-oxblood-500/10 text-danger"
-                }`}
-              >
-                {testResults[svc.service].success ? (
-                  <CheckCircle2 className="h-3 w-3" />
-                ) : (
-                  <XCircle className="h-3 w-3" />
-                )}
-                {testResults[svc.service].message}
-              </div>
-            )}
+            {(() => {
+              const resultado = testResults[svc.service];
+              if (!resultado) return null;
+              return (
+                <div
+                  role="status"
+                  className={`flex items-center gap-2 p-2 rounded-lg text-xs ${
+                    resultado.success
+                      ? "bg-success/10 text-success"
+                      : "bg-oxblood-500/10 text-danger"
+                  }`}
+                >
+                  {resultado.success ? (
+                    <CheckCircle2 className="h-3 w-3" />
+                  ) : (
+                    <XCircle className="h-3 w-3" />
+                  )}
+                  {resultado.message}
+                </div>
+              );
+            })()}
 
             {/* Action buttons */}
             <div className="flex items-center gap-2">

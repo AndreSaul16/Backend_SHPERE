@@ -29,7 +29,7 @@ import type { Message } from '../../src/types';
  * repinten, que es `RerenderDelTranscript.test.tsx`.)
  */
 
-vi.mock('../../src/contexts/AuthContext', () => ({
+vi.mock('../../src/contexts/auth', () => ({
     useAuth: () => ({ user: { uid: 'u1', email: 'a@b.c', displayName: 'A', photoURL: null }, loading: false }),
     AuthProvider: ({ children }: { children: ReactNode }) => children,
 }));

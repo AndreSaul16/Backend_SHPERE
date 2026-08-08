@@ -20,6 +20,22 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // 7.4 · D43 — `any` pasa de aviso a ERROR.
+      //
+      // `tseslint.configs.recommended` lo deja en `warn`, y un aviso que nadie
+      // lee no es un control: el repo llegó a 112 `any` así. Un `any` en el
+      // borde de la red no es «no sé qué llega», es apagar el comprobador de
+      // tipos para todo lo que toque ese valor después. Costó tres bugs reales
+      // encontrados al quitarlos (la forma inventada de `AgentDocument`, el
+      // `detail` de FastAPI leído sin comprobar, `t.delta` pintado como
+      // «undefined» en verde).
+      //
+      // Si algún día hace falta uno de verdad —un límite de una librería
+      // externa que no se puede tipar—, va con `eslint-disable-next-line` Y un
+      // comentario que diga por qué. A fecha de hoy no hay ninguno.
+      '@typescript-eslint/no-explicit-any': 'error',
+    },
   },
   {
     // Accesibilidad: las SIETE reglas que DESIGN §12.14 exige en modo error, ni

@@ -70,7 +70,8 @@ export function useDraft(sessionId: string | null | undefined): DraftHandle {
     // campo nunca parpadea de vacío a lleno.
     const [value, setValueState] = useState(() => leer(key));
     const [restored, setRestored] = useState(() => leer(key).length > 0);
-    const keyRef = useRef(key);
+    /** La clave con la que se pintó el render anterior. */
+    const [claveAnterior, setClaveAnterior] = useState(key);
     // Espejo del valor para los manejadores que necesitan leerlo sin volver a
     // crearse en cada pulsación (`restore`). Se sincroniza en un efecto y no
     // durante el render: escribir en una `ref` mientras se renderiza es lo que
@@ -80,21 +81,30 @@ export function useDraft(sessionId: string | null | undefined): DraftHandle {
         valueRef.current = value;
     }, [value]);
 
-    // Cambio de sesión: se cierra el borrador anterior con su último valor —sin
-    // esperar al retardo, o se perdería lo tecleado en el último medio segundo—
-    // y se abre el de la sesión nueva.
-    useEffect(() => {
-        if (keyRef.current === key) return;
-        keyRef.current = key;
+    /*
+     * Cambio de sesión: se abre el borrador de la sesión nueva.
+     *
+     * D43 · 7.4 — esto era un `useEffect` sobre `[key]` que llamaba a dos
+     * `setState` (`react-hooks/set-state-in-effect`), y no es un detalle de
+     * estilo: con el efecto, el render intermedio pinta el compositor con el
+     * texto de la sesión ANTERIOR y el navegador puede llegar a mostrarlo —el
+     * borrador de otra junta, medio parpadeo, en el campo de ésta—. Ajustar el
+     * estado DURANTE el render es el patrón que React documenta justo para
+     * esto: React descarta el render a medias y vuelve a empezar con los
+     * valores nuevos, sin pintar nada intermedio.
+     *
+     * También desaparece la `ref` que iba por delante del render y obligaba a
+     * comparar antes de escribir en el efecto de guardado.
+     */
+    if (claveAnterior !== key) {
+        setClaveAnterior(key);
         const recuperado = leer(key);
         setValueState(recuperado);
         setRestored(recuperado.length > 0);
-    }, [key]);
+    }
 
-    // Guardado con retardo. El `key` de la dependencia es el de ESTE render, y
-    // `keyRef` puede ir por delante: por eso se compara antes de escribir.
+    // Guardado con retardo.
     useEffect(() => {
-        if (keyRef.current !== key) return;
         const timer = setTimeout(() => escribir(key, value), DRAFT_DEBOUNCE_MS);
         return () => clearTimeout(timer);
     }, [key, value]);

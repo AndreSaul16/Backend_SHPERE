@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { AGENT_HEX, getGroupMembers, useAgentes, useChatStore } from "@/store/useChatStore";
 import { cn } from "@/lib/utils";
+import type { VisualConfig } from "@/types";
 import { TextField } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -267,18 +268,14 @@ export function ChatSettingsPage() {
     const handleColorChange = async (newHex: string, themeName?: string) => {
         if (!currentSessionId) return;
 
-        const updates: any = {
-            visual_config: {
-                ...currentSession?.visual_config,
-                color: newHex // Always set primary color for consistency
-            }
+        const visual_config: VisualConfig = {
+            ...currentSession?.visual_config,
+            color: newHex, // el color primario siempre, por coherencia
+            ...(isGroupChat
+                ? { theme: themeName || 'Manual' }
+                : { bubble_color: newHex }),
         };
-
-        if (isGroupChat) {
-            updates.visual_config.theme = themeName || 'Manual';
-        } else {
-            updates.visual_config.bubble_color = newHex;
-        }
+        const updates = { visual_config };
 
         try {
             await updateSessionMetadata(currentSessionId, updates);

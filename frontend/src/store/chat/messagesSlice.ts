@@ -181,7 +181,9 @@ export const createMessagesSlice = (set: ChatSet, get: ChatGet): MessagesSlice =
                     ...createStreamHandlers(ctx),
                     ...createBoardStreamHandlers(ctx),
                 },
-                (targetRole as any) === "specialist" ? (selectedAgentId || undefined) : targetRole,
+                // Un agente a medida viaja por su id, no por su rol: el rol
+                // de todos ellos es «specialist» y el backend no sabría a cuál.
+                targetRole === "specialist" ? (selectedAgentId || undefined) : targetRole,
                 abortController.signal,
                 !!regenerateFromId,  // Pasar regenerate=true al backend cuando regeneramos
                 isGroup ? 5 : 1  // Coste optimista: un board meeting descuenta 5 (A4)
@@ -191,7 +193,7 @@ export const createMessagesSlice = (set: ChatSet, get: ChatGet): MessagesSlice =
             // hay fotograma siguiente que esperar, y un turno no puede quedarse
             // con la última frase a medias porque el buffer no llegó a vaciar.
             buffer.vaciar();
-        } catch (error: any) {
+        } catch (error: unknown) {
             // Lo escrito hasta el corte se conserva, y eso incluye lo que
             // estuviera esperando fotograma. Va ANTES de tocar el hilo.
             bufferDelEnvio?.vaciar();
@@ -205,7 +207,7 @@ export const createMessagesSlice = (set: ChatSet, get: ChatGet): MessagesSlice =
             // deshabilitado con «Sistema ocupado…», el indicador de escritura no
             // para nunca y la única salida es recargar. Es un callejón sin
             // salida provocado por un `return`.
-            if (error?.name === 'AbortError') {
+            if (error instanceof Error && error.name === 'AbortError') {
                 if (import.meta.env.DEV) console.log('🛑 Generación detenida por el usuario');
                 set((state) => ({
                     streamingSessionIds: state.streamingSessionIds.filter(id => id !== sessionId),

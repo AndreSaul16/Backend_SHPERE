@@ -33,7 +33,7 @@ export function ContactsSettings() {
   const [error, setError] = useState<FalloDeSeccion | null>(null);
 
   // Form state
-  const [newType, setNewType] = useState<string>("email");
+  const [newType, setNewType] = useState<Contact["type"]>("email");
   const [newValue, setNewValue] = useState("");
   const [newName, setNewName] = useState("");
   const [newPerms, setNewPerms] = useState<string[]>([]);
@@ -75,7 +75,7 @@ export function ContactsSettings() {
     setError(null);
     try {
       await contactsService.add({
-        type: newType as any,
+        type: newType,
         value: newValue.trim(),
         display_name: newName.trim() || undefined,
         authorized_for: newPerms,
@@ -138,7 +138,7 @@ export function ContactsSettings() {
             label="Tipo"
             id="contact-type"
             value={newType}
-            onChange={(e) => setNewType(e.target.value)}
+            onChange={(e) => setNewType(e.target.value as Contact["type"])}
           >
             {Object.entries(CONTACT_TYPES).map(([k, v]) => (
               <option key={k} value={k}>

@@ -10,11 +10,42 @@ import { chatService } from '../../services/api';
 import { NetworkError, SessionError } from '../../lib/errors';
 import { notify } from '../../lib/toastBus';
 import type { ChatSession, Message } from '../../types';
+import type { SesionAPI } from '../../types/api';
 import { createGreeting } from './agentCatalog';
 import { conError } from './errorsSlice';
 import { mapSessionHistory } from './historyMapper';
 import { GROUP_CHAT_ID, identidadDeSesion } from './sessionIdentity';
 import type { ChatGet, ChatSet, SessionsSlice } from './types';
+
+/**
+ * De lo que manda el backend a lo que el frontend garantiza (D43 · 7.4).
+ *
+ * `getSessions()` decía `Promise<any[]>` y su resultado se metía en el store
+ * tal cual. `ChatSession` promete `visual_config`, `context_files`,
+ * `enabled_tools` y `members` SIEMPRE presentes, y el backend los omite en las
+ * sesiones antiguas: media docena de `.map()` por el código leían de
+ * `undefined` y sólo no reventaban por casualidad. Los huecos se rellenan aquí,
+ * una vez, en el borde.
+ */
+export function aSesionDelFrontend(api: SesionAPI): ChatSession {
+    return {
+        session_id: api.session_id,
+        user_id: api.user_id ?? '',
+        title: api.title ?? 'Sin título',
+        base_agent_id: api.base_agent_id ?? 'CEO',
+        agent_ref_type: api.agent_ref_type ?? 'core',
+        type: api.type ?? 'direct',
+        visual_config: api.visual_config ?? {},
+        context_files: api.context_files ?? [],
+        enabled_tools: api.enabled_tools ?? [],
+        members: api.members ?? [],
+        folder: api.folder,
+        tags: api.tags,
+        pinned_messages: api.pinned_messages,
+        created_at: api.created_at ?? new Date().toISOString(),
+        share_token: api.share_token ?? null,
+    };
+}
 
 /** Los cinco de fábrica viajan por rol; el resto, por su id. */
 const CORE_AGENT_IDS = ['group-chat', 'ceo-1', 'cto-1', 'cmo-1', 'cfo-1'];
@@ -71,9 +102,9 @@ export const createSessionsSlice = (set: ChatSet, get: ChatGet): SessionsSlice =
 
     fetchSessions: async () => {
         try {
-            const sessions = await chatService.getSessions();
+            const sessions = (await chatService.getSessions()).map(aSesionDelFrontend);
             set({ sessions, historialCargado: true });
-        } catch (error: any) {
+        } catch (error: unknown) {
             // Sin aviso a propósito: este fallo ya tiene canal visible. El
             // `errorStates.fetch_agents` que se escribe aquí abajo lo pinta
             // `ErrorOverlay`, que está montado en `App`. Un toast encima sería
@@ -113,7 +144,8 @@ export const createSessionsSlice = (set: ChatSet, get: ChatGet): SessionsSlice =
                 type: isGroup ? 'group' : 'direct',
                 members: isGroup ? allAgents.map(a => a.id) : [targetId]
             });
-            const sessionId = newSession.session_id;
+            const sesion = aSesionDelFrontend(newSession);
+            const sessionId = sesion.session_id;
 
             set((state) => ({
                 currentSessionId: sessionId,
@@ -122,7 +154,7 @@ export const createSessionsSlice = (set: ChatSet, get: ChatGet): SessionsSlice =
                     ...state.messagesBySession,
                     [sessionId]: [createGreeting(targetId, allAgents)]
                 },
-                sessions: [newSession, ...state.sessions],
+                sessions: [sesion, ...state.sessions],
                 sessionsByAgent: {
                     ...state.sessionsByAgent,
                     [targetId]: sessionId
@@ -131,7 +163,7 @@ export const createSessionsSlice = (set: ChatSet, get: ChatGet): SessionsSlice =
             }));
 
             return sessionId;
-        } catch (error: any) {
+        } catch (error: unknown) {
             const sphereError = new SessionError('Error al crear la sesión', 'create_session', error);
             set(conError('create_session', sphereError.message));
             throw sphereError;
@@ -172,7 +204,7 @@ export const createSessionsSlice = (set: ChatSet, get: ChatGet): SessionsSlice =
         try {
             const history = await chatService.getSessionHistory(sessionId);
             const { messages: mappedMessages, artifacts: sessionArtifacts } =
-                mapSessionHistory(history.messages, sessionId, allAgents);
+                mapSessionHistory(history.messages ?? [], sessionId, allAgents);
 
             set((state) => {
                 // La identidad la manda la sesión; los mensajes sólo se miran
@@ -197,7 +229,7 @@ export const createSessionsSlice = (set: ChatSet, get: ChatGet): SessionsSlice =
                     streamingSessionIds: state.streamingSessionIds.filter(id => id !== sessionId)
                 };
             });
-        } catch (error: any) {
+        } catch (error: unknown) {
             const sphereError = new NetworkError(
                 'Fallo al recuperar el historial de la sesión',
                 'load_history',
@@ -219,7 +251,7 @@ export const createSessionsSlice = (set: ChatSet, get: ChatGet): SessionsSlice =
     // Sin `catch`: el rechazo sube tal cual y avisa `ChatSettingsPage`, que es
     // la única que sabe si lo que no se ha guardado era el nombre, el color o
     // el avatar. Avisar también desde aquí sería el mismo error dos veces.
-    updateSessionMetadata: async (sessionId: string, updates: { title?: string; visual_config?: any; members?: string[] }) => {
+    updateSessionMetadata: async (sessionId, updates) => {
         const updatedSession = await chatService.updateSession(sessionId, updates);
 
         set((state) => ({

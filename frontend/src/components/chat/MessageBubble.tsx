@@ -45,10 +45,21 @@ const ROW_ACTION_CLASS =
 const COMPONENTES_MARKDOWN = {
     // `react-markdown` mete los bloques dentro del <p> del párrafo y el DOM lo
     // rechaza. No es estilo: es validez del árbol.
-    p: ({ children, ...props }: any) => {
-        const hasBlock = React.Children.toArray(children).some(
-            child => React.isValidElement(child) && ['pre', 'ul', 'ol', 'blockquote'].includes((child.type as any).name || (child.type as any))
-        );
+    p: ({ children, ...props }: React.ComponentPropsWithoutRef<'p'>) => {
+        const hasBlock = React.Children.toArray(children).some((child) => {
+            if (!React.isValidElement(child)) return false;
+            // El `type` de un elemento es la etiqueta ('pre') si es intrínseco,
+            // o el componente si no. Antes esto era `(child.type as any).name
+            // || (child.type as any)`, que en un componente anónimo daba
+            // `undefined` y el `.includes` decía que no había bloque: el <p>
+            // se pintaba igual y el DOM lo rechazaba.
+            const tipo = typeof child.type === 'string'
+                ? child.type
+                : (child.type as { displayName?: string; name?: string }).displayName
+                    ?? (child.type as { name?: string }).name
+                    ?? '';
+            return ['pre', 'ul', 'ol', 'blockquote'].includes(tipo);
+        });
         if (hasBlock) return <>{children}</>;
         return <p {...props}>{children}</p>;
     },

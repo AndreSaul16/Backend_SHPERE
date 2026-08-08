@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { Sidebar } from '../../src/components/sidebar/Sidebar';
 import { useChatStore } from '../../src/store/useChatStore';
-import { useAuth } from '../../src/contexts/AuthContext';
+import { useAuth } from '../../src/contexts/auth';
 
 // Mock react-router-dom's useNavigate
 const mockNavigate = vi.fn();
@@ -16,7 +16,7 @@ vi.mock('react-router-dom', async () => {
 });
 
 // Mock AuthContext
-vi.mock('../../src/contexts/AuthContext', () => ({
+vi.mock('../../src/contexts/auth', () => ({
   useAuth: vi.fn(),
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));

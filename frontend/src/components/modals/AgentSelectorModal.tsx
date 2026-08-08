@@ -83,7 +83,7 @@ export function AgentSelectorModal() {
         if (isAgentModalOpen) {
             fetchCustomAgents();
         }
-    }, [isAgentModalOpen]);
+    }, [isAgentModalOpen, fetchCustomAgents]);
 
     // Separate group chat from individual agents
     const groupChat = allAgents.find(a => a.id === 'group-chat');
@@ -140,7 +140,10 @@ export function AgentSelectorModal() {
         await openSession('group-chat');
     };
 
-    const handleAgentCreated = (_agentId: string) => {
+    /* El asistente devuelve el id del agente recién creado (D67). Aquí no se
+       usa —el modal sólo refresca la lista—, así que se recibe sin nombrarlo
+       en vez de con un parámetro tachado que ESLint marcaba. */
+    const handleAgentCreated = () => {
         setIsWizardOpen(false);
         fetchCustomAgents();
     };
@@ -226,7 +229,7 @@ export function AgentSelectorModal() {
                                         )}
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             {/* Core experts: CEO, CTO, CMO, CFO */}
-                                            {filteredCoreExperts.map((agent: any) => {
+                                            {filteredCoreExperts.map((agent) => {
                                                 const Icon = getRoleIcon(agent.role);
                                                 return (
                                                     <motion.button
@@ -251,7 +254,7 @@ export function AgentSelectorModal() {
                                             })}
 
                                             {/* Custom experts */}
-                                            {filteredCustomExperts.map((agent: any) => (
+                                            {filteredCustomExperts.map((agent) => (
                                                 <div key={agent.id} className="relative group" data-row>
                                                     <button
                                                         type="button"

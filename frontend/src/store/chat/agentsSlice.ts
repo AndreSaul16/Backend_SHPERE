@@ -5,6 +5,7 @@
  * fábrica en `resetState`; ver `resetState.ts`, donde está la razón.
  */
 import type { Agent, Role } from '../../types';
+import type { AgenteAPI } from '../../types/api';
 import { chatService } from '../../services/api';
 import { NetworkError } from '../../lib/errors';
 import { withAgentIdentityOverrides, saveAgentIdentityOverride } from '../../lib/agentIdentityOverrides';
@@ -13,7 +14,7 @@ import { conError } from './errorsSlice';
 import type { AgentsSlice, ChatGet, ChatSet } from './types';
 
 /** Traduce el agente a medida del backend al modelo del frontend. */
-const mapCustomAgent = (a: any): Agent => ({
+const mapCustomAgent = (a: AgenteAPI): Agent => ({
     id: a.agent_id,
     name: a.identity.name,
     role: a.identity.role as Role,
@@ -22,7 +23,16 @@ const mapCustomAgent = (a: any): Agent => ({
     color: 'bg-surface border-stroke-hairline',
     hexColor: a.identity.color || AGENT_HEX.custom,
     isOnline: true,
-    identity: a.identity,
+    // El backend manda `role` como cadena libre; el frontend sólo entiende
+    // los siete de `Role`. La conversión se hace UNA vez, aquí, y no se
+    // repite abajo: `identity` se reconstruye con el rol ya estrechado en vez
+    // de reenviar el objeto crudo del servidor.
+    identity: {
+        name: a.identity.name,
+        role: a.identity.role as Role,
+        color: a.identity.color || AGENT_HEX.custom,
+        avatar_style: a.identity.avatar_style,
+    },
     brain_config: a.brain_config,
     owner_user_id: a.owner_user_id,
     is_public: a.is_public,
@@ -45,7 +55,7 @@ export const createAgentsSlice = (set: ChatSet, get: ChatGet): AgentsSlice => ({
             // Mapear de Response a Agent tipo frontend evolucionado
             const mapped: Agent[] = customAgentsData.map(mapCustomAgent);
             set({ customAgents: withAgentIdentityOverrides(mapped) });
-        } catch (error: any) {
+        } catch (error: unknown) {
             const sphereError = new NetworkError('Error al obtener agentes personalizados', 'fetch_agents', error);
             set(conError('fetch_agents', sphereError.message));
         }
@@ -63,7 +73,7 @@ export const createAgentsSlice = (set: ChatSet, get: ChatGet): AgentsSlice => ({
             // dos líneas entraba un `fetchCustomAgents` (lo hace el arranque),
             // los ficheros subían al agente equivocado.
             return mapped.id;
-        } catch (error: any) {
+        } catch (error: unknown) {
             const sphereError = new NetworkError('Error al crear agente personalizado', 'fetch_agents', error);
             set(conError('fetch_agents', sphereError.message));
             throw sphereError; // Re-throw to allow UI to handle specific error

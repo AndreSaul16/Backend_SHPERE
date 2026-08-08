@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { RequireAuth } from "@/components/RequireAuth";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Sidebar } from "@/components/sidebar/Sidebar";

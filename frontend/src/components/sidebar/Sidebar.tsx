@@ -8,7 +8,7 @@ import { useBillingStore } from "@/store/useBillingStore";
 import { useUserAvatar } from "@/hooks/useUserAvatar";
 import { useEsAdmin } from "@/hooks/useEsAdmin";
 import { useEstadoEfimero } from "@/hooks/useEstadoEfimero";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { TextField } from "@/components/ui/Field";
 import { AvatarImage } from "@/components/ui/AvatarImage";
 import { notify, reasonOf, toast } from "@/lib/toastBus";

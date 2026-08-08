@@ -629,11 +629,19 @@ export function ChatPanel() {
         else handleSendMessage();
     };
 
+    /* Las dependencias estaban recortadas a `[urlSessionId]` para que el
+       efecto no se repitiera al cambiar `currentSessionId` —que es justo lo
+       que `loadSession` hace—. Con las tres puestas el efecto sí se re-evalúa,
+       pero la condición lo corta: tras cargar, `currentSessionId` ya es igual
+       a `urlSessionId` y no se vuelve a pedir. Lo que se gana es lo que se
+       perdía: si el store se resetea (cerrar sesión y volver a entrar en la
+       misma URL) `currentSessionId` deja de coincidir y AHORA sí se recarga.
+       Antes esa pantalla se quedaba vacía. */
     useEffect(() => {
         if (urlSessionId && urlSessionId !== currentSessionId) {
             loadSession(urlSessionId);
         }
-    }, [urlSessionId]);
+    }, [urlSessionId, currentSessionId, loadSession]);
 
     /**
      * 5.2 · Q4 — una plantilla elegida en la paleta llega aquí.

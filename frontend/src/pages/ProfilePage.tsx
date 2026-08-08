@@ -6,7 +6,7 @@ import { useUserAvatar, saveUserAvatar } from "@/hooks/useUserAvatar";
 import { TIPOS_ACEPTADOS_ATTR, prepararAvatar } from "@/lib/avatar";
 import { reasonOf, toast } from "@/lib/toastBus";
 import { profileService } from "@/services/api";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { TextField } from "@/components/ui/Field";
 import { AvatarImage } from "@/components/ui/AvatarImage";
 import { UnsavedGuardDialog } from "@/components/ui/UnsavedGuardDialog";

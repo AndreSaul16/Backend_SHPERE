@@ -31,6 +31,7 @@
  */
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
+import type { TransaccionAPI } from "@/types/api";
 import { Loader2, Search, ShieldAlert, Users, BarChart3, ArrowUpDown, Home } from "lucide-react";
 import {
     adminService,
@@ -81,7 +82,7 @@ export function AdminPage() {
     const [query, setQuery] = useState("");
     const [loadingUsers, setLoadingUsers] = useState(true);
     const [selected, setSelected] = useState<AdminUser | null>(null);
-    const [txs, setTxs] = useState<any[]>([]);
+    const [txs, setTxs] = useState<TransaccionAPI[]>([]);
 
     // Orden de la tabla
     const [orden, setOrden] = useState<{ clave: ClaveDeOrden; sentido: Sentido }>({
@@ -385,14 +386,20 @@ export function AdminPage() {
                                 <div className="p-4 rounded-xl bg-surface/40 border border-surface-highlight">
                                     <h3 className="text-sm font-semibold text-content-strong mb-2">Transacciones</h3>
                                     <div className="space-y-1 max-h-80 overflow-y-auto">
-                                        {txs.map((t, i) => (
-                                            <div key={i} className="flex items-center justify-between gap-3 text-xs font-mono tabular-nums">
-                                                <span className="text-content-muted truncate">{t.reason}</span>
-                                                <span className={t.delta < 0 ? "text-agent-devil" : "text-success"}>
-                                                    {t.delta > 0 ? "+" : ""}{t.delta}
-                                                </span>
-                                            </div>
-                                        ))}
+                                        {txs.map((t, i) => {
+                                            // D43 — `delta` puede faltar. Con
+                                            // `any` esto pintaba «undefined»
+                                            // en verde, que es peor que un 0.
+                                            const delta = t.delta ?? 0;
+                                            return (
+                                                <div key={i} className="flex items-center justify-between gap-3 text-xs font-mono tabular-nums">
+                                                    <span className="text-content-muted truncate">{t.reason ?? "Sin motivo"}</span>
+                                                    <span className={delta < 0 ? "text-agent-devil" : "text-success"}>
+                                                        {delta > 0 ? "+" : ""}{delta}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
                                         {txs.length === 0 && <p className="text-xs text-content-muted">Sin transacciones.</p>}
                                     </div>
                                 </div>

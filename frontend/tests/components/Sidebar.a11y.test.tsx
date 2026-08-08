@@ -24,7 +24,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { Sidebar } from '../../src/components/sidebar/Sidebar';
 import { useChatStore } from '../../src/store/useChatStore';
-import { useAuth } from '../../src/contexts/AuthContext';
+import { useAuth } from '../../src/contexts/auth';
 import { __resetToastBus, subscribeToasts, type ToastRecord } from '../../src/lib/toastBus';
 import { chatService } from '../../src/services/api';
 import {
@@ -43,7 +43,7 @@ vi.mock('../../src/services/api', async () => {
     };
 });
 
-vi.mock('../../src/contexts/AuthContext', () => ({
+vi.mock('../../src/contexts/auth', () => ({
     useAuth: vi.fn(),
     AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));

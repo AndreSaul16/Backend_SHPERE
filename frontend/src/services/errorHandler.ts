@@ -63,7 +63,7 @@ export type ErrorCode =
 export interface AppError {
     code: ErrorCode;
     message: string;
-    details: Record<string, any>;
+    details: Record<string, unknown>;
     status: number;
 }
 
@@ -71,8 +71,13 @@ export interface AppError {
  * Parsea la respuesta de error del backend.
  * Tolera respuestas no estructuradas (compat con HTTPException legacy).
  */
+/** ¿Es un objeto JSON al que se le pueden leer claves? */
+function esObjeto(v: unknown): v is Record<string, unknown> {
+    return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
 export async function parseError(response: Response): Promise<AppError> {
-    let body: any = null;
+    let body: unknown = null;
     try {
         body = await response.json();
     } catch {
@@ -85,14 +90,20 @@ export async function parseError(response: Response): Promise<AppError> {
         };
     }
 
-    // Cuerpo FastAPI: { "detail": { error, message, details } } o { "detail": "string" }
-    const detail = body?.detail ?? body;
+    /* Cuerpo de FastAPI: `{ detail: { error, message, details } }` o
+       `{ detail: "cadena" }`. D43 — antes `body` era `any` y esto se leía a
+       ciegas: `detail.error`, `detail.message` y `detail.details` se accedían
+       sin que nadie hubiera comprobado que `detail` es un objeto, así que un
+       cuerpo con `detail: 0` reventaba aquí dentro y el fallo real se perdía
+       detrás de un TypeError. */
+    const envoltorio = esObjeto(body) ? body : {};
+    const detail: unknown = 'detail' in envoltorio ? envoltorio.detail : body;
 
-    if (typeof detail === 'object' && detail?.error) {
+    if (esObjeto(detail) && typeof detail.error === 'string') {
         return {
             code: detail.error as ErrorCode,
-            message: detail.message ?? response.statusText,
-            details: detail.details ?? {},
+            message: typeof detail.message === 'string' ? detail.message : response.statusText,
+            details: esObjeto(detail.details) ? detail.details : {},
             status: response.status,
         };
     }

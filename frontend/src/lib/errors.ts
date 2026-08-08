@@ -7,12 +7,13 @@ export type ErrorContext = 'fetch_agents' | 'create_session' | 'send_message' | 
 export class SphereError extends Error {
     public message: string;
     public context: ErrorContext;
-    public originalError?: any;
+    /** La causa. `unknown` y no `any`: nadie la lee sin comprobarla antes. */
+    public originalError?: unknown;
 
     constructor(
         message: string,
         context: ErrorContext,
-        originalError?: any
+        originalError?: unknown
     ) {
         super(message);
         this.message = message;
@@ -49,7 +50,7 @@ export function motivoLegible(err: unknown): string | undefined {
  * Fallos relacionados con la red o el backend
  */
 export class NetworkError extends SphereError {
-    constructor(message: string, context: ErrorContext, originalError?: any) {
+    constructor(message: string, context: ErrorContext, originalError?: unknown) {
         super(message, context, originalError);
         this.name = 'NetworkError';
     }
@@ -59,7 +60,7 @@ export class NetworkError extends SphereError {
  * Errores durante el procesamiento de datos (ej: XML malformado)
  */
 export class ParserError extends SphereError {
-    constructor(message: string, context: ErrorContext, originalError?: any) {
+    constructor(message: string, context: ErrorContext, originalError?: unknown) {
         super(message, context, originalError);
         this.name = 'ParserError';
     }
@@ -69,7 +70,7 @@ export class ParserError extends SphereError {
  * Errores de sesión (expiración, ID no encontrado)
  */
 export class SessionError extends SphereError {
-    constructor(message: string, context: ErrorContext, originalError?: any) {
+    constructor(message: string, context: ErrorContext, originalError?: unknown) {
         super(message, context, originalError);
         this.name = 'SessionError';
     }

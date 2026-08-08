@@ -7,7 +7,7 @@
  */
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { MailCheck, RefreshCw, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { AuthAlert, AuthNotice, AuthShell } from "@/components/auth/AuthShell";

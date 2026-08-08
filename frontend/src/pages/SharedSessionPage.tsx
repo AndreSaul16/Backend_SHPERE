@@ -50,10 +50,24 @@ export function SharedSessionPage() {
         setAttempt((n) => n + 1);
     }, []);
 
+    /*
+     * D43 · 7.4 — el `setState({ status: 'loading' })` estaba DENTRO del
+     * efecto (`react-hooks/set-state-in-effect`). Sobraba en el caso normal
+     * —el estado inicial ya es «cargando» y `retry` también lo pone— y en el
+     * único caso en que hacía falta, cambiar de enlace compartido sin
+     * desmontar la página, llegaba tarde: el render intermedio enseñaba el
+     * acta ANTERIOR mientras se pedía la nueva. Ajustado durante el render,
+     * React descarta ese render y no llega a pintarse.
+     */
+    const [tokenAnterior, setTokenAnterior] = useState(token);
+    if (tokenAnterior !== token) {
+        setTokenAnterior(token);
+        setState({ status: 'loading' });
+    }
+
     useEffect(() => {
         if (!token) return;
         let active = true;
-        setState({ status: 'loading' });
 
         // El timeout no es cosmético: sin él, una conexión que ni responde ni
         // falla (backend colgado, red muerta) deja la promesa pendiente y la

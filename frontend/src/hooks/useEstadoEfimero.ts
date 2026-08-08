@@ -30,8 +30,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 export function useEstadoEfimero<T>(reposo: T, ms: number): [T, (valor: T) => void] {
     const [valor, setValor] = useState<T>(reposo);
     const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const reposoRef = useRef(reposo);
-    reposoRef.current = reposo;
 
     const limpiar = useCallback(() => {
         if (temporizador.current !== null) {
@@ -40,14 +38,19 @@ export function useEstadoEfimero<T>(reposo: T, ms: number): [T, (valor: T) => vo
         }
     }, []);
 
+    /* `reposo` entra como dependencia en vez de por una `ref` escrita durante
+       el render: escribir una `ref` mientras se renderiza rompe la
+       memoización de React (`react-hooks/refs`). Todos los usos pasan un
+       valor de reposo constante (`false`, `null`, `'idle'`), así que `marcar`
+       no se recrea nunca en la práctica. */
     const marcar = useCallback((nuevo: T) => {
         limpiar();
         setValor(nuevo);
         temporizador.current = setTimeout(() => {
             temporizador.current = null;
-            setValor(reposoRef.current);
+            setValor(reposo);
         }, ms);
-    }, [limpiar, ms]);
+    }, [limpiar, ms, reposo]);
 
     useEffect(() => limpiar, [limpiar]);
 

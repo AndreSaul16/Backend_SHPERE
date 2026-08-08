@@ -5,6 +5,17 @@
 import { cloneElement, useEffect, useState } from "react";
 import { User, Briefcase, MessageSquare, Wallet, Palette } from "lucide-react";
 import { profileService, type UserProfile } from "@/services/api";
+
+/** Las claves del perfil cuyo valor es un objeto: las únicas parcheables. */
+type SeccionDePerfil = {
+  [K in keyof UserProfile]-?: NonNullable<UserProfile[K]> extends object
+    ? (NonNullable<UserProfile[K]> extends readonly unknown[] ? never : K)
+    : never;
+}[keyof UserProfile];
+
+type ToneDeComunicacion = NonNullable<UserProfile["communication_style"]>["tone"];
+type VerbosidadDeComunicacion = NonNullable<UserProfile["communication_style"]>["verbosity"];
+type NivelDeConfirmacion = NonNullable<UserProfile["ui_preferences"]>["tool_confirmation_level"];
 import { Field as FormField } from "@/components/ui/Field";
 import { fieldControlClass } from "@/components/ui/fieldStyles";
 import { InlineError, type FalloDeSeccion } from "@/components/ui/InlineError";
@@ -66,12 +77,20 @@ export function ProfileSettings() {
     setProfile((p) => (p ? { ...p, [key]: value } : p));
   };
 
-  const updateSection = <T extends keyof UserProfile>(
+  /**
+   * Parchea una sección del perfil sin apagar el comprobador de tipos.
+   *
+   * `(p[section] as any)` valía para cualquier clave, incluidas las que no
+   * son objetos (`email`, `display_name`): `updateSection('email', …)`
+   * compilaba y dejaba una cadena convertida en objeto. `SeccionDePerfil`
+   * restringe `T` a las claves cuyo valor SÍ es un objeto.
+   */
+  const updateSection = <T extends SeccionDePerfil>(
     section: T,
     patch: Partial<NonNullable<UserProfile[T]>>
   ) => {
     setProfile((p) =>
-      p ? { ...p, [section]: { ...((p[section] as any) || {}), ...patch } } : p
+      p ? { ...p, [section]: { ...(p[section] ?? {}), ...patch } } : p
     );
   };
 
@@ -220,7 +239,9 @@ export function ProfileSettings() {
               className={inputCls}
               value={profile.communication_style?.tone || "casual"}
               onChange={(e) =>
-                updateSection("communication_style", { tone: e.target.value as any })
+                updateSection("communication_style", {
+                  tone: e.target.value as ToneDeComunicacion,
+                })
               }
             >
               <option value="casual">Casual</option>
@@ -232,7 +253,9 @@ export function ProfileSettings() {
               className={inputCls}
               value={profile.communication_style?.verbosity || "concise"}
               onChange={(e) =>
-                updateSection("communication_style", { verbosity: e.target.value as any })
+                updateSection("communication_style", {
+                  verbosity: e.target.value as VerbosidadDeComunicacion,
+                })
               }
             >
               <option value="concise">Conciso</option>
@@ -319,7 +342,7 @@ export function ProfileSettings() {
             value={profile.ui_preferences?.tool_confirmation_level || "destructive_only"}
             onChange={(e) =>
               updateSection("ui_preferences", {
-                tool_confirmation_level: e.target.value as any,
+                tool_confirmation_level: e.target.value as NivelDeConfirmacion,
               })
             }
           >

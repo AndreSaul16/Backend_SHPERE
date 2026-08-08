@@ -1,5 +1,6 @@
 // Knowledge Base Panel — Agent document management
 import { useState, useEffect, useRef, useCallback } from 'react';
+import type { AgentDocument as DocumentoDelBackend } from '@/types';
 import {
     FileText,
     Upload,
@@ -27,14 +28,23 @@ interface KnowledgeBasePanelProps {
     readOnly?: boolean;
 }
 
-interface AgentDocument {
-    id: string;
-    filename: string;
-    file_size: number;
-    status: 'pending' | 'processing' | 'completed' | 'failed';
-    chunks_count: number;
-    created_at: string;
-}
+/**
+ * D43 · 7.4 — esta interfaz estaba MAL, y el `any` de `getAgentDocuments()` lo
+ * tapaba.
+ *
+ * Declaraba `id`, `file_size`, `status` y `created_at`. El backend
+ * (`DocumentResponse` en `documents.py`) manda `file_id`, `file_size_bytes`,
+ * `processing_status` y `uploaded_at`. Ninguno de los cuatro campos que este
+ * panel leía existía en la respuesta: el indicador de estado no se pintaba
+ * (`switch` sin rama para `undefined`), el tamaño salía como `NaN`, el total
+ * de la base de conocimiento era `0` siempre, y el botón de eliminar mandaba
+ * un `DELETE .../documents/undefined`.
+ *
+ * Se usa el tipo canónico de `@/types`, que sí describe lo que llega. El
+ * fichero de pruebas repetía la forma inventada, así que también estaba
+ * verde contra una mentira; se ha corregido con ella.
+ */
+type AgentDocument = DocumentoDelBackend;
 
 interface UploadingFile {
     id: string;
@@ -78,7 +88,7 @@ function generateId(): string {
 // Status Badge
 // ---------------------------------------------------------------------------
 
-function StatusBadge({ status }: { status: AgentDocument['status'] }) {
+function StatusBadge({ status }: { status: AgentDocument['processing_status'] }) {
     switch (status) {
         case 'pending':
             return (
@@ -140,7 +150,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
     // ---- Polling while pending/processing ----
     useEffect(() => {
         const hasPending = documents.some(
-            (d) => d.status === 'pending' || d.status === 'processing',
+            (d) => d.processing_status === 'pending' || d.processing_status === 'processing',
         );
 
         if (hasPending) {
@@ -164,9 +174,14 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
 
     // ---- Cleanup XHRs on unmount ----
     useEffect(() => {
+        /* La limpieza leía `xhrMapRef.current` en el momento de DESMONTAR, y
+           para entonces la `ref` puede apuntar a otro mapa: las subidas en
+           vuelo se quedaban sin abortar y seguían llamando a `setState` sobre
+           un componente muerto. Se captura el mapa de ESTE montaje. */
+        const enVuelo = xhrMapRef.current;
         return () => {
-            xhrMapRef.current.forEach((xhr) => xhr.abort());
-            xhrMapRef.current.clear();
+            enVuelo.forEach((xhr) => xhr.abort());
+            enVuelo.clear();
         };
     }, []);
 
@@ -263,7 +278,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
             try {
                 // El endpoint exige Depends(get_current_user).
                 await chatService.deleteAgentDocument(agentId, fileId);
-                setDocuments((prev) => prev.filter((d) => d.id !== fileId));
+                setDocuments((prev) => prev.filter((d) => d.file_id !== fileId));
             } catch (err) {
                 // El borrado no es optimista: la fila sigue en la lista. Sin
                 // aviso, «he pulsado borrar y no ha pasado nada» era
@@ -303,7 +318,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
     // ---- Summary calculations ----
     const totalFiles = documents.length;
     const totalChunks = documents.reduce((acc, d) => acc + (d.chunks_count ?? 0), 0);
-    const totalSize = documents.reduce((acc, d) => acc + (d.file_size ?? 0), 0);
+    const totalSize = documents.reduce((acc, d) => acc + (d.file_size_bytes ?? 0), 0);
 
     // ---- Render ----
     return (
@@ -435,7 +450,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                 <AnimatePresence>
                     {documents.map((doc) => (
                         <motion.div
-                            key={doc.id}
+                            key={doc.file_id}
                             layout
                             initial={{ opacity: 0, y: 8 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -445,7 +460,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                         >
                             {/* Status indicator */}
                             <div className="h-10 w-10 rounded-xl bg-stroke-highlight border border-stroke-hairline flex items-center justify-center shrink-0">
-                                <StatusBadge status={doc.status} />
+                                <StatusBadge status={doc.processing_status} />
                             </div>
 
                             {/* File info */}
@@ -455,24 +470,24 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                                 </p>
                                 <div className="flex items-center gap-3 mt-1">
                                     <span className="text-micro text-content-muted font-mono uppercase">
-                                        {formatFileSize(doc.file_size)}
+                                        {formatFileSize(doc.file_size_bytes)}
                                     </span>
-                                    {doc.status === 'completed' && doc.chunks_count > 0 && (
+                                    {doc.processing_status === 'completed' && doc.chunks_count > 0 && (
                                         <span className="text-micro text-electric-cyan/70 font-mono tabular-nums">
                                             {doc.chunks_count} chunks
                                         </span>
                                     )}
-                                    {doc.status === 'failed' && (
+                                    {doc.processing_status === 'failed' && (
                                         <span className="text-micro text-danger font-mono uppercase">
                                             Error al procesar
                                         </span>
                                     )}
-                                    {doc.status === 'processing' && (
+                                    {doc.processing_status === 'processing' && (
                                         <span className="text-micro text-electric-cyan font-mono uppercase">
                                             Procesando...
                                         </span>
                                     )}
-                                    {doc.status === 'pending' && (
+                                    {doc.processing_status === 'pending' && (
                                         <span className="text-micro text-warning/80 font-mono uppercase">
                                             En cola
                                         </span>
@@ -491,7 +506,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                                    única etiqueta (§9.6). */
                                 <button
                                     type="button"
-                                    onClick={() => deleteDocument(doc.id)}
+                                    onClick={() => deleteDocument(doc.file_id)}
                                     data-row-actions
                                     aria-label={`Eliminar el documento ${doc.filename}`}
                                     className="flex h-11 w-11 items-center justify-center rounded-xl bg-dissent/10 text-dissent hover:bg-dissent/20 transition-all active-scale shrink-0"

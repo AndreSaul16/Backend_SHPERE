@@ -6,7 +6,7 @@ import { server } from '../setup';
 import { Sidebar } from '../../src/components/sidebar/Sidebar';
 import { useChatStore } from '../../src/store/useChatStore';
 import { useBillingStore } from '../../src/store/useBillingStore';
-import { useAuth } from '../../src/contexts/AuthContext';
+import { useAuth } from '../../src/contexts/auth';
 import { adminService } from '../../src/services/api';
 
 /**
@@ -24,7 +24,7 @@ import { adminService } from '../../src/services/api';
  * pasa.
  */
 
-vi.mock('../../src/contexts/AuthContext', () => ({
+vi.mock('../../src/contexts/auth', () => ({
     useAuth: vi.fn(),
     AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));

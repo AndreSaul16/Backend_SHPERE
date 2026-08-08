@@ -25,7 +25,7 @@ const verifyPasswordReset = vi.fn<(code: string) => Promise<string>>();
 const confirmPasswordResetWithCode =
     vi.fn<(code: string, password: string) => Promise<void>>();
 
-vi.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/contexts/auth', () => ({
     useAuth: () => ({
         sendPasswordReset,
         verifyPasswordReset,

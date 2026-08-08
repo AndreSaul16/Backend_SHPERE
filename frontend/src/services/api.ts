@@ -1,3 +1,10 @@
+import type {
+    AgenteAPI, AjustesDeJuntaAPI, DocumentoAPI, HistorialAPI, ListaDeDocumentosAPI,
+    NuevaSesionAPI, NuevoAgenteAPI, ParcheDeAgenteAPI, PlantillaDeAgenteAPI,
+    SesionAPI, TransaccionAPI, ValorJson,
+} from '@/types/api';
+import type { VisualConfig } from '@/types';
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
 if (!import.meta.env.VITE_API_URL) {
@@ -59,11 +66,11 @@ export interface StreamCallbacks {
     onArtifactChunk?: (content: string) => void;
     onArtifactClose?: () => void;
     // TOOL EXECUTION: 2-event protocol for tool visibility
-    onToolStart?: (data: { tool_name: string; args: Record<string, any> }) => void;
+    onToolStart?: (data: { tool_name: string; args: Record<string, ValorJson> }) => void;
     onToolResult?: (data: { tool_name: string; result: string }) => void;
     onToolError?: (data: { tool_name: string; error: string }) => void;
     onDone?: () => void;
-    onError?: (error: any) => void;
+    onError?: (error: unknown) => void;
 }
 
 export const chatService = {
@@ -251,16 +258,7 @@ export const chatService = {
     /**
      * Gestión de Sesiones
      */
-    async createSession(params: {
-        title?: string;
-        base_agent_id?: string;
-        agent_ref_type?: string;
-        role?: string; // Backwards compatibility helper
-        visual_config?: any;
-        user_id?: string;
-        type?: string;
-        members?: string[];
-    }): Promise<any> {
+    async createSession(params: NuevaSesionAPI): Promise<SesionAPI> {
         const finalBaseAgentId = params.base_agent_id || params.role || 'CEO';
 
         const response = await fetch(`${API_URL}/sessions/`, {
@@ -281,7 +279,7 @@ export const chatService = {
         return response.json();
     },
 
-    async getSessions(): Promise<any[]> {
+    async getSessions(): Promise<SesionAPI[]> {
         const response = await fetch(`${API_URL}/sessions/`, {
             headers: await authHeaders(),
         });        if (!response.ok) {
@@ -290,7 +288,7 @@ export const chatService = {
         return response.json();
     },
 
-    async updateSession(sessionId: string, updates: { title?: string, visual_config?: any, enabled_tools?: string[], members?: string[] }): Promise<any> {
+    async updateSession(sessionId: string, updates: { title?: string, visual_config?: VisualConfig, enabled_tools?: string[], members?: string[] }): Promise<SesionAPI> {
         const response = await fetch(`${API_URL}/sessions/${sessionId}`, {
             method: 'PATCH',
             headers: await authHeaders(),
@@ -302,7 +300,7 @@ export const chatService = {
         return response.json();
     },
 
-    async getSessionHistory(sessionId: string): Promise<any> {
+    async getSessionHistory(sessionId: string): Promise<HistorialAPI> {
         const response = await fetch(`${API_URL}/sessions/${sessionId}/history`, {
             headers: await authHeaders(),
         });
@@ -311,7 +309,7 @@ export const chatService = {
     },
 
     // --- AGENTS CUSTOM ---
-    async getCustomAgents(): Promise<any[]> {
+    async getCustomAgents(): Promise<AgenteAPI[]> {
         const response = await fetch(`${API_URL}/agents/`, {
             headers: await authHeaders(),
         });
@@ -319,7 +317,7 @@ export const chatService = {
         return response.json();
     },
 
-    async createCustomAgent(data: { identity: any, brain_config: any, is_public?: boolean }): Promise<any> {
+    async createCustomAgent(data: NuevoAgenteAPI): Promise<AgenteAPI> {
         const response = await fetch(`${API_URL}/agents/`, {
             method: 'POST',
             headers: await authHeaders(),
@@ -348,7 +346,7 @@ export const chatService = {
     },
 
     // --- AGENT UPDATE ---
-    async updateCustomAgent(agentId: string, data: any): Promise<any> {
+    async updateCustomAgent(agentId: string, data: ParcheDeAgenteAPI): Promise<AgenteAPI> {
         const response = await fetch(`${API_URL}/agents/${agentId}`, {
             method: 'PATCH',
             headers: await authHeaders(),
@@ -359,7 +357,7 @@ export const chatService = {
     },
 
     // --- TEMPLATES ---
-    async getAgentTemplates(category?: string): Promise<any[]> {
+    async getAgentTemplates(category?: string): Promise<PlantillaDeAgenteAPI[]> {
         const url = category
             ? `${API_URL}/agents/templates?category=${category}`
             : `${API_URL}/agents/templates`;
@@ -371,39 +369,50 @@ export const chatService = {
     },
 
     // --- DOCUMENTS (RAG) ---
-    uploadAgentDocument(agentId: string, file: File, onProgress?: (pct: number) => void): Promise<any> {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const token = await getAuthToken();
-                const xhr = new XMLHttpRequest();
-                const formData = new FormData();
-                formData.append('file', file);
+    /**
+     * Sube un documento con barra de progreso, o sea con `XMLHttpRequest`:
+     * `fetch` no informa del progreso de subida.
+     *
+     * D43 — el ejecutor de la promesa era `async`, que es una trampa conocida
+     * (y su propia regla de ESLint): si algo lanza DENTRO de un ejecutor `async`
+     * después del primer `await`, el rechazo se pierde y la promesa se queda
+     * pendiente para siempre — quien la espera no vuelve nunca. Aquí un
+     * `try/catch` lo tapaba, pero bastaba con tocar el cuerpo para reabrirlo.
+     * El `await` sale fuera y el ejecutor deja de ser `async`.
+     */
+    async uploadAgentDocument(agentId: string, file: File, onProgress?: (pct: number) => void): Promise<DocumentoAPI> {
+        const token = await getAuthToken();
+        return new Promise<DocumentoAPI>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            const formData = new FormData();
+            formData.append('file', file);
 
-                xhr.upload.addEventListener('progress', (e) => {
-                    if (e.lengthComputable && onProgress) {
-                        onProgress(Math.round((e.loaded / e.total) * 100));
-                    }
-                });
-                xhr.addEventListener('load', () => {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        resolve(JSON.parse(xhr.responseText));
-                    } else {
-                        reject(new Error(`Upload failed: ${xhr.status}`));
-                    }
-                });
-                xhr.addEventListener('error', () => reject(new Error('Network error during upload')));
-                xhr.open('POST', `${API_URL}/agents/${agentId}/documents`);
-                if (token) {
-                    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable && onProgress) {
+                    onProgress(Math.round((e.loaded / e.total) * 100));
                 }
-                xhr.send(formData);
-            } catch (err) {
-                reject(err);
+            });
+            xhr.addEventListener('load', () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        resolve(JSON.parse(xhr.responseText) as DocumentoAPI);
+                    } catch {
+                        reject(new Error('El servidor respondió algo que no es JSON'));
+                    }
+                } else {
+                    reject(new Error(`Upload failed: ${xhr.status}`));
+                }
+            });
+            xhr.addEventListener('error', () => reject(new Error('Network error during upload')));
+            xhr.open('POST', `${API_URL}/agents/${agentId}/documents`);
+            if (token) {
+                xhr.setRequestHeader('Authorization', `Bearer ${token}`);
             }
+            xhr.send(formData);
         });
     },
 
-    async getAgentDocuments(agentId: string): Promise<any> {
+    async getAgentDocuments(agentId: string): Promise<ListaDeDocumentosAPI> {
         const response = await fetch(`${API_URL}/agents/${agentId}/documents`, {
             headers: await authHeaders(),
         });
@@ -467,7 +476,7 @@ export const chatService = {
     },
 
     /** Board settings: actualiza la config de debate (activar, devil's advocate). */
-    async updateBoardSettings(patch: { board_meeting_enabled?: boolean; board_devils_advocate?: boolean }): Promise<any> {
+    async updateBoardSettings(patch: { board_meeting_enabled?: boolean; board_devils_advocate?: boolean }): Promise<AjustesDeJuntaAPI> {
         const response = await fetch(`${API_URL}/me/board-settings`, {
             method: 'PATCH',
             headers: await authHeaders(),
@@ -622,9 +631,9 @@ export interface AgentOverride {
  * El error se sigue construyendo y lanzando igual: lo que se salta es el EFECTO
  * GLOBAL, no el aviso al llamante.
  */
-type ReqInit = RequestInit & { json?: any; skipGlobalHandler?: boolean };
+type ReqInit = RequestInit & { json?: unknown; skipGlobalHandler?: boolean };
 
-async function req<T = any>(
+async function req<T = unknown>(
     path: string,
     init?: ReqInit
 ): Promise<T> {
@@ -632,7 +641,7 @@ async function req<T = any>(
     const { json, skipGlobalHandler, ...rest } = init || {};
     const response = await fetch(`${API_URL}${path}`, {
         ...rest,
-        headers: { ...headers, ...(rest.headers as any) },
+        headers: { ...headers, ...(rest.headers as Record<string, string> | undefined) },
         body: json !== undefined ? JSON.stringify(json) : rest.body,
     });
     if (!response.ok) {
@@ -846,7 +855,7 @@ export const adminService = {
             { method: "POST", json: { delta, reason } }
         ),
     transactions: (uid?: string, limit = 50) =>
-        req<{ transactions: any[] }>(
+        req<{ transactions: TransaccionAPI[] }>(
             `/admin/transactions?limit=${limit}${uid ? `&uid=${encodeURIComponent(uid)}` : ""}`
         ),
     metrics: (days = 30) => req<AdminMetrics>(`/admin/metrics?days=${days}`),

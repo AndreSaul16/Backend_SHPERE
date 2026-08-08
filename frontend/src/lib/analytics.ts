@@ -23,14 +23,29 @@ export const ANALYTICS_EVENTS = {
 
 export type AnalyticsEvent = (typeof ANALYTICS_EVENTS)[keyof typeof ANALYTICS_EVENTS];
 
-let clientPromise: Promise<any> | null = null;
+/**
+ * El cliente de PostHog, reducido a lo único que esta app le pide.
+ *
+ * Era `Promise<any>`: `posthog-js` trae sus propios tipos, pero importarlos de
+ * forma estática arrastraría el paquete al trozo de entrada, que es justo lo
+ * que la carga perezosa de abajo evita. Con esta interfaz mínima no hace falta
+ * el paquete para tipar, y si mañana se llama a un método que no está aquí, el
+ * compilador lo dice en vez de tragárselo.
+ */
+interface ClienteDeAnalitica {
+    capture(evento: string, propiedades?: Record<string, unknown>): void;
+    identify(id: string, propiedades?: Record<string, unknown>): void;
+    reset(): void;
+}
+
+let clientPromise: Promise<ClienteDeAnalitica | null> | null = null;
 
 /** True si hay analytics configurada. Útil para tests y guards. */
 export function isAnalyticsEnabled(): boolean {
     return !!KEY;
 }
 
-async function getClient(): Promise<any | null> {
+async function getClient(): Promise<ClienteDeAnalitica | null> {
     if (!KEY) return null;
     if (!clientPromise) {
         clientPromise = import("posthog-js")

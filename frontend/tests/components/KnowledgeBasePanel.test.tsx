@@ -37,15 +37,25 @@ const AGENT_ID = 'cto-1';
 const LIST_URL = `http://localhost:8000/api/v1/agents/${AGENT_ID}/documents`;
 const DELETE_URL = `http://localhost:8000/api/v1/agents/${AGENT_ID}/documents/:fileId`;
 
+/**
+ * La forma REAL de `DocumentResponse` (backend `documents.py`).
+ *
+ * Este fixture decía `id`, `file_size`, `status` y `created_at`, que es la
+ * forma que se había inventado el propio panel. Ninguno de los cuatro campos
+ * existe en la respuesta del backend, así que la prueba estaba verde contra
+ * una mentira mientras en producción no se pintaba el estado, el tamaño salía
+ * NaN y eliminar mandaba un DELETE a `.../documents/undefined` (D43 · 7.4).
+ */
 const doc = (overrides: Record<string, unknown> = {}) => ({
-    id: 'doc-1',
+    file_id: 'doc-1',
     filename: 'informe.pdf',
-    file_size: 2048,
+    file_size_bytes: 2048,
+    content_type: 'application/pdf',
     // 'completed' a propósito: con pending/processing el panel arranca un
     // setInterval de polling que ensuciaría el test.
-    status: 'completed',
+    processing_status: 'completed',
     chunks_count: 12,
-    created_at: '2026-07-30T10:00:00Z',
+    uploaded_at: '2026-07-30T10:00:00Z',
     ...overrides,
 });
 
@@ -117,8 +127,8 @@ describe('KnowledgeBasePanel — regresión P0 (b7452be)', () => {
         server.use(
             http.get(LIST_URL, () =>
                 listResponse([
-                    doc({ id: 'doc-1', filename: 'informe.pdf', chunks_count: 12 }),
-                    doc({ id: 'doc-2', filename: 'contrato.docx', file_size: 4096, chunks_count: 7 }),
+                    doc({ file_id: 'doc-1', filename: 'informe.pdf', chunks_count: 12 }),
+                    doc({ file_id: 'doc-2', filename: 'contrato.docx', file_size_bytes: 4096, chunks_count: 7 }),
                 ]),
             ),
         );
@@ -160,8 +170,8 @@ describe('KnowledgeBasePanel — regresión P0 (b7452be)', () => {
         server.use(
             http.get(LIST_URL, () =>
                 listResponse([
-                    doc({ id: 'doc-1', filename: 'informe.pdf' }),
-                    doc({ id: 'doc-2', filename: 'contrato.docx' }),
+                    doc({ file_id: 'doc-1', filename: 'informe.pdf' }),
+                    doc({ file_id: 'doc-2', filename: 'contrato.docx' }),
                 ]),
             ),
             http.delete(DELETE_URL, ({ request, params }) => {

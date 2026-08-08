@@ -16,7 +16,7 @@
  */
 import { Navigate, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import type { EstadoDeRegreso } from "@/lib/rutaDeRegreso";
 import type { ReactNode } from "react";
 
