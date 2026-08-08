@@ -162,10 +162,11 @@ class TestWebhookInvalidSKU:
 
     @pytest.mark.asyncio
     async def test_webhook_invalid_sku_grants_no_credits(
-        self, async_client: AsyncClient, db_instance
+        self, async_client: AsyncClient, sync_db
     ):
         """Usuario free recibe webhook con SKU 'topup_premium_10k' → 200 OK, 0 créditos."""
-        db_sync = db_instance.get_sync_client()["sphere_db"]
+        db_sync = sync_db()
+        event_id = "evt_invalid_sku_topup"
 
         # Configurar usuario free
         db_sync["users"].delete_many({"firebase_uid": "test_user_a"})
@@ -179,14 +180,16 @@ class TestWebhookInvalidSKU:
             },
         })
 
-        # Limpiar idempotencia
-        db_sync["stripe_events_processed"].delete_many(
-            {"_id": "evt_invalid_sku_topup"}
-        )
+        # Limpieza previa: idempotencia y claim de este evento. Sin esto, una
+        # ejecución anterior (p. ej. la verificación por mutación) dejaría el
+        # evento reclamado y esta corrida saldría verde/roja por el motivo
+        # equivocado.
+        db_sync["stripe_events_processed"].delete_many({"_id": event_id})
+        db_sync["credit_transactions"].delete_many({"stripe_event_id": event_id})
 
         import stripe as stripe_lib
         event = {
-            "id": "evt_invalid_sku_topup",
+            "id": event_id,
             "type": "checkout.session.completed",
             "data": {
                 "object": {
@@ -198,28 +201,38 @@ class TestWebhookInvalidSKU:
             },
         }
 
-        with patch.object(stripe_lib.Webhook, "construct_event", return_value=event):
-            response = await async_client.post(
-                "/api/v1/webhooks/stripe",
-                json=event,
-                headers={"stripe-signature": "valid"},
+        try:
+            with patch.object(stripe_lib.Webhook, "construct_event", return_value=event):
+                response = await async_client.post(
+                    "/api/v1/webhooks/stripe",
+                    json=event,
+                    headers={"stripe-signature": "valid"},
+                )
+
+            # Webhook no debe romper — Stripe reintentaría por siempre
+            assert response.status_code == 200
+
+            # No deben haberse otorgado créditos de top-up
+            user = db_sync["users"].find_one({"firebase_uid": "test_user_a"})
+            assert user["wallet"]["topup_messages_balance"] == 0
+
+            # Verificar que este evento NO reclamó ningún grant.
+            # Se filtra por stripe_event_id, no por (user_id, balance_source):
+            # el filtro amplio da rojo por transacciones que dejan otros tests
+            # sobre test_user_a en la base compartida, y —más grave— el saldo
+            # por sí solo NO detecta una regresión de validate_topup_tier,
+            # porque un segundo guard en _grant_topup corta el $inc. El claim
+            # del evento es el único hecho observable de esta ruta.
+            tx_count = db_sync["credit_transactions"].count_documents({
+                "stripe_event_id": event_id,
+            })
+            assert tx_count == 0, (
+                f"Se crearon {tx_count} transacciones de top-up inesperadas "
+                f"para el evento {event_id}: el SKU inválido reclamó un grant"
             )
-
-        # Webhook no debe romper — Stripe reintentaría por siempre
-        assert response.status_code == 200
-
-        # No deben haberse otorgado créditos de top-up
-        user = db_sync["users"].find_one({"firebase_uid": "test_user_a"})
-        assert user["wallet"]["topup_messages_balance"] == 0
-
-        # Verificar que NO se creó transacción de top-up
-        tx_count = db_sync["credit_transactions"].count_documents({
-            "user_id": "test_user_a",
-            "balance_source": "topup",
-        })
-        assert tx_count == 0, (
-            f"Se crearon {tx_count} transacciones de top-up inesperadas"
-        )
+        finally:
+            db_sync["stripe_events_processed"].delete_many({"_id": event_id})
+            db_sync["credit_transactions"].delete_many({"stripe_event_id": event_id})
 
 
 # ---------------------------------------------------------------------------

@@ -44,6 +44,23 @@ def db_instance():
     db.close()
 
 
+@pytest.fixture
+def sync_db(db_instance):
+    """Devuelve un CALLABLE que resuelve la base síncrona en el momento de uso.
+
+    Nunca un handle plano: `_setup_db()` cierra y recrea `db.sync_client` en cada
+    test async (pytest-asyncio da un loop nuevo por test), y PyMongo 4 prohíbe
+    reutilizar un cliente cerrado. Resolver en el cuerpo del test elimina esa
+    clase entera de fallos dependientes del orden de los parámetros.
+
+    La base es la MISMA que escribe la app (`settings.DB_NAME`, webhooks.py):
+    sin esto, los tests observarían una base que el producto nunca toca.
+    """
+    from app.core.config import settings
+
+    return lambda: db_instance.get_sync_client()[settings.DB_NAME]
+
+
 # --- PERFILES MULTI-TENANT ---
 
 _NOW = datetime.now(timezone.utc)

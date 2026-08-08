@@ -29,9 +29,9 @@ async def test_stripe_webhook_invalid_signature(async_client: AsyncClient):
     assert response.status_code == 400
 
 @pytest.mark.asyncio
-async def test_stripe_webhook_idempotency_and_success(async_client: AsyncClient, mock_stripe_event, db_instance):
+async def test_stripe_webhook_idempotency_and_success(async_client: AsyncClient, mock_stripe_event, sync_db):
     # Limpieza de runs anteriores (idempotencia del propio test).
-    events_col = db_instance.get_sync_client()["sphere_db"]["stripe_events_processed"]
+    events_col = sync_db()["stripe_events_processed"]
     events_col.delete_many({"_id": "evt_test_123"})
 
     with patch("stripe.Webhook.construct_event", return_value=mock_stripe_event):
@@ -60,10 +60,10 @@ async def test_stripe_webhook_idempotency_and_success(async_client: AsyncClient,
 # ── A2 (auditoría 2026-06-10): el grant NO se duplica aunque Stripe reintente
 # un evento que quedó a medio procesar (estado "processing", sin marcar "done"). ──
 @pytest.mark.asyncio
-async def test_topup_grant_idempotent_on_retry(async_client: AsyncClient, db_instance):
+async def test_topup_grant_idempotent_on_retry(async_client: AsyncClient, sync_db):
     from app.core.config import settings
 
-    dbc = db_instance.get_sync_client()["sphere_db"]
+    dbc = sync_db()
     events_col = dbc["stripe_events_processed"]
     tx_col = dbc["credit_transactions"]
     users_col = dbc["users"]
@@ -73,17 +73,20 @@ async def test_topup_grant_idempotent_on_retry(async_client: AsyncClient, db_ins
     sku = "deep_dive"
     expected = settings.topup_messages_map[sku]
 
+    # Limpieza de runs anteriores ANTES de crear el índice: una corrida previa
+    # pudo dejar el evento reclamado (y hasta duplicado, si el índice no llegó a
+    # existir), y entonces create_index moriría con DuplicateKeyError en vez de
+    # ejecutar el test.
+    events_col.delete_many({"_id": event_id})
+    tx_col.delete_many({"stripe_event_id": event_id})
+    users_col.delete_many({"firebase_uid": user_id})
+
     # Índice único idempotente (en prod lo crea _ensure_indexes al arrancar).
     tx_col.create_index(
         [("stripe_event_id", 1)],
         unique=True,
         partialFilterExpression={"stripe_event_id": {"$exists": True}},
     )
-
-    # Limpieza de runs anteriores
-    events_col.delete_many({"_id": event_id})
-    tx_col.delete_many({"stripe_event_id": event_id})
-    users_col.delete_many({"firebase_uid": user_id})
 
     users_col.insert_one({
         "firebase_uid": user_id,
@@ -133,8 +136,8 @@ async def test_topup_grant_idempotent_on_retry(async_client: AsyncClient, db_ins
 # ── A2: una compra con metadata corrupta no se pierde en silencio: queda en
 # failed_payments y devolvemos 200 (no 500) para que Stripe no reintente eterno. ──
 @pytest.mark.asyncio
-async def test_malformed_checkout_goes_to_dead_letter(async_client: AsyncClient, db_instance):
-    dbc = db_instance.get_sync_client()["sphere_db"]
+async def test_malformed_checkout_goes_to_dead_letter(async_client: AsyncClient, sync_db):
+    dbc = sync_db()
     events_col = dbc["stripe_events_processed"]
     failed_col = dbc["failed_payments"]
 
