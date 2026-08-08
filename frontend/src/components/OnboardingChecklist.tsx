@@ -17,7 +17,10 @@ interface Props {
 }
 
 export function OnboardingChecklist({ onPrimaryAction }: Props) {
-    const { sessions, customAgents, messagesBySession } = useChatStore();
+    /* 4.6 · D20: tres campos, una suscripción global. */
+    const sessions = useChatStore((s) => s.sessions);
+    const customAgents = useChatStore((s) => s.customAgents);
+    const messagesBySession = useChatStore((s) => s.messagesBySession);
     const navigate = useNavigate();
     const [dismissed, setDismissed] = useState(false);
     const [loaded, setLoaded] = useState(false);

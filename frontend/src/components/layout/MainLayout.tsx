@@ -54,7 +54,13 @@ function anchoGuardado(): number {
 }
 
 export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayoutProps) {
-    const { isSidebarOpen, toggleSidebar, isArtifactPanelOpen } = useChatStore();
+    /* 4.6 · D20: el shell de tres columnas se suscribía al store entero, así que
+       un token de streaming repintaba el marco de la aplicación —rail, tirador,
+       velo y panel— sesenta veces por segundo para leer dos interruptores que no
+       se tocan durante un debate. */
+    const isSidebarOpen = useChatStore((s) => s.isSidebarOpen);
+    const toggleSidebar = useChatStore((s) => s.toggleSidebar);
+    const isArtifactPanelOpen = useChatStore((s) => s.isArtifactPanelOpen);
     /* §4.3: por debajo de `xl` el panel es una hoja a pantalla completa; a
        partir de ahí, columna redimensionable. Antes esto se decidía leyendo
        `window.innerWidth` durante el render, que no vuelve a mirarse nunca:

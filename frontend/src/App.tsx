@@ -97,7 +97,13 @@ function RutaDeChat() {
 }
 
 function AuthenticatedApp() {
-  const { fetchSessions, fetchCustomAgents } = useChatStore();
+  /* 4.6 · D20 — esto era `const { … } = useChatStore()`, o sea una suscripción
+     al store ENTERO en el componente que contiene TODAS las rutas. Un token de
+     streaming re-renderizaba el árbol completo de la aplicación desde aquí
+     arriba, y para leer dos funciones que no cambian nunca. Dos selectores
+     atómicos: sólo se vuelve a evaluar si cambia la función, que es jamás. */
+  const fetchSessions = useChatStore((s) => s.fetchSessions);
+  const fetchCustomAgents = useChatStore((s) => s.fetchCustomAgents);
   const { user } = useAuth();
 
   useEffect(() => {

@@ -25,7 +25,9 @@
  * empeora.
  */
 import { create } from 'zustand';
+import { useShallow } from 'zustand/react/shallow';
 
+import type { Agent, Message } from '../types';
 import { createAgentsSlice } from './chat/agentsSlice';
 import { createArtifactsSlice } from './chat/artifactsSlice';
 import { createBoardSlice } from './chat/boardSlice';
@@ -46,6 +48,54 @@ export const useChatStore = create<ChatState>((set, get) => ({
     ...createUiSlice(set),
     ...createResetSlice(set),
 }));
+
+// --- Selectores compartidos (tarea 4.6 · D20) -----------------------------
+//
+// Suscribirse al store ENTERO —`const { … } = useChatStore()`— re-renderiza el
+// componente en cada `set`, y durante el streaming hay un `set` por token. Así
+// es como un token repintaba a la vez el rail, el panel de artefactos, el
+// selector de agentes, el shell y la aplicación entera desde `App`.
+//
+// Los selectores atómicos (`useChatStore(s => s.x)`) resuelven el caso normal.
+// Estos dos hooks existen para los DOS casos que no se pueden resolver con uno
+// atómico, porque el valor que hace falta no está guardado tal cual:
+//
+//   · la lista de agentes es `coreAgents` + `customAgents`, y concatenar dentro
+//     de un selector devuelve un array nuevo en cada comprobación;
+//   · el hilo de una sesión puede no existir todavía, y `?? []` tiene el mismo
+//     problema.
+//
+// En Zustand 5 eso no es una ineficiencia: es un BUCLE. `useSyncExternalStore`
+// compara la instantánea por identidad, ve un valor distinto cada vez y vuelve
+// a renderizar sin parar («The result of getSnapshot should be cached»). Por eso
+// uno usa `useShallow` y el otro una constante de módulo.
+
+/**
+ * Quién puede hablar: directores de fábrica + agentes a medida.
+ *
+ * `useShallow` compara elemento a elemento, así que el array nuevo que produce
+ * el `concat` sólo cuenta como cambio cuando de verdad ha entrado o salido un
+ * agente. Es el sustituto de llamar a `getAgents()` en el cuerpo del
+ * componente, que además NO suscribía: un agente nuevo no repintaba la lista
+ * hasta que otra cosa forzara el render.
+ */
+export const useAgentes = (): Agent[] =>
+    useChatStore(useShallow((s) => [...s.coreAgents, ...s.customAgents]));
+
+/**
+ * El hilo vacío. Es UNA constante de módulo, congelada, y esto no es cosmético:
+ * devolver `[]` recién creado desde un selector es el bucle de render descrito
+ * arriba. Congelado, además, para que nadie le haga `push` creyendo que es suyo.
+ */
+const HILO_VACIO: readonly Message[] = Object.freeze([]);
+
+/** El hilo de una sesión, sin suscribirse a los de las demás. */
+export const useMensajesDeSesion = (sessionId: string | null): Message[] =>
+    useChatStore((s) => (sessionId ? s.messagesBySession[sessionId] : undefined) ?? (HILO_VACIO as Message[]));
+
+/** ¿Está transmitiendo ESTA sesión? Un booleano, o sea nunca una referencia nueva. */
+export const useEstaTransmitiendo = (sessionId: string | null): boolean =>
+    useChatStore((s) => !!sessionId && s.streamingSessionIds.includes(sessionId));
 
 // --- Puerta pública -------------------------------------------------------
 // Lo que la aplicación importaba de este módulo antes del troceo sigue

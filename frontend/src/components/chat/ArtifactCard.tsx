@@ -20,7 +20,11 @@ const getIcon = (type?: ArtifactType, lang?: string) => {
 };
 
 export function ArtifactCard({ content, language, artifactType, title: propsTitle, artifactId }: ArtifactCardProps) {
-    const { artifacts, setActiveArtifact } = useChatStore();
+    /* 4.6 · D20: la tarjeta seleccionaba el store entero para leer un
+       artefacto. Un turno con tres artefactos son tres suscripciones globales
+       dentro del transcript, y por token. */
+    const artifacts = useChatStore((s) => s.artifacts);
+    const setActiveArtifact = useChatStore((s) => s.setActiveArtifact);
 
     // Find artifact by ID first (streaming case), then fallback to content match
     const existingArtifact = artifactId

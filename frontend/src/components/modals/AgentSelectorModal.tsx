@@ -1,7 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { Search, Zap, Crown, Monitor, TrendingUp, Briefcase, Plus, Users, Trash2, Landmark } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useChatStore } from '@/store/useChatStore';
+import { useAgentes, useChatStore } from '@/store/useChatStore';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import type { Role } from '@/types';
@@ -57,14 +57,15 @@ const getRoleIcon = (role: Role) => {
 
 export function AgentSelectorModal() {
     const navigate = useNavigate();
-    const {
-        isAgentModalOpen,
-        toggleAgentModal,
-        createNewSession,
-        getAgents,
-        fetchCustomAgents,
-        deleteCustomAgent
-    } = useChatStore();
+    /* 4.6 · D20: el selector está montado SIEMPRE (cerrado casi todo el
+       tiempo), y se suscribía al store entero. O sea que un modal invisible se
+       re-renderizaba con cada token del debate. */
+    const isAgentModalOpen = useChatStore((s) => s.isAgentModalOpen);
+    const toggleAgentModal = useChatStore((s) => s.toggleAgentModal);
+    const createNewSession = useChatStore((s) => s.createNewSession);
+    const fetchCustomAgents = useChatStore((s) => s.fetchCustomAgents);
+    const deleteCustomAgent = useChatStore((s) => s.deleteCustomAgent);
+    const allAgents = useAgentes();
     const loadBoardSettings = useBoardSettingsStore((s) => s.load);
     const setBoardEnabled = useBoardSettingsStore((s) => s.setEnabled);
 
@@ -81,8 +82,6 @@ export function AgentSelectorModal() {
             fetchCustomAgents();
         }
     }, [isAgentModalOpen]);
-
-    const allAgents = getAgents();
 
     // Separate group chat from individual agents
     const groupChat = allAgents.find(a => a.id === 'group-chat');

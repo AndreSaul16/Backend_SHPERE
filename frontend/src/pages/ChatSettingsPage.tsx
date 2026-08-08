@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { ArrowLeft, Save, Camera, Zap, Palette, Pencil, Users, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { AGENT_HEX, useChatStore, getGroupMembers } from "@/store/useChatStore";
+import { AGENT_HEX, getGroupMembers, useAgentes, useChatStore } from "@/store/useChatStore";
 import { cn } from "@/lib/utils";
 import { TextField } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
@@ -15,8 +15,14 @@ import { InlineError } from "@/components/ui/InlineError";
 
 export function ChatSettingsPage() {
     const navigate = useNavigate();
-    const { getAgents, selectedAgentId, currentSessionId, sessions, updateSessionMetadata } = useChatStore();
-    const agents = getAgents();
+    /* 4.6 · D20: cinco campos y `getAgents()` llamado en el render, que lee
+       bien pero no suscribe — funcionaba de rebote porque el store entero ya
+       forzaba el render. */
+    const selectedAgentId = useChatStore((s) => s.selectedAgentId);
+    const currentSessionId = useChatStore((s) => s.currentSessionId);
+    const sessions = useChatStore((s) => s.sessions);
+    const updateSessionMetadata = useChatStore((s) => s.updateSessionMetadata);
+    const agents = useAgentes();
     const currentSession = sessions.find(s => s.session_id === currentSessionId);
     const activeAgent = agents.find(a => a.id === selectedAgentId) || agents[0];
     const fileInputRef = useRef<HTMLInputElement>(null);

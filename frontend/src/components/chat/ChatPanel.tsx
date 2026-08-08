@@ -2,7 +2,7 @@ import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { Send, Square, Paperclip, MoreVertical, Zap, ShieldCheck, Search, X, Download, Pin, Hand, Landmark } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { useChatStore, getGroupMembers } from "@/store/useChatStore";
+import { getGroupMembers, useAgentes, useChatStore, useEstaTransmitiendo, useMensajesDeSesion } from "@/store/useChatStore";
 import { chatService } from "@/services/api";
 import { MessageBubble } from "./MessageBubble";
 import { BoardWarRoom } from "./BoardWarRoom";
@@ -27,22 +27,39 @@ import { RegionBoundary } from "@/components/shared/RegionBoundary";
 export function ChatPanel() {
     const navigate = useNavigate();
     const { sessionId: urlSessionId } = useParams<{ sessionId: string }>();
-    const {
-        sessions,
-        currentSessionId,
-        selectedAgentId,
-        getAgents,
-        sendMessage,
-        stopGeneration,
-        streamingSessionIds,
-        loadSession,
-        getCurrentMessages,
-        toggleAgentModal,
-        boardSession,
-    } = useChatStore();
+    /**
+     * 4.6 · D20 — selectores atómicos.
+     *
+     * Esto era una desestructuración del store ENTERO, así que el panel se
+     * repintaba en cada `set`: por token, sí, pero también por trozo de
+     * artefacto, por evento de junta y por cambio de error. Y encima
+     * `getAgents()` y `getCurrentMessages()` son funciones que se llamaban en el
+     * cuerpo del render: leían el valor correcto pero NO suscribían a nada —
+     * funcionaban de rebote, porque el store entero ya forzaba el render.
+     * Cambiarlas por selectores tapa además ese agujero.
+     */
+    const currentSessionId = useChatStore((s) => s.currentSessionId);
+    const selectedAgentId = useChatStore((s) => s.selectedAgentId);
+    const sendMessage = useChatStore((s) => s.sendMessage);
+    const stopGeneration = useChatStore((s) => s.stopGeneration);
+    const loadSession = useChatStore((s) => s.loadSession);
+    const toggleAgentModal = useChatStore((s) => s.toggleAgentModal);
+    const boardSession = useChatStore((s) => s.boardSession);
+    const agents = useAgentes();
 
-    const messages = getCurrentMessages();
-    const agents = getAgents();
+    // La sesión abierta, no las cuarenta del historial: seleccionar `sessions`
+    // entero repintaría el panel cada vez que llega un título nuevo del rail.
+    const currentSession = useChatStore(
+        (s) => s.sessions.find((x) => x.session_id === currentSessionId),
+    );
+    // El hilo de ESTA sesión, no el mapa entero. `useMensajesDeSesion` devuelve
+    // una constante congelada cuando no hay hilo: un `?? []` dentro del selector
+    // es una instantánea nueva por comprobación y Zustand 5 entra en bucle.
+    const messages = useMensajesDeSesion(currentSessionId);
+    // Un booleano, o sea nunca una referencia nueva: antes se seleccionaba el
+    // array `streamingSessionIds` completo para responder a una sola pregunta.
+    const isTyping = useEstaTransmitiendo(currentSessionId);
+
     /**
      * Q3 — lo que se escribe no se pierde.
      *
@@ -104,9 +121,7 @@ export function ChatPanel() {
     const CORE_AGENT_IDS = ['CEO', 'CTO', 'CFO', 'CMO', 'system', 'group-chat'];
     const isCustomAgent = !!selectedAgentId && !CORE_AGENT_IDS.includes(selectedAgentId);
 
-    const isTyping = currentSessionId ? streamingSessionIds.includes(currentSessionId) : false;
     const activeAgent = agents.find(a => a.id === selectedAgentId);
-    const currentSession = sessions.find(s => s.session_id === currentSessionId);
 
     const isGroupChat = selectedAgentId === 'group-chat';
     const groupMembers = getGroupMembers(agents);

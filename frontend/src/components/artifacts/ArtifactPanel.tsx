@@ -20,12 +20,13 @@ const ARTIFACT_ICONS: Record<ArtifactType, React.ComponentType<{ className?: str
 };
 
 export function ArtifactPanel() {
-    const {
-        artifacts,
-        activeArtifactId,
-        toggleArtifactPanel,
-        setActiveArtifact
-    } = useChatStore();
+    /* 4.6 · D20: el panel se suscribía al store entero, así que un token de
+       streaming lo repintaba —con su tira de pestañas, su medida de
+       desbordamiento y su visor— aunque no hubiera artefacto ninguno en vuelo. */
+    const artifacts = useChatStore((s) => s.artifacts);
+    const activeArtifactId = useChatStore((s) => s.activeArtifactId);
+    const toggleArtifactPanel = useChatStore((s) => s.toggleArtifactPanel);
+    const setActiveArtifact = useChatStore((s) => s.setActiveArtifact);
 
     const activeArtifact = artifacts.find(a => a.id === activeArtifactId);
 

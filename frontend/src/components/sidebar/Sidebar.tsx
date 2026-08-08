@@ -3,7 +3,7 @@ import { CreditCard, MessageSquare, MoreVertical, Plus, Search, Settings, Share2
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { useChatStore } from "@/store/useChatStore";
+import { useAgentes, useChatStore } from "@/store/useChatStore";
 import { useBillingStore } from "@/store/useBillingStore";
 import { useUserAvatar } from "@/hooks/useUserAvatar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,18 +32,18 @@ function getInitials(displayName: string | null, email: string | null): string {
 }
 
 export function Sidebar() {
-    const {
-        sessions,
-        currentSessionId,
-        streamingSessionIds,
-        toggleSidebar,
-        fetchSessions,
-        toggleAgentModal,
-        coreAgents,
-        customAgents,
-        historialCargado,
-    } = useChatStore();
-    const allAgents = [...coreAgents, ...customAgents];
+    /* 4.6 · D20 — nueve campos con una sola suscripción al store entero. El
+       rail pinta el historial y el saldo, nada que cambie durante un debate, y
+       aun así se repintaba en cada token. Uno por campo: la lista de sesiones no
+       cambia porque llegue un token, y las cuatro acciones no cambian nunca. */
+    const sessions = useChatStore((s) => s.sessions);
+    const currentSessionId = useChatStore((s) => s.currentSessionId);
+    const streamingSessionIds = useChatStore((s) => s.streamingSessionIds);
+    const toggleSidebar = useChatStore((s) => s.toggleSidebar);
+    const fetchSessions = useChatStore((s) => s.fetchSessions);
+    const toggleAgentModal = useChatStore((s) => s.toggleAgentModal);
+    const historialCargado = useChatStore((s) => s.historialCargado);
+    const allAgents = useAgentes();
     const userAvatar = useUserAvatar();
     const { user } = useAuth();
     const { pro_messages_balance, topup_messages_balance, loaded: billingLoaded, refresh: refreshBilling } = useBillingStore();
