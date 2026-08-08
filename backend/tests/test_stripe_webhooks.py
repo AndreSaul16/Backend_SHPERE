@@ -486,6 +486,114 @@ async def test_topup_profile_deleted_after_claim_compensates(
     assert failed["reason"] == "user_profile_not_found"
 
 
+# ── PW-006: el grant LANZA (no devuelve matched_count == 0) ─────────────────
+#
+# No hace falta un crash de proceso: basta un WriteError corriente de Mongo.
+# Si el claim queda escrito y `applied` conserva su inicial True, el reintento
+# encuentra el evento ya reclamado, lo marca "done" y el resultado es cero
+# créditos, cero filas en failed_payments y nada que ver para el auditor.
+# El grant tiene que ser FAIL-CLOSED: si no se aplicó, se compensa.
+
+@pytest.mark.asyncio
+async def test_topup_grant_write_error_compensates_and_replay_grants(
+    async_client: AsyncClient, orphan_env
+):
+    from app.core.config import settings
+
+    E, U, SKU = "evt_pw006_topup", "usr_pw006_topup", "deep_dive"
+    expected = settings.topup_messages_map[SKU]
+    event = orphan_env.event(E, U, "payment", SKU)
+
+    # topup_messages_balance de tipo string → el $inc del grant lanza WriteError.
+    # El perfil SÍ existe: esto no lo detecta ni la guarda ni el script de auditoría.
+    orphan_env.users.insert_one({
+        "firebase_uid": U,
+        "subscription": {"plan_id": "free"},
+        "wallet": {"pro_messages_balance": 0, "topup_messages_balance": "0"},
+    })
+
+    with patch("stripe.Webhook.construct_event", return_value=event):
+        r1 = await async_client.post(
+            "/api/v1/webhooks/stripe", json=event,
+            headers={"stripe-signature": "v"},
+        )
+        # Estado intermedio capturado aquí y afirmado abajo: primero la pérdida
+        # de dinero, que es lo que de verdad importa, y después el mecanismo.
+        after_r1 = {
+            "status": r1.status_code,
+            "claims": orphan_env.tx.count_documents({"stripe_event_id": E}),
+            "failed": orphan_env.failed.count_documents({"event_id": E}),
+            "event": orphan_env.events.find_one({"_id": E})["status"],
+        }
+
+        # Se repara el wallet y Stripe reentrega el mismo evento.
+        orphan_env.users.update_one(
+            {"firebase_uid": U}, {"$set": {"wallet.topup_messages_balance": 0}}
+        )
+        r2 = await async_client.post(
+            "/api/v1/webhooks/stripe", json=event,
+            headers={"stripe-signature": "v"},
+        )
+
+    doc = orphan_env.users.find_one({"firebase_uid": U})
+    # La pérdida silenciosa: hoy el reintento responde 200 y otorga 0 créditos.
+    assert doc["wallet"]["topup_messages_balance"] == expected
+    assert r2.status_code == 200
+    assert orphan_env.tx.count_documents({"stripe_event_id": E}) == 1
+    # Fail-closed: el claim no puede sobrevivir a un grant que no se aplicó.
+    assert after_r1["claims"] == 0
+    assert after_r1["failed"] == 1
+    assert after_r1["status"] == 500
+    assert after_r1["event"] != "done"
+    assert orphan_env.failed.find_one({"event_id": E})["reason"] == "grant_write_failed"
+
+
+@pytest.mark.asyncio
+async def test_subscription_grant_write_error_compensates_and_replay_grants(
+    async_client: AsyncClient, orphan_env
+):
+    from app.core.config import settings
+
+    E, U, P = "evt_pw006_sub", "usr_pw006_sub", "free"
+    expected = settings.plan_messages_map[P]
+    event = orphan_env.event(E, U, "subscription", P)
+
+    # wallet escalar → el $set sobre "wallet.pro_messages_balance" lanza
+    # WriteError. Otro modo de fallo, misma clase: el grant lanza, no devuelve 0.
+    orphan_env.users.insert_one({
+        "firebase_uid": U,
+        "subscription": {},
+        "wallet": "corrupto",
+    })
+
+    with patch("stripe.Webhook.construct_event", return_value=event), \
+         patch("stripe.Subscription.retrieve", return_value=_FAKE_PERIOD_END):
+        r1 = await async_client.post(
+            "/api/v1/webhooks/stripe", json=event,
+            headers={"stripe-signature": "v"},
+        )
+        after_r1 = {
+            "status": r1.status_code,
+            "claims": orphan_env.tx.count_documents({"stripe_event_id": E}),
+            "failed": orphan_env.failed.count_documents({"event_id": E}),
+        }
+
+        orphan_env.users.update_one({"firebase_uid": U}, {"$set": {"wallet": {}}})
+        r2 = await async_client.post(
+            "/api/v1/webhooks/stripe", json=event,
+            headers={"stripe-signature": "v"},
+        )
+
+    doc = orphan_env.users.find_one({"firebase_uid": U})
+    assert doc["wallet"]["pro_messages_balance"] == expected
+    assert doc["subscription"]["plan_id"] == P
+    assert r2.status_code == 200
+    assert orphan_env.tx.count_documents({"stripe_event_id": E}) == 1
+    assert after_r1["claims"] == 0
+    assert after_r1["failed"] == 1
+    assert after_r1["status"] == 500
+
+
 @pytest.mark.asyncio
 async def test_subscription_profile_deleted_after_claim_compensates(
     async_client: AsyncClient, orphan_env

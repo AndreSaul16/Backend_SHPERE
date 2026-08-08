@@ -188,6 +188,9 @@ async def stripe_webhook(request: Request):
             # grant no llega a aplicarse. None = no reclamamos nada aquí.
             claimed_tx = None
             applied = True
+            # Motivo por el que el grant no se aplicó, cuando fue por excepción
+            # (WriteError, no "perfil ausente"). None = no hubo excepción.
+            grant_error: Exception | None = None
 
             if not user_id or not plan_id:
                 logger.error(f"checkout.session.completed sin user_id/plan_id: {obj.get('id')}")
@@ -236,9 +239,17 @@ async def stripe_webhook(request: Request):
                 }
                 if _claim_grant(transactions_col, tx_doc):
                     claimed_tx = tx_doc
-                    applied = _grant_subscription(
-                        users_col, user_id, plan_id, customer_id, subscription_id, period_end
-                    )
+                    # Fail-closed: `applied` solo puede quedarse en True si el
+                    # grant TERMINÓ. Si lanza (p. ej. $set sobre un wallet
+                    # corrupto), el claim ya está escrito y sin esto el reintento
+                    # lo encontraría reclamado → evento "done" con 0 créditos.
+                    try:
+                        applied = _grant_subscription(
+                            users_col, user_id, plan_id, customer_id, subscription_id, period_end
+                        )
+                    except Exception as exc:
+                        applied = False
+                        grant_error = exc
             elif mode == "payment":  # top-up
                 # Defense-in-depth: validar que el top-up corresponde al tier del usuario
                 # (user_doc ya viene de la guarda de perfil de arriba: no es None).
@@ -262,7 +273,12 @@ async def stripe_webhook(request: Request):
                     }
                     if _claim_grant(transactions_col, tx_doc):
                         claimed_tx = tx_doc
-                        applied = _grant_topup(users_col, user_id, plan_id)
+                        # Fail-closed, igual que en subscription (ver arriba).
+                        try:
+                            applied = _grant_topup(users_col, user_id, plan_id)
+                        except Exception as exc:
+                            applied = False
+                            grant_error = exc
 
             # El perfil pasó la guarda pero desapareció antes del grant (borrado
             # de cuenta a mitad). Deshacemos el claim de ESTA petición para que
@@ -270,13 +286,20 @@ async def stripe_webhook(request: Request):
             # inyecta en el dict), nunca por stripe_event_id: sin el índice
             # único podríamos llevarnos un documento ajeno.
             if claimed_tx is not None and not applied:
+                reason = ("grant_write_failed" if grant_error is not None
+                          else "user_profile_not_found")
                 logger.error(
-                    f"Grant sobre perfil inexistente: user={user_id} "
+                    f"Grant no aplicado ({reason}): user={user_id} "
                     f"event={event_id} — claim revertido, pago sin aplicar."
                 )
                 transactions_col.delete_one({"_id": claimed_tx["_id"]})
-                _dead_letter(failed_col, event_id, event_type, obj,
-                             "user_profile_not_found")
+                _dead_letter(failed_col, event_id, event_type, obj, reason)
+                if grant_error is not None:
+                    # El claim ya está compensado, así que un reintento vuelve a
+                    # otorgar limpio. Propagamos para responder 500 y que Stripe
+                    # reintente solo: un WriteError suele ser transitorio, y con
+                    # 200 el evento quedaría esperando un replay manual.
+                    raise grant_error
                 return {"status": "user_profile_not_found"}
 
         elif event_type == "invoice.payment_succeeded":
