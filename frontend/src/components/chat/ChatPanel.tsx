@@ -23,6 +23,7 @@ import { useDraft } from "@/hooks/useDraft";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { StreamInterrupted } from "./StreamInterrupted";
 import { RegionBoundary } from "@/components/shared/RegionBoundary";
+import { useVentanaDeTurnos } from "@/hooks/useVentanaDeTurnos";
 
 export function ChatPanel() {
     const navigate = useNavigate();
@@ -190,14 +191,64 @@ export function ChatPanel() {
         ? 'Un debate de la junta cuesta hasta 5 créditos (3 si el triage reduce los participantes)'
         : 'Un mensaje cuesta 1 crédito';
 
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+    // Filtered messages (search + pinned filter)
+    const filteredMessages = useMemo(() => messages.filter(msg => {
+        if (showPinnedOnly && !pinnedMessages.includes(msg.id)) return false;
+        if (searchQuery && !msg.content.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+        return true;
+    }), [messages, showPinnedOnly, pinnedMessages, searchQuery]);
+
+    /**
+     * 4.9 — la ventana del transcript.
+     *
+     * Por encima de 80 turnos se monta sólo la cola del hilo y lo viejo se
+     * revela al subir. Se desactiva entera mientras hay búsqueda o filtro de
+     * anclados: un resultado que está en un turno sin montar sería un resultado
+     * que no existe, y el contador de «N resultados» mentiría.
+     */
+    const {
+        visibles: turnosVisibles,
+        ocultos: turnosOcultos,
+        recortando: hayTurnosOcultos,
+        // Se saca aquí y no se usa como `ventana.centinela` en el JSX: la regla
+        // `react-hooks/refs` marca como «acceso a ref durante el render»
+        // cualquier `ref={objeto.propiedad}`. Y NO vale un arrow en el sitio
+        // (`ref={(n) => ventana.centinela(n)}`): cambiaría de identidad en cada
+        // render, React lo llamaría con `null` y con el nodo cada vez, y como
+        // detrás hay un `setState` eso es un bucle de render.
+        centinela: refDelCentinela,
+        revelarMas,
+        revelarTodo,
+    } = useVentanaDeTurnos(filteredMessages, {
+        activa: !searchQuery && !showPinnedOnly,
+    });
+
     /** Tocar un segmento del Canto salta a esa fase (§8.4). */
     const saltarAFase = useCallback((clave: string) => {
-        const destino = messagesContainerRef.current?.querySelector<HTMLElement>(`[data-fase="${clave}"]`);
-        destino?.scrollIntoView({
-            behavior: prefiereMenosMovimiento ? 'auto' : 'smooth',
-            block: 'start',
+        const buscar = () =>
+            messagesContainerRef.current?.querySelector<HTMLElement>(`[data-fase="${clave}"]`);
+        const destino = buscar();
+        if (destino) {
+            destino.scrollIntoView({
+                behavior: prefiereMenosMovimiento ? 'auto' : 'smooth',
+                block: 'start',
+            });
+            return;
+        }
+        // 4.9: la fase puede estar en un tramo que la ventana no tiene montado.
+        // El Canto es el índice del debate; que un salto no haga nada porque el
+        // turno «no está» sería peor que no tener índice. Se revela el hilo
+        // entero y se salta en el fotograma siguiente, ya con el nodo en el DOM.
+        revelarTodo();
+        requestAnimationFrame(() => {
+            buscar()?.scrollIntoView({
+                behavior: prefiereMenosMovimiento ? 'auto' : 'smooth',
+                block: 'start',
+            });
         });
-    }, [prefiereMenosMovimiento]);
+    }, [prefiereMenosMovimiento, revelarTodo]);
 
     // Indicador "X está escribiendo…" — resuelve el agente que habla ahora mismo
     // a partir de la última burbuja (en board, va cambiando CEO → CTO → …).
@@ -249,13 +300,6 @@ export function ChatPanel() {
 
     // Priorizar Avatar de la sesión
     const sessionAvatar = currentSession?.visual_config?.avatar;
-
-    // Filtered messages (search + pinned filter)
-    const filteredMessages = messages.filter(msg => {
-        if (showPinnedOnly && !pinnedMessages.includes(msg.id)) return false;
-        if (searchQuery && !msg.content.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-        return true;
-    });
 
     // Attachment handlers: subir un documento a la KB del agente custom activo.
     const handleAttachClick = () => {
@@ -447,7 +491,6 @@ export function ChatPanel() {
         }
     }, [urlSessionId]);
 
-    const messagesContainerRef = useRef<HTMLDivElement>(null);
     const [isNearBottom, setIsNearBottom] = useState(true);
 
     const handleScroll = () => {
@@ -675,7 +718,23 @@ export function ChatPanel() {
                         </motion.div>
                     ) : (
                         <>
-                            {filteredMessages.map((msg, idx) => {
+                            {/* 4.9 · el acceso a lo que la ventana no ha
+                                montado. El `IntersectionObserver` cubre el
+                                ratón y el dedo; ESTE botón cubre el teclado y
+                                el lector de pantalla, que no generan scroll.
+                                Sin él, virtualizar sería esconder contenido. */}
+                            {hayTurnosOcultos && (
+                                <div ref={refDelCentinela} className="flex justify-center py-2">
+                                    <button
+                                        type="button"
+                                        onClick={revelarMas}
+                                        className="rounded-sm border border-stroke-edge px-3 py-1.5 text-micro uppercase text-content-muted transition-colors duration-(--duration-tap) hover:border-brass-600 hover:text-content-strong"
+                                    >
+                                        Mostrar los {turnosOcultos} turnos anteriores
+                                    </button>
+                                </div>
+                            )}
+                            {turnosVisibles.map((msg, idx) => {
                                 const msgAgent = msg.agentId ? agents.find(a => a.id === msg.agentId) : (msg.role !== 'user' && msg.role !== 'system' ? activeAgent : undefined);
                                 return (
                                     <div key={msg.id} data-fase={msg.phase} className="space-y-3">
@@ -696,13 +755,13 @@ export function ChatPanel() {
                                         agentColor={isGroupChat ? msgAgent?.hexColor : effectiveBubbleColor}
                                         sessionAvatar={sessionAvatar}
                                         isTyping={isTyping}
-                                        isLast={idx === filteredMessages.length - 1}
+                                        isLast={idx === turnosVisibles.length - 1}
                                         searchQuery={searchQuery || undefined}
                                         isPinned={pinnedMessages.includes(msg.id)}
                                         rating={ratings[msg.id] || null}
                                         onPin={() => handlePin(msg.id)}
                                         onRate={(r) => handleRate(msg.id, r)}
-                                        onRegenerate={!msg.role.includes('user') && idx === filteredMessages.length - 1 ? () => reintentarTurno(msg.id) : undefined}
+                                        onRegenerate={!msg.role.includes('user') && idx === turnosVisibles.length - 1 ? () => reintentarTurno(msg.id) : undefined}
                                     />
                                     {/* Eje 4 · el turno cortado se dice EN EL
                                         HILO, con su acción, no en un aviso que
