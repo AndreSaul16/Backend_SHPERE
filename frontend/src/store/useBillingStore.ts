@@ -5,7 +5,7 @@ import { notify, reasonOf } from '../lib/toastBus';
 // Modelo solo-créditos: el único plan es "free". Lo de pago son compras
 // puntuales de créditos (packs + top-ups), no planes.
 type PlanId = 'free';
-type PaywallReason = '402' | 'upgrade_cta' | 'rag_full' | 'agents_full';
+export type PaywallReason = '402' | 'upgrade_cta' | 'rag_full' | 'agents_full';
 
 interface BillingState {
   plan_id: PlanId;

@@ -290,8 +290,12 @@ export const BillingPage: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Almacenamiento de documentos (GridFS) */}
-                    <div className="glass-panel p-6 rounded-md border border-surface-highlight">
+                    {/* Almacenamiento de documentos (GridFS).
+                        El `id` no es decorativo: es el destino de la razón
+                        `rag_full` del muro (6.3), que trae aquí a quien se ha
+                        quedado sin espacio. `scroll-mt-20` lo despega de la
+                        cabecera adherida al saltar. */}
+                    <div id="almacenamiento" className="glass-panel p-6 rounded-md border border-surface-highlight scroll-mt-20">
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-2">
                                 <HardDrive className="h-4 w-4 text-luxury-purple" />
