@@ -1,16 +1,61 @@
 /**
  * Panel de administración (F4 + F5).
  * Solo accesible para emails admin: si el backend devuelve 403 muestra "Sin acceso".
+ *
+ * **6.9 — los tres arreglos.**
+ *
+ * 1. **La lista de usuarios era una pila de botones**, no una tabla: cuatro
+ *    datos por usuario (correo, plan, saldo de plan, saldo comprado) metidos en
+ *    una línea de texto con dos puntos y separadores de punto medio. Sin
+ *    encabezados, sin poder ordenar y sin forma de comparar dos filas. Ahora es
+ *    una `<table>` de verdad, con `<caption>`, `scope="col"`/`scope="row"` y
+ *    `aria-sort` en la columna por la que se está ordenando (§9.7, §12.12).
+ * 2. **Mover créditos no pedía confirmación.** «Aplicar» movía el saldo real de
+ *    la cuenta de otra persona, con una sola pulsación y sin decir de cuánto a
+ *    cuánto. Ahora pasa por `ConfirmDialog` y el diálogo dice el saldo de
+ *    partida, el movimiento y el saldo resultante.
+ * 3. **La guarda de rol era un callejón sin salida.** Quien llegaba a `/admin`
+ *    sin permiso veía «Sin acceso» y ya: ni una salida, ni un enlace. Y la
+ *    denegación sólo se detectaba si el fallo llegaba con un «403» dentro del
+ *    texto del error, cosa que depende de cómo lo redacte `api.ts`.
  */
-import { useEffect, useState, useCallback } from "react";
-import { Loader2, Search, ShieldAlert, Users, BarChart3 } from "lucide-react";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { Link } from "react-router-dom";
+import { Loader2, Search, ShieldAlert, Users, BarChart3, ArrowUpDown, Home } from "lucide-react";
 import {
     adminService,
     type AdminUser,
     type AdminMetrics,
 } from "@/services/api";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { cn } from "@/lib/utils";
 
 type Tab = "users" | "metrics";
+
+/** Columnas ordenables de la tabla de usuarios. */
+type ClaveDeOrden = "email" | "plan" | "pro_messages_balance" | "topup_messages_balance";
+type Sentido = "asc" | "desc";
+
+const COLUMNAS: { clave: ClaveDeOrden; rotulo: string; numerica?: boolean }[] = [
+    { clave: "email", rotulo: "Usuario" },
+    { clave: "plan", rotulo: "Plan" },
+    { clave: "pro_messages_balance", rotulo: "Créditos del plan", numerica: true },
+    { clave: "topup_messages_balance", rotulo: "Comprados", numerica: true },
+];
+
+/**
+ * ¿Es esto una negativa del backend?
+ *
+ * Se miraba `e.message.includes("403")`, que depende de que `api.ts` siga
+ * metiendo el estado en el texto. Se comprueban las dos formas para que un
+ * cambio de redacción no convierta un «no eres admin» en una pantalla en blanco.
+ */
+function esDenegado(e: unknown): boolean {
+    if (typeof e === "object" && e !== null && "status" in e) {
+        return (e as { status?: number }).status === 403;
+    }
+    return e instanceof Error && /\b403\b/.test(e.message);
+}
 
 export function AdminPage() {
     const [denied, setDenied] = useState(false);
@@ -23,10 +68,19 @@ export function AdminPage() {
     const [selected, setSelected] = useState<AdminUser | null>(null);
     const [txs, setTxs] = useState<any[]>([]);
 
+    // Orden de la tabla
+    const [orden, setOrden] = useState<{ clave: ClaveDeOrden; sentido: Sentido }>({
+        clave: "email",
+        sentido: "asc",
+    });
+
     // Ajuste
     const [adjustDelta, setAdjustDelta] = useState<number>(0);
     const [adjustReason, setAdjustReason] = useState("");
     const [adjusting, setAdjusting] = useState(false);
+    // 6.9: mover el saldo de otra persona exige confirmar. El diálogo no vive
+    // en el manejador para que el resumen («de 10 a 25») se calcule al pintarlo.
+    const [confirmandoAjuste, setConfirmandoAjuste] = useState(false);
 
     // Métricas
     const [metrics, setMetrics] = useState<AdminMetrics | null>(null);
@@ -36,7 +90,7 @@ export function AdminPage() {
         try {
             setUsers(await adminService.users(q));
         } catch (e) {
-            if (e instanceof Error && e.message.includes("403")) setDenied(true);
+            if (esDenegado(e)) setDenied(true);
         } finally {
             setLoadingUsers(false);
         }
@@ -52,10 +106,29 @@ export function AdminPage() {
                 .metrics(30)
                 .then(setMetrics)
                 .catch((e) => {
-                    if (e instanceof Error && e.message.includes("403")) setDenied(true);
+                    if (esDenegado(e)) setDenied(true);
                 });
         }
     }, [tab, metrics, denied]);
+
+    /* La tabla se ordena en cliente: la lista viene de una búsqueda ya acotada
+       por el backend y ordenar en servidor pediría un parámetro que no existe. */
+    const usuariosOrdenados = useMemo(() => {
+        const factor = orden.sentido === "asc" ? 1 : -1;
+        return [...users].sort((a, b) => {
+            const va = a[orden.clave] ?? "";
+            const vb = b[orden.clave] ?? "";
+            if (typeof va === "number" && typeof vb === "number") return (va - vb) * factor;
+            return String(va).localeCompare(String(vb), "es") * factor;
+        });
+    }, [users, orden]);
+
+    const ordenarPor = (clave: ClaveDeOrden) =>
+        setOrden((o) =>
+            o.clave === clave
+                ? { clave, sentido: o.sentido === "asc" ? "desc" : "asc" }
+                : { clave, sentido: "asc" },
+        );
 
     const selectUser = async (u: AdminUser) => {
         setSelected(u);
@@ -74,6 +147,7 @@ export function AdminPage() {
         setAdjusting(true);
         try {
             await adminService.adjust(selected.uid, adjustDelta, adjustReason.trim());
+            setConfirmandoAjuste(false);
             await loadUsers(query);
             await selectUser(selected);
         } finally {
@@ -82,11 +156,24 @@ export function AdminPage() {
     };
 
     if (denied) {
+        // §11: qué pasó, qué se conserva y una salida. Antes era un callejón:
+        // el mensaje y nada más, con la única salida de dar atrás en el
+        // navegador o reescribir la URL.
         return (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-center p-8">
-                <ShieldAlert className="h-12 w-12 text-agent-devil" />
-                <h2 className="text-lg font-bold text-content-strong">Sin acceso</h2>
-                <p className="text-sm text-content-muted">No tienes permisos para ver el panel de administración.</p>
+                <ShieldAlert className="h-12 w-12 text-dissent" aria-hidden="true" />
+                <h2 className="text-lg font-semibold text-content-strong">Sin acceso</h2>
+                <p className="max-w-sm text-sm text-content-muted">
+                    Esta cuenta no tiene el panel de administración. No has hecho nada mal y
+                    tu sesión sigue abierta: esta pantalla simplemente no es para tu cuenta.
+                </p>
+                <Link
+                    to="/"
+                    className="mt-2 inline-flex items-center gap-2 rounded-sm border border-stroke-control px-4 py-2 text-sm text-content-strong hover:bg-surface-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)"
+                >
+                    <Home className="h-4 w-4" aria-hidden="true" />
+                    Volver al chat
+                </Link>
             </div>
         );
     }
@@ -134,28 +221,99 @@ export function AdminPage() {
                         </form>
 
                         {loadingUsers ? (
-                            <Loader2 className="h-5 w-5 animate-spin text-content-muted" />
+                            <Loader2 className="h-5 w-5 animate-spin text-content-muted" aria-label="Cargando usuarios" />
+                        ) : users.length === 0 ? (
+                            <p className="text-xs text-content-muted">Sin resultados.</p>
                         ) : (
-                            <div className="space-y-1">
-                                {users.map((u) => (
-                                    <button
-                                        key={u.uid}
-                                        onClick={() => selectUser(u)}
-                                        className={`w-full text-left p-3 rounded-xl border transition-colors ${
-                                            selected?.uid === u.uid
-                                                ? "border-electric-cyan/40 bg-electric-cyan/5"
-                                                : "border-surface-highlight hover:bg-surface-highlight/40"
-                                        }`}
-                                    >
-                                        <p className="text-sm text-content-strong truncate">{u.email || u.uid}</p>
-                                        <p className="text-xs text-content-muted font-mono">
-                                            plan: {u.plan} · pro: {u.pro_messages_balance} · topup: {u.topup_messages_balance}
-                                        </p>
-                                    </button>
-                                ))}
-                                {users.length === 0 && (
-                                    <p className="text-xs text-content-muted">Sin resultados.</p>
-                                )}
+                            /* §9.7/§12.12: contenedor propio con scroll horizontal,
+                               `tabindex` y `role="region"` — una tabla que se
+                               desplaza y no admite foco es contenido inalcanzable
+                               para quien no usa ratón. */
+                            <div
+                                role="region"
+                                aria-label="Usuarios, tabla desplazable en horizontal"
+                                tabIndex={0}
+                                className="overflow-x-auto rounded-md border border-stroke-edge focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)"
+                            >
+                                <table className="w-full border-collapse text-sm">
+                                    <caption className="px-3 py-2 text-start text-xs text-content-muted">
+                                        {users.length === 1
+                                            ? "1 usuario"
+                                            : `${users.length} usuarios`}
+                                        {query ? ` que coinciden con «${query}»` : ""}. Pulsa una
+                                        cabecera para ordenar; pulsa una fila para ver su detalle.
+                                    </caption>
+                                    <thead>
+                                        <tr className="border-y border-stroke-hairline bg-surface-1">
+                                            {COLUMNAS.map((col) => {
+                                                const activa = orden.clave === col.clave;
+                                                return (
+                                                    <th
+                                                        key={col.clave}
+                                                        scope="col"
+                                                        aria-sort={
+                                                            activa
+                                                                ? orden.sentido === "asc"
+                                                                    ? "ascending"
+                                                                    : "descending"
+                                                                : "none"
+                                                        }
+                                                        className={cn(
+                                                            "px-3 py-2 text-micro font-medium uppercase text-content-muted",
+                                                            col.numerica ? "text-end" : "text-start",
+                                                        )}
+                                                    >
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => ordenarPor(col.clave)}
+                                                            className={cn(
+                                                                "inline-flex items-center gap-1 rounded-xs hover:text-content-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)",
+                                                                activa && "text-content-strong",
+                                                            )}
+                                                        >
+                                                            {col.rotulo}
+                                                            <ArrowUpDown
+                                                                aria-hidden="true"
+                                                                className={cn("h-3 w-3", activa ? "opacity-100" : "opacity-40")}
+                                                            />
+                                                        </button>
+                                                    </th>
+                                                );
+                                            })}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {usuariosOrdenados.map((u) => (
+                                            <tr
+                                                key={u.uid}
+                                                className={cn(
+                                                    "border-b border-stroke-hairline last:border-0",
+                                                    selected?.uid === u.uid && "bg-accent/12",
+                                                )}
+                                            >
+                                                {/* La celda de identidad es el encabezado de su fila:
+                                                    es lo que da nombre a los tres números de al lado. */}
+                                                <th scope="row" className="max-w-[16rem] px-3 py-2 text-start font-normal">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => selectUser(u)}
+                                                        aria-current={selected?.uid === u.uid ? "true" : undefined}
+                                                        className="block w-full truncate text-start text-content-strong underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)"
+                                                    >
+                                                        {u.email || u.uid}
+                                                    </button>
+                                                </th>
+                                                <td className="px-3 py-2 text-content-muted">{u.plan}</td>
+                                                <td className="px-3 py-2 text-end font-mono tabular-nums text-content">
+                                                    {u.pro_messages_balance}
+                                                </td>
+                                                <td className="px-3 py-2 text-end font-mono tabular-nums text-content">
+                                                    {u.topup_messages_balance}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         )}
                     </div>
@@ -183,12 +341,16 @@ export function AdminPage() {
                                             placeholder="Motivo"
                                             className="flex-1 min-w-0 bg-midnight border border-surface-highlight rounded-lg px-2 py-1.5 text-sm text-content-strong"
                                         />
+                                        {/* 6.9: «Aplicar» ya no aplica. Abre la
+                                            confirmación, que es donde se ve de
+                                            cuánto a cuánto se mueve el saldo de
+                                            una cuenta que no es la tuya. */}
                                         <button
-                                            onClick={submitAdjust}
+                                            onClick={() => setConfirmandoAjuste(true)}
                                             disabled={adjusting || !adjustDelta || !adjustReason.trim()}
-                                            className="px-3 py-1.5 rounded-lg text-xs font-bold bg-electric-cyan/10 text-electric-cyan border border-electric-cyan/30 hover:bg-electric-cyan/20 disabled:opacity-40"
+                                            className="rounded-sm border border-stroke-control px-3 py-1.5 text-xs font-medium text-content-strong hover:bg-surface-1 disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)"
                                         >
-                                            {adjusting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Aplicar"}
+                                            Revisar y aplicar
                                         </button>
                                     </div>
                                 </div>
@@ -216,6 +378,32 @@ export function AdminPage() {
             )}
 
             {tab === "metrics" && <MetricsView metrics={metrics} />}
+
+            {/* Confirmación del ajuste de créditos (§9.4). El resumen es el
+                punto: «+15» no dice nada, «de 10 a 25» sí. */}
+            <ConfirmDialog
+                open={confirmandoAjuste && selected !== null}
+                onClose={() => setConfirmandoAjuste(false)}
+                onConfirm={submitAdjust}
+                question={`¿${adjustDelta >= 0 ? "Añadir" : "Retirar"} ${Math.abs(adjustDelta)} créditos a`}
+                objectName={selected?.email || selected?.uid || ""}
+                consequence={
+                    <>
+                        Su saldo comprado pasa de{" "}
+                        <strong className="text-content-strong">{selected?.topup_messages_balance ?? 0}</strong> a{" "}
+                        <strong className="text-content-strong">
+                            {(selected?.topup_messages_balance ?? 0) + adjustDelta}
+                        </strong>{" "}
+                        créditos, con el motivo «{adjustReason.trim()}». El movimiento queda
+                        registrado en sus transacciones y no se puede deshacer desde aquí:
+                        haría falta otro ajuste en sentido contrario.
+                    </>
+                }
+                confirmLabel={adjustDelta >= 0 ? "Añadir créditos" : "Retirar créditos"}
+                confirmLoadingLabel="Aplicando"
+                loading={adjusting}
+                destructive={adjustDelta < 0}
+            />
         </div>
     );
 }
