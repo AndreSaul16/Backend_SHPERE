@@ -22,6 +22,13 @@ import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import { ErrorBoundary } from './components/shared/ErrorBoundary'
 import { StartupError } from './components/shared/StartupError'
+import { inicializarDensidad } from './lib/densidad'
+
+// 5.7 · Q11 — la densidad se fija ANTES del primer pintado. Hacerlo en un
+// efecto de React haría que la primera pintura fuera con las filas de 44px y
+// la segunda con las de 34: un salto de layout en cada arranque para quien ha
+// elegido compacto.
+inicializarDensidad()
 
 const root = createRoot(document.getElementById('root')!)
 

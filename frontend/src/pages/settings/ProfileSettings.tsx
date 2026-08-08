@@ -8,6 +8,7 @@ import { profileService, type UserProfile } from "@/services/api";
 import { Field as FormField } from "@/components/ui/Field";
 import { fieldControlClass } from "@/components/ui/fieldStyles";
 import { InlineError, type FalloDeSeccion } from "@/components/ui/InlineError";
+import { aplicarDensidad, leerDensidad, type Densidad } from "@/lib/densidad";
 
 export function ProfileSettings() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -276,6 +277,11 @@ export function ProfileSettings() {
             </select>
           </Field>
         </div>
+        {/* 5.7 · Q11 · §4.4 — la densidad. Es del DISPOSITIVO, no de la
+            cuenta, así que no viaja en `ui_preferences` ni se guarda con el
+            botón de abajo: se aplica al elegirla y ya está guardada. */}
+        <DensidadDeLaInterfaz />
+
         <Field label="Confirmación antes de ejecutar herramientas">
           <select
             className={inputCls}
@@ -326,6 +332,70 @@ export function ProfileSettings() {
               : ""}
       </p>
     </div>
+  );
+}
+
+/**
+ * Conmutador de densidad (Q11 · §4.4).
+ *
+ * Dos radios de verdad dentro de un `<fieldset>` y no dos botones con
+ * `aria-pressed`: son opciones excluyentes de un mismo ajuste, y los radios
+ * traen de serie el recorrido con flechas y el anuncio «2 de 2» que un par de
+ * botones no da. La etiqueta del grupo es el `<legend>`.
+ *
+ * No hay botón de guardar: se aplica al elegir. Una preferencia visual que hay
+ * que confirmar aparte se queda sin confirmar la mitad de las veces, y el
+ * usuario cree que no funciona.
+ */
+const OPCIONES_DE_DENSIDAD: { valor: Densidad; etiqueta: string; detalle: string }[] = [
+  { valor: 'comfortable', etiqueta: 'Cómoda', detalle: 'Filas de 44px. Es la de partida.' },
+  { valor: 'compact', etiqueta: 'Compacta', detalle: 'Filas de 34px: más historial de un vistazo.' },
+];
+
+function DensidadDeLaInterfaz() {
+  const [densidad, setDensidad] = useState<Densidad>(() => leerDensidad());
+
+  const elegir = (valor: Densidad) => {
+    setDensidad(valor);
+    aplicarDensidad(valor);
+  };
+
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-xs font-medium text-content-muted">Densidad de la interfaz</legend>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {OPCIONES_DE_DENSIDAD.map((opcion) => (
+          <label
+            key={opcion.valor}
+            className={`grid cursor-pointer grid-cols-[auto_1fr] items-start gap-x-2 gap-y-0.5 rounded-sm border p-3 transition-colors duration-(--duration-tap) ${
+              densidad === opcion.valor
+                ? 'border-brass-600 bg-accent/12'
+                : 'border-stroke-hairline hover:border-stroke-control'
+            }`}
+          >
+            {/* El texto va DIRECTO bajo la etiqueta, sin envoltorio: anidarlo un
+                nivel más deja al `<label>` sin texto accesible para la regla de
+                jsx-a11y, y con ella para varios lectores. La composición la
+                hace la rejilla, no un `<span>` de más. */}
+            <input
+              type="radio"
+              name="densidad"
+              value={opcion.valor}
+              checked={densidad === opcion.valor}
+              onChange={() => elegir(opcion.valor)}
+              className="row-span-2 mt-0.5 accent-brass-500"
+            />
+            <span className="min-w-0 text-sm text-content-strong">{opcion.etiqueta}</span>
+            <span className="col-start-2 min-w-0 text-xs text-content-muted">{opcion.detalle}</span>
+          </label>
+        ))}
+      </div>
+      {/* §12.11/§12.16: en táctil la fila nunca baja de 44px, lo decida quien lo
+          decida. Se dice, porque si no el conmutador parece roto en el móvil. */}
+      <p className="text-xs text-content-quiet">
+        En pantallas táctiles las filas se mantienen a 44px, para que el dedo siga acertando.
+      </p>
+    </fieldset>
   );
 }
 
