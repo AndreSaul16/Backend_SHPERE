@@ -46,7 +46,7 @@ describe('F7 — la facturación siempre tiene salida', () => {
         renderPage();
         expect(screen.getByTestId('billing-loading')).toBeInTheDocument();
 
-        act(() => { vi.advanceTimersByTime(12_001); });
+        act(() => { vi.advanceTimersByTime(8_001); }); // ESPERA_MAXIMA_MS
 
         expect(screen.queryByTestId('billing-loading')).not.toBeInTheDocument();
         expect(screen.getByText('No hemos podido cargar tus créditos')).toBeInTheDocument();

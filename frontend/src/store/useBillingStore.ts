@@ -48,28 +48,39 @@ async function authHeaders(): Promise<Record<string, string>> {
 }
 
 /**
- * Espera hasta que Firebase Auth esté inicializado.
- * Polling de `auth.currentUser` cada 100ms, máximo 5s.
- * Si no hay usuario tras 5s, se asume que el auth ya cargó (usuario no logueado).
+ * Espera a que Firebase Auth haya resuelto su estado de persistencia.
+ *
+ * F7: esto era un sondeo de `auth.currentUser` cada 100ms **hasta agotar 5
+ * segundos**, así que cualquier caso sin usuario —o con Firebase no
+ * inicializado, que es lo que pasa en cuanto `getAuth()` lanza— pagaba los 5
+ * segundos enteros ANTES de la primera petición. Ésa es la mayor parte del rato
+ * que la pantalla de facturación se pasaba en bloques grises.
+ *
+ * `onAuthStateChanged` es la respuesta a la misma pregunta: dispara en cuanto
+ * la persistencia está resuelta, con usuario o sin él. Se conserva el tope de 5
+ * segundos por si el callback no llegara nunca.
  */
 async function waitForAuthReady(): Promise<void> {
-  const startTime = Date.now();
-  while (Date.now() - startTime < 5000) {
-    try {
-      const { getAuth } = await import('firebase/auth');
-      const auth = getAuth();
-      // auth.currentUser será null durante la inicialización y después
-      // si no hay usuario. Polling de 100ms con timeout de 5s asegura
-      // que Firebase haya cargado su estado de persistencia.
-      if (auth.currentUser) {
-        return; // Usuario autenticado, listo
-      }
-    } catch {
-      // Firebase aún no disponible, reintentar
-    }
-    await new Promise((r) => setTimeout(r, 100));
+  try {
+    const { getAuth, onAuthStateChanged } = await import('firebase/auth');
+    const auth = getAuth();
+    if (auth.currentUser) return; // Ya resuelto: nada que esperar.
+    await new Promise<void>((resolve) => {
+      let listo = false;
+      const acabar = () => {
+        if (listo) return;
+        listo = true;
+        clearTimeout(tope);
+        try { desuscribir?.(); } catch { /* ya desuscrito */ }
+        resolve();
+      };
+      const tope = setTimeout(acabar, 5000);
+      const desuscribir = onAuthStateChanged(auth, acabar, acabar);
+    });
+  } catch {
+    // Sin Firebase disponible no hay nada que esperar: la petición saldrá sin
+    // token y el backend contestará 401. Antes esto costaba 5s de reloj.
   }
-  // Timeout: asumimos que auth ya está listo (sin usuario)
 }
 
 const RETRY_BACKOFFS = [1000, 2000, 4000];

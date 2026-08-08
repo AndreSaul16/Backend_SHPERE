@@ -57,13 +57,16 @@ async function readErrorMessage(response: Response, fallback: string): Promise<s
 /**
  * F7 — cuánto se espera antes de admitir que esto no carga.
  *
- * `useBillingStore.refresh()` puede tardar hasta ~12s en el peor caso (espera a
- * que Firebase Auth esté listo + tres reintentos con backoff). Pasado ese
- * margen, seguir enseñando bloques grises es mentir: un esqueleto que no
- * termina no dice nada y no ofrece salida. §11 pide decir qué pasó, qué hacer y
- * qué se conservó.
+ * Una consulta de saldo sana tarda menos de un segundo (`useBillingStore`
+ * espera al estado de auth por evento, no sondeando). Ocho segundos son ya el
+ * territorio de los reintentos: pasado ese margen, seguir enseñando bloques
+ * grises es mentir. Un esqueleto que no termina no dice nada y no ofrece
+ * salida; §11 pide decir qué pasó, qué hacer y qué se conservó.
+ *
+ * No cancela nada: si un reintento tardío acaba trayendo el saldo, la página se
+ * pinta con sus datos y esta pantalla desaparece sola.
  */
-const ESPERA_MAXIMA_MS = 12000;
+const ESPERA_MAXIMA_MS = 8000;
 
 /** Skeleton para el estado de carga del panel de facturación */
 const BillingSkeleton: React.FC = () => (
