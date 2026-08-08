@@ -477,6 +477,26 @@
     outline: 2px solid var(--focus-ring); outline-offset: 2px;
   }
 
+  /* §8.3 El Sello. La silueta del tampón —anillo, sangría de tinta,
+     salpicaduras— viene HORNEADA en `public/seals/seal-N.svg`, generada offline
+     por `scripts/gen-seals.mjs`. Aquí sólo se declara cómo se aplica: el activo
+     entra por `--seal-src` y el color lo pone `bg-aniline-500` en el sitio de
+     uso. Va en CSS y no en el `style` del componente porque el detector de
+     clases muertas lee los literales del TSX y `no-repeat` parece una clase.
+
+     Prohibido añadir aquí un `filter`: la textura ya está pintada en el activo,
+     y el filtro en runtime es exactamente lo que la auditoría v3 quitó. */
+  .acta-seal-stamp{
+    -webkit-mask-image: var(--seal-src);
+    mask-image: var(--seal-src);
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+  }
+
   /* §9.8 «Desbordamiento: scroll horizontal con degradado de desvanecimiento en
      los dos cantos». La clase la pone el componente sólo cuando la tira mide
      más que su caja: un desvanecido permanente mentiría sobre que hay más. */
