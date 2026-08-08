@@ -24,24 +24,106 @@ def read_ci_yml() -> dict:
 # ── T-001: CI Pipeline ────────────────────────────────────────────────
 
 
-def test_ci_yml_triggers_on_push_and_pr_to_main():
-    """CI-001/CI-002: triggers on push + PR to main."""
+def read_trigger_branches() -> tuple[list[str], list[str]]:
+    """Devuelve (push.branches, pull_request.branches) de ci.yml."""
     ci = read_ci_yml()
     # PyYAML 1.1 parses 'on' as boolean True; GitHub Actions docs use literal 'on'
     on = ci.get("on", ci.get(True))
     assert on is not None, "Missing 'on' trigger block"
     assert on.get("push") is not None, "Missing push trigger"
     assert on.get("pull_request") is not None, "Missing pull_request trigger"
-    # Check branch filter: either the bare key or branches list
-    push_cfg = on["push"]
-    pr_cfg = on["pull_request"]
-    if isinstance(push_cfg, dict) and "branches" in push_cfg:
-        assert "main" in push_cfg["branches"]
-    if isinstance(pr_cfg, dict) and "branches" in pr_cfg:
-        assert "main" in pr_cfg["branches"]
-    # Compare by value for simple string case
-    assert push_cfg == "main" or ("branches" in push_cfg and "main" in push_cfg["branches"])
-    assert pr_cfg == "main" or ("branches" in pr_cfg and "main" in pr_cfg["branches"])
+
+    def branches_of(cfg) -> list[str]:
+        if isinstance(cfg, str):
+            return [cfg]
+        return list(cfg.get("branches", []))
+
+    return branches_of(on["push"]), branches_of(on["pull_request"])
+
+
+def resolve_default_branch() -> str | None:
+    """Rama por defecto REAL del repo, sin codificar ningún nombre.
+
+    En CI la da el propio workflow (SPHERE_DEFAULT_BRANCH). En local se deduce
+    de origin/HEAD. `git rev-parse --abbrev-ref HEAD` no vale: en un PR el
+    checkout está detached, y GITHUB_BASE_REF es la rama destino del PR, que no
+    tiene por qué ser la por defecto.
+    """
+    from_env = os.environ.get("SPHERE_DEFAULT_BRANCH", "").strip()
+    if from_env:
+        return from_env
+
+    import subprocess
+
+    try:
+        out = subprocess.run(
+            ["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
+            cwd=ROOT, capture_output=True, text=True, timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if out.returncode != 0:
+        return None
+    ref = out.stdout.strip()  # p. ej. "origin/master"
+    return ref.split("/", 1)[1] if "/" in ref else ref or None
+
+
+def test_ci_yml_merge_gate_targets_default_branch():
+    """CI-001: la puerta de merge apunta a la rama por defecto REAL del repo.
+
+    Valida la intención, no la forma: el workflow debe disparar en pull_request
+    contra la rama por defecto, y NO en push sobre ella (eso provocó los deploys
+    SKIPPED de 1867ff4). Añadir más patrones de ramas de trabajo no rompe nada.
+    """
+    from fnmatch import fnmatch
+
+    default_branch = resolve_default_branch()
+    if not default_branch:
+        pytest.skip(
+            "No se pudo resolver la rama por defecto: ni SPHERE_DEFAULT_BRANCH "
+            "ni origin/HEAD disponibles"
+        )
+
+    push_branches, pr_branches = read_trigger_branches()
+
+    assert default_branch in pr_branches, (
+        f"La rama por defecto ({default_branch!r}) debe estar en "
+        f"pull_request.branches para que exista puerta de merge; "
+        f"hay {pr_branches!r}"
+    )
+
+    covering = [p for p in push_branches if fnmatch(default_branch, p)]
+    assert not covering, (
+        f"push.branches cubre la rama por defecto ({default_branch!r}) vía "
+        f"{covering!r}. Eso reintroduce los deploys SKIPPED de 1867ff4."
+    )
+
+
+def test_ci_yml_push_never_covers_merge_gate_branches():
+    """CI-001: invariante puro de YAML, sin git ni entorno — siempre corre.
+
+    Ningún patrón de push puede cubrir una rama que ya tiene puerta de merge por
+    pull_request: sería disparar dos veces y, sobre la rama por defecto,
+    reproducir el incidente de deploys SKIPPED.
+    """
+    from fnmatch import fnmatch
+
+    push_branches, pr_branches = read_trigger_branches()
+
+    assert push_branches, (
+        "push.branches vacío: se pierde la verificación continua durante el "
+        "desarrollo"
+    )
+
+    overlaps = [
+        (pattern, branch)
+        for pattern in push_branches
+        for branch in pr_branches
+        if fnmatch(branch, pattern)
+    ]
+    assert not overlaps, (
+        f"Patrones de push que cubren ramas de la puerta de merge: {overlaps!r}"
+    )
 
 
 def test_ci_yml_has_backend_job_with_services():
