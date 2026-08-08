@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { FileText, Github, ExternalLink, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { claveDeActa, cargarHechos, guardarHechos } from "@/utils/actaPasos";
 import { exportsService } from "@/services/api";
 import { parseProximosPasos } from "@/utils/actaParser";
 
@@ -12,12 +13,32 @@ type Status = "idle" | "loading" | "success" | "error";
 
 const GH_REPO_STORAGE_KEY = "sphere_last_github_repo";
 
+/**
+ * D52 — lo que hay en `localStorage` no es de fiar.
+ *
+ * La versión anterior hacía `JSON.parse` y devolvía el resultado tal cual. El
+ * `try/catch` sólo cubre el parseo: un valor sintácticamente válido pero de otra
+ * forma —`null`, `42`, `"algo"`, un objeto con `owner: 123`— pasaba de largo y
+ * llegaba a `ghRepo.owner.trim()`, que revienta con un TypeError y se lleva por
+ * delante todo el panel de artefactos. Y no hace falta mala fe: basta con una
+ * versión anterior del producto, o con otra pestaña escribiendo la misma clave.
+ *
+ * Un valor corrupto se trata como si no hubiera nada, que es exactamente lo que
+ * significa.
+ */
 function loadLastRepo(): { owner: string; repo: string } {
+    const vacio = { owner: "", repo: "" };
     try {
         const raw = localStorage.getItem(GH_REPO_STORAGE_KEY);
-        if (raw) return JSON.parse(raw);
-    } catch { /* noop */ }
-    return { owner: "", repo: "" };
+        if (!raw) return vacio;
+        const valor: unknown = JSON.parse(raw);
+        if (typeof valor !== "object" || valor === null) return vacio;
+        const { owner, repo } = valor as Record<string, unknown>;
+        if (typeof owner !== "string" || typeof repo !== "string") return vacio;
+        return { owner, repo };
+    } catch {
+        return vacio;
+    }
 }
 
 /**
@@ -38,7 +59,82 @@ export function ActaActions({ title, content }: ActaActionsProps) {
     const [ghFailed, setGhFailed] = useState<{ title: string; error: string }[]>([]);
     const [ghError, setGhError] = useState<string>("");
 
-    const parsedIssues = parseProximosPasos(content);
+    // Q6 — los próximos pasos, marcables y con acción propia.
+    const [pasoEnVuelo, setPasoEnVuelo] = useState<string | null>(null);
+    const [pasoError, setPasoError] = useState<{ titulo: string; motivo: string } | null>(null);
+    const [pasoCreado, setPasoCreado] = useState<{ titulo: string; url: string } | null>(null);
+
+    /**
+     * D52 — el acta se re-parseaba en CADA render, y este componente re-renderiza
+     * con cada tecla de los campos owner/repo. Recorrer un acta de 3 KB línea a
+     * línea para responder siempre lo mismo es trabajo tirado, y encima en el
+     * hilo del teclado.
+     */
+    const parsedIssues = useMemo(() => parseProximosPasos(content), [content]);
+
+    // La clave se deriva del acta, no del artefacto: el artefacto se re-crea con
+    // un uuid nuevo en cada carga del historial y las marcas se perderían.
+    const clavePasos = useMemo(
+        () => claveDeActa(title, parsedIssues.map((i) => i.title)),
+        [title, parsedIssues]
+    );
+    const [hechos, setHechos] = useState<Set<string>>(() => cargarHechos(clavePasos));
+    // La clave cambia si cambia el acta: hay que traerse SUS marcas, no las de
+    // la anterior. `useState` no se reinicializa solo al cambiar la clave.
+    const [claveVista, setClaveVista] = useState(clavePasos);
+    if (claveVista !== clavePasos) {
+        setClaveVista(clavePasos);
+        setHechos(cargarHechos(clavePasos));
+    }
+
+    const alternarPaso = (titulo: string) => {
+        setHechos((previos) => {
+            const siguiente = new Set(previos);
+            if (siguiente.has(titulo)) siguiente.delete(titulo);
+            else siguiente.add(titulo);
+            guardarHechos(clavePasos, siguiente);
+            return siguiente;
+        });
+    };
+
+    /**
+     * Un paso, un issue. La acción de fila no abre el volcado completo: crea
+     * exactamente el que se está mirando, y al volver con su URL lo da por
+     * hecho — que es lo que acaba de pasar.
+     */
+    const enviarPaso = async (issue: { title: string; body: string }) => {
+        const owner = ghRepo.owner.trim();
+        const repo = ghRepo.repo.trim();
+        // Sin repositorio no hay adónde mandarlo: se pide, no se falla.
+        if (!owner || !repo) {
+            setShowGithubModal(true);
+            return;
+        }
+        setPasoEnVuelo(issue.title);
+        setPasoError(null);
+        setPasoCreado(null);
+        try {
+            const { created, errors } = await exportsService.githubIssues(owner, repo, [issue]);
+            const fallo = errors?.[0];
+            if (fallo) {
+                setPasoError({ titulo: issue.title, motivo: fallo.error });
+            } else if (created[0]) {
+                setPasoCreado({ titulo: issue.title, url: created[0].url });
+                setHechos((previos) => {
+                    const siguiente = new Set(previos).add(issue.title);
+                    guardarHechos(clavePasos, siguiente);
+                    return siguiente;
+                });
+            }
+        } catch (e) {
+            setPasoError({
+                titulo: issue.title,
+                motivo: e instanceof Error ? e.message : "No se pudo crear el issue",
+            });
+        } finally {
+            setPasoEnVuelo(null);
+        }
+    };
 
     const handleNotion = async () => {
         setNotionStatus("loading");
@@ -121,6 +217,94 @@ export function ActaActions({ title, content }: ActaActionsProps) {
                 <p className="flex items-center gap-1.5 text-xs text-agent-devil">
                     <AlertCircle className="h-3 w-3" /> {notionError}
                 </p>
+            )}
+
+            {/* Q6 — los próximos pasos, marcables y con acción propia.
+
+                Un acta que no deja marcar lo hecho no es un acta: es un texto.
+                Antes esta lista sólo existía dentro del volcado a GitHub; ahora
+                es la lista, con su estado y con la acción de fila que crea UN
+                issue —el de esa línea— en vez de los seis de golpe.
+
+                Casillas de verdad (`input type="checkbox"` con su `<label>`), no
+                divs con un glifo: el estado marcado tiene que existir también
+                para quien navega con teclado o con lector. */}
+            {parsedIssues.length > 0 && (
+                <section className="mt-3 space-y-2" aria-labelledby="acta-pasos-titulo">
+                    <div className="flex items-baseline justify-between gap-2">
+                        <h4 id="acta-pasos-titulo" className="text-micro font-sans uppercase text-content-quiet">
+                            Próximos pasos
+                        </h4>
+                        <p className="text-micro font-sans tabular-nums text-content-quiet">
+                            {hechos.size} de {parsedIssues.length} hechos
+                        </p>
+                    </div>
+
+                    <ul className="space-y-1">
+                        {parsedIssues.map((issue) => {
+                            const hecho = hechos.has(issue.title);
+                            const enVuelo = pasoEnVuelo === issue.title;
+                            return (
+                                <li
+                                    key={issue.title}
+                                    data-row-actions
+                                    className="group flex items-start gap-2 rounded-sm px-1.5 py-1 hover:bg-stroke-hairline"
+                                >
+                                    <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={hecho}
+                                            onChange={() => alternarPaso(issue.title)}
+                                            className="mt-0.5 h-4 w-4 shrink-0 accent-accent-fill"
+                                        />
+                                        <span
+                                            className={
+                                                hecho
+                                                    ? "min-w-0 text-xs text-content-quiet line-through"
+                                                    : "min-w-0 text-xs text-content"
+                                            }
+                                        >
+                                            {issue.title}
+                                        </span>
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={() => enviarPaso(issue)}
+                                        disabled={enVuelo}
+                                        aria-label={`Crear issue en GitHub para «${issue.title}»`}
+                                        className="flex shrink-0 items-center gap-1 rounded-sm px-1.5 py-0.5 text-micro font-sans uppercase text-content-muted transition-colors hover:bg-stroke-highlight hover:text-accent disabled:opacity-50"
+                                    >
+                                        {enVuelo ? (
+                                            <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                                        ) : (
+                                            <Github className="h-3 w-3" aria-hidden="true" />
+                                        )}
+                                        GitHub
+                                    </button>
+                                </li>
+                            );
+                        })}
+                    </ul>
+
+                    {/* §11: éxito en pasado, corto, y con el objeto nombrado. */}
+                    {pasoCreado && (
+                        <a
+                            href={pasoCreado.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-1.5 text-xs text-success hover:underline"
+                        >
+                            <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
+                            Issue creado para «{pasoCreado.titulo}» <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                        </a>
+                    )}
+                    {pasoError && (
+                        <p role="alert" className="flex items-start gap-1.5 text-xs text-dissent">
+                            <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
+                            No se pudo crear el issue de «{pasoError.titulo}». {pasoError.motivo}
+                        </p>
+                    )}
+                </section>
             )}
 
             {/* Modal GitHub (inline, minimal) */}
