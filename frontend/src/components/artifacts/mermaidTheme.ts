@@ -4,8 +4,35 @@
  * Vive fuera de `MermaidDiagram.tsx` porque es estado de MÓDULO —el tema con el
  * que se inicializó mermaid, el contador de ids— y porque un fichero de
  * componente que además exporta funciones rompe el refresco en caliente de Vite.
+ *
+ * ── 4.2 · mermaid ya NO se importa de forma estática ────────────────────────
+ * `import mermaid from 'mermaid'` en el scope de este módulo metía ~600 KB de
+ * motor de diagramas en el chunk de entrada de TODO usuario, incluido el que
+ * nunca abre un artefacto — y la mayoría no abre ninguno. Ahora se carga con
+ * `await import('mermaid')` la primera vez que hay un diagrama de verdad que
+ * dibujar, y la promesa se memoiza: dos diagramas a la vez no piden el módulo
+ * dos veces.
  */
-import mermaid from 'mermaid';
+type Mermaid = typeof import('mermaid').default;
+
+let cargaEnVuelo: Promise<Mermaid> | null = null;
+
+/**
+ * El motor, cuando de verdad haga falta. La promesa se guarda, no el módulo:
+ * así dos diagramas montados a la vez comparten UNA descarga, y un fallo de red
+ * no deja una referencia rota cacheada para siempre.
+ */
+export function cargarMermaid(): Promise<Mermaid> {
+    if (!cargaEnVuelo) {
+        cargaEnVuelo = import('mermaid')
+            .then((m) => m.default)
+            .catch((e) => {
+                cargaEnVuelo = null;
+                throw e;
+            });
+    }
+    return cargaEnVuelo;
+}
 
 /**
  * DESIGN §10: «`themeVariables` se deriva de los tokens leyendo
@@ -103,8 +130,16 @@ export function aHex(color: string): string | null {
  * porque `mermaid.initialize` es idempotente y barato comparado con el render.
  */
 let temaAplicado: string | null = null;
-export function aplicarTemaMermaid(tema: string) {
-    if (temaAplicado === tema) return;
+/**
+ * Deja el motor listo con la paleta del tema pedido y lo devuelve.
+ *
+ * Devuelve el motor —y no `void`— a propósito: quien va a dibujar necesita la
+ * MISMA instancia que se acaba de configurar, y pedirla por su cuenta con otro
+ * `await import` invitaría a dibujar antes de que el tema esté puesto.
+ */
+export async function aplicarTemaMermaid(tema: string): Promise<Mermaid> {
+    const mermaid = await cargarMermaid();
+    if (temaAplicado === tema) return mermaid;
     // Se marca DESPUÉS de que `initialize` haya salido bien. Marcarlo antes es
     // lo que convertía un fallo de configuración en un diagrama que se dibujaba
     // con la paleta equivocada al segundo intento y en un error irrecuperable
@@ -130,6 +165,7 @@ export function aplicarTemaMermaid(tema: string) {
         fontFamily: '"JetBrains Mono", monospace',
     });
     temaAplicado = tema;
+    return mermaid;
 }
 
 /** Qué tema está pintando la app ahora mismo. `null` = el de por defecto. */

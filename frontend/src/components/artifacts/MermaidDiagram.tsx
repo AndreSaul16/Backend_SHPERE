@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import mermaid from 'mermaid';
 import { Download, AlertTriangle, GitBranch } from 'lucide-react';
 import { aplicarTemaMermaid, siguienteIdDeDibujo, temaActual } from './mermaidTheme';
 import type { Artifact } from '@/types/artifact';
@@ -29,7 +28,10 @@ export function MermaidDiagram({ artifact }: MermaidDiagramProps) {
 
         const renderDiagram = async () => {
             try {
-                aplicarTemaMermaid(tema);
+                // 4.2: el motor entra aquí, no en el chunk de entrada.
+                // `aplicarTemaMermaid` devuelve la instancia ya configurada, así
+                // que no hay ventana en la que se dibuje con la paleta anterior.
+                const mermaid = await aplicarTemaMermaid(tema);
                 const { svg } = await mermaid.render(id, artifact.content);
                 if (!vigente) return;
                 setError(null);
