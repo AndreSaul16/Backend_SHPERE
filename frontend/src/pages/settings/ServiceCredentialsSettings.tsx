@@ -30,7 +30,9 @@ import {
   Shield,
   TestTube2,
   TrendingUp,
+  SearchX,
 } from "lucide-react";
+import { EstadoVacio } from "@/components/ui/EstadoVacio";
 
 const SERVICE_ICONS: Record<string, React.ReactNode> = {
   google_calendar: <Calendar className="h-5 w-5" />,
@@ -177,10 +179,32 @@ export function ServiceCredentialsSettings({ control: controlExterno }: { contro
       {error && <InlineError {...error} />}
 
       {/* Service cards — 6.8: plegadas, y sólo una abierta en toda la página. */}
-      <div className="grid grid-cols-1 gap-2">
-        {data?.services
-          .filter((svc) => pasaElFiltro(control.filtro, svc.label, svc.service, svc.description))
-          .map((svc) => (
+      {(() => {
+        const visibles = (data?.services ?? []).filter((svc) =>
+          pasaElFiltro(control.filtro, svc.label, svc.service, svc.description),
+        );
+        if (visibles.length === 0) {
+          /* 6.12 · §9.14: con la lista vacía esto no pintaba NADA — página en
+             blanco bajo el aviso de seguridad. Son dos vacíos distintos y
+             merecen dos textos distintos: «tu búsqueda no encuentra» y «el
+             backend no ofrece ninguno», que es un fallo de despliegue y no
+             algo que el usuario pueda arreglar. */
+          return control.filtro ? (
+            <EstadoVacio
+              glifo={<SearchX aria-hidden="true" />}
+              titulo="Ningún servicio coincide con tu búsqueda"
+              frase="Prueba con otra palabra: se busca por el nombre del servicio y por lo que hace."
+            />
+          ) : (
+            <EstadoVacio
+              glifo={<Key aria-hidden="true" />}
+              titulo="No hay servicios disponibles"
+              frase="Tus agentes no tienen ninguna herramienta externa que configurar todavía. No has perdido nada: si tenías credenciales, siguen guardadas."
+              accion={{ etiqueta: 'Volver a comprobarlo', onClick: () => { void load(); } }}
+            />
+          );
+        }
+        return visibles.map((svc) => (
           <FilaDeConexion
             key={svc.service}
             id={svc.service}
@@ -349,8 +373,8 @@ export function ServiceCredentialsSettings({ control: controlExterno }: { contro
               )}
             </div>
           </FilaDeConexion>
-        ))}
-      </div>
+        ));
+      })()}
     </div>
   );
 }

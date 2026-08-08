@@ -3,10 +3,11 @@
  * externo (WhatsApp, Calendar, etc.). Sin contactos aquí, las tools bloquean.
  */
 import { useEffect, useState } from "react";
-import { Trash2, Plus, Users, Shield, Check } from "lucide-react";
+import { Trash2, Plus, Users, Shield, Check, UserPlus } from "lucide-react";
 import { contactsService, type Contact } from "@/services/api";
 import { SelectField, TextField } from "@/components/ui/Field";
 import { InlineError, type FalloDeSeccion } from "@/components/ui/InlineError";
+import { EstadoVacio } from '@/components/ui/EstadoVacio';
 
 const CONTACT_TYPES: Record<string, string> = {
   email: "Email",
@@ -215,10 +216,22 @@ export function ContactsSettings() {
         {loading ? (
           <p className="text-content-muted text-sm">Cargando...</p>
         ) : contacts.length === 0 ? (
-          <p className="text-content-muted text-sm">
-            Aún no tienes contactos. Añade al menos uno para que los agentes
-            puedan enviar mensajes o crear eventos.
-          </p>
+          /* 6.12 · §9.14: era una frase suelta en medio de un hueco. Ahora
+             tiene glifo, título, la frase y UNA acción — que aquí es llevar el
+             foco al campo de añadir, porque el formulario está debajo y a
+             mucha gente le pasa desapercibido. */
+          <EstadoVacio
+            glifo={<UserPlus aria-hidden="true" />}
+            titulo="Aún no tienes contactos autorizados"
+            frase="Sin al menos uno, tus agentes no pueden escribir a nadie ni crear eventos: las herramientas se bloquean."
+            accion={{
+              etiqueta: "Añadir el primero",
+              // Por id y no por `ref`: `<TextField>` no expone el control, y
+              // abrirle la API entera a un componente canónico para mover un
+              // foco no compensa. El id es el mismo que usa su `<label>`.
+              onClick: () => document.getElementById("contact-value")?.focus(),
+            }}
+          />
         ) : (
           <div className="space-y-2">
             {contacts.map((c) => (

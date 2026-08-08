@@ -43,6 +43,8 @@ import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { reasonOf, toast } from '@/lib/toastBus';
 import { useBoardSettingsStore } from '@/store/useBoardSettingsStore';
+import { EstadoVacio } from '@/components/ui/EstadoVacio';
+import { SearchX } from 'lucide-react';
 
 const getRoleIcon = (role: Role) => {
     switch (role) {
@@ -211,10 +213,16 @@ export function AgentSelectorModal() {
                                             Chats individuales con un experto específico. Respuestas rápidas y enfocadas.
                                         </p>
                                         {filteredCoreExperts.length === 0 && filteredCustomExperts.length === 0 && searchQuery && (
-                                            /* §9.14: la búsqueda sin resultados dice qué falta y qué hacer. */
-                                            <p className="mb-4 text-xs text-content-muted">
-                                                Ningún experto se llama así. Borra la búsqueda o crea uno nuevo.
-                                            </p>
+                                            /* 6.12 · §9.14: tenía frase pero ni glifo
+                                               ni salida. La salida es la única que
+                                               sirve aquí: quitar el filtro. */
+                                            <EstadoVacio
+                                                className="mb-4"
+                                                glifo={<SearchX aria-hidden="true" />}
+                                                titulo={`Ningún experto se llama «${searchQuery}»`}
+                                                frase="Prueba con otra palabra, o quita el filtro para ver a los que tienes."
+                                                accion={{ etiqueta: 'Ver todos', onClick: () => setSearchQuery('') }}
+                                            />
                                         )}
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             {/* Core experts: CEO, CTO, CMO, CFO */}

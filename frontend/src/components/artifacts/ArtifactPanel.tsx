@@ -9,6 +9,7 @@ import { ActaActions } from './ActaActions';
 import { esActa } from '@/utils/acta';
 import { cn } from '@/lib/utils';
 import type { ArtifactType } from '@/types/artifact';
+import { EstadoVacio } from '@/components/ui/EstadoVacio';
 
 // Icons by artifact type
 const ARTIFACT_ICONS: Record<ArtifactType, React.ComponentType<{ className?: string }>> = {
@@ -201,17 +202,23 @@ export function ArtifactPanel() {
                                «un vacío que parpadea pide perdón», y el
                                `blur-3xl` morado era además una capa compuesta
                                permanente por un estado en el que no pasa nada. */
-                            <div className="flex-1 flex flex-col items-center justify-center gap-6 p-8 text-center h-full">
-                                <div className="flex h-14 w-14 items-center justify-center rounded-sm border border-brass-600 bg-accent/12 text-accent">
-                                    <GitBranch className="h-7 w-7" aria-hidden="true" />
-                                </div>
-                                <div className="space-y-2 max-w-xs">
-                                    <h4 className="text-content-strong font-semibold text-lg tracking-tight">Aún no hay documentos</h4>
-                                    <p className="text-content-muted text-sm leading-relaxed">
-                                        El acta, el código y los diagramas que redacte la junta se abrirán aquí.
-                                    </p>
-                                </div>
-                            </div>
+                            /* 6.12 · §9.14: tenía glifo, título y frase, y le
+                               faltaba lo cuarto — una acción. El vacío del panel
+                               de artefactos es además el único que aparece con
+                               el panel ABIERTO a propósito: la salida honrada es
+                               cerrarlo y volver a la conversación, que es donde
+                               se generan los documentos. */
+                            <EstadoVacio
+                                tamano="amplio"
+                                className="flex-1 h-full"
+                                glifo={<GitBranch aria-hidden="true" />}
+                                titulo="Aún no hay documentos"
+                                frase="El acta, el código y los diagramas que redacte la junta se abrirán aquí."
+                                accion={{
+                                    etiqueta: 'Volver a la conversación',
+                                    onClick: () => toggleArtifactPanel(),
+                                }}
+                            />
                         ) : (
                             <div className="flex-1 flex items-center justify-center text-content-muted text-sm font-mono h-full">
                                 Elige un documento arriba para leerlo
