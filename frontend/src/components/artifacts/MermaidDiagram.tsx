@@ -96,10 +96,18 @@ export function MermaidDiagram({ artifact }: MermaidDiagramProps) {
             <div className="flex-1 overflow-auto p-12 flex items-center justify-center scrollbar-thin scrollbar-thumb-white/10">
                 {error ? (
                     <div className="flex flex-col items-center gap-4 text-center p-6 bg-oxblood-500/5 rounded-md border border-oxblood-500/10 max-w-md">
-                        <AlertTriangle className="h-10 w-10 text-danger" />
+                        <AlertTriangle className="h-10 w-10 text-danger" aria-hidden="true" />
+                        {/* 6.14 · §11: el título iba en VERSALITAS ESPACIADAS,
+                            que §0 descarta, y faltaba el «qué se conserva» — que
+                            aquí es lo que baja la tensión: el texto del diagrama
+                            no se ha perdido, está justo debajo y se puede
+                            copiar. */}
                         <div>
-                            <p className="text-content-strong font-bold text-sm uppercase tracking-wider">{error}</p>
-                            <p className="text-content-muted text-xs mt-1">Revisa la estructura del código Mermaid generado.</p>
+                            <p className="text-sm font-semibold text-content-strong">{error}</p>
+                            <p className="text-content-muted text-xs mt-1">
+                                El texto del diagrama no se ha perdido: está aquí debajo, tal como lo
+                                escribió la junta, y el resto de la conversación sigue intacto.
+                            </p>
                         </div>
                         <pre className="text-xs text-danger font-mono bg-black/40 p-4 rounded-md w-full text-left overflow-auto max-h-40 border border-oxblood-500/5">
                             {artifact.content}

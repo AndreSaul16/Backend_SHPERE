@@ -5,6 +5,8 @@ import { exportsService } from "@/services/api";
 import { parseProximosPasos } from "@/utils/actaParser";
 import { ActaPresentation } from "./ActaPresentation";
 import { comboDe, useAtajo } from "@/hooks/useShortcuts";
+import { InlineError } from "@/components/ui/InlineError";
+import { motivoLegible } from "@/lib/errors";
 
 interface ActaActionsProps {
     title: string;
@@ -51,7 +53,7 @@ export function ActaActions({ title, content }: ActaActionsProps) {
     // Notion
     const [notionStatus, setNotionStatus] = useState<Status>("idle");
     const [notionUrl, setNotionUrl] = useState<string>("");
-    const [notionError, setNotionError] = useState<string>("");
+    const [notionError, setNotionError] = useState<string | undefined>(undefined);
 
     // GitHub
     const [showGithubModal, setShowGithubModal] = useState(false);
@@ -59,7 +61,7 @@ export function ActaActions({ title, content }: ActaActionsProps) {
     const [ghStatus, setGhStatus] = useState<Status>("idle");
     const [ghCreated, setGhCreated] = useState<{ title: string; url: string }[]>([]);
     const [ghFailed, setGhFailed] = useState<{ title: string; error: string }[]>([]);
-    const [ghError, setGhError] = useState<string>("");
+    const [ghError, setGhError] = useState<string | undefined>(undefined);
 
     // Q1 (5.8) — modo presentación. El estado vive aquí porque aquí está el
     // acta con su contenido, y porque `ActaActions` sólo se monta para actas.
@@ -148,13 +150,18 @@ export function ActaActions({ title, content }: ActaActionsProps) {
 
     const handleNotion = async () => {
         setNotionStatus("loading");
-        setNotionError("");
+        setNotionError(undefined);
         try {
             const { url } = await exportsService.notion(title, content);
             setNotionUrl(url);
             setNotionStatus("success");
         } catch (e) {
-            setNotionError(e instanceof Error ? e.message : "Error al exportar a Notion");
+            // 6.14 · D64 · §11: el `e.message` crudo llegaba a pantalla («500
+            // integrations.notion_error: …»). El título dice qué pasó, la
+            // segunda frase qué se conserva —que aquí es lo importante: el acta
+            // no se ha tocado— y el motivo del backend, si lo hay redactado, va
+            // pequeño y debajo.
+            setNotionError(motivoLegible(e));
             setNotionStatus("error");
         }
     };
@@ -162,7 +169,7 @@ export function ActaActions({ title, content }: ActaActionsProps) {
     const handleGithubSubmit = async () => {
         if (!ghRepo.owner.trim() || !ghRepo.repo.trim()) return;
         setGhStatus("loading");
-        setGhError("");
+        setGhError(undefined);
         try {
             localStorage.setItem(GH_REPO_STORAGE_KEY, JSON.stringify(ghRepo));
             const { created, errors } = await exportsService.githubIssues(
@@ -174,7 +181,7 @@ export function ActaActions({ title, content }: ActaActionsProps) {
             setGhFailed(errors || []);
             setGhStatus("success");
         } catch (e) {
-            setGhError(e instanceof Error ? e.message : "Error al crear issues");
+            setGhError(motivoLegible(e));
             setGhStatus("error");
         }
     };
@@ -246,9 +253,13 @@ export function ActaActions({ title, content }: ActaActionsProps) {
                 </a>
             )}
             {notionStatus === "error" && (
-                <p className="flex items-center gap-1.5 text-xs text-agent-devil">
-                    <AlertCircle className="h-3 w-3" /> {notionError}
-                </p>
+                <InlineError
+                    title="No se ha podido crear la página en Notion"
+                    detail="El acta sigue aquí, entera y sin tocar. Comprueba que la conexión con Notion sigue activa en Ajustes › Conexiones y vuelve a intentarlo."
+                    reason={notionError}
+                    onRetry={() => { void handleNotion(); }}
+                    retryLabel="Volver a exportar"
+                />
             )}
 
             {/* Q6 — los próximos pasos, marcables y con acción propia.
@@ -401,9 +412,13 @@ export function ActaActions({ title, content }: ActaActionsProps) {
                         </div>
                     )}
                     {ghStatus === "error" && (
-                        <p className="flex items-center gap-1.5 text-xs text-agent-devil">
-                            <AlertCircle className="h-3 w-3" /> {ghError}
-                        </p>
+                        <InlineError
+                            title="No se ha podido crear ninguna incidencia"
+                            detail="No se ha creado nada a medias en el repositorio, y los próximos pasos del acta siguen tal cual. Comprueba el propietario y el repositorio, y que la conexión con GitHub siga activa."
+                            reason={ghError}
+                            onRetry={() => { void handleGithubSubmit(); }}
+                            retryLabel="Volver a crearlas"
+                        />
                     )}
                 </div>
             )}
