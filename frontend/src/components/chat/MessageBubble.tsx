@@ -259,7 +259,14 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
                     className={cn(
                         "group p-3 sm:p-4 rounded-md shadow-lg text-sm leading-relaxed border text-left",
                         "min-w-[80px] max-w-full overflow-hidden",
-                        "[overflow-wrap:break-word] [word-break:break-word]",
+                        /* Partir una palabra SÓLO si no cabe ni en una línea
+                           entera — el caso de una URL larga, que es el motivo por
+                           el que esto existe. La regla hermana que lo acompañaba
+                           (la de `word-break`) es el alias antiguo de la variante
+                           «anywhere» y además autoriza a partir palabras que sí
+                           caben: dos declaraciones para un solo trabajo, y la
+                           segunda más agresiva de lo que nadie quería. */
+                        "[overflow-wrap:break-word]",
                         isUser
                             ? "bg-user-bubble/12 text-content rounded-tr-sm"
                             : "bg-ai-bubble text-content-strong rounded-tl-sm relative"
@@ -301,8 +308,10 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
 
                     {/* `max-w-none` neutraliza la medida de 68ch de `.doc-prose`:
                         aquí la impone la burbuja, y la medida del transcript la
-                        fija la tarea 3.7. */}
-                    <div className="doc-prose max-w-none break-words">
+                        fija la tarea 3.7. `--turno` baja un peldaño la escala de
+                        encabezados: la de la hoja está diseñada para 68ch y aquí
+                        la columna real son ~250px a 390px. */}
+                    <div className="doc-prose doc-prose--turno max-w-none break-words">
                         {/* Process message content, detecting artifact + tool placeholders */}
                         {(() => {
                             const combinedPattern = /\[ARTIFACT:([^:]+):([^\]]+)\]|\[TOOL_START:([^\]]+)\]|\[TOOL_RESULT:([^:]+):([^\]]*)\]|\[TOOL_ERROR:([^:]+):([^\]]*)\]/g;
@@ -316,42 +325,37 @@ export function MessageBubble({ message, agent, agentColor, sessionAvatar, isTyp
 
                             const content = message.content;
 
-                            // Markdown components Shared Config
+                            /**
+                             * Tarea 2.3 · §P1 «el documento manda sobre el chat».
+                             *
+                             * El transcript se pinta dentro de `.doc-prose`, así
+                             * que encabezados, listas, citas, enlaces, negritas,
+                             * itálicas, `hr`, `img` y código salen ya con la
+                             * tipografía del documento: Literata a `base`,
+                             * h1/h2/h3 diferenciados, viñetas y enlaces en latón,
+                             * cita con barra oxblood. Aquí SÓLO quedan los dos
+                             * casos que el CSS no puede resolver solo.
+                             *
+                             * Lo que había antes eran seis sobrecargas que
+                             * peleaban con `.doc-prose` y le ganaban por
+                             * especificidad, todas escritas en la paleta
+                             * anterior (`electric-cyan` en el código en línea y
+                             * en la cita, viñetas y espaciado propios). El
+                             * resultado era un markdown con dos sistemas
+                             * tipográficos a la vez: por eso se quitan en vez de
+                             * repintarse.
+                             */
                             const markdownComponents = {
+                                // `react-markdown` mete los bloques dentro del
+                                // <p> del párrafo y el DOM lo rechaza. No es
+                                // estilo: es validez del árbol.
                                 p: ({ children, ...props }: any) => {
-                                    // Hack to prevent hydration errors: if children contain a block element (like pre), don't wrap in p
                                     const hasBlock = React.Children.toArray(children).some(
                                         child => React.isValidElement(child) && ['pre', 'ul', 'ol', 'blockquote'].includes((child.type as any).name || (child.type as any))
                                     );
                                     if (hasBlock) return <>{children}</>;
-                                    return <p className="mb-3 last:mb-0 leading-relaxed" {...props}>{children}</p>;
+                                    return <p {...props}>{children}</p>;
                                 },
-                                code({ inline, className, children, ...props }: any) {
-                                    if (!inline) {
-                                        return (
-                                            <div className="my-3 overflow-hidden rounded-lg border border-surface-highlight shadow-sm">
-                                                <pre className="bg-midnight/80 p-3 overflow-x-auto text-[13px]">
-                                                    <code className={cn("font-mono", className)} {...props}>
-                                                        {children}
-                                                    </code>
-                                                </pre>
-                                            </div>
-                                        );
-                                    }
-                                    return (
-                                        <code className={cn("bg-surface-highlight/50 px-1.5 py-0.5 rounded text-xs font-mono text-electric-cyan border border-electric-cyan/10", className)} {...props}>
-                                            {children}
-                                        </code>
-                                    );
-                                },
-                                ul: ({ children }: any) => <ul className="list-disc pl-5 mb-3 space-y-1">{children}</ul>,
-                                ol: ({ children }: any) => <ol className="list-decimal pl-5 mb-3 space-y-1">{children}</ol>,
-                                li: ({ children }: any) => <li className="text-content-strong">{children}</li>,
-                                blockquote: ({ children }: any) => (
-                                    <blockquote className="border-l-2 border-electric-cyan/30 pl-4 py-1 my-3 bg-electric-cyan/5 rounded-r text-content-muted italic">
-                                        {children}
-                                    </blockquote>
-                                ),
                                 // F4 · §9.7: una tabla ancha se desplaza dentro
                                 // de su contenedor; jamás rompe la burbuja.
                                 table: DocTable,

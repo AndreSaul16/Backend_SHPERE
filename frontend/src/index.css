@@ -415,6 +415,19 @@
   .doc-prose :is(h5,h6){ font-family:var(--font-sans); font-size:var(--text-micro);
                  text-transform:uppercase; letter-spacing:0.07em; color:var(--content-muted); }
 
+  /* El turno del transcript también es documento (§P1), pero no es la portada
+     de un acta. La escala de encabezados de la hoja está diseñada para una
+     columna de 68ch; dentro de una burbuja al 88% de 390px la columna real son
+     ~250px, y ahí un h1 a 33px no cabe ni en una línea: «Recomendación» salía
+     partido como «Recomendació / n». Se baja un peldaño la escala —y el aire de
+     encima, que a 33px es una portada y aquí sería un hueco—. La jerarquía se
+     conserva entera: siguen siendo cuatro tamaños y tres pesos distintos. */
+  .doc-prose--turno h1{ font-size:var(--text-2xl); line-height:1.22; letter-spacing:-0.015em; }
+  .doc-prose--turno h2{ font-size:var(--text-xl);  line-height:1.3;  letter-spacing:-0.01em; }
+  .doc-prose--turno h3{ font-size:var(--text-lg);  line-height:1.45; letter-spacing:-0.005em; }
+  .doc-prose--turno h4{ font-size:var(--text-base); }
+  .doc-prose--turno :is(h1,h2,h3,h4,h5,h6){ margin-block: 1.25em 0.5em; }
+
   .doc-prose :is(ul,ol){ padding-inline-start:1.4em; margin-block:0.75em; }
   .doc-prose ul{ list-style: disc; }
   .doc-prose ol{ list-style: decimal; }

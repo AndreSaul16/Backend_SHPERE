@@ -146,7 +146,7 @@ export function SharedSessionPage() {
                                             {m.agent_role}
                                         </p>
                                     )}
-                                    <div className="doc-prose max-w-none break-words">
+                                    <div className="doc-prose doc-prose--turno max-w-none break-words">
                                         <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]} components={{ table: DocTable }}>
                                             {m.content}
                                         </ReactMarkdown>
