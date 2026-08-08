@@ -25,6 +25,7 @@ import { StreamInterrupted } from "./StreamInterrupted";
 import { RegionBoundary } from "@/components/shared/RegionBoundary";
 import { useVentanaDeTurnos } from "@/hooks/useVentanaDeTurnos";
 import { citaLlana } from "@/utils/citaLlana";
+import { comboDe, useAtajo } from "@/hooks/useShortcuts";
 
 export function ChatPanel() {
     const navigate = useNavigate();
@@ -520,6 +521,58 @@ export function ChatPanel() {
     };
 
     /**
+     * 5.3 · Q9 — los atajos de la junta.
+     *
+     * Los cuatro viven aquí, junto a lo que mueven, y no en un registro global
+     * que tendría que alcanzarlo por referencias: un atajo que no encuentra su
+     * acción es un atajo que no funciona, y esto es lo que lo hace evidente al
+     * compilar.
+     *
+     * Los de una sola tecla (J/K) los protege `useAtajo`: dentro de un campo de
+     * texto no disparan, así que escribir «junta» en el compositor no salta de
+     * turno. Los otros dos llevan modificador y sí funcionan mientras se
+     * escribe, que es cuando hacen falta.
+     */
+    useAtajo(
+        comboDe('detener'),
+        useCallback(() => { if (isTyping) stopGeneration(); }, [isTyping, stopGeneration]),
+        { activo: isTyping },
+    );
+
+    useAtajo(
+        comboDe('buscar'),
+        useCallback((e: KeyboardEvent) => {
+            e.preventDefault();
+            setIsSearchOpen(true);
+        }, []),
+        { permitirEnCampos: true },
+    );
+
+    /** Mueve el foco al turno anterior o siguiente y lo trae a la vista. */
+    const saltarDeTurno = useCallback((direccion: 1 | -1) => {
+        const contenedor = messagesContainerRef.current;
+        if (!contenedor) return;
+        const turnos = Array.from(contenedor.querySelectorAll<HTMLElement>('[data-turno]'));
+        if (turnos.length === 0) return;
+        const activo = document.activeElement as HTMLElement | null;
+        const actual = turnos.findIndex((t) => t === activo || t.contains(activo));
+        // Desde fuera del hilo: J entra por el último turno (lo más reciente,
+        // que es lo que se está mirando) y K por el mismo sitio hacia atrás.
+        const siguiente = actual === -1
+            ? (direccion === 1 ? turnos.length - 1 : turnos.length - 1)
+            : Math.min(turnos.length - 1, Math.max(0, actual + direccion));
+        const destino = turnos[siguiente];
+        destino.focus();
+        destino.scrollIntoView({
+            behavior: prefiereMenosMovimiento ? 'auto' : 'smooth',
+            block: 'nearest',
+        });
+    }, [prefiereMenosMovimiento]);
+
+    useAtajo(comboDe('turno-siguiente'), useCallback(() => saltarDeTurno(1), [saltarDeTurno]));
+    useAtajo(comboDe('turno-anterior'), useCallback(() => saltarDeTurno(-1), [saltarDeTurno]));
+
+    /**
      * Enviar con ⏎, y también con ⌘⏎ / Ctrl+⏎ (tarea 3.8).
      *
      * El atajo con modificador es el que traen aprendido quienes vienen de un
@@ -528,7 +581,17 @@ export function ChatPanel() {
      */
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key !== 'Enter') return;
-        if (e.shiftKey && !(e.metaKey || e.ctrlKey)) return;
+        const conModificador = e.metaKey || e.ctrlKey;
+        /* 5.3 · Q9 — ⌘⇧⏎ convoca junta con lo escrito. Si ya estamos en una,
+           es enviar; si no, abre el selector de directores SIN vaciar el campo:
+           el borrador es por sesión y sigue ahí cuando se elija la junta. */
+        if (conModificador && e.shiftKey) {
+            e.preventDefault();
+            if (isGroupChat) handleSendMessage();
+            else toggleAgentModal(true);
+            return;
+        }
+        if (e.shiftKey && !conModificador) return;
         e.preventDefault();
         if (canIntervene) handleIntervene();
         else handleSendMessage();
@@ -837,7 +900,13 @@ export function ChatPanel() {
                                     ?? getBoardAgentByRole(agents, msg.role)
                                     ?? (msg.role !== 'user' && msg.role !== 'system' ? activeAgent : undefined);
                                 return (
-                                    <div key={msg.id} data-fase={msg.phase} className="space-y-3">
+                                    /* `data-turno` + `tabIndex={-1}`: es lo que
+                                       hace que J/K tengan a dónde ir. Fuera del
+                                       recorrido de tabulación a propósito —
+                                       tabular por cien turnos no es navegar—,
+                                       pero enfocable para que el salto lleve
+                                       también al lector de pantalla. */
+                                    <div key={msg.id} data-fase={msg.phase} data-turno tabIndex={-1} className="space-y-3 scroll-mt-4 rounded-sm">
                                     <MessageBubble
                                         message={msg}
                                         agent={msgAgent}

@@ -6,6 +6,8 @@ import { useChatStore } from "@/store/useChatStore";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { RegionBoundary } from "@/components/shared/RegionBoundary";
+import { comboDe, useAtajo } from "@/hooks/useShortcuts";
+import { ShortcutSheet } from "@/components/ui/ShortcutSheet";
 
 interface MainLayoutProps {
     sidebar: ReactNode;
@@ -61,6 +63,24 @@ export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayo
     const isSidebarOpen = useChatStore((s) => s.isSidebarOpen);
     const toggleSidebar = useChatStore((s) => s.toggleSidebar);
     const isArtifactPanelOpen = useChatStore((s) => s.isArtifactPanelOpen);
+    const toggleArtifactPanel = useChatStore((s) => s.toggleArtifactPanel);
+
+    /* 5.3 · Q9 — los dos conmutadores del shell.
+       Van aquí y no en un registro global porque el shell es quien los posee, y
+       porque así sólo existen donde existe el shell: pulsar ⌘B en `/login` no
+       puede abrir un cajón que no está montado. Los dos llevan modificador, así
+       que funcionan también mientras se escribe (`permitirEnCampos`): esconder
+       el historial es justo lo que se quiere hacer con el compositor lleno. */
+    useAtajo(
+        comboDe('sidebar'),
+        useCallback((e: KeyboardEvent) => { e.preventDefault(); toggleSidebar(); }, [toggleSidebar]),
+        { permitirEnCampos: true },
+    );
+    useAtajo(
+        comboDe('artefactos'),
+        useCallback((e: KeyboardEvent) => { e.preventDefault(); toggleArtifactPanel(); }, [toggleArtifactPanel]),
+        { permitirEnCampos: true },
+    );
     /* §4.3: por debajo de `xl` el panel es una hoja a pantalla completa; a
        partir de ahí, columna redimensionable. Antes esto se decidía leyendo
        `window.innerWidth` durante el render, que no vuelve a mirarse nunca:
@@ -154,6 +174,11 @@ export function MainLayout({ sidebar, chat, artifactPanel, className }: MainLayo
 
     return (
         <div className={cn("flex h-dvh w-full min-w-0 overflow-hidden bg-transparent", className)}>
+            {/* 5.3 · Q9 — la hoja de `?`. Vive en el shell porque los atajos que
+                documenta viven en el shell: enseñarla en `/login`, donde no
+                funciona ninguno, sería documentación falsa. */}
+            <ShortcutSheet />
+
             {/* Mobile Menu Button - Dynamic Position */}
             <button
                 onClick={() => toggleSidebar()}
