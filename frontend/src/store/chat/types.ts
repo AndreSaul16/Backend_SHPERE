@@ -92,6 +92,15 @@ export interface SessionsSlice {
     selectAgent: (agentId: string) => void;
     updateSessionMetadata: (sessionId: string, updates: { title?: string; visual_config?: any }) => Promise<void>;
     deleteSession: (sessionId: string) => Promise<void>;
+    /**
+     * Borrado optimista con ventana para deshacer (PLAN §6 Q5).
+     *
+     * Quita la junta de la vista al instante y espera 8 s antes de pedirle al
+     * backend que la borre de verdad. Devuelve `false` si no había tal junta.
+     */
+    deleteSessionConDeshacer: (sessionId: string) => boolean;
+    /** Cancela un borrado en su ventana y devuelve la junta a su sitio. */
+    undoDeleteSession: (sessionId: string) => boolean;
 }
 
 /** El hilo y su transmisión: mensajes, tokens en vuelo y cancelación. */

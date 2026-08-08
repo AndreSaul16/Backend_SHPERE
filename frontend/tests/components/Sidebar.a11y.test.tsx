@@ -10,17 +10,38 @@
  *  D18 — El borrado se confirmaba con «¿Confirmar borrado?» + Sí/No dentro del
  *        propio menú, sin nombrar la sesión ni decir qué se pierde (§11).
  *
+ * Y Q5, que cambia la defensa de sitio: el diálogo de «¿seguro?» se pulsa sin
+ * leer, así que ya no lo hay. La junta desaparece al instante y se puede
+ * recuperar entera durante ocho segundos, porque hasta entonces no se ha
+ * borrado nada de verdad.
+ *
  * Este fichero NO simula framer-motion a propósito: la trampa de foco y el
  * retorno del foco al disparador dependen de refs reales.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { Sidebar } from '../../src/components/sidebar/Sidebar';
 import { useChatStore } from '../../src/store/useChatStore';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { __resetToastBus, subscribeToasts, type ToastRecord } from '../../src/lib/toastBus';
+import { chatService } from '../../src/services/api';
+import {
+    VENTANA_DESHACER_MS,
+    olvidarBorradosPendientes,
+} from '../../src/store/chat/sessionsSlice';
+
+vi.mock('../../src/services/api', async () => {
+    const actual = await vi.importActual<typeof import('../../src/services/api')>(
+        '../../src/services/api',
+    );
+    return {
+        ...actual,
+        chatService: { ...actual.chatService, deleteSession: vi.fn(() => Promise.resolve()) },
+        adminService: { ...actual.adminService, isAdmin: vi.fn(() => Promise.resolve(false)) },
+    };
+});
 
 vi.mock('../../src/contexts/AuthContext', () => ({
     useAuth: vi.fn(),
@@ -62,7 +83,14 @@ describe('Sidebar — buscador, menú y confirmación', () => {
             streamingSessionIds: [],
             coreAgents: [],
             customAgents: [],
+            messagesBySession: {},
         });
+        olvidarBorradosPendientes();
+    });
+
+    afterEach(() => {
+        // Un plazo vivo entre casos borraría una sesión del caso siguiente.
+        olvidarBorradosPendientes();
     });
 
     // ── D10 ───────────────────────────────────────────────────────────────
@@ -171,56 +199,84 @@ describe('Sidebar — buscador, menú y confirmación', () => {
         );
     });
 
-    // ── D18 ───────────────────────────────────────────────────────────────
-    it('Eliminar abre un diálogo que nombra la sesión y su consecuencia', async () => {
+    // ── Q5: borrar con deshacer ───────────────────────────────────────────
+    it('Eliminar quita la junta de la vista y ofrece deshacerlo, nombrándola', async () => {
         const user = userEvent.setup();
-        renderSidebar();
-        await user.click(screen.getByRole('button', { name: 'Acciones de Precios 2026' }));
-        await user.click(screen.getByRole('menuitem', { name: 'Eliminar' }));
-
-        const dialog = screen.getByRole('dialog');
-        expect(dialog).toHaveAccessibleName(/Precios 2026/);
-        expect(within(dialog).getByText(/No se puede deshacer/)).toBeInTheDocument();
-        // §9.4: el foco arranca en Cancelar.
-        expect(within(dialog).getByRole('button', { name: 'Cancelar' })).toHaveFocus();
-    });
-
-    it('el diálogo de borrado no llama a deleteSession hasta que se confirma', async () => {
-        const user = userEvent.setup();
-        const deleteSession = vi.fn(() => Promise.resolve());
-        useChatStore.setState({ deleteSession } as never);
+        const seen: ToastRecord[] = [];
+        const unsubscribe = subscribeToasts((t) => seen.push(t));
         renderSidebar();
 
         await user.click(screen.getByRole('button', { name: 'Acciones de Precios 2026' }));
         await user.click(screen.getByRole('menuitem', { name: 'Eliminar' }));
-        expect(deleteSession).not.toHaveBeenCalled();
 
-        await user.click(
-            within(screen.getByRole('dialog')).getByRole('button', { name: 'Eliminar' }),
-        );
-        expect(deleteSession).toHaveBeenCalledWith('s1');
+        // Ya no hay diálogo: la defensa es el deshacer, que actúa después.
+        expect(screen.queryByRole('dialog')).toBeNull();
+        expect(screen.queryByRole('link', { name: /Precios 2026/ })).toBeNull();
+
+        expect(seen).toHaveLength(1);
+        expect(seen[0].title).toBe('Junta «Precios 2026» eliminada');
+        expect(seen[0].action?.label).toBe('Deshacer');
+        unsubscribe();
     });
 
-    it('un fallo al borrar emite un aviso de error con su motivo', async () => {
+    it('no se llama al backend dentro de la ventana para deshacer', async () => {
+        const user = userEvent.setup();
+        renderSidebar();
+
+        await user.click(screen.getByRole('button', { name: 'Acciones de Precios 2026' }));
+        await user.click(screen.getByRole('menuitem', { name: 'Eliminar' }));
+
+        // Lo importante de Q5: durante la ventana NO se ha borrado nada. Si el
+        // usuario deshace, no hay nada que revertir en el servidor.
+        expect(vi.mocked(chatService.deleteSession)).not.toHaveBeenCalled();
+    });
+
+    it('«Deshacer» devuelve la junta a su sitio, con su hilo', async () => {
         const user = userEvent.setup();
         const seen: ToastRecord[] = [];
         const unsubscribe = subscribeToasts((t) => seen.push(t));
         useChatStore.setState({
-            deleteSession: vi.fn(() => Promise.reject(new Error('502 upstream'))),
+            messagesBySession: { s1: [{ id: 'm1', role: 'user', content: 'hola', timestamp: new Date() }] },
         } as never);
         renderSidebar();
 
         await user.click(screen.getByRole('button', { name: 'Acciones de Precios 2026' }));
         await user.click(screen.getByRole('menuitem', { name: 'Eliminar' }));
-        await user.click(
-            within(screen.getByRole('dialog')).getByRole('button', { name: 'Eliminar' }),
-        );
+        seen[0].action!.onClick();
 
-        // Antes esto era un `console.error`: un fallo invisible para el usuario.
-        expect(seen).toHaveLength(1);
-        expect(seen[0].variant).toBe('error');
-        expect(seen[0].title).toBe('No se pudo eliminar la junta');
-        expect(seen[0].detail).toBe('502 upstream');
+        const estado = useChatStore.getState();
+        // A su hueco original, no arriba del todo: reaparecer en otro sitio
+        // también es perder algo.
+        expect(estado.sessions.map((s) => s.session_id)).toEqual(['s1', 's2', 's3']);
+        expect(estado.messagesBySession.s1).toHaveLength(1);
+        expect(vi.mocked(chatService.deleteSession)).not.toHaveBeenCalled();
         unsubscribe();
+    });
+
+    it('si el borrado real falla, la junta vuelve sola y se dice por qué', async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+        const seen: ToastRecord[] = [];
+        const unsubscribe = subscribeToasts((t) => seen.push(t));
+        vi.mocked(chatService.deleteSession).mockRejectedValueOnce(new Error('502 upstream'));
+        renderSidebar();
+
+        await user.click(screen.getByRole('button', { name: 'Acciones de Precios 2026' }));
+        await user.click(screen.getByRole('menuitem', { name: 'Eliminar' }));
+
+        await act(async () => {
+            vi.advanceTimersByTime(VENTANA_DESHACER_MS + 50);
+            await Promise.resolve();
+            await Promise.resolve();
+        });
+
+        // Reversión visible y explicada (§11): vuelve a la lista y se dice que
+        // no se ha perdido nada.
+        expect(useChatStore.getState().sessions.map((s) => s.session_id)).toContain('s1');
+        const fallo = seen.find((t) => t.variant === 'error');
+        expect(fallo?.title).toBe('«Precios 2026» no se ha podido eliminar');
+        expect(fallo?.detail).toMatch(/intactos/);
+        unsubscribe();
+        vi.useRealTimers();
     });
 });

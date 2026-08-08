@@ -8,9 +8,8 @@ import { useBillingStore } from "@/store/useBillingStore";
 import { useUserAvatar } from "@/hooks/useUserAvatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { TextField } from "@/components/ui/Field";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { AvatarImage } from "@/components/ui/AvatarImage";
-import { reasonOf, toast } from "@/lib/toastBus";
+import { notify, reasonOf, toast } from "@/lib/toastBus";
 
 /**
  * Extract initials from displayName (e.g., "María García" → "MG")
@@ -51,10 +50,6 @@ export function Sidebar() {
     // `value` ni `onChange` que no filtraba nada.
     const [query, setQuery] = useState("");
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
-    // D18 (1.9): el borrado se confirma en un <ConfirmDialog> que nombra la
-    // sesión, no con un «¿Confirmar borrado?» + Sí/No dentro del menú.
-    const [confirmDelete, setConfirmDelete] = useState<{ id: string; title: string } | null>(null);
-    const [deleting, setDeleting] = useState(false);
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [sharingId, setSharingId] = useState<string | null>(null);
     // Referencias del menú: el foco tiene que volver al disparador al cerrar.
@@ -142,21 +137,34 @@ export function Sidebar() {
         if (window.innerWidth < 1024) toggleSidebar(false);
     };
 
-    const handleDelete = async () => {
-        if (!confirmDelete) return;
-        setDeleting(true);
-        try {
-            await useChatStore.getState().deleteSession(confirmDelete.id);
-            toast.success(`Junta «${confirmDelete.title}» eliminada`);
-            setConfirmDelete(null);
-        } catch (error) {
-            toast.error(
-                "No se pudo eliminar la junta",
-                reasonOf(error) ?? "Sigue en tu historial.",
-            );
-        } finally {
-            setDeleting(false);
-        }
+    /**
+     * Q5 — borrar con deshacer, en vez de confirmar con un diálogo.
+     *
+     * El diálogo de «¿seguro?» es la barrera que todo el mundo pulsa sin leer, y
+     * detrás había un borrado irreversible de un debate de cinco créditos. Aquí
+     * la junta desaparece al instante y durante ocho segundos se puede recuperar
+     * entera: es una barrera que sí funciona porque actúa DESPUÉS del error.
+     *
+     * El aviso dura exactamente lo que la ventana (`warning` = 8 s, §9.5): si
+     * está en pantalla, la junta todavía existe.
+     */
+    const handleDelete = (sessionId: string, title: string) => {
+        setActiveMenuId(null);
+        if (!useChatStore.getState().deleteSessionConDeshacer(sessionId)) return;
+        notify({
+            title: `Junta «${title}» eliminada`,
+            detail: "Se borra en unos segundos. Puedes recuperarla con su debate y su acta.",
+            variant: "warning",
+            dedupeKey: `borrado:${sessionId}`,
+            action: {
+                label: "Deshacer",
+                onClick: () => {
+                    if (useChatStore.getState().undoDeleteSession(sessionId)) {
+                        toast.success(`Junta «${title}» recuperada`);
+                    }
+                },
+            },
+        });
     };
 
     /** Cierra el menú y devuelve el foco a su disparador (§12.4). */
@@ -394,8 +402,7 @@ export function Sidebar() {
                                                     onClick={(e) => {
                                                         e.preventDefault();
                                                         e.stopPropagation();
-                                                        setConfirmDelete({ id: session.session_id, title: session.title });
-                                                        setActiveMenuId(null);
+                                                        handleDelete(session.session_id, session.title);
                                                     }}
                                                     className="w-full flex items-center gap-2 px-3 py-2 text-xs text-dissent hover:bg-dissent/10 rounded-sm transition-colors"
                                                 >
@@ -497,17 +504,6 @@ export function Sidebar() {
                     </Link>
                 )}
             </div>
-
-            {/* §11: la confirmación nombra el objeto y su consecuencia. */}
-            <ConfirmDialog
-                open={confirmDelete !== null}
-                onClose={() => setConfirmDelete(null)}
-                onConfirm={handleDelete}
-                question="¿Eliminar"
-                objectName={confirmDelete?.title ?? ""}
-                consequence="Se borran el debate y su acta. No se puede deshacer."
-                loading={deleting}
-            />
         </div>
     );
 }

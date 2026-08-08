@@ -8,6 +8,8 @@
  */
 import { chatService } from '../../services/api';
 import { NetworkError, SessionError } from '../../lib/errors';
+import { notify } from '../../lib/toastBus';
+import type { ChatSession, Message } from '../../types';
 import { createGreeting } from './agentCatalog';
 import { conError } from './errorsSlice';
 import { mapSessionHistory } from './historyMapper';
@@ -16,6 +18,49 @@ import type { ChatGet, ChatSet, SessionsSlice } from './types';
 
 /** Los cinco de fábrica viajan por rol; el resto, por su id. */
 const CORE_AGENT_IDS = ['group-chat', 'ceo-1', 'cto-1', 'cmo-1', 'cfo-1'];
+
+/**
+ * Ventana para deshacer un borrado — PLAN §6 Q5.
+ *
+ * Ocho segundos, que es exactamente lo que dura un aviso de tipo `warning`
+ * (§9.5): mientras el aviso con «Deshacer» está en pantalla, la junta todavía
+ * existe. Cuando el aviso se va, el borrado ya ha salido. El plazo y el aviso
+ * son la misma cosa vista por delante y por detrás.
+ */
+export const VENTANA_DESHACER_MS = 8000;
+
+interface BorradoPendiente {
+    timer: ReturnType<typeof setTimeout>;
+    /**
+     * El plazo ya venció y la petición de borrado está en el aire.
+     *
+     * Hace falta porque la entrada NO se puede tirar al lanzar la petición: si
+     * el backend la rechaza, esto es lo único que sabe cómo devolver la junta.
+     * Y mientras esté en vuelo, «Deshacer» tiene que negarse — restaurar en
+     * local mientras el servidor borra de verdad dejaría una junta fantasma que
+     * desaparece al recargar.
+     */
+    enVuelo: boolean;
+    /** Todo lo que hay que devolver a su sitio si el usuario se arrepiente. */
+    session: ChatSession;
+    indice: number;
+    messages: Message[] | undefined;
+    eraLaAbierta: boolean;
+    agenteAbierto: string | null;
+}
+
+/**
+ * Los borrados en su ventana. Viven en el módulo y no en el estado porque
+ * nadie los pinta: la junta ya ha desaparecido de la lista. Lo que se guarda
+ * aquí es cómo devolverla.
+ */
+const borradosPendientes = new Map<string, BorradoPendiente>();
+
+/** Sólo para tests: cancela los plazos vivos entre casos. */
+export function olvidarBorradosPendientes(): void {
+    for (const { timer } of borradosPendientes.values()) clearTimeout(timer);
+    borradosPendientes.clear();
+}
 
 export const createSessionsSlice = (set: ChatSet, get: ChatGet): SessionsSlice => ({
     sessions: [],
@@ -206,4 +251,109 @@ export const createSessionsSlice = (set: ChatSet, get: ChatGet): SessionsSlice =
 
         if (import.meta.env.DEV) console.log('🗑️ [deleteSession] Sesión eliminada:', sessionId);
     },
+
+    /**
+     * Q5 — borrar una junta deja de ser irreversible.
+     *
+     * Borrar destruía un debate de cinco créditos y su acta al instante. La
+     * defensa era un diálogo de confirmación, que es la clase de barrera que se
+     * pulsa sin leer. Esto invierte el trato: la junta desaparece de la vista
+     * ya, y durante ocho segundos se puede recuperar entera —turnos incluidos—
+     * porque no se ha borrado nada todavía.
+     */
+    deleteSessionConDeshacer: (sessionId: string) => {
+        const { sessions, messagesBySession, currentSessionId, selectedAgentId } = get();
+        const indice = sessions.findIndex(s => s.session_id === sessionId);
+        if (indice < 0) return false;
+
+        // Un segundo borrado del mismo id no puede pisar el plazo del primero.
+        if (borradosPendientes.has(sessionId)) return false;
+
+        const session = sessions[indice];
+        const eraLaAbierta = currentSessionId === sessionId;
+        const mensajes = messagesBySession[sessionId];
+
+        // Desaparece de la vista. Lo que se guarda arriba es cómo devolverla.
+        const restantes = { ...messagesBySession };
+        delete restantes[sessionId];
+        set({
+            sessions: sessions.filter(s => s.session_id !== sessionId),
+            messagesBySession: restantes,
+            ...(eraLaAbierta ? { currentSessionId: null, selectedAgentId: null } : {}),
+        });
+
+        const timer = setTimeout(() => {
+            const pendiente = borradosPendientes.get(sessionId);
+            if (!pendiente) return;
+            pendiente.enVuelo = true;
+            chatService.deleteSession(sessionId)
+                .then(() => { borradosPendientes.delete(sessionId); })
+                .catch(() => {
+                    // Reversión visible y explicada: la junta vuelve a la lista
+                    // y se dice por qué, porque el usuario ya la daba por
+                    // borrada. Sin esto la habría perdido de vista sin que se
+                    // hubiera borrado — lo peor de los dos mundos.
+                    //
+                    // Avisa el store, que es la excepción a la regla de
+                    // `errorsSlice` («avisa el componente, que sabe qué
+                    // intentaba el usuario»): ocho segundos después puede no
+                    // quedar componente vivo, y el store es el único que sabe
+                    // que este borrado estaba en vuelo.
+                    pendiente.enVuelo = false;
+                    deshacerBorrado(set, get, sessionId);
+                    notify({
+                        title: `«${session.title}» no se ha podido eliminar`,
+                        detail: 'La junta ha vuelto a tu historial con su debate y su acta intactos.',
+                        variant: 'error',
+                        dedupeKey: `borrado:${sessionId}`,
+                    });
+                });
+        }, VENTANA_DESHACER_MS);
+
+        borradosPendientes.set(sessionId, {
+            timer,
+            enVuelo: false,
+            session,
+            indice,
+            messages: mensajes,
+            eraLaAbierta,
+            agenteAbierto: selectedAgentId,
+        });
+        return true;
+    },
+
+    undoDeleteSession: (sessionId: string) => {
+        // Si la petición ya salió, deshacer sería mentir: el servidor está
+        // borrando. La ventana coincide con la vida del aviso justo para que
+        // este caso sea inalcanzable desde la interfaz.
+        if (borradosPendientes.get(sessionId)?.enVuelo) return false;
+        return deshacerBorrado(set, get, sessionId);
+    },
 });
+
+/**
+ * Devuelve la junta a su sitio: a su posición en la lista, con sus turnos y,
+ * si era la que estaba abierta, reabierta.
+ */
+function deshacerBorrado(set: ChatSet, get: ChatGet, sessionId: string): boolean {
+    const pendiente = borradosPendientes.get(sessionId);
+    if (!pendiente) return false;
+    clearTimeout(pendiente.timer);
+    borradosPendientes.delete(sessionId);
+
+    const { sessions, messagesBySession } = get();
+    // A su hueco original: reaparecer arriba del todo también es perder algo.
+    const restauradas = [...sessions];
+    restauradas.splice(Math.min(pendiente.indice, restauradas.length), 0, pendiente.session);
+
+    set({
+        sessions: restauradas,
+        messagesBySession: pendiente.messages
+            ? { ...messagesBySession, [sessionId]: pendiente.messages }
+            : messagesBySession,
+        ...(pendiente.eraLaAbierta
+            ? { currentSessionId: sessionId, selectedAgentId: pendiente.agenteAbierto }
+            : {}),
+    });
+    return true;
+}
