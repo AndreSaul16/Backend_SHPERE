@@ -1,8 +1,10 @@
-import { useMemo, useState } from "react";
-import { FileText, Github, ExternalLink, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { FileText, Github, ExternalLink, Loader2, CheckCircle2, AlertCircle, Presentation } from "lucide-react";
 import { claveDeActa, cargarHechos, guardarHechos } from "@/utils/actaPasos";
 import { exportsService } from "@/services/api";
 import { parseProximosPasos } from "@/utils/actaParser";
+import { ActaPresentation } from "./ActaPresentation";
+import { comboDe, useAtajo } from "@/hooks/useShortcuts";
 
 interface ActaActionsProps {
     title: string;
@@ -58,6 +60,14 @@ export function ActaActions({ title, content }: ActaActionsProps) {
     const [ghCreated, setGhCreated] = useState<{ title: string; url: string }[]>([]);
     const [ghFailed, setGhFailed] = useState<{ title: string; error: string }[]>([]);
     const [ghError, setGhError] = useState<string>("");
+
+    // Q1 (5.8) — modo presentación. El estado vive aquí porque aquí está el
+    // acta con su contenido, y porque `ActaActions` sólo se monta para actas.
+    const [presentando, setPresentando] = useState(false);
+    useAtajo(
+        comboDe('presentacion'),
+        useCallback(() => setPresentando(true), []),
+    );
 
     // Q6 — los próximos pasos, marcables y con acción propia.
     const [pasoEnVuelo, setPasoEnVuelo] = useState<string | null>(null);
@@ -171,7 +181,29 @@ export function ActaActions({ title, content }: ActaActionsProps) {
 
     return (
         <div className="border-b border-stroke-hairline bg-surface-1 px-4 py-3 space-y-2">
+            <ActaPresentation
+                open={presentando}
+                onClose={() => setPresentando(false)}
+                title={title}
+                content={content}
+            />
             <div className="flex flex-wrap items-center gap-2">
+                {/* 5.8 · Q1 — presentar el acta. Va el PRIMERO de la fila: es
+                    lo que el usuario hace con el acta más a menudo (enseñársela
+                    a alguien), y hasta ahora exigía copiar el markdown a otra
+                    herramienta. La tecla se enseña al lado, que es como se
+                    descubre; el botón existe porque a 390px no hay tecla. */}
+                <button
+                    onClick={() => setPresentando(true)}
+                    className="flex items-center gap-1.5 rounded-lg border border-brass-600 bg-accent/12 px-3 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accent/20"
+                >
+                    <Presentation className="h-3 w-3" aria-hidden="true" />
+                    Presentar
+                    <kbd className="ms-1 hidden rounded-xs border border-stroke-control px-1 font-mono text-micro text-content-muted sm:inline">
+                        P
+                    </kbd>
+                </button>
+
                 {/* Notion */}
                 <button
                     onClick={handleNotion}
