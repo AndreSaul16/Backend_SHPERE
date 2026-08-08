@@ -12,7 +12,7 @@ import type { Message, Role } from '../../types';
 import { nuevoBoardSession } from './boardSession';
 import { createBoardStreamHandlers } from './boardStreamHandlers';
 import { GROUP_CHAT_ID } from './sessionIdentity';
-import { nuevasBurbujas, type StreamContext } from './streamContext';
+import { crearBufferDeTurno, nuevasBurbujas, type BufferDeTurno, type StreamContext } from './streamContext';
 import { createStreamHandlers } from './streamHandlers';
 import type { ChatGet, ChatSet, MessagesSlice } from './types';
 
@@ -98,6 +98,9 @@ export const createMessagesSlice = (set: ChatSet, get: ChatGet): MessagesSlice =
         // Vive fuera del `try` porque el `catch` necesita saber si el abortador
         // que hay en el store sigue siendo el de ESTE envío.
         let abortRef: AbortController | null = null;
+        // 4.8: y el buffer también, porque las dos salidas por `catch` escriben
+        // en el hilo y tienen que hacerlo DESPUÉS de lo que quedara encolado.
+        let bufferDelEnvio: BufferDeTurno | null = null;
 
         try {
             const selectedAgent = allAgents.find(a => a.id === selectedAgentId);
@@ -136,12 +139,19 @@ export const createMessagesSlice = (set: ChatSet, get: ChatGet): MessagesSlice =
 
             // El registro de burbujas es UNO y lo comparten los dos juegos de
             // manejadores: los eventos de junta lo mueven y el resto lo lee.
+            // 4.8 · D22: el buffer es de ESTE envío, no global. Así el `set`
+            // que vacía toca sólo el hilo de esta sesión, y dos juntas abiertas
+            // a la vez no comparten cola.
+            const buffer = crearBufferDeTurno(set, targetSessionId);
+            bufferDelEnvio = buffer;
+
             const ctx: StreamContext = {
                 set, get,
                 sessionId: targetSessionId,
                 allAgents,
                 selectedAgentId,
                 burbujas: nuevasBurbujas(botMsgId),
+                buffer,
             };
 
             await chatService.streamChat(
@@ -156,7 +166,15 @@ export const createMessagesSlice = (set: ChatSet, get: ChatGet): MessagesSlice =
                 !!regenerateFromId,  // Pasar regenerate=true al backend cuando regeneramos
                 isGroup ? 5 : 1  // Coste optimista: un board meeting descuenta 5 (A4)
             );
+
+            // El stream ha terminado. Lo que quede encolado se escribe ya: no
+            // hay fotograma siguiente que esperar, y un turno no puede quedarse
+            // con la última frase a medias porque el buffer no llegó a vaciar.
+            buffer.vaciar();
         } catch (error: any) {
+            // Lo escrito hasta el corte se conserva, y eso incluye lo que
+            // estuviera esperando fotograma. Va ANTES de tocar el hilo.
+            bufferDelEnvio?.vaciar();
             // Una cancelación NO es un fallo: no escribe error ni marca el turno
             // como interrumpido. Pero sí tiene que apagar el «está escribiendo».
             //

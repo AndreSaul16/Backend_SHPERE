@@ -23,7 +23,7 @@ export type BoardStreamCallbacks = Pick<
 >;
 
 export function createBoardStreamHandlers(ctx: StreamContext): BoardStreamCallbacks {
-    const { set, get, sessionId, allAgents, burbujas } = ctx;
+    const { set, get, sessionId, allAgents, burbujas, buffer } = ctx;
 
     return {
         onBoardStart: (data) => {
@@ -131,6 +131,11 @@ export function createBoardStreamHandlers(ctx: StreamContext): BoardStreamCallba
             // `burbujas.porRol`. El primer agente (CEO apertura) reclama la
             // burbuja inicial vacía; el resto crean burbuja nueva.
             try {
+                // 4.8: aquí se LEE el contenido de la burbuja inicial para
+                // decidir si está vacía y se puede reclamar. Con tokens
+                // esperando en el buffer, la vería vacía y le robaría la
+                // burbuja a quien ya estaba hablando. Vaciar es obligatorio.
+                buffer.vaciar();
                 const matchingAgent = getBoardAgentByRole(allAgents, data.role);
                 const phase = data.phase as BoardPhase | undefined;
                 const msgs = get().messagesBySession[sessionId] || [];

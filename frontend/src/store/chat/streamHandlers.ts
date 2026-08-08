@@ -18,7 +18,7 @@ const TIPOS_DE_ARTEFACTO: Record<string, 'code' | 'markdown' | 'mermaid' | 'data
 };
 
 export function createStreamHandlers(ctx: StreamContext): StreamCallbacks {
-    const { set, get, sessionId, allAgents, burbujas } = ctx;
+    const { set, get, sessionId, allAgents, burbujas, buffer } = ctx;
 
     /** Reescribe UN mensaje del hilo de esta sesión, dejando el resto igual. */
     const editarMensaje = (id: string, cambio: (m: Message) => Message) =>
@@ -31,15 +31,27 @@ export function createStreamHandlers(ctx: StreamContext): StreamCallbacks {
             },
         }));
 
-    /** Pega texto al final del contenido de la burbuja activa. */
-    const anadirALaActiva = (texto: string) =>
-        editarMensaje(burbujas.activaId, (m) => ({ ...m, content: m.content + texto }));
+    /**
+     * Pega texto al final del contenido de la burbuja activa.
+     *
+     * 4.8: pasa por el MISMO buffer que los tokens y no por un `set` directo.
+     * Si el marcador de un utensilio se escribiera al instante mientras hay
+     * tokens esperando el fotograma, aterrizaría ANTES que texto que llegó
+     * antes que él y el turno saldría con las frases cambiadas de sitio.
+     */
+    const anadirALaActiva = (texto: string) => buffer.texto(burbujas.activaId, texto);
 
     return {
         onToken: (token, role) => {
             // En board V2 el token trae rol → enrutar a la burbuja de ese
             // agente (debaten en paralelo). Si no hay rol, burbuja activa.
-            editarMensaje(destinoDe(burbujas, role), (m) => ({ ...m, content: m.content + token }));
+            //
+            // 4.8 · D22: el destino se resuelve AQUÍ, en el instante en que el
+            // token llega, y el texto se encola con ese destino ya fijado. Así
+            // el buffer no puede reenrutar nada: si `onBoardAgent` cambia de
+            // burbuja antes del siguiente fotograma, lo encolado sigue yendo a
+            // la burbuja que le correspondía.
+            buffer.texto(destinoDe(burbujas, role), token);
         },
 
         onRole: (role) => {
@@ -57,7 +69,7 @@ export function createStreamHandlers(ctx: StreamContext): StreamCallbacks {
             // del rol que piensa (board V2) o en la activa.
             const targetId = destinoDe(burbujas, role);
             try {
-                editarMensaje(targetId, (m) => ({ ...m, thinking: (m.thinking || '') + piece }));
+                buffer.razonamiento(targetId, piece);
             } catch (e) {
                 reportStreamGlitch('onThinking', e);
             }
@@ -113,6 +125,9 @@ export function createStreamHandlers(ctx: StreamContext): StreamCallbacks {
         },
 
         onDone: () => {
+            // Lo pendiente se escribe ANTES de cerrar: si el último token se
+            // quedara en el buffer, el turno terminaría con la frase a medias.
+            buffer.vaciar();
             set((state) => ({
                 streamingSessionIds: state.streamingSessionIds.filter(id => id !== sessionId),
                 abortController: null,
@@ -123,6 +138,10 @@ export function createStreamHandlers(ctx: StreamContext): StreamCallbacks {
         },
 
         onError: () => {
+            // Igual que en `onDone`, y aquí además se LEE el contenido para
+            // pegarle la marca de corte: sin vaciar, la marca se escribiría
+            // antes que los últimos tokens y quedaría en medio del texto.
+            buffer.vaciar();
             set((state) => ({
                 messagesBySession: {
                     ...state.messagesBySession,
