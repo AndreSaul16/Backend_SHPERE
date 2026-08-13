@@ -18,13 +18,36 @@ ROLE_TOOLS: dict[str, list[BaseTool]] = {
 }
 
 
+# Herramientas retiradas del catálogo: nombre → por qué.
+#
+# Estar aquí significa que no se registran, así que ningún rol las recibe y su
+# esquema no se le bindea al LLM. NO significa borrarlas: el código de cada
+# tool, su esquema y los workflows de n8n siguen en el repositorio, de modo que
+# reactivar una es borrar su línea de este diccionario.
+#
+# Las cinco vienen de la auditoría de herramientas: su endpoint externo ya no
+# responde a lo que la tool le pide, y arreglarlas es una integración nueva, no
+# un parche. Ofrecerlas mientras tanto es prometer algo que falla al usarse.
+RETIRED_TOOLS: dict[str, str] = {
+    "create_jules_task": "El endpoint es api.jules.google; migrar a jules.googleapis.com es una integración nueva (auth + v1alpha/sessions).",
+    "check_jules_status": "Mismo endpoint retirado que create_jules_task.",
+    "review_jules_output": "Mismo endpoint retirado que create_jules_task.",
+    "get_market_analysis": "El proveedor retiró `function=SECTOR`; get_stock_data cubre la demanda financiera.",
+    "whatsapp_read_messages": "Los mensajes entrantes de Cloud API llegan por webhook, no por GET: reimplementarlo es infraestructura, no un parche.",
+}
+
+
 def register_shared_tool(tool: BaseTool):
     """Registra una herramienta disponible para todos los agentes."""
+    if tool.name in RETIRED_TOOLS:
+        return
     SHARED_TOOLS.append(apply_confirmation_gate(tool))
 
 
 def register_role_tool(role: str, tool: BaseTool):
     """Registra una herramienta específica para un rol."""
+    if tool.name in RETIRED_TOOLS:
+        return
     if role not in ROLE_TOOLS:
         ROLE_TOOLS[role] = []
     ROLE_TOOLS[role].append(apply_confirmation_gate(tool))

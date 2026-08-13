@@ -323,19 +323,6 @@ SERVICE_DEFINITIONS = {
         "tools": [
             "whatsapp_send_message",
             "whatsapp_send_notification",
-            "whatsapp_read_messages",
-        ],
-    },
-    "jules": {
-        "label": "Jules (Google Coding Agent)",
-        "credential_type": "api_key",
-        "fields": ["api_key"],
-        "metadata_fields": [],
-        "description": "Permite al CTO delegar tareas de código a Jules.",
-        "tools": [
-            "check_jules_status",
-            "create_jules_task",
-            "review_jules_output",
         ],
     },
     "instagram": {
@@ -356,13 +343,12 @@ SERVICE_DEFINITIONS = {
         "fields": ["api_key"],
         "metadata_fields": [],
         "description": (
-            "Permite al CFO consultar noticias, cotizaciones y análisis de mercado. "
+            "Permite al CFO consultar noticias y cotizaciones. "
             "Consigue una API key gratuita en alphavantage.co."
         ),
         "tools": [
             "get_financial_news",
             "get_stock_data",
-            "get_market_analysis",
         ],
     },
 }
