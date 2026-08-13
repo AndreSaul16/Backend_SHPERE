@@ -190,3 +190,69 @@ describe('la abstención sobrevive a la recarga', () => {
         expect(cmo.vote).toBeUndefined();
     });
 });
+
+/**
+ * lanzamiento-p0 · AD-001 — el acta sobrevive a la recarga siendo acta.
+ *
+ * El backend envuelve el acta en `<sphere_artifact type="markdown" …>`
+ * (`board_v2.py`, `SYNTHESIS_ADDITION`) y el lector del historial buscaba
+ * `artifact_type="…"`, un atributo que no escribe nadie. Al no casar, el tipo
+ * caía al default `'code'`: el acta volvía de la recarga convertida en un
+ * bloque de código, y con ella se perdían sus acciones —sólo se montan cuando
+ * el tipo es `markdown`—.
+ */
+describe('AD-001 — el artefacto recuperado conserva su tipo real', () => {
+    beforeEach(() => {
+        useChatStore.getState().resetState();
+    });
+
+    /** Un turno de síntesis con el acta envuelta tal y como la emite el backend. */
+    const conArtefacto = (etiqueta: string) => {
+        useChatStore.setState({ sessions: [junta] });
+        servirHistorial({
+            messages: [
+                { type: 'human', content: '¿Lanzamos Enterprise en Q4?', additional_kwargs: { timestamp: t(40) } },
+                {
+                    type: 'ai',
+                    content: `Queda el acta.\n\n${etiqueta}# Acta de la Junta Directiva\n\n## Decisión\nAdelante.</sphere_artifact>`,
+                    additional_kwargs: {
+                        agent_role: 'CEO', agent_id: 'ceo-1', board_phase: 'synthesis',
+                        is_conclusion: true, timestamp: t(58),
+                    },
+                },
+            ],
+        });
+    };
+
+    it('el acta vuelve siendo acta, no un bloque de código', async () => {
+        conArtefacto('<sphere_artifact type="markdown" title="Acta de la Junta">');
+
+        await useChatStore.getState().loadSession(SESSION_ID);
+        const artefactos = useChatStore.getState().artifacts;
+
+        expect(artefactos).toHaveLength(1);
+        expect(artefactos[0].type).toBe('markdown');
+        expect(artefactos[0].title).toBe('Acta de la Junta');
+        expect(artefactos[0].content).toContain('# Acta de la Junta Directiva');
+    });
+
+    it('con las comillas escapadas el tipo sigue siendo el real', async () => {
+        conArtefacto('<sphere_artifact type=\\"markdown\\" title=\\"Acta de la Junta\\">');
+
+        await useChatStore.getState().loadSession(SESSION_ID);
+        const artefactos = useChatStore.getState().artifacts;
+
+        expect(artefactos).toHaveLength(1);
+        expect(artefactos[0].type).toBe('markdown');
+    });
+
+    it('un diagrama vuelve como diagrama, no como texto plano', async () => {
+        conArtefacto('<sphere_artifact type="mermaid" title="Ruta de lanzamiento">');
+
+        await useChatStore.getState().loadSession(SESSION_ID);
+        const artefactos = useChatStore.getState().artifacts;
+
+        expect(artefactos).toHaveLength(1);
+        expect(artefactos[0].type).toBe('mermaid');
+    });
+});

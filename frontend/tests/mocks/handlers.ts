@@ -30,7 +30,7 @@ export const handlers = [
                 { type: 'human', content: 'Hola', additional_kwargs: {} },
                 {
                     type: 'ai',
-                    content: 'Aquí tienes el código: <sphere_artifact title="Sort" artifact_type="code" language="python">def sort(): pass</sphere_artifact>',
+                    content: 'Aquí tienes el código: <sphere_artifact title="Sort" type="code" language="python">def sort(): pass</sphere_artifact>',
                     additional_kwargs: { agent_id: 'cto-1' }
                 }
             ]

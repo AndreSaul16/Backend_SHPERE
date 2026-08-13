@@ -116,7 +116,18 @@ function extraerArtefactos(contenido: string, kwargs: AdditionalKwargs | undefin
         const [fullTag, attrsStr, content] = match;
 
         const titleMatch = /title=\\?"([^\\"]+)\\?"/.exec(attrsStr);
-        const typeMatch = /artifact_type=\\?"([^\\"]+)\\?"/.exec(attrsStr);
+        // `type=`, que es lo que el backend escribe de verdad
+        // (`board_v2.SYNTHESIS_ADDITION` y `orchestrator.py`). Buscar
+        // `artifact_type=` —un atributo que no emite nadie— hacía que TODO
+        // artefacto recuperado del historial cayera al default `'code'`: el
+        // acta volvía de la recarga como bloque de código y sin sus acciones.
+        //
+        // El `\b` no casa dentro de `artifact_type=` porque `_` es carácter de
+        // palabra, así que el regex no puede volver a leer el atributo
+        // equivocado por accidente. `artifact_type` sigue existiendo, pero como
+        // campo JSON del evento SSE `artifact_open` (`streamHandlers.ts`), que
+        // es otro espacio de nombres y funciona.
+        const typeMatch = /\btype=\\?"([^\\"]+)\\?"/.exec(attrsStr);
         const langMatch = /language=\\?"([^\\"]*)\\?"/.exec(attrsStr);
 
         const title = titleMatch ? titleMatch[1] : "untitled";

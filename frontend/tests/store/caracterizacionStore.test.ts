@@ -354,9 +354,12 @@ describe('loadSession — mapeo del historial persistido', () => {
     });
 
     it('varios artefactos en un mismo turno se extraen todos, en orden', async () => {
+        // AD-001: el atributo es `type=`, que es lo que el backend escribe. El
+        // fixture decía `artifact_type=` y codificaba el bug del lector; la
+        // aserción de abajo siempre fue correcta y no se toca.
         const contenido =
-            'uno <sphere_artifact title="A" artifact_type="markdown">aaa</sphere_artifact> ' +
-            'dos <sphere_artifact title="B" artifact_type="csv" language="">bbb</sphere_artifact>';
+            'uno <sphere_artifact title="A" type="markdown">aaa</sphere_artifact> ' +
+            'dos <sphere_artifact title="B" type="csv" language="">bbb</sphere_artifact>';
         const msgs = await cargar([{ type: 'ai', content: contenido, additional_kwargs: { agent_role: 'CTO' } }]);
 
         const arts = useChatStore.getState().artifacts;

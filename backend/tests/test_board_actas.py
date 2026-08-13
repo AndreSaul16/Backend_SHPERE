@@ -120,3 +120,25 @@ async def test_load_context_tolerante_a_fallo(monkeypatch):
 async def test_load_context_sin_ids(monkeypatch):
     ctx = await bv._load_prior_actas_context(None, None)
     assert ctx == ""
+
+
+# --- AD-002: la etiqueta que emite la plantilla del acta ---
+#
+# El nombre del atributo tiene que estar fijado por un test EN CADA LADO. Este
+# es el de backend; el de frontend es
+# `tests/store/loadSessionJunta.test.ts::AD-001`, que afirma sobre el mismo
+# literal sin normalizarlo ni reescribirlo. Cambiar la plantilla de un lado sin
+# el otro rompe una suite en vez de degradar el acta en silencio: durante 844
+# tests en verde, el lector buscó `artifact_type=`, un atributo que no escribe
+# nadie, y el acta recuperada volvía como bloque de código.
+
+
+def test_plantilla_del_acta_emite_type_markdown():
+    assert 'type="markdown"' in bv.SYNTHESIS_ADDITION
+
+
+def test_plantilla_del_acta_usa_la_etiqueta_completa_del_contrato():
+    # El literal EXACTO que el frontend recupera del historial.
+    assert '<sphere_artifact type="markdown" title="Acta de la Junta">' in bv.SYNTHESIS_ADDITION
+    # Y el nombre inventado no aparece por ningún lado.
+    assert "artifact_type=" not in bv.SYNTHESIS_ADDITION

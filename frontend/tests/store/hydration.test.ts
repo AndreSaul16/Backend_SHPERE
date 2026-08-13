@@ -9,7 +9,7 @@ describe('useChatStore - Hidratación de Artefactos', () => {
     });
 
     it('debe extraer correctamente un artefacto XML del historial y convertirlo al formato interno', async () => {
-        const xmlContent = 'Mira este código: <sphere_artifact title="Test" artifact_type="code" language="typescript">console.log("hello")</sphere_artifact>';
+        const xmlContent = 'Mira este código: <sphere_artifact title="Test" type="code" language="typescript">console.log("hello")</sphere_artifact>';
 
         server.use(
             http.get('http://localhost:8000/api/v1/sessions/:id/history', () => {
@@ -41,7 +41,7 @@ describe('useChatStore - Hidratación de Artefactos', () => {
     });
 
     it('debe manejar XML malformado sin romper la aplicación', async () => {
-        const brokenXml = 'XML roto: <sphere_artifact title="Broken" artifact_type="code"> sin cierre';
+        const brokenXml = 'XML roto: <sphere_artifact title="Broken" type="code"> sin cierre';
 
         server.use(
             http.get('http://localhost:8000/api/v1/sessions/:id/history', () => {
