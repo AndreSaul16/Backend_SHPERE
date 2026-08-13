@@ -82,3 +82,33 @@ describe('F6 — el chip de voto distingue el disenso', () => {
         expect(screen.getByText(/✗ EN CONTRA · 91%/)).toBeInTheDocument();
     });
 });
+
+/**
+ * lanzamiento-p0 · BVT-002 — la abstención tiene chip propio.
+ *
+ * `VOTE_CHIP[decision] ?? VOTE_CHIP.CONDICIONAL` pintaba la abstención como un
+ * voto decisivo que nadie emitió: el director que no se pronuncia aparecía
+ * ámbar diciendo «~ CONDICIONAL».
+ */
+describe('la abstención no se disfraza de condicional', () => {
+    it('se lee ABSTENCIÓN, no CONDICIONAL', () => {
+        pintar({ decision: 'ABSTENCION', confidence: null } as unknown as BoardVote);
+
+        expect(screen.getByTitle('Voto: ABSTENCION').textContent).toBe('ABSTENCIÓN');
+    });
+
+    it('no inventa una cifra de confianza', () => {
+        pintar({ decision: 'ABSTENCION', confidence: null } as unknown as BoardVote);
+
+        expect(screen.getByTitle('Voto: ABSTENCION').textContent).not.toMatch(/%/);
+    });
+
+    it('es neutra: no comparte tratamiento con el disenso ni con el condicional', () => {
+        pintar({ decision: 'ABSTENCION', confidence: null } as unknown as BoardVote);
+
+        const c = screen.getByTitle('Voto: ABSTENCION');
+        expect(c.className).not.toContain('text-warning');
+        expect(c.className).not.toContain('text-danger');
+        expect(c.className).toContain('text-content-muted');
+    });
+});

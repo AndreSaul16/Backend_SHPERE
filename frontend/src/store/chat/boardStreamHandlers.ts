@@ -81,9 +81,16 @@ export function createBoardStreamHandlers(ctx: StreamContext): BoardStreamCallba
         },
 
         onBoardVote: (data) => {
+            const decision = (data.vote as BoardVote['decision']) || 'CONDICIONAL';
             const vote: BoardVote = {
-                decision: (data.vote as BoardVote['decision']) || 'CONDICIONAL',
-                confidence: typeof data.confidence === 'number' ? data.confidence : 50,
+                decision,
+                // Misma regla que el lector del historial: la abstención no lleva cifra.
+                confidence:
+                    decision === 'ABSTENCION'
+                        ? null
+                        : typeof data.confidence === 'number'
+                          ? data.confidence
+                          : 50,
             };
             set((state) => {
                 // Pintar el voto como chip en la última burbuja de ese rol.

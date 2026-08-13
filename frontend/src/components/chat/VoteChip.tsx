@@ -29,11 +29,15 @@ const VOTE_CHIP: Record<BoardVote['decision'], { clase: string; texto: string; g
     CONDICIONAL: { clase: 'border-warning/45 bg-warning/12 text-warning font-bold', texto: 'CONDICIONAL', glifo: '~' },
     // Conformidad: neutra y callada. Es el fondo contra el que destaca el disenso.
     SI: { clase: 'border-stroke-edge bg-surface-2 text-content-muted font-medium', texto: 'A FAVOR', glifo: '✓' },
+    // La abstención no vota en ninguna dirección: sin glifo (no hay dirección que
+    // señalar), sin color semántico y sin cifra. Es la ausencia de voto, no un
+    // voto tibio — pintarla de CONDICIONAL le atribuía una decisión que nadie tomó.
+    ABSTENCION: { clase: 'border-stroke-edge bg-transparent text-content-muted font-medium italic', texto: 'ABSTENCIÓN', glifo: '' },
 };
 
 interface VoteChipProps {
     decision: string;
-    confidence?: number;
+    confidence?: number | null;
 }
 
 export function VoteChip({ decision, confidence }: VoteChipProps) {
@@ -46,7 +50,7 @@ export function VoteChip({ decision, confidence }: VoteChipProps) {
             className={cn('px-2 py-0.5 rounded-xs text-micro font-mono border tnum', chip.clase)}
             title={cifra ? `Voto: ${decision} · confianza ${cifra}` : `Voto: ${decision}`}
         >
-            {chip.glifo} {chip.texto}
+            {chip.glifo ? `${chip.glifo} ` : ''}{chip.texto}
             {cifra ? ` · ${cifra}` : ''}
         </span>
     );

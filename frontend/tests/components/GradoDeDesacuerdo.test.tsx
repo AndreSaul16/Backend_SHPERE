@@ -114,3 +114,50 @@ describe('la barra en pantalla', () => {
         expect(container).toBeEmptyDOMElement();
     });
 });
+
+/**
+ * lanzamiento-p0 · BVT-002 — la abstención llega aquí desde el backend.
+ *
+ * `ABSTENCION` es un valor nuevo de `decision` que este cálculo nunca había
+ * visto: `recuento` la excluía pero `lista` no, así que dos síes y una
+ * abstención se leían como «Unanimidad» y el cero de la abstención entraba en
+ * la media. Una abstención no vota a favor de nadie.
+ */
+const abstencion = (): BoardVote => ({ decision: 'ABSTENCION', confidence: null } as BoardVote);
+
+describe('la abstención en el grado de desacuerdo', () => {
+    it('dos síes y una abstención NO son unanimidad', () => {
+        const g = gradoDeDesacuerdo({
+            CTO: voto('SI', 90), CFO: voto('SI', 80), CMO: abstencion(),
+        });
+        expect(g.etiqueta).toBe('Mayoría con reserva');
+        expect(g.nivel).toBe('mayoria');
+        expect(g.abstenciones).toBe(1);
+    });
+
+    it('la abstención no entra en la media de confianza', () => {
+        const g = gradoDeDesacuerdo({
+            CTO: voto('SI', 90), CFO: voto('SI', 80), CMO: abstencion(),
+        });
+        // 170/2, no 170/3: el que se abstiene no aporta un cero.
+        expect(g.confianzaMedia).toBe(85);
+        expect(g.recuento).toEqual({ SI: 2, NO: 0, CONDICIONAL: 0 });
+        expect(g.total).toBe(2);
+    });
+
+    it('la unanimidad de verdad sigue siéndolo, y dice su media', () => {
+        const g = gradoDeDesacuerdo({
+            CTO: voto('SI', 90), CFO: voto('SI', 80), CMO: voto('SI', 70),
+        });
+        expect(g.etiqueta).toBe('Unanimidad');
+        expect(g.abstenciones).toBe(0);
+        expect(g.confianzaMedia).toBe(80);
+    });
+
+    it('una junta que sólo se abstiene no tiene grado que enseñar', () => {
+        const g = gradoDeDesacuerdo({ CTO: abstencion(), CFO: abstencion(), CMO: abstencion() });
+        expect(g.nivel).toBe('sin-datos');
+        expect(g.etiqueta).toBe('Sin votos');
+        expect(g.abstenciones).toBe(3);
+    });
+});

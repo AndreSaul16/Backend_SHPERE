@@ -15,7 +15,7 @@ export interface AdditionalKwargs {
     agent_id?: string;
     agent_role?: string;
     timestamp?: string | number;
-    board_vote?: { decision?: BoardVote['decision']; confidence?: number } | null;
+    board_vote?: { decision?: BoardVote['decision']; confidence?: number | null } | null;
     board_phase?: BoardPhase;
     is_conclusion?: boolean;
 }
@@ -143,9 +143,15 @@ function extraerArtefactos(contenido: string, kwargs: AdditionalKwargs | undefin
 /** Board V2: recuperar el voto persistido en `additional_kwargs`. */
 function leerVoto(kwargs: AdditionalKwargs | undefined): BoardVote | undefined {
     const rawVote = kwargs?.board_vote;
-    return (rawVote && typeof rawVote === 'object' && rawVote.decision)
-        ? { decision: rawVote.decision, confidence: typeof rawVote.confidence === 'number' ? rawVote.confidence : 50 }
-        : undefined;
+    if (!rawVote || typeof rawVote !== 'object' || !rawVote.decision) return undefined;
+    // La abstención se recupera SIN cifra: un 50 inventado la volvería
+    // indistinguible de un voto tibio. Y la ausencia de `board_vote` sigue
+    // significando «aún no ha votado», que no es lo mismo que abstenerse.
+    if (rawVote.decision === 'ABSTENCION') return { decision: 'ABSTENCION', confidence: null };
+    return {
+        decision: rawVote.decision,
+        confidence: typeof rawVote.confidence === 'number' ? rawVote.confidence : 50,
+    };
 }
 
 export function mapSessionHistory(

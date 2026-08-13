@@ -33,7 +33,12 @@ export interface GradoDeDesacuerdo {
     grado: number;
     /** Recuento por decisión, ya normalizado a los tres valores. */
     recuento: { SI: number; NO: number; CONDICIONAL: number };
+    /** Votos DECISIVOS. Las abstenciones van aparte: no votan a favor de nadie. */
     total: number;
+    /** Directores que se abstuvieron (BVT-002). */
+    abstenciones: number;
+    /** Media de confianza de los decisivos. Una abstención no aporta un cero. */
+    confianzaMedia: number;
     /** Confianza más alta entre los votos que NO son de la mayoría. */
     confianzaDelDisenso: number | null;
 }
@@ -60,13 +65,23 @@ export function gradoDeDesacuerdo(
     votes: Record<string, BoardVote> | null | undefined,
 ): GradoDeDesacuerdo {
     const lista = Object.values(votes ?? {});
+    // La abstención sale de `lista` ANTES de contar: si se queda, `mayor === total`
+    // declara unanimidad con un director que no votó y su cero entra en la media.
+    const decisivos = lista.filter(
+        (v) => v.decision === 'SI' || v.decision === 'NO' || v.decision === 'CONDICIONAL',
+    );
+    const abstenciones = lista.length - decisivos.length;
     const recuento = { ...VACIO };
-    for (const v of lista) {
-        if (v.decision === 'SI' || v.decision === 'NO' || v.decision === 'CONDICIONAL') {
-            recuento[v.decision] += 1;
-        }
+    for (const v of decisivos) {
+        recuento[v.decision as keyof GradoDeDesacuerdo['recuento']] += 1;
     }
     const total = recuento.SI + recuento.NO + recuento.CONDICIONAL;
+    const confianzaMedia = total
+        ? Math.round(decisivos.reduce((suma, v) => suma + (v.confidence ?? 0), 0) / total)
+        : 0;
+    const seAbstienen = abstenciones
+        ? ` ${abstenciones} ${abstenciones === 1 ? 'director se abstiene' : 'directores se abstienen'}.`
+        : '';
 
     // Un voto solo no es un desacuerdo, y cero votos no es nada. Enseñar
     // «Unanimidad» con un único director sería una mentira estadística.
@@ -80,6 +95,8 @@ export function gradoDeDesacuerdo(
             grado: 0,
             recuento,
             total,
+            abstenciones,
+            confianzaMedia,
             confianzaDelDisenso: null,
         };
     }
@@ -88,19 +105,18 @@ export function gradoDeDesacuerdo(
     const decisionMayoritaria = (
         ['SI', 'NO', 'CONDICIONAL'] as const
     ).filter((d) => recuento[d] === mayor);
-    const disidentes = lista.filter(
+    const disidentes = decisivos.filter(
         (v) => !(decisionMayoritaria.length === 1 && v.decision === decisionMayoritaria[0]),
     );
     const confianzaDelDisenso = disidentes.length
         ? Math.max(...disidentes.map((v) => v.confidence ?? 0))
         : null;
 
-    if (mayor === total) {
+    // Unanimidad exige que TODOS se pronuncien: con una abstención hay mayoría,
+    // no unanimidad (mismo criterio que el recuento del backend, BVT-003).
+    if (abstenciones === 0 && mayor === total) {
         // Todos han votado lo mismo. Sigue siendo interesante CUÁNTO: una
         // unanimidad con confianzas de 55 no es la misma señal que una de 90.
-        const confianzaMedia = Math.round(
-            lista.reduce((suma, v) => suma + (v.confidence ?? 0), 0) / total,
-        );
         return {
             nivel: 'unanime',
             etiqueta: 'Unanimidad',
@@ -108,6 +124,8 @@ export function gradoDeDesacuerdo(
             grado: 0,
             recuento,
             total,
+            abstenciones,
+            confianzaMedia,
             confianzaDelDisenso: null,
         };
     }
@@ -128,17 +146,19 @@ export function gradoDeDesacuerdo(
                 confianzaDelDisenso !== null
                     ? `. El disenso vota con un ${confianzaDelDisenso}% de confianza`
                     : ''
-            }.`
+            }.${seAbstienen}`
             : `${frase(recuento)}${
                 confianzaDelDisenso !== null
                     ? `. La reserva se expresa con un ${confianzaDelDisenso}% de confianza`
                     : ''
-            }.`,
+            }.${seAbstienen}`,
         // Un disenso con certeza cuenta más que su peso numérico: es lo que P2
         // pide que se encuentre antes.
         grado: Math.min(100, disensoConCerteza ? Math.max(pesoDeLaMinoria, 60) : pesoDeLaMinoria),
         recuento,
         total,
+        abstenciones,
+        confianzaMedia,
         confianzaDelDisenso,
     };
 }

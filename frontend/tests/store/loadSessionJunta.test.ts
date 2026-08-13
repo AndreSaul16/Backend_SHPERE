@@ -148,3 +148,45 @@ describe('F2 — la junta no pierde su identidad al recargarse', () => {
         expect(useChatStore.getState().selectedAgentId).toBe('cfo-1');
     });
 });
+
+/**
+ * lanzamiento-p0 · BVT-002 — «se abstuvo» y «aún no ha votado» no son lo mismo.
+ *
+ * El backend escribe ahora `board_vote = {decision:'ABSTENCION', confidence:null}`
+ * en `additional_kwargs`. El lector lo convertía en un 50 inventado, que es
+ * exactamente la cifra que el chip enseñaría como confianza del director.
+ */
+describe('la abstención sobrevive a la recarga', () => {
+    beforeEach(() => {
+        useChatStore.getState().resetState();
+    });
+
+    it('el que se abstuvo vuelve como ABSTENCION y sin cifra; el que no votó, sin voto', async () => {
+        useChatStore.setState({ sessions: [junta] });
+        servirHistorial({
+            messages: [
+                { type: 'human', content: '¿Lanzamos Enterprise en Q4?', additional_kwargs: { timestamp: t(40) } },
+                {
+                    type: 'ai', content: 'No me pronuncio.',
+                    additional_kwargs: {
+                        agent_role: 'CFO', agent_id: 'cfo-1', board_phase: 'analysis',
+                        board_vote: { decision: 'ABSTENCION', confidence: null }, timestamp: t(45),
+                    },
+                },
+                {
+                    type: 'ai', content: 'Todavía estoy leyendo.',
+                    additional_kwargs: { agent_role: 'CMO', agent_id: 'cmo-1', board_phase: 'analysis', timestamp: t(46) },
+                },
+            ],
+        });
+
+        await useChatStore.getState().loadSession(SESSION_ID);
+        const mensajes = useChatStore.getState().messagesBySession[SESSION_ID];
+        const cfo = mensajes.find((m) => m.agentId === 'cfo-1')!;
+        const cmo = mensajes.find((m) => m.agentId === 'cmo-1')!;
+
+        expect(cfo.vote?.decision).toBe('ABSTENCION');
+        expect(cfo.vote?.confidence).toBeNull();
+        expect(cmo.vote).toBeUndefined();
+    });
+});

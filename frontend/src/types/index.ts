@@ -2,8 +2,10 @@ export type Role = 'user' | 'system' | 'CTO' | 'CMO' | 'CFO' | 'CEO' | 'speciali
 
 // Board V2: voto estructurado de un director.
 export interface BoardVote {
-    decision: 'SI' | 'NO' | 'CONDICIONAL';
-    confidence: number; // 0-100
+    // ABSTENCION: el director no aportó voto decisivo. No es un voto tibio, es
+    // la ausencia de voto — y el backend la escribe explícitamente (BVT-002).
+    decision: 'SI' | 'NO' | 'CONDICIONAL' | 'ABSTENCION';
+    confidence: number | null; // 0-100; null en una abstención
 }
 
 export type BoardPhase = 'opening' | 'analysis' | 'rebuttal' | 'devil' | 'synthesis';
