@@ -17,6 +17,12 @@ from typing import Optional, Any, Literal
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from app.application.artifact_contract import (
+    ARTIFACT_MAX_BYTES,
+    check_content,
+    normalize_type,
+    recortar_a_presupuesto,
+)
 from app.application.orchestrator import app as orchestrator_app
 from app.application.orchestrator import board_app as board_orchestrator_app
 from app.application.board_v2 import (
@@ -151,9 +157,17 @@ def _cierre_forzado(artifact_buffer: str, razon: str) -> list[str]:
         eventos.append(
             f"data: {json.dumps({'type': 'artifact_chunk', 'content': artifact_buffer})}\n\n"
         )
-    eventos.append(
-        f"data: {json.dumps({'type': 'artifact_close', 'truncated': True, 'reason': razon})}\n\n"
-    )
+    cierre: dict[str, Any] = {
+        "type": "artifact_close",
+        "truncated": True,
+        "reason": razon,
+        # Un contenido incompleto no es un contenido incoherente: lo truncado no
+        # se juzga, se declara sin juzgar.
+        "content_status": "unchecked",
+    }
+    if razon == "size_limit":
+        cierre["limit_bytes"] = ARTIFACT_MAX_BYTES
+    eventos.append(f"data: {json.dumps(cierre)}\n\n")
     return eventos
 
 
@@ -191,6 +205,10 @@ async def generate_chat_events(
     # dejaría estos nombres sin definir.
     artifact_buffer = ""
     is_inside_artifact = False
+    artifact_type_actual = "code"  # tipo ya normalizado del artefacto en curso
+    artifact_visto = ""            # lo emitido, para juzgar coherencia al cerrar
+    artifact_bytes = 0             # bytes ya emitidos de este artefacto
+    artifact_cortado = False       # True tras agotar el presupuesto: ya se cerró
     try:
         mode_str = "BOARD MEETING" if board_mode else "NORMAL"
         logger.info(
@@ -466,17 +484,41 @@ async def generate_chat_events(
                                 "</sphere_artifact>", 1
                             )
 
-                            if artifact_content:
-                                yield f"data: {json.dumps({'type': 'artifact_chunk', 'content': artifact_content})}\n\n"
+                            # Si el artefacto ya se cortó por presupuesto, su
+                            # cierre ya viajó: aquí sólo se recoge la mesa y se
+                            # devuelve el turno al chat.
+                            if not artifact_cortado:
+                                trozo, nuevos, agotado = recortar_a_presupuesto(
+                                    artifact_content, artifact_bytes
+                                )
+                                artifact_bytes += nuevos
+                                if trozo:
+                                    artifact_visto += trozo
+                                    yield f"data: {json.dumps({'type': 'artifact_chunk', 'content': trozo})}\n\n"
 
-                            yield f"data: {json.dumps({'type': 'artifact_close'})}\n\n"
+                                if agotado:
+                                    for evento in _cierre_forzado("", "size_limit"):
+                                        yield evento
+                                else:
+                                    yield f"data: {json.dumps({'type': 'artifact_close', 'content_status': check_content(artifact_type_actual, artifact_visto)})}\n\n"
+
                             is_inside_artifact = False
+                            artifact_cortado = False
                             artifact_buffer = ""
+                            artifact_visto = ""
+                            artifact_bytes = 0
 
                             if chat_residue:
                                 yield f"data: {json.dumps({'type': 'token', 'content': chat_residue, 'role': current_board_agent})}\n\n"
 
                             buffer = ""
+                        elif artifact_cortado:
+                            # Presupuesto agotado: se sigue leyendo para no
+                            # perder el cierre, pero no se emite ni un byte más
+                            # y no se acumula (un modelo en bucle escribiría
+                            # megas). Se conserva sólo la cola que podría
+                            # contener el principio de la etiqueta de cierre.
+                            artifact_buffer = artifact_buffer[-len("</sphere_artifact>"):]
                         else:
                             close_prefixes = [
                                 "<",
@@ -507,8 +549,27 @@ async def generate_chat_events(
                                     )
 
                                 if artifact_buffer:
-                                    yield f"data: {json.dumps({'type': 'artifact_chunk', 'content': artifact_buffer})}\n\n"
+                                    trozo, nuevos, agotado = recortar_a_presupuesto(
+                                        artifact_buffer, artifact_bytes
+                                    )
+                                    artifact_bytes += nuevos
                                     artifact_buffer = ""
+                                    if trozo:
+                                        artifact_visto += trozo
+                                        yield f"data: {json.dumps({'type': 'artifact_chunk', 'content': trozo})}\n\n"
+
+                                    if agotado:
+                                        # El artefacto se corta aquí, pero el
+                                        # turno NO: matar el stream reabriría la
+                                        # ruta de reembolso por un caso que no
+                                        # la necesita y perdería texto útil.
+                                        logger.warning(
+                                            f"✂️ Artefacto cortado en {ARTIFACT_MAX_BYTES} bytes "
+                                            f"(sesión {session_id})"
+                                        )
+                                        for evento in _cierre_forzado("", "size_limit"):
+                                            yield evento
+                                        artifact_cortado = True
 
                     else:
                         buffer += content
@@ -532,26 +593,60 @@ async def generate_chat_events(
                                         if title_match
                                         else "untitled"
                                     )
-                                    artifact_type = (
-                                        type_match.group(1) if type_match else "code"
+                                    # El tipo se contrasta con la lista blanca
+                                    # ANTES de emitir un solo byte de contenido:
+                                    # es el único momento en que todavía se
+                                    # puede etiquetar sin haber enseñado nada.
+                                    declared_type = (
+                                        type_match.group(1) if type_match else None
+                                    )
+                                    artifact_type, type_status = normalize_type(
+                                        declared_type
                                     )
                                     language = lang_match.group(1) if lang_match else ""
 
                                     logger.info(
                                         f"📦 Abriendo artefacto: '{title}' ({artifact_type})"
                                     )
+                                    if type_status == "unknown":
+                                        logger.warning(
+                                            f"❓ Tipo de artefacto no reconocido: "
+                                            f"{declared_type!r} → se abre como código"
+                                        )
 
                                     pre_tag = buffer[:tag_start]
                                     if pre_tag.strip():
                                         yield f"data: {json.dumps({'type': 'token', 'content': pre_tag, 'role': current_board_agent})}\n\n"
 
-                                    yield f"data: {json.dumps({'type': 'artifact_open', 'title': title, 'artifact_type': artifact_type, 'language': language})}\n\n"
+                                    apertura: dict[str, Any] = {
+                                        "type": "artifact_open",
+                                        "title": title,
+                                        "artifact_type": artifact_type,
+                                        "language": language,
+                                        "type_status": type_status,
+                                    }
+                                    if type_status != "ok":
+                                        # El literal que escribió el modelo se
+                                        # conserva tal cual: es lo que el usuario
+                                        # tiene que leer para entender el aviso.
+                                        apertura["declared_type"] = declared_type
+                                    yield f"data: {json.dumps(apertura)}\n\n"
 
                                     is_inside_artifact = True
+                                    artifact_type_actual = artifact_type
+                                    artifact_visto = ""
+                                    artifact_bytes = 0
+                                    artifact_cortado = False
                                     tag_end = tag_section.find(">")
                                     residue = tag_section[tag_end + 1 :]
                                     if residue:
-                                        yield f"data: {json.dumps({'type': 'artifact_chunk', 'content': residue})}\n\n"
+                                        trozo, nuevos, _ = recortar_a_presupuesto(
+                                            residue, artifact_bytes
+                                        )
+                                        artifact_bytes += nuevos
+                                        if trozo:
+                                            artifact_visto += trozo
+                                            yield f"data: {json.dumps({'type': 'artifact_chunk', 'content': trozo})}\n\n"
 
                                     buffer = ""
                         else:
@@ -583,10 +678,14 @@ async def generate_chat_events(
         # El modelo terminó de hablar con un artefacto todavía abierto: se vuelca
         # lo retenido y se cierra. Sin esto el canal del artefacto se queda
         # abierto en el cliente y el resto de `artifact_buffer` se pierde.
+        # Si ya se cortó por presupuesto, su cierre viajó hace rato: cerrar otra
+        # vez le daría al cliente dos cierres para una sola apertura.
         if is_inside_artifact:
-            for evento in _cierre_forzado(artifact_buffer, "stream_ended"):
-                yield evento
+            if not artifact_cortado:
+                for evento in _cierre_forzado(artifact_buffer, "stream_ended"):
+                    yield evento
             is_inside_artifact = False
+            artifact_cortado = False
             artifact_buffer = ""
 
         if buffer.strip():
@@ -630,9 +729,11 @@ async def generate_chat_events(
         # El artefacto se cierra ANTES de pintar el fallo: si el aviso llegara
         # primero, el panel se quedaría con el artefacto "en curso" para siempre.
         if is_inside_artifact:
-            for evento in _cierre_forzado(artifact_buffer, "stream_ended"):
-                yield evento
+            if not artifact_cortado:
+                for evento in _cierre_forzado(artifact_buffer, "stream_ended"):
+                    yield evento
             is_inside_artifact = False
+            artifact_cortado = False
             artifact_buffer = ""
         error = safe_error_response(e)
         yield f"data: {json.dumps({'type': 'error', 'message': error['message']})}\n\n"

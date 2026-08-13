@@ -220,3 +220,158 @@ async def test_art005_desconexion_con_artefacto_abierto_no_emite_nada():
             await gen.__anext__()
     finally:
         parche.stop()
+
+
+# --- AC-003 · el tipo desconocido se declara, no se disimula ----------------
+
+
+async def test_ac003_un_tipo_desconocido_viaja_etiquetado():
+    eventos = await _eventos([
+        '<sphere_artifact title="Plan" type="markdwon">',
+        "el plan entero</sphere_artifact>",
+    ])
+
+    apertura = next(e for e in eventos if e["type"] == "artifact_open")
+    assert apertura["type_status"] == "unknown"
+    assert apertura["declared_type"] == "markdwon"
+    assert apertura["artifact_type"] == "code"
+
+
+async def test_ac003_el_contenido_llega_entero_y_el_turno_sigue():
+    eventos = await _eventos([
+        '<sphere_artifact title="Plan" type="markdwon">',
+        "el plan entero</sphere_artifact>y sigo hablando",
+    ])
+
+    trozos = [e["content"] for e in eventos if e["type"] == "artifact_chunk"]
+    assert "".join(trozos) == "el plan entero"
+    assert [e["content"] for e in eventos if e["type"] == "token"] == ["y sigo hablando"]
+    assert eventos[-1]["type"] == "[DONE]"
+
+
+async def test_ac003_un_tipo_valido_no_lleva_ruido():
+    eventos = await _eventos([
+        '<sphere_artifact title="Diagrama" type="mermaid">',
+        "graph TD; A-->B;</sphere_artifact>",
+    ])
+
+    apertura = next(e for e in eventos if e["type"] == "artifact_open")
+    assert apertura["type_status"] == "ok"
+    assert "declared_type" not in apertura
+
+
+# --- AC-005 · presupuesto de tamaño con corte visible ----------------------
+
+
+TRESCIENTOS_KB = "x" * (300 * 1024)
+
+
+async def test_ac005_un_modelo_en_bucle_se_corta_en_el_presupuesto():
+    eventos = await _eventos([
+        '<sphere_artifact title="Bucle" type="code">',
+        TRESCIENTOS_KB,
+    ])
+
+    transmitido = sum(
+        len(e["content"].encode("utf-8"))
+        for e in eventos
+        if e["type"] == "artifact_chunk"
+    )
+    assert transmitido <= 262144
+
+    cierres = [e for e in eventos if e["type"] == "artifact_close"]
+    assert len(cierres) == 1, f"no se emitió artifact_close con reason='size_limit': {_tipos(eventos)}"
+    assert cierres[0]["reason"] == "size_limit"
+    assert cierres[0]["truncated"] is True
+    assert cierres[0]["limit_bytes"] == 262144
+
+
+async def test_ac005_tras_el_corte_no_llega_ni_un_trozo_mas():
+    eventos = await _eventos([
+        '<sphere_artifact title="Bucle" type="code">',
+        TRESCIENTOS_KB,
+        "y todavía más contenido del artefacto",
+    ])
+
+    # Anclado al corte de verdad: sin esta guarda el test pasaría por el cierre
+    # forzado de fin de stream, que también va al final y no prueba nada de esto.
+    corte = next(
+        i for i, e in enumerate(eventos)
+        if e["type"] == "artifact_close" and e.get("reason") == "size_limit"
+    )
+    assert "artifact_chunk" not in _tipos(eventos)[corte:]
+
+
+async def test_ac005b_el_turno_sobrevive_al_corte():
+    eventos = await _eventos([
+        '<sphere_artifact title="Bucle" type="code">',
+        TRESCIENTOS_KB,
+        "resto del artefacto</sphere_artifact>Y aquí sigo con el chat.",
+    ])
+
+    # Precondición: el artefacto se cortó de verdad. Sin ella el test hablaría
+    # de un turno que nunca sufrió el corte.
+    assert any(e.get("reason") == "size_limit" for e in eventos)
+
+    assert [e["content"] for e in eventos if e["type"] == "token"] == [
+        "Y aquí sigo con el chat."
+    ]
+    assert eventos[-1]["type"] == "[DONE]"
+
+
+async def test_ac005_un_artefacto_normal_no_se_toca():
+    acta = "# Acta\n" + ("contenido del acta. " * 600)  # ~12 KB
+    eventos = await _eventos([
+        '<sphere_artifact title="Acta" type="markdown">',
+        acta + "</sphere_artifact>",
+    ])
+
+    trozos = [e["content"] for e in eventos if e["type"] == "artifact_chunk"]
+    assert "".join(trozos) == acta
+    cierre = next(e for e in eventos if e["type"] == "artifact_close")
+    assert "truncated" not in cierre
+
+
+# --- AC-006 · coherencia entre tipo declarado y contenido -------------------
+
+
+async def test_ac006c_un_csv_que_es_prosa_se_cierra_con_mismatch():
+    eventos = await _eventos([
+        '<sphere_artifact title="Tabla" type="csv">',
+        "Esto es un párrafo sin separadores de ninguna clase</sphere_artifact>",
+    ])
+
+    cierre = next(e for e in eventos if e["type"] == "artifact_close")
+    assert cierre["content_status"] == "mismatch"
+
+
+async def test_ac006c_un_csv_de_verdad_se_cierra_con_ok():
+    eventos = await _eventos([
+        '<sphere_artifact title="Tabla" type="csv">',
+        "Director,Voto\nCTO,SI</sphere_artifact>",
+    ])
+
+    cierre = next(e for e in eventos if e["type"] == "artifact_close")
+    assert cierre["content_status"] == "ok"
+
+
+async def test_ac006d_lo_truncado_por_tamano_no_se_juzga():
+    eventos = await _eventos([
+        '<sphere_artifact title="Tabla" type="csv">',
+        TRESCIENTOS_KB,  # ni una coma: sería mismatch si se juzgara
+    ])
+
+    cierre = next(e for e in eventos if e["type"] == "artifact_close")
+    assert cierre["content_status"] == "unchecked"
+    assert cierre["truncated"] is True
+
+
+async def test_ac006d_lo_truncado_por_fin_de_stream_tampoco_se_juzga():
+    eventos = await _eventos([
+        '<sphere_artifact title="Tabla" type="csv">',
+        "Esto es prosa y se corta a mitad",
+    ])
+
+    cierre = next(e for e in eventos if e["type"] == "artifact_close")
+    assert cierre["content_status"] == "unchecked"
+    assert cierre["reason"] == "stream_ended"

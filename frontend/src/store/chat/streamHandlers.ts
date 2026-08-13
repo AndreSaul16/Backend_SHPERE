@@ -85,6 +85,11 @@ export function createStreamHandlers(ctx: StreamContext): StreamCallbacks {
                 content: '',
                 agentId: ctx.selectedAgentId || 'system',
                 createdAt: new Date(),
+                // El veredicto viaja CON el artefacto, no por un canal aparte:
+                // el panel lo lee del mismo objeto que pinta, así que no hay
+                // fotograma en que el documento se enseñe sin su aviso.
+                typeStatus: data.type_status,
+                declaredType: data.declared_type,
             };
 
             get().addArtifact(artifact);
@@ -105,8 +110,25 @@ export function createStreamHandlers(ctx: StreamContext): StreamCallbacks {
             }));
         },
 
-        onArtifactClose: () => {
-            set(state => ({ streamingArtifactBySession: { ...state.streamingArtifactBySession, [sessionId]: null } }));
+        onArtifactClose: (data) => {
+            // Deja de ser un no-op sobre el artefacto: el cierre es el momento
+            // en que el generador dice si el documento se cortó y si su
+            // contenido encaja con el tipo declarado. Si eso no se copia aquí,
+            // el aviso muere en el canal y el panel enseña el documento como si
+            // estuviera entero y fuese lo que dice ser.
+            const artifactId = get().streamingArtifactBySession[sessionId];
+
+            set(state => ({
+                streamingArtifactBySession: { ...state.streamingArtifactBySession, [sessionId]: null },
+                artifacts: artifactId
+                    ? state.artifacts.map(a => a.id === artifactId ? {
+                        ...a,
+                        truncated: data?.truncated || undefined,
+                        truncatedReason: data?.reason,
+                        contentStatus: data?.content_status,
+                    } : a)
+                    : state.artifacts,
+            }));
         },
 
         onToolStart: (data) => {

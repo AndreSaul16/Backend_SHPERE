@@ -6,6 +6,7 @@ import { useChatStore } from '@/store/useChatStore';
 import { ArtifactRenderer } from './ArtifactRenderer';
 import { RegionBoundary } from '@/components/shared/RegionBoundary';
 import { ActaActions } from './ActaActions';
+import { BandaDeVeredicto } from './BandaDeVeredicto';
 import { esActa } from '@/utils/acta';
 import { cn } from '@/lib/utils';
 import type { ArtifactType } from '@/types/artifact';
@@ -181,6 +182,12 @@ export function ArtifactPanel() {
                                 {esActa(activeArtifact) && (
                                     <ActaActions title={activeArtifact.title} content={activeArtifact.content} />
                                 )}
+                                {/* El veredicto del generador, en UN sitio. Se
+                                    lee del propio artefacto, así que ningún
+                                    visor tiene que acordarse de reenviarlo —y
+                                    olvidarse es justo el fallo que este cambio
+                                    arregla. */}
+                                <BandaDeVeredicto artifact={activeArtifact} />
                                 {/* Eje 3 · el visor es el vecindario peligroso
                                     del panel: un mermaid mal formado o una
                                     tabla con una fila rara lanzan al renderizar.

@@ -4,6 +4,7 @@ import type {
     SesionAPI, TransaccionAPI, ValorJson,
 } from '@/types/api';
 import type { VisualConfig } from '@/types';
+import type { ContentStatus, TruncatedReason, TypeStatus } from '@/types/artifact';
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
@@ -61,10 +62,27 @@ export interface StreamCallbacks {
     onBoardIntervention?: (data: { text: string }) => void;
     // THINKING: línea de razonamiento (reasoning_content) del modelo, en streaming
     onThinking?: (content: string, role?: string | null) => void;
-    // ARTIFACTS 2.0 STREAMING: 3-event protocol for live artifact rendering
-    onArtifactOpen?: (data: { title: string; artifact_type: string; language: string }) => void;
+    // ARTIFACTS 2.0 STREAMING: 3-event protocol for live artifact rendering.
+    //
+    // Los campos de veredicto son ADITIVOS y opcionales: un backend anterior a
+    // `artefactos-guardarrailes` no los manda, y el cliente tiene que seguir
+    // funcionando igual. Es lo que permite revertir el backend sin tocar esto.
+    onArtifactOpen?: (data: {
+        title: string;
+        artifact_type: string;
+        language: string;
+        /** El literal que escribió el modelo, sólo cuando no se reconoce. */
+        declared_type?: string;
+        /** `unknown` = el tipo declarado no está en la lista blanca. */
+        type_status?: TypeStatus;
+    }) => void;
     onArtifactChunk?: (content: string) => void;
-    onArtifactClose?: () => void;
+    onArtifactClose?: (data?: {
+        truncated?: boolean;
+        reason?: TruncatedReason;
+        limit_bytes?: number;
+        content_status?: ContentStatus;
+    }) => void;
     // TOOL EXECUTION: 2-event protocol for tool visibility
     onToolStart?: (data: { tool_name: string; args: Record<string, ValorJson> }) => void;
     onToolResult?: (data: { tool_name: string; result: string }) => void;
@@ -205,12 +223,28 @@ export const chatService = {
                             callbacks.onArtifactOpen?.({
                                 title: data.title || 'untitled',
                                 artifact_type: data.artifact_type || 'code',
-                                language: data.language || ''
+                                language: data.language || '',
+                                declared_type: typeof data.declared_type === 'string' ? data.declared_type : undefined,
+                                // Sin campo, se asume `ok`: un backend anterior
+                                // a los guardarraíles no emite veredicto, y eso
+                                // no es motivo para pintar un aviso.
+                                type_status: data.type_status === 'unknown' ? 'unknown' : 'ok' as TypeStatus,
                             });
                         } else if (data.type === 'artifact_chunk' && typeof data.content === 'string') {
                             callbacks.onArtifactChunk?.(data.content);
                         } else if (data.type === 'artifact_close') {
-                            callbacks.onArtifactClose?.();
+                            callbacks.onArtifactClose?.({
+                                truncated: data.truncated === true,
+                                reason: data.reason === 'size_limit' || data.reason === 'stream_ended'
+                                    ? data.reason as TruncatedReason
+                                    : undefined,
+                                limit_bytes: typeof data.limit_bytes === 'number' ? data.limit_bytes : undefined,
+                                content_status: data.content_status === 'ok'
+                                    || data.content_status === 'mismatch'
+                                    || data.content_status === 'unchecked'
+                                    ? data.content_status as ContentStatus
+                                    : undefined,
+                            });
                         } else if (data.type === 'tool_start') {
                             callbacks.onToolStart?.({
                                 tool_name: data.tool_name || 'unknown',

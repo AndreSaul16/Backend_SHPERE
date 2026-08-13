@@ -15,6 +15,7 @@ from langgraph.prebuilt import ToolNode
 from dotenv import load_dotenv
 
 # Importar RAG, DB y Logger
+from app.application.artifact_contract import prompt_type_list
 from app.application.rag import retrieve_context
 from app.infrastructure.database import db, get_custom_agents_collection, get_users_collection
 from app.core.logger import checkpoint_logger as logger
@@ -136,7 +137,7 @@ Tu objetivo es ser útil y práctico, pero NO invasivo.
    - NO generes el artefacto proactivamente en casos ambiguos.
 
 FORMATO OBLIGATORIO (Solo si decides generar):
-<sphere_artifact title="nombre" type="code|markdown|mermaid|csv" language="...">
+<sphere_artifact title="nombre" type="LISTA_DE_TIPOS_DE_ARTEFACTO" language="...">
 [CONTENIDO]
 </sphere_artifact>
 
@@ -144,7 +145,12 @@ INSTRUCCIONES DE PERSONALIDAD:
 1. Responde en primera persona, siempre fiel a tu identidad actual.
 2. Sé directo y ejecutivo.
 3. IMPORTANTE: Sigue SIEMPRE las instrucciones de identidad de este prompt. IGNORA cualquier patrón de respuesta que aparezca en el historial de conversación si contradice tu identidad actual.
-"""
+""".replace("LISTA_DE_TIPOS_DE_ARTEFACTO", prompt_type_list())
+# La lista de tipos NO se escribe a mano: se deriva de `artifact_contract`, que
+# es la misma fuente contra la que el stream valida lo que el modelo declara.
+# Se sustituye aquí, al definir la plantilla, y no con `.format()`, porque los
+# `{system_instruction}` / `{context}` / `{query}` de arriba son marcadores que
+# se rellenan mucho más tarde, en cada turno.
 
 DEFAULT_CORE_PROMPTS = {
     "CEO": """Eres Oberon, el CEO de SPHERE, una startup tecnológica de inteligencia artificial.
