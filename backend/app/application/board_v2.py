@@ -647,7 +647,7 @@ PARTE 2 (un artefacto): el ACTA formal de la reunión. Envolvela EXACTAMENTE as�
 - (riesgos identificados, incluida la objeción del Abogado del Diablo si la hubo)
 
 ## Próximos pasos
-- (acciones concretas con responsable)
+- (una acción concreta por línea, cada una encabezada por SU DIRECTOR RESPONSABLE con nombre y rol: "Nexus (CTO): ...", "Ledger (CFO): ...", "Vortex (CMO): ..." u "Oberon (CEO): ...". NUNCA escribas "responsable" a secas, "el equipo" ni dejes un paso sin dueño: el fundador abrirá cada paso en el chat de ese director para lanzarlo.)
 </sphere_artifact>
 
 No repitas literalmente lo que dijo cada uno: SINTETIZÁ. La tabla de votación debe

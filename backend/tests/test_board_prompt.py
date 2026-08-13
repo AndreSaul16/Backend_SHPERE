@@ -426,3 +426,51 @@ async def test_sin_override_la_postcondicion_se_calla(caplog):
             await _ejecutar_nodo_de_junta("CFO")
 
     assert "identidad aún nombra" not in caplog.text
+
+
+# ==========================================================================
+# BTH-008 — cada próximo paso del acta lleva nombre propio
+# ==========================================================================
+#
+# «Responsable» a secas no es un responsable: es una casilla que el modelo
+# rellena con una función («el equipo técnico») y que ninguna UI puede resolver.
+# El acta debe nombrar al director ANTES de que la interfaz se fíe del nombre
+# para abrir su chat — de ahí que este commit vaya antes que el de la UI.
+
+from app.application.board_v2 import BOARD_DIRECTORS, SYNTHESIS_ADDITION  # noqa: E402
+
+# Derivado, no escrito a mano: si mañana entra un quinto director al censo, la
+# instrucción de la síntesis tiene que enterarse, y este test lo obliga.
+VOCABULARIO_DE_DIRECTORES = ["CEO"] + BOARD_DIRECTORS
+
+
+def _seccion_proximos_pasos() -> str:
+    ini = SYNTHESIS_ADDITION.index("## Próximos pasos")
+    fin = SYNTHESIS_ADDITION.index("</sphere_artifact>", ini)
+    return SYNTHESIS_ADDITION[ini:fin]
+
+
+def test_bth008_la_sintesis_no_pide_un_responsable_generico():
+    seccion = _seccion_proximos_pasos()
+
+    assert "acciones concretas con responsable" not in seccion, (
+        f"SYNTHESIS_ADDITION no exige director nombrado: {seccion.strip()!r}"
+    )
+
+
+def test_bth008_la_sintesis_exige_el_director_responsable_nombrado():
+    seccion = _seccion_proximos_pasos()
+
+    faltan = [rol for rol in VOCABULARIO_DE_DIRECTORES if rol not in seccion]
+    assert not faltan, (
+        f"la instrucción de «Próximos pasos» no nombra a {faltan}: el modelo no "
+        f"sabe entre quiénes elegir"
+    )
+    assert "RESPONSABLE" in seccion.upper()
+
+
+def test_bth008_la_seccion_de_proximos_pasos_sigue_existiendo_en_el_acta():
+    """El recorte de BTH-008 no puede llevarse la sección por delante."""
+    assert "## Próximos pasos" in SYNTHESIS_ADDITION
+    assert "## Decisión ejecutiva" in SYNTHESIS_ADDITION
+    assert "## Votación" in SYNTHESIS_ADDITION
