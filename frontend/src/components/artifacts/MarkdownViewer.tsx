@@ -1,5 +1,6 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 import { Download, FileText } from 'lucide-react';
 import { DocTable } from '@/components/shared/DocTable';
 import { ActaHeader } from './ActaHeader';
@@ -65,7 +66,20 @@ export function MarkdownViewer({ artifact }: MarkdownViewerProps) {
                     <div className="doc-prose">
                         {/* F4: la tabla del acta se desplaza dentro de su
                             contenedor (§9.7), nunca rompe la hoja. */}
-                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ table: DocTable }}>
+                        {/* El acta se sanea por DECISIÓN, igual que el hilo
+                            (`MessageBubble`) y la vista pública. Hoy react-markdown
+                            no pinta HTML crudo sin `rehypeRaw`, así que esto no
+                            cierra un agujero abierto: cierra el camino por el que
+                            se abriría el día que alguien quiera «que se vean las
+                            tablas HTML del acta». El esquema github admite las
+                            etiquetas de tabla, y `DocTable` sustituye el
+                            componente DESPUÉS del saneado, así que la tabla del
+                            acta y su contenedor desplazable siguen intactos. */}
+                        <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            rehypePlugins={[rehypeSanitize]}
+                            components={{ table: DocTable }}
+                        >
                             {artifact.content}
                         </ReactMarkdown>
                     </div>
