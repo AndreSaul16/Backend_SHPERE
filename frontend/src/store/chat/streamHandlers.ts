@@ -13,8 +13,8 @@ import type { Message, Role } from '../../types';
 import { destinoDe, reportStreamGlitch, type StreamContext } from './streamContext';
 
 /** Tipos de artefacto que entiende el panel; lo demás cae a `code`. */
-const TIPOS_DE_ARTEFACTO: Record<string, 'code' | 'markdown' | 'mermaid' | 'data_table'> = {
-    'code': 'code', 'markdown': 'markdown', 'mermaid': 'mermaid', 'csv': 'data_table',
+const TIPOS_DE_ARTEFACTO: Record<string, 'code' | 'markdown' | 'mermaid' | 'data_table' | 'svg'> = {
+    'code': 'code', 'markdown': 'markdown', 'mermaid': 'mermaid', 'csv': 'data_table', 'svg': 'svg',
 };
 
 export function createStreamHandlers(ctx: StreamContext): StreamCallbacks {

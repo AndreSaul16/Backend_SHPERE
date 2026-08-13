@@ -30,6 +30,7 @@ ARTIFACT_TYPES: dict[str, str] = {
     "markdown": "markdown",
     "mermaid": "mermaid",
     "csv": "csv",
+    "svg": "svg",
 }
 
 # 256 KB de contenido de artefacto. Escala: la pregunta del usuario está acotada

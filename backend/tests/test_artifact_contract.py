@@ -65,6 +65,14 @@ def test_ac001_los_dos_mapas_del_cliente_no_pueden_separarse_de_la_lista():
     )
 
 
+def test_ac001_svg_es_un_tipo_de_primera_clase():
+    # `PRODUCT.md` promete el SVG como artefacto, `SvgViewer` existe y sanea, y
+    # `getDownloadExtension` ya devuelve `.svg`. Lo único que faltaba era que
+    # alguien se lo dijera al modelo.
+    assert "svg" in ARTIFACT_TYPES
+    assert "svg" in prompt_type_list()
+
+
 def test_ac001_prompt_type_list_es_la_lista_blanca_en_texto():
     assert set(prompt_type_list().split("|")) == set(ARTIFACT_TYPES.values())
 
