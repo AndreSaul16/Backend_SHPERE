@@ -233,6 +233,27 @@ async def _setup_db():
     db.sync_client.admin.command("ping")
     db._connected = True
 
+    # Los grafos de LangGraph se compilan UNA vez y se cachean con un
+    # `MongoDBSaver` que capturó `db.sync_client` en ese momento. Como acabamos
+    # de cerrar ese cliente y crear otro, el grafo cacheado se queda apuntando a
+    # uno muerto y cualquier lectura de checkpoint revienta con
+    # `InvalidOperation: Cannot use MongoClient after close`.
+    #
+    # En producción no pasa —el cliente no se reemplaza en caliente—, pero aquí
+    # sí, y hasta ahora no se veía porque el endpoint de historial se tragaba la
+    # excepción y devolvía 200 con lista vacía. Con el fallo ya visible (SH-001),
+    # invalidar la caché es lo que hace que el entorno de test se parezca a
+    # producción en vez de fabricar fallos de infraestructura que no existen.
+    for modulo, atributos in (
+        ("app.application.orchestrator", ("_compiled_app", "_compiled_board_app")),
+        ("app.application.board_v2", ("_compiled_board_v2",)),
+    ):
+        mod = sys.modules.get(modulo)
+        if mod is not None:
+            for atributo in atributos:
+                if getattr(mod, atributo, None) is not None:
+                    setattr(mod, atributo, None)
+
     # Upsert test users
     users_col = db.get_async_db()["users"]
     await users_col.update_one(

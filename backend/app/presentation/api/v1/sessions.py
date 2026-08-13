@@ -339,10 +339,21 @@ async def get_session_history(
         return result
 
     except HTTPException:
+        # Va ANTES a propósito: `require_owner` lanza 404/403 y ese camino no
+        # puede caer por el 500 de abajo. Autorización no es infraestructura.
         raise
     except Exception as e:
+        # Antes: `return {"messages": [], "final_response": ""}` con un 200.
+        # El cliente no podía distinguir «esta sesión no tiene mensajes» de «no
+        # he podido leerlos», así que el usuario abría su debate de ayer y veía
+        # un chat en blanco, como si nunca hubiera existido. Una sesión vacía de
+        # verdad ni siquiera pasa por aquí: sale por el camino normal con 200 y
+        # su lista vacía.
         logger.warning(f"No se pudo cargar historial para {session_id}: {e}")
-        return {"messages": [], "final_response": ""}
+        raise HTTPException(
+            status_code=500,
+            detail="No se ha podido cargar el historial de esta conversación. Inténtalo de nuevo en unos segundos.",
+        )
 
 
 class UpdateSessionRequest(BaseModel):
