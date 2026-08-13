@@ -173,6 +173,7 @@ REGLAS DE COMPORTAMIENTO:
 - Después de delegar y recibir respuestas del equipo, SIEMPRE sintetiza y entrega una conclusión ejecutiva al usuario. No repitas lo que dijo cada agente — consolida en un plan de acción con pasos claros.
 - Si un agente reporta un problema (ej: servicio no disponible), inclúyelo en tu resumen como riesgo y propón alternativas.
 
+[[TOOLS]]
 HERRAMIENTAS EXCLUSIVAS DEL CEO:
 - delegate_task: Asigna una tarea a un miembro del equipo (CTO, CMO, CFO) con descripción y prioridad. ÚSALA DIRECTAMENTE sin preguntar al usuario.
 - check_task_status: Consulta el estado de una tarea delegada por task_id o por agente asignado.
@@ -185,7 +186,8 @@ HERRAMIENTAS COMPARTIDAS (disponibles para todos los directivos):
 - whatsapp_send_message: Envía mensajes por WhatsApp a un contacto.
 - whatsapp_send_notification: Notifica al grupo del equipo por WhatsApp.
 
-Usa las herramientas cuando sean necesarias para cumplir con la solicitud del usuario. Para acciones que modifican datos (crear eventos, enviar mensajes), confirma con el usuario antes de ejecutar. EXCEPCIÓN: delegate_task NO requiere confirmación — ejecútala directamente.""",
+Usa las herramientas cuando sean necesarias para cumplir con la solicitud del usuario. Para acciones que modifican datos (crear eventos, enviar mensajes), confirma con el usuario antes de ejecutar. EXCEPCIÓN: delegate_task NO requiere confirmación — ejecútala directamente.
+[[/TOOLS]]""",
     "CTO": """Eres Nexus, el CTO de SPHERE, una startup tecnológica de inteligencia artificial.
 
 IDENTIDAD Y PERSONALIDAD:
@@ -197,6 +199,7 @@ CONTEXTO ORGANIZACIONAL:
 - Formas parte de la Junta Directiva de SPHERE junto con: Oberon (CEO), Vortex (CMO) y Ledger (CFO).
 - Reportas al liderazgo de la empresa y colaboras estrechamente con tu equipo ejecutivo.
 
+[[TOOLS]]
 HERRAMIENTAS COMPARTIDAS (disponibles para todos los directivos):
 - calendar_list_events: Consulta eventos del calendario en un rango de fechas.
 - calendar_create_event: Crea reuniones y eventos con título, hora y asistentes.
@@ -204,7 +207,8 @@ HERRAMIENTAS COMPARTIDAS (disponibles para todos los directivos):
 - whatsapp_send_message: Envía mensajes por WhatsApp a un contacto.
 - whatsapp_send_notification: Notifica al grupo del equipo por WhatsApp.
 
-Usa las herramientas cuando sean necesarias.""",
+Usa las herramientas cuando sean necesarias.
+[[/TOOLS]]""",
     "CMO": """Eres Vortex, el CMO de SPHERE, una startup tecnológica de inteligencia artificial.
 
 IDENTIDAD Y PERSONALIDAD:
@@ -216,6 +220,7 @@ CONTEXTO ORGANIZACIONAL:
 - Formas parte de la Junta Directiva de SPHERE junto con: Oberon (CEO), Nexus (CTO) y Ledger (CFO).
 - Reportas al liderazgo de la empresa y colaboras estrechamente con tu equipo ejecutivo.
 
+[[TOOLS]]
 HERRAMIENTAS EXCLUSIVAS DEL CMO:
 - post_to_linkedin: Publica contenido en LinkedIn (texto + imagen opcional).
 - post_to_instagram: Publica contenido en Instagram (imagen + caption).
@@ -229,7 +234,8 @@ HERRAMIENTAS COMPARTIDAS (disponibles para todos los directivos):
 - whatsapp_send_message: Envía mensajes por WhatsApp a un contacto.
 - whatsapp_send_notification: Notifica al grupo del equipo por WhatsApp.
 
-Usa las herramientas cuando sean necesarias. Para publicaciones en redes sociales, SIEMPRE muestra un preview al usuario y pide confirmación antes de publicar.""",
+Usa las herramientas cuando sean necesarias. Para publicaciones en redes sociales, SIEMPRE muestra un preview al usuario y pide confirmación antes de publicar.
+[[/TOOLS]]""",
     "CFO": """Eres Ledger, el CFO de SPHERE, una startup tecnológica de inteligencia artificial.
 
 IDENTIDAD Y PERSONALIDAD:
@@ -241,6 +247,7 @@ CONTEXTO ORGANIZACIONAL:
 - Formas parte de la Junta Directiva de SPHERE junto con: Oberon (CEO), Nexus (CTO) y Vortex (CMO).
 - Reportas al liderazgo de la empresa y colaboras estrechamente con tu equipo ejecutivo.
 
+[[TOOLS]]
 HERRAMIENTAS EXCLUSIVAS DEL CFO:
 - get_financial_news: Obtiene noticias financieras del día por tema (ej: 'AI stocks', 'tasas de interés').
 - get_stock_data: Consulta datos de bolsa en tiempo real por símbolo (ej: 'AAPL', 'MSFT').
@@ -252,10 +259,83 @@ HERRAMIENTAS COMPARTIDAS (disponibles para todos los directivos):
 - whatsapp_send_message: Envía mensajes por WhatsApp a un contacto.
 - whatsapp_send_notification: Notifica al grupo del equipo por WhatsApp.
 
-Usa las herramientas cuando el usuario necesite datos financieros actualizados o consultar el mercado.""",
+Usa las herramientas cuando el usuario necesite datos financieros actualizados o consultar el mercado.
+[[/TOOLS]]""",
     "system": """Eres el Asistente General de SPHERE. Ayuda en lo que sea necesario combinando visiones técnicas y de negocio.
 Si la consulta es más adecuada para un miembro específico de la Junta Directiva (CEO, CTO, CMO o CFO), sugiere redirigir.""",
 }
+
+
+# El anuncio de herramientas se delimita con marcadores, no se recorta buscando
+# literales. El precedente de recortar por literal ya existe en este fichero
+# (`board_agent_node_factory`, más abajo) y es exactamente el fallo que se evita:
+# un `.replace()` de un párrafo copiado a mano deja de casar en cuanto alguien
+# retoca una coma, no lanza nada y devuelve el texto intacto. Un marcador que
+# falta, en cambio, se ve desde un test.
+TOOLS_OPEN, TOOLS_CLOSE = "[[TOOLS]]", "[[/TOOLS]]"
+
+
+def _indice_de_marcador(lineas: list[str], marcador: str) -> Optional[int]:
+    for i, linea in enumerate(lineas):
+        if linea.strip() == marcador:
+            return i
+    return None
+
+
+def render_identity(prompt: str, *, with_tools: bool) -> str:
+    """Renderiza una identidad con o sin su anuncio de herramientas. Pura.
+
+    `with_tools=True` borra sólo las líneas marcadoras; `False` borra el bloque
+    entero. En ninguna de las dos ramas sobrevive un marcador: lo que se le
+    manda al modelo nunca lleva sintaxis interna.
+
+    Un prompt SIN marcadores se devuelve intacto y **no lanza**. No es
+    tolerancia estética: `devil_node` resuelve `target_role="DEVIL"`, que no
+    está en `CORE_ROLES` ni en Mongo, así que cae en
+    `DEFAULT_CORE_PROMPTS["system"]` — que no lleva marcadores— y todo agente a
+    medida tampoco los lleva. Un `raise` aquí convertiría un desliz de redacción
+    en un 500 en el chat del usuario.
+
+    El ruido, por tanto, no está aquí sino en tres guardas que sí fallan: el
+    test de marcadores bien formados, el test derivado del registry y la
+    postcondición de `agent_node`, que deja en el log toda herramienta que
+    sobreviva al recorte.
+    """
+    if TOOLS_OPEN not in prompt and TOOLS_CLOSE not in prompt:
+        return prompt
+
+    lineas = prompt.split("\n")
+    abre = _indice_de_marcador(lineas, TOOLS_OPEN)
+    cierra = _indice_de_marcador(lineas, TOOLS_CLOSE)
+
+    if not with_tools and abre is not None and cierra is not None and abre < cierra:
+        lineas = lineas[:abre] + lineas[cierra + 1:]
+
+    # Un marcador suelto (par mal formado) tampoco puede llegar al modelo: se
+    # cae del texto igual. Que el par esté bien formado lo vigila su test.
+    lineas = [l for l in lineas if l.strip() not in (TOOLS_OPEN, TOOLS_CLOSE)]
+    return "\n".join(lineas).rstrip()
+
+
+# Lo que sustituye al anuncio de herramientas en la junta. Dos cosas a la vez,
+# y la segunda importa tanto como la primera: se le quita la mentira ("tenés
+# estas manos") sin empujarlo a la otra ("no tengo acceso"), que es justo lo que
+# `REGLAS DE COMPORTAMIENTO` le prohíbe decir y con razón — un director que se
+# disculpa por no tener acceso rompe la reunión igual que uno que se inventa
+# haberla consultado.
+BOARD_NO_TOOLS_CLAUSE = """
+
+--- MODO JUNTA: DELIBERACIÓN, NO EJECUCIÓN ---
+En esta sesión la junta DELIBERA. No hay ejecución de herramientas: no consultás
+sistemas externos ni actuás sobre ellos mientras hablás.
+1. NO afirmes haber consultado, revisado, enviado, publicado, agendado ni ejecutado
+   nada. No inventes datos "en vivo" (cotizaciones, métricas, agenda, mensajes).
+2. Esto NO es decir "no tengo acceso": no te disculpes ni rompas la reunión. Sos un
+   director de esta junta y decidís con tu criterio y con lo que hay sobre la mesa.
+3. Si hace falta un dato externo o una acción, va a "Próximos pasos" como acción
+   concreta con SU DIRECTOR RESPONSABLE nombrado. El fundador la lanzará después
+   desde el chat de ese director."""
+
 
 # --- NODOS ---
 
@@ -422,9 +502,30 @@ async def agent_node(state: AgentState):
         history = [msg for msg in history if not isinstance(msg, HumanMessage)]
         history.insert(0, HumanMessage(content=query))
 
-    # 6. Construir el prompt rico
+    # 6. Construir el prompt rico.
+    # En junta la identidad va SIN su anuncio de herramientas: el grafo de board
+    # no tiene nodo de tools y ni siquiera se bindean (paso 8), así que
+    # anunciárselas al modelo es prometerle manos que le acabamos de atar. Es el
+    # único embudo por el que pasan los cuatro caminos de junta (v1, v2,
+    # devil_node y synthesis_node): recortar en `board_v2.py` no llegaría al
+    # modelo, porque `agent_node` no lee `state["system_prompt"]`.
+    en_junta = bool(state.get("board_mode"))
+    identidad = render_identity(resolved.system_prompt, with_tools=not en_junta)
+    if en_junta:
+        # Postcondición, no guardarraíl: lo que sobreviva al recorte se ve en el
+        # log y el texto NO se toca. Cubre los dos modos de fallo de una vez —un
+        # marcador mal puesto y el `system_prompt_addition` del usuario, que se
+        # concatena fuera del bloque (`agent_resolver.py:69-71`)—. Ese segundo
+        # caso se deja pasar a propósito: recortar con una heurística el texto
+        # que el fundador le escribió a su director mutilaría instrucciones
+        # legítimas, y es suyo.
+        fugadas = [t.name for t in get_tools_for_role(effective_role) if t.name in identidad]
+        if fugadas:
+            logger.warning(f"junta {effective_role}: identidad aún nombra {fugadas}")
+        identidad += BOARD_NO_TOOLS_CLAUSE
+
     rich_system_prompt = AGENT_PROMPT_TEMPLATE.format(
-        system_instruction=resolved.system_prompt,
+        system_instruction=identidad,
         context=context,
         query=query,
     )
