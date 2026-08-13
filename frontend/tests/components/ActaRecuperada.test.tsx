@@ -1,10 +1,21 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { render as renderSinRouter, screen, cleanup } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
 import { server } from '../setup';
 import { useChatStore } from '../../src/store/useChatStore';
 import { ArtifactPanel } from '../../src/components/artifacts/ArtifactPanel';
 import type { ChatSession } from '../../src/types';
+
+/**
+ * Router obligatorio: el panel monta `ActaActions`, y desde junta-honesta cada
+ * próximo paso del acta abre el chat de su director con `useNavigate`. Sin un
+ * `<Router>` alrededor, React Router lanza en el RENDER y estos tests caerían
+ * por un motivo que no tiene nada que ver con lo que prueban.
+ */
+const render = (ui: ReactElement) => renderSinRouter(<MemoryRouter>{ui}</MemoryRouter>);
+
 
 /**
  * lanzamiento-p0 · AD-001 — las acciones del acta siguen ahí tras la recarga.

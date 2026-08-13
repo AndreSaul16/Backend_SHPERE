@@ -1,8 +1,12 @@
 import { useCallback, useMemo, useState } from "react";
-import { FileText, Github, ExternalLink, Loader2, CheckCircle2, AlertCircle, Presentation } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { FileText, Github, ExternalLink, Loader2, CheckCircle2, AlertCircle, Presentation, Play } from "lucide-react";
 import { claveDeActa, cargarHechos, guardarHechos } from "@/utils/actaPasos";
 import { exportsService } from "@/services/api";
 import { parseProximosPasos } from "@/utils/actaParser";
+import type { ParsedIssue } from "@/utils/actaParser";
+import { directorDestino } from "@/utils/directorDelPaso";
+import { useChatStore } from "@/store/useChatStore";
 import { ActaPresentation } from "./ActaPresentation";
 import { comboDe, useAtajo } from "@/hooks/useShortcuts";
 import { InlineError } from "@/components/ui/InlineError";
@@ -46,6 +50,23 @@ function loadLastRepo(): { owner: string; repo: string } {
 }
 
 /**
+ * El texto que se precarga en el compositor del director.
+ *
+ * Pura a propósito: es lo único de este camino que merece un test sin montar
+ * nada. Lleva el paso, su cuerpo y una línea de procedencia — sin ella, el
+ * director recibe una orden suelta y el usuario no recuerda de qué junta salió.
+ */
+export function textoDelPaso(issue: ParsedIssue, tituloDelActa: string): string {
+    return [
+        issue.title,
+        issue.body.trim(),
+        `(Próximo paso del acta «${tituloDelActa}». Revísalo antes de enviarlo.)`,
+    ]
+        .filter(Boolean)
+        .join("\n\n");
+}
+
+/**
  * Acciones sobre el acta del board (F2): enviarla a Notion o crear issues de
  * GitHub con los "Próximos pasos". Estados loading/éxito(link)/error inline.
  */
@@ -75,6 +96,47 @@ export function ActaActions({ title, content }: ActaActionsProps) {
     const [pasoEnVuelo, setPasoEnVuelo] = useState<string | null>(null);
     const [pasoError, setPasoError] = useState<{ titulo: string; motivo: string } | null>(null);
     const [pasoCreado, setPasoCreado] = useState<{ titulo: string; url: string } | null>(null);
+
+    /**
+     * junta-honesta · ASH-001 — el paso se abre en el chat de su director.
+     *
+     * La junta delibera; no ejecuta. Lo que sí puede hacer el acta es dejar
+     * cada paso a un clic del chat de quien lo tiene que lanzar.
+     *
+     * Cero mecanismo nuevo: se reutiliza el camino que ya usan las plantillas
+     * de debate (`CommandPalette` → `ChatPanel`), incluida la clave `plantilla`
+     * del estado de navegación, que `ChatPanel` recoge y BORRA para que volver
+     * atrás no lo re-pegue. Sin query params a propósito: el texto del paso no
+     * debe viajar en la URL ni acabar en telemetría.
+     *
+     * Y no se envía: el crédito lo dispara el usuario al pulsar enviar, con el
+     * borrador delante y editable.
+     */
+    const navigate = useNavigate();
+    const createNewSession = useChatStore((s) => s.createNewSession);
+    const [pasoAbriendo, setPasoAbriendo] = useState<string | null>(null);
+    // `motivo` es opcional porque `motivoLegible` puede no tener nada técnico
+    // que añadir; `detail` ya dice qué hacer, así que la fila sigue explicándose.
+    const [errorApertura, setErrorApertura] = useState<{ titulo: string; motivo?: string } | null>(null);
+
+    const abrirPasoConSuDirector = useCallback(
+        async (issue: ParsedIssue) => {
+            const destino = directorDestino(issue.title, issue.body);
+            setErrorApertura(null);
+            setPasoAbriendo(issue.title);
+            try {
+                const sessionId = await createNewSession(destino.agentId);
+                navigate(`/chat/${sessionId}`, { state: { plantilla: textoDelPaso(issue, title) } });
+            } catch (error) {
+                // El fallo se queda EN LA FILA y no se navega: el resto de la
+                // lista sigue operativa y el usuario no pierde de vista el acta.
+                setErrorApertura({ titulo: issue.title, motivo: motivoLegible(error) });
+            } finally {
+                setPasoAbriendo(null);
+            }
+        },
+        [createNewSession, navigate, title],
+    );
 
     /**
      * D52 — el acta se re-parseaba en CADA render, y este componente re-renderiza
@@ -287,12 +349,16 @@ export function ActaActions({ title, content }: ActaActionsProps) {
                         {parsedIssues.map((issue) => {
                             const hecho = hechos.has(issue.title);
                             const enVuelo = pasoEnVuelo === issue.title;
+                            const destino = directorDestino(issue.title, issue.body);
+                            const abriendo = pasoAbriendo === issue.title;
+                            const falloAlAbrir = errorApertura?.titulo === issue.title ? errorApertura : null;
                             return (
                                 <li
                                     key={issue.title}
                                     data-row-actions
-                                    className="group flex items-start gap-2 rounded-sm px-1.5 py-1 hover:bg-stroke-hairline"
+                                    className="group rounded-sm px-1.5 py-1 hover:bg-stroke-hairline"
                                 >
+                                  <div className="flex items-start gap-2">
                                     <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2">
                                         <input
                                             type="checkbox"
@@ -310,6 +376,27 @@ export function ActaActions({ title, content }: ActaActionsProps) {
                                             {issue.title}
                                         </span>
                                     </label>
+                                    {/* ASH-003: un paso sin dueño NO esconde el botón — cae en
+                                        Oberon, que es quien delega, y el `aria-label` dice por qué.
+                                        Esconderlo dejaría el paso sin salida por ser el caso raro. */}
+                                    <button
+                                        type="button"
+                                        onClick={() => void abrirPasoConSuDirector(issue)}
+                                        disabled={abriendo}
+                                        aria-label={
+                                            destino.explicito
+                                                ? `Abrir el chat de ${destino.nombre} (${destino.rol}) con este paso preparado`
+                                                : `Abrir el chat de ${destino.nombre} (${destino.rol}) con este paso preparado: el paso no nombra responsable y el CEO es quien delega`
+                                        }
+                                        className="flex shrink-0 items-center gap-1 rounded-sm px-1.5 py-0.5 text-micro font-sans uppercase text-content-muted transition-colors hover:bg-stroke-highlight hover:text-accent disabled:opacity-50"
+                                    >
+                                        {abriendo ? (
+                                            <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                                        ) : (
+                                            <Play className="h-3 w-3" aria-hidden="true" />
+                                        )}
+                                        Ejecutar con {destino.nombre}
+                                    </button>
                                     <button
                                         type="button"
                                         onClick={() => enviarPaso(issue)}
@@ -324,6 +411,16 @@ export function ActaActions({ title, content }: ActaActionsProps) {
                                         )}
                                         GitHub
                                     </button>
+                                  </div>
+                                  {falloAlAbrir && (
+                                      <InlineError
+                                          title={`No se pudo abrir el chat de ${destino.nombre}`}
+                                          detail="El paso sigue aquí, intacto. Vuelve a intentarlo."
+                                          reason={falloAlAbrir.motivo}
+                                          onRetry={() => void abrirPasoConSuDirector(issue)}
+                                          retryLabel="Reintentar"
+                                      />
+                                  )}
                                 </li>
                             );
                         })}

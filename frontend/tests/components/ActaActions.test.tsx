@@ -1,10 +1,30 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, cleanup, waitFor, within } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { render as renderSinRouter, screen, cleanup, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
 import { server } from '../setup';
 import { ActaActions } from '../../src/components/artifacts/ActaActions';
 import { claveDeActa, cargarHechos } from '../../src/utils/actaPasos';
+import { useChatStore } from '../../src/store/useChatStore';
+import { SessionError } from '../../src/lib/errors';
+
+/**
+ * Todo montaje lleva router (patrón de `PaletaDeComandos.test.tsx:20-32`).
+ *
+ * La fila de un próximo paso abre el chat de su director con `useNavigate`, y
+ * sin un `<Router>` alrededor React Router revienta en el RENDER, no en el
+ * clic: sin esto, los once tests de este fichero caerían a la vez por un
+ * motivo que no tiene nada que ver con lo que prueban.
+ */
+const render = (ui: ReactElement) => renderSinRouter(<MemoryRouter>{ui}</MemoryRouter>);
+
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+    const actual = await vi.importActual('react-router-dom');
+    return { ...actual, useNavigate: () => mockNavigate };
+});
 
 /**
  * Q6 (próximos pasos marcables) y D52 (memo del parseo + `localStorage` que no
@@ -216,5 +236,133 @@ describe('AD-004 — el diálogo enseña los títulos, no un número', () => {
 
         expect(screen.getByText(/No se encontró la sección/)).toBeTruthy();
         expect(screen.queryByRole('button', { name: 'Crear issues' })).toBeNull();
+    });
+});
+
+/**
+ * junta-honesta · ASH-001/003/005/006 — la junta decide, el paso lo lanzas tú.
+ *
+ * La junta delibera y no ejecuta nada. Lo que sí puede hacer el acta es dejar
+ * cada próximo paso a un clic del chat de su director, con el texto PRECARGADO
+ * y SIN ENVIAR: el crédito lo dispara el usuario, no la interfaz.
+ *
+ * Se reutiliza tal cual el camino ya en producción para las plantillas de
+ * debate (`CommandPalette.tsx` → `ChatPanel.tsx`), incluida la clave `plantilla`
+ * del estado de navegación. Diff de mecanismo en `ChatPanel`: cero líneas.
+ */
+const ACTA_CON_DUEÑOS = `# Acta de la junta
+
+## Próximos pasos
+
+- Nexus (CTO): migrar el pipeline de despliegue
+- Revisar el informe de cierre
+`;
+
+describe('ASH-001 — cada paso se abre en el chat de su director', () => {
+    beforeEach(() => {
+        mockNavigate.mockClear();
+        useChatStore.setState({ sessions: [], currentSessionId: null });
+    });
+
+    it('la fila de un paso con dueño ofrece «Ejecutar con Nexus»', () => {
+        render(<ActaActions title="Acta de la junta" content={ACTA_CON_DUEÑOS} />);
+
+        expect(screen.getByRole('button', { name: /Abrir el chat de Nexus \(CTO\)/ })).toBeTruthy();
+        expect(screen.getByText('Ejecutar con Nexus')).toBeTruthy();
+    });
+
+    it('pulsarlo crea sesión con su director y navega con el paso en el state', async () => {
+        const crear = vi.fn().mockResolvedValue('sesion-123');
+        useChatStore.setState({ createNewSession: crear });
+        const user = userEvent.setup();
+        render(<ActaActions title="Acta de la junta" content={ACTA_CON_DUEÑOS} />);
+
+        await user.click(screen.getByText('Ejecutar con Nexus'));
+
+        await waitFor(() => expect(crear).toHaveBeenCalledWith('cto-1'));
+        expect(mockNavigate).toHaveBeenCalledTimes(1);
+        const [ruta, opciones] = mockNavigate.mock.calls[0];
+        expect(ruta).toBe('/chat/sesion-123');
+        expect(opciones.state.plantilla).toContain('Nexus (CTO): migrar el pipeline de despliegue');
+        // El texto viaja en el state, NUNCA en la URL ni en query params.
+        expect(ruta).not.toContain('?');
+    });
+
+    it('el texto precargado lleva el paso y su procedencia del acta', async () => {
+        useChatStore.setState({ createNewSession: vi.fn().mockResolvedValue('s1') });
+        const user = userEvent.setup();
+        render(<ActaActions title="Acta de la junta" content={ACTA_CON_DUEÑOS} />);
+
+        await user.click(screen.getByText('Ejecutar con Nexus'));
+
+        await waitFor(() => expect(mockNavigate).toHaveBeenCalled());
+        const texto = mockNavigate.mock.calls[0][1].state.plantilla as string;
+        expect(texto).toContain('migrar el pipeline de despliegue');
+        expect(texto).toContain('Acta de la junta');
+    });
+
+    it('abrir el chat NO envía nada: no hay stream ni cargo', async () => {
+        const enviar = vi.fn();
+        useChatStore.setState({
+            createNewSession: vi.fn().mockResolvedValue('s1'),
+            sendMessage: enviar,
+        });
+        const user = userEvent.setup();
+        render(<ActaActions title="Acta de la junta" content={ACTA_CON_DUEÑOS} />);
+
+        await user.click(screen.getByText('Ejecutar con Nexus'));
+
+        await waitFor(() => expect(mockNavigate).toHaveBeenCalled());
+        expect(enviar).not.toHaveBeenCalled();
+    });
+});
+
+describe('ASH-003 — un paso sin dueño cae en Oberon, y lo dice', () => {
+    beforeEach(() => {
+        mockNavigate.mockClear();
+        useChatStore.setState({ sessions: [], currentSessionId: null });
+    });
+
+    it('ofrece «Ejecutar con Oberon» y explica por qué en el aria-label', () => {
+        render(<ActaActions title="Acta de la junta" content={ACTA_CON_DUEÑOS} />);
+
+        const boton = screen.getByRole('button', { name: /Abrir el chat de Oberon \(CEO\)/ });
+        expect(boton).toBeTruthy();
+        expect(boton.getAttribute('aria-label')).toMatch(/delega/i);
+    });
+
+    it('la fila sigue entera: casilla de hecho y botón de GitHub', async () => {
+        const user = userEvent.setup();
+        render(<ActaActions title="Acta de la junta" content={ACTA_CON_DUEÑOS} />);
+
+        expect(screen.getAllByRole('checkbox')).toHaveLength(2);
+        expect(
+            screen.getByRole('button', { name: /Crear issue en GitHub para «Revisar el informe de cierre»/ })
+        ).toBeTruthy();
+
+        await user.click(screen.getByRole('checkbox', { name: /Revisar el informe/ }));
+        expect(screen.getByText('1 de 2 hechos')).toBeTruthy();
+    });
+});
+
+describe('ASH-006 — si falla crear la sesión, no se navega', () => {
+    beforeEach(() => {
+        mockNavigate.mockClear();
+        useChatStore.setState({ sessions: [], currentSessionId: null });
+    });
+
+    it('enseña el error en la fila y deja el resto de la lista operativo', async () => {
+        useChatStore.setState({
+            createNewSession: vi.fn().mockRejectedValue(new SessionError('Error al crear la sesión', 'create_session')),
+        });
+        const user = userEvent.setup();
+        render(<ActaActions title="Acta de la junta" content={ACTA_CON_DUEÑOS} />);
+
+        await user.click(screen.getByText('Ejecutar con Nexus'));
+
+        expect(await screen.findByText(/No se pudo abrir el chat de Nexus/)).toBeTruthy();
+        expect(mockNavigate).not.toHaveBeenCalled();
+        // La otra fila sigue viva.
+        expect(screen.getByText('Ejecutar con Oberon')).toBeTruthy();
     });
 });

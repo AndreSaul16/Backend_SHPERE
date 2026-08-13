@@ -650,6 +650,12 @@ export function ChatPanel() {
      * navegación; el compositor lo recoge y lo BORRA del historial, para que
      * volver atrás y adelante no lo vuelva a pegar encima de lo que el usuario
      * haya escrito entretanto.
+     *
+     * SEGUNDO PRODUCTOR (junta-honesta · ASH-001): «Ejecutar con {director}» en
+     * los próximos pasos del acta (`ActaActions.tsx`) usa este mismo camino y
+     * esta misma clave. No hay ruta nueva ni clave nueva: el texto del paso
+     * llega precargado y SIN ENVIAR, igual que un guion de la paleta. Si algún
+     * día se renombra `plantilla`, hay que tocar los dos emisores.
      */
     const location = useLocation();
     const plantillaPendiente = (location.state as { plantilla?: string } | null)?.plantilla;
