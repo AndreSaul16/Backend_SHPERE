@@ -4,6 +4,8 @@ Shared tools (Calendar, WhatsApp) se agregan a todos los roles.
 """
 from langchain_core.tools import BaseTool
 
+from app.infrastructure.tools.confirmation import apply_confirmation_gate
+
 # Tools compartidas (se llenan al importar shared_tools)
 SHARED_TOOLS: list[BaseTool] = []
 
@@ -18,14 +20,14 @@ ROLE_TOOLS: dict[str, list[BaseTool]] = {
 
 def register_shared_tool(tool: BaseTool):
     """Registra una herramienta disponible para todos los agentes."""
-    SHARED_TOOLS.append(tool)
+    SHARED_TOOLS.append(apply_confirmation_gate(tool))
 
 
 def register_role_tool(role: str, tool: BaseTool):
     """Registra una herramienta específica para un rol."""
     if role not in ROLE_TOOLS:
         ROLE_TOOLS[role] = []
-    ROLE_TOOLS[role].append(tool)
+    ROLE_TOOLS[role].append(apply_confirmation_gate(tool))
 
 
 def get_tools_for_role(role: str) -> list[BaseTool]:
