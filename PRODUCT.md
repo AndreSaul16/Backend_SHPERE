@@ -84,6 +84,16 @@ respuestas fueron sometidas a réplica, voto y recuento.
   (`AgentCreationWizard.tsx`, `KnowledgeBasePanel.tsx`, `AgentDocument`).
 - **Artefactos** como ciudadanos de primera clase: código, markdown, mermaid,
   tablas de datos, SVG, en un panel lateral redimensionable.
+- **Guardarraíles del artefacto — lo que SPHERE garantiza y lo que no.**
+  Garantiza **detección y aviso**: el tipo declarado se contrasta con una lista
+  blanca y nunca se adivina, un artefacto abierto siempre se cierra, el tamaño
+  está acotado a 256 KB, y al cerrar se juzga si el contenido encaja con el tipo
+  declarado. Cuando algo de eso falla, se dice en el panel y el contenido se
+  enseña igual. **No garantiza** que el código de un artefacto compile o parsee
+  —no se comprueba en ningún lenguaje—, que sus datos, cifras o citas sean
+  ciertos, ni que un markdown sea «válido» (cualquier texto lo es). **No hay
+  reintento del modelo en ningún punto**: en streaming no se puede reintentar lo
+  que ya se ha enseñado.
 - **Memoria ejecutiva y analytics** (PostHog) sobre eventos de producto.
 - Despliegue en Railway; backend propio en el mismo monorepo.
 
