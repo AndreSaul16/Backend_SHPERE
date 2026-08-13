@@ -11,10 +11,53 @@ from langchain_core.tools import StructuredTool
 from app.infrastructure.tools.registry import register_role_tool
 from app.infrastructure.database import db
 from app.core.logger import checkpoint_logger as logger
+from app.core.tool_context import get_current_user_id
 
 
-def _get_tasks_collection():
-    return db.get_async_db()["agent_tasks"]
+# ============================================================
+# ACCESO A agent_tasks — el dueño no se aplica, se hereda
+# ============================================================
+#
+# No existe forma de obtener la colección cruda desde este módulo: la única
+# puerta es `_scoped_tasks`, y lo que devuelve ya lleva el dueño dentro. Una
+# cuarta lectura futura no puede olvidar el filtro porque no tiene con qué.
+
+
+class _ScopedTasks:
+    """`agent_tasks` acotada a un dueño. No expone la colección subyacente."""
+
+    def __init__(self, col, uid: str):
+        self._col = col
+        self._uid = uid
+
+    def find(self, query: Optional[dict] = None):
+        return self._col.find({**(query or {}), "owner_user_id": self._uid})
+
+    async def insert_one(self, doc: dict):
+        return await self._col.insert_one({**doc, "owner_user_id": self._uid})
+
+
+def _user_context_missing_error(tool_name: str) -> str:
+    return json.dumps(
+        {
+            "error": "user_context_missing",
+            "tool": tool_name,
+            "hint": "Esta herramienta requiere un usuario autenticado.",
+        },
+        ensure_ascii=False,
+    )
+
+
+def _scoped_tasks(tool_name: str) -> tuple[Optional[_ScopedTasks], Optional[str]]:
+    """Devuelve `(colección acotada, None)` o `(None, error)`.
+
+    La guarda va ANTES de `db.get_async_db()`: sin usuario en contexto no se
+    abre consulta alguna contra Mongo (ATI-004).
+    """
+    uid = get_current_user_id()
+    if not uid:
+        return None, _user_context_missing_error(tool_name)
+    return _ScopedTasks(db.get_async_db()["agent_tasks"], uid), None
 
 
 # ============================================================
@@ -45,7 +88,10 @@ async def _delegate_task(
     description: str,
     priority: Literal["high", "medium", "low"] = "medium",
 ) -> str:
-    tasks_col = _get_tasks_collection()
+    tasks_col, error = _scoped_tasks("delegate_task")
+    if error:
+        return error
+
     task_id = str(uuid.uuid4())[:8]
     now = datetime.now(timezone.utc)
 
@@ -78,16 +124,21 @@ async def _check_task_status(
     task_id: Optional[str] = None,
     assigned_to: Optional[str] = None,
 ) -> str:
-    tasks_col = _get_tasks_collection()
-
     query = {}
     if task_id:
         query["task_id"] = task_id
     if assigned_to:
         query["assigned_to"] = assigned_to
 
+    # La guarda se evalúa sobre los argumentos del llamante y ANTES de mezclar
+    # el dueño; si se evaluara después nunca estaría vacía y este mensaje
+    # quedaría muerto.
     if not query:
         return json.dumps({"error": "Debes proporcionar task_id o assigned_to"}, ensure_ascii=False)
+
+    tasks_col, error = _scoped_tasks("check_task_status")
+    if error:
+        return error
 
     cursor = tasks_col.find(query).sort("updated_at", -1).limit(10)
     tasks = []
@@ -106,7 +157,10 @@ async def _check_task_status(
 
 
 async def _list_active_tasks() -> str:
-    tasks_col = _get_tasks_collection()
+    tasks_col, error = _scoped_tasks("list_active_tasks")
+    if error:
+        return error
+
     cursor = tasks_col.find(
         {"status": {"$in": ["pending", "in_progress"]}}
     ).sort("priority", 1).limit(20)

@@ -41,7 +41,9 @@ async def backfill(owner_uid: str, dry_run: bool = False):
         col = async_db[collection_name]
 
         # Contar documentos sin user_id
-        if collection_name == "custom_agents":
+        # `agent_tasks` va con `custom_agents`: su índice es sobre
+        # `owner_user_id` (main.py) y sus tools filtran por ese campo.
+        if collection_name in ("custom_agents", "agent_tasks"):
             query = {"owner_user_id": {"$exists": False}}
             field = "owner_user_id"
         else:
