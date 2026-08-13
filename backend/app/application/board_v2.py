@@ -32,6 +32,7 @@ from app.application.orchestrator import (
     BOARD_SYSTEM_PROMPT_ADDITION,
     BOARD_CEO_OPENER,
 )
+from app.application.board_narracion import narracion_sospechosa
 from app.infrastructure.database import db, get_board_actas_collection
 from app.core.logger import checkpoint_logger as logger
 
@@ -442,6 +443,27 @@ def _board_query(role: str, phase: str, query: str, participants: list[str], pri
     )
 
 
+def _medir_narracion(role: str, msgs: list) -> None:
+    """Termómetro: deja en el log si un director narró usar una herramienta.
+
+    NO bloquea, NO reescribe y NO llega al usuario — ni al `state`, ni al SSE.
+    Lo único que puede hacer con lo que mide es escribirlo: `narracion_sospechosa`
+    devuelve `list[str]`, así que aquí no hay texto con el que censurar a nadie
+    aunque alguien quisiera.
+
+    El `try/except` no es defensivo por costumbre: un fallo de la MEDICIÓN no
+    puede tumbar una junta. Sería una puerta con la etiqueta equivocada.
+    """
+    try:
+        if not msgs:
+            return
+        fugas = narracion_sospechosa(getattr(msgs[0], "content", "") or "", role)
+        if fugas:
+            logger.info(f"Board V2: narración sospechosa de {role} → {fugas}")
+    except Exception:
+        pass
+
+
 def board_v2_node_factory(role: str, phase: str):
     """Crea un nodo de director para análisis o réplica. Parsea el voto."""
 
@@ -466,6 +488,7 @@ def board_v2_node_factory(role: str, phase: str):
         # las escrituras de los directores del mismo step (InvalidUpdateError).
         # final_response lo escribe únicamente synthesis al cerrar el debate.
         msgs = result.get("messages") or []
+        _medir_narracion(role, msgs)
         out: dict[str, Any] = {"messages": msgs}
         if msgs:
             msg = msgs[0]
@@ -669,6 +692,7 @@ async def synthesis_node(state: AgentState):
     }
     result = await agent_node(modified_state)
     msgs = result.get("messages") or []
+    _medir_narracion(role, msgs)
     if msgs:
         ak = getattr(msgs[0], "additional_kwargs", None)
         if isinstance(ak, dict):
