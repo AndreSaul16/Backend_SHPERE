@@ -352,7 +352,11 @@ export function ActaActions({ title, content }: ActaActionsProps) {
 
             {/* Modal GitHub (inline, minimal) */}
             {showGithubModal && (
-                <div className="mt-2 rounded-xl border border-surface-highlight bg-surface/60 p-3 space-y-3">
+                <div
+                    role="group"
+                    aria-label="Crear issues en GitHub"
+                    className="mt-2 rounded-xl border border-surface-highlight bg-surface/60 p-3 space-y-3"
+                >
                     {parsedIssues.length === 0 ? (
                         <p className="text-xs text-warning">
                             No se encontró la sección "Próximos pasos" con acciones en el acta.
@@ -362,6 +366,29 @@ export function ActaActions({ title, content }: ActaActionsProps) {
                             <p className="text-xs text-content-muted">
                                 Se crearán {parsedIssues.length} issues en el repositorio indicado.
                             </p>
+
+                            {/* AD-004 — lo que se aprueba son estos títulos, no su número.
+
+                                Salen del MISMO `parsedIssues` que el recuento de arriba y
+                                que la lista marcable de la sección: un solo array, así que
+                                el número anunciado no puede divergir de lo que se lista.
+
+                                Y se listan TODOS. Nada de «y N más»: lo que no se ve es
+                                exactamente lo que nadie ha aprobado, y esto acaba en el
+                                repositorio de un cliente. Si la lista es larga, se recorre
+                                con scroll, que sigue dejándola entera. */}
+                            <ul className="max-h-48 space-y-1 overflow-y-auto pr-1">
+                                {parsedIssues.map((issue) => (
+                                    <li
+                                        key={issue.title}
+                                        className="truncate text-xs text-content"
+                                        title={issue.title}
+                                    >
+                                        {issue.title}
+                                    </li>
+                                ))}
+                            </ul>
+
                             <div className="flex gap-2">
                                 <input
                                     aria-label="owner"
