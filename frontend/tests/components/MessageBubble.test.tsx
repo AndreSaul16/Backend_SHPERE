@@ -102,3 +102,45 @@ describe('MessageBubble — copiar al portapapeles (D36)', () => {
         expect(onUnhandled).not.toHaveBeenCalled();
     });
 });
+
+/**
+ * El quinto salto de la cadena del tercer estado.
+ *
+ * `resumen` es una prop OPCIONAL, así que TypeScript no dice nada si la
+ * burbuja se olvida de pasarla: el turno tendría el marcador, el parser
+ * produciría la pieza correcta y la tarjeta saldría muda. Es el único salto de
+ * los cinco que el compilador no protege, y por eso lleva test propio.
+ */
+describe('MessageBubble — la confirmación pendiente llega entera a la tarjeta', () => {
+    const conMarcador = (content: string): Message => ({
+        id: 'm-confirm',
+        role: 'assistant',
+        content,
+        timestamp: new Date('2026-08-13T10:00:00Z'),
+        agentId: 'ceo',
+    });
+
+    it('el resumen del marcador se ve en el hilo', () => {
+        render(
+            <MessageBubble
+                message={conMarcador(
+                    'Voy a avisarle.\n[TOOL_CONFIRM:whatsapp_send_message:Enviar «llego tarde» a +34600111222]\n',
+                )}
+            />,
+        );
+
+        expect(screen.getByText('Enviar «llego tarde» a +34600111222')).toBeInTheDocument();
+    });
+
+    it('y no se cuela el marcador crudo ni el identificador técnico', () => {
+        render(
+            <MessageBubble
+                message={conMarcador('[TOOL_CONFIRM:calendar_delete_event:Borrar «Comité» del jueves]')}
+            />,
+        );
+
+        expect(screen.getByText('Borrar «Comité» del jueves')).toBeInTheDocument();
+        expect(screen.queryByText(/TOOL_CONFIRM/)).toBeNull();
+        expect(screen.queryByText(/calendar_delete_event/)).toBeNull();
+    });
+});

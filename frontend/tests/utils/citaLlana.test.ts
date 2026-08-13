@@ -60,6 +60,12 @@ describe('citaLlana', () => {
             .toBe('Miro el calendario. Tres huecos.');
     });
 
+    it('el marcador de confirmación tampoco se cuela crudo en la cita', () => {
+        // Es el marcador nuevo; si se olvida en esta lista, el Palco cita
+        // literalmente «[TOOL_CONFIRM:whatsapp_send_message:…]».
+        expect(citaLlana('a [TOOL_CONFIRM:x:y] b')).toBe('a b');
+    });
+
     it('recorta por palabra y lo dice con una elipsis', () => {
         const largo = 'palabra '.repeat(60);
         const r = citaLlana(largo, 40);

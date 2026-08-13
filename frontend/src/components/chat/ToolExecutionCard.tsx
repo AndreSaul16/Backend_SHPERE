@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wrench, ChevronDown, ChevronUp, Loader2, CheckCircle2, XCircle, RotateCcw } from 'lucide-react';
+import { Wrench, ChevronDown, ChevronUp, Loader2, CheckCircle2, XCircle, RotateCcw, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChatStore } from '@/store/useChatStore';
 
 interface ToolExecutionCardProps {
     toolName: string;
-    status: 'running' | 'completed' | 'failed';
+    status: 'running' | 'completed' | 'failed' | 'awaiting_confirmation';
     result?: string;
     error?: string;
+    /** Qué se hará si el usuario confirma. Solo en `awaiting_confirmation`. */
+    resumen?: string;
 }
 
 const TOOL_LABELS: Record<string, string> = {
@@ -53,6 +55,7 @@ function Header({
     panelId,
     label,
     isFailed,
+    isAwaiting,
     status,
 }: {
     interactive: boolean;
@@ -61,6 +64,7 @@ function Header({
     panelId: string;
     label: string;
     isFailed: boolean;
+    isAwaiting: boolean;
     status: ToolExecutionCardProps['status'];
 }) {
     const contenido = (
@@ -69,6 +73,9 @@ function Header({
                 <Loader2 className="h-3.5 w-3.5 text-accent animate-spin" aria-hidden="true" />
             ) : isFailed ? (
                 <XCircle className="h-3.5 w-3.5 text-dissent" aria-hidden="true" />
+            ) : isAwaiting ? (
+                /* Ni ✓ ni ✗: la acción no ha ocurrido y tampoco ha fallado. */
+                <HelpCircle className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
             ) : (
                 <CheckCircle2 className="h-3.5 w-3.5 text-success" aria-hidden="true" />
             )}
@@ -106,11 +113,13 @@ export const ToolExecutionCard: React.FC<ToolExecutionCardProps> = ({
     status,
     result,
     error,
+    resumen,
 }) => {
     const [expanded, setExpanded] = useState(false);
     const panelId = React.useId();
     const label = TOOL_LABELS[toolName] || toolName;
     const isFailed = status === 'failed';
+    const isAwaiting = status === 'awaiting_confirmation';
     const isStreaming = useChatStore(
         (s) => s.currentSessionId !== null && s.streamingSessionIds.includes(s.currentSessionId)
     );
@@ -147,8 +156,16 @@ export const ToolExecutionCard: React.FC<ToolExecutionCardProps> = ({
                 panelId={panelId}
                 label={label}
                 isFailed={isFailed}
+                isAwaiting={isAwaiting}
                 status={status}
             />
+            {/* Sin botón: quien confirma es el usuario respondiéndole al agente,
+                no un clic que reenvía la herramienta. */}
+            {isAwaiting && resumen && (
+                <p className="mt-2 text-xs text-content-muted leading-relaxed break-words">
+                    {resumen}
+                </p>
+            )}
             {isFailed && (
                 <div className="mt-2 space-y-2">
                     {error && (

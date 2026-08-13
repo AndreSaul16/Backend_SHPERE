@@ -22,7 +22,7 @@
 const ARTEFACTO = /<sphere_artifact[\s\S]*?<\/sphere_artifact>/g;
 
 /** Los marcadores que el store escribe en el contenido (ver `streamHandlers`). */
-const MARCADORES = /\[(?:ARTIFACT|TOOL_START|TOOL_RESULT|TOOL_ERROR):[^\]]*\]/g;
+const MARCADORES = /\[(?:ARTIFACT|TOOL_START|TOOL_RESULT|TOOL_ERROR|TOOL_CONFIRM):[^\]]*\]/g;
 
 const REGLAS: Array<[RegExp, string]> = [
     // Bloques de código cercados: se queda el contenido, se va la valla.

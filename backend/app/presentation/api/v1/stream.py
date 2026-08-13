@@ -13,7 +13,7 @@ El orchestrator respeta la bandera already_charged para no volver a cobrar.
 
 import json
 import re
-from typing import Optional, Any
+from typing import Optional, Any, Literal
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -33,25 +33,52 @@ from app.core.logger import stream_logger as logger
 router = APIRouter()
 
 
-def _tool_error_message(raw_output: str) -> Optional[str]:
-    """Detecta si el resultado de una tool es un error real y extrae su mensaje.
+CONFIRMATION_REQUIRED = "confirmation_required"
 
-    Las tools devuelven JSON: error real = {"error": true, "message": ...}.
-    El caso {"error": "confirmation_required"} NO es un fallo (es el flujo de
-    confirmación que el agente narra al usuario), así que no se marca como error.
+ToolOutcome = Literal["result", "error", "confirmation"]
+
+
+def _classify_tool_output(raw_output: str) -> tuple[ToolOutcome, str]:
+    """Clasifica el resultado de una tool en uno y solo uno de tres estados.
+
+    Éxito, fallo o pendiente de confirmación. Es el ÚNICO punto de decisión:
+    ningún par de estados puede compartir evento porque nadie más clasifica.
+
+    Los errores reales llegan casi siempre como string —`{"error":
+    "linkedin_not_configured"}`—, no como `{"error": true}`; tratar solo el
+    booleano como fallo pintaba en verde toda la familia de credenciales
+    ausentes. `confirmation_required` no es ni una cosa ni la otra: es una
+    pregunta al usuario, y ni la ✗ roja ni el ✓ verde la describen.
+
+    Devuelve `(estado, texto)`, donde el texto es el mensaje de fallo o el
+    resumen de la acción pendiente, y queda vacío en caso de éxito.
     """
     if not raw_output or '"error"' not in raw_output:
-        return None
+        return "result", ""
     try:
         # El output puede venir envuelto (ToolMessage repr); intentar el JSON directo
         parsed = json.loads(raw_output)
     except (json.JSONDecodeError, TypeError):
-        return None
+        return "result", ""
     if not isinstance(parsed, dict):
-        return None
-    if parsed.get("error") is True:
-        return str(parsed.get("message") or parsed.get("hint") or "La herramienta falló.")
-    return None
+        return "result", ""
+
+    error = parsed.get("error")
+    if not error:
+        return "result", ""
+
+    if error == CONFIRMATION_REQUIRED:
+        resumen = (
+            parsed.get("action_summary")
+            or parsed.get("hint")
+            or "Acción pendiente de tu confirmación."
+        )
+        return "confirmation", str(resumen)
+
+    mensaje = parsed.get("message") or parsed.get("hint")
+    if not mensaje:
+        mensaje = "La herramienta falló." if error is True else error
+    return "error", str(mensaje)
 
 
 async def _safe_refund(credit_manager, charge_ctx, user_id: str, reason: str) -> None:
@@ -343,10 +370,13 @@ async def generate_chat_events(
                 if not isinstance(raw_output, str):
                     raw_output = getattr(raw_output, "content", None) or str(raw_output)
                 tool_output = raw_output[:500]
-                error_msg = _tool_error_message(raw_output)
-                if error_msg:
-                    logger.warning(f"⚠️ Tool error: {tool_name}: {error_msg[:200]}")
-                    yield f"data: {json.dumps({'type': 'tool_error', 'tool_name': tool_name, 'error': error_msg[:300]})}\n\n"
+                estado, texto = _classify_tool_output(raw_output)
+                if estado == "error":
+                    logger.warning(f"⚠️ Tool error: {tool_name}: {texto[:200]}")
+                    yield f"data: {json.dumps({'type': 'tool_error', 'tool_name': tool_name, 'error': texto[:300]})}\n\n"
+                elif estado == "confirmation":
+                    logger.info(f"⏸️ Tool pendiente de confirmación: {tool_name}")
+                    yield f"data: {json.dumps({'type': 'tool_confirmation', 'tool_name': tool_name, 'summary': texto[:300]})}\n\n"
                 else:
                     logger.info(f"✅ Tool end: {tool_name}")
                     yield f"data: {json.dumps({'type': 'tool_result', 'tool_name': tool_name, 'result': tool_output})}\n\n"

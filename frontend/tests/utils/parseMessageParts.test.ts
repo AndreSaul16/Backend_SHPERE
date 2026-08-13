@@ -99,6 +99,35 @@ describe('parseMessageParts', () => {
         expect(parseMessageParts('')).toEqual([{ tipo: 'texto', texto: '' }]);
     });
 
+    it('una petición de confirmación es una pieza propia, ni hecha ni fallida', () => {
+        // El quinto marcador. Sin él, el turno enseñaría el corchete crudo y la
+        // acción pendiente se leería como texto del agente.
+        const partes = parseMessageParts(
+            '\n[TOOL_CONFIRM:whatsapp_send_message:Enviar «llego tarde» a +34600111222]\n',
+        );
+        expect(partes[0].tipo).toBe('utensilio');
+        expect(partes[0]).toEqual({
+            tipo: 'utensilio',
+            nombre: 'whatsapp_send_message',
+            estado: 'awaiting_confirmation',
+            resumen: 'Enviar «llego tarde» a +34600111222',
+        });
+    });
+
+    it('la confirmación SUSTITUYE a la tarjeta en curso del mismo utensilio', () => {
+        // Misma regla que resultado y error: una llamada es UNA tarjeta que
+        // cambia de estado, no dos apiladas.
+        const partes = parseMessageParts(
+            '[TOOL_START:calendar_delete_event]\n[TOOL_CONFIRM:calendar_delete_event:Borrar «Comité» del jueves]',
+        );
+        expect(partes).toEqual([{
+            tipo: 'utensilio',
+            nombre: 'calendar_delete_event',
+            estado: 'awaiting_confirmation',
+            resumen: 'Borrar «Comité» del jueves',
+        }]);
+    });
+
     it('cien turnos de 8 KB se parsean en menos de 150 ms', () => {
         // No es una prueba de rendimiento fina: es la red que detecta si alguien
         // reintroduce un algoritmo cuadrático aquí dentro. El caso real es un

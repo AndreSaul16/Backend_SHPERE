@@ -31,23 +31,28 @@ export type ParteDelTurno =
     | {
         tipo: 'utensilio';
         nombre: string;
-        estado: 'running' | 'completed' | 'failed';
+        estado: 'running' | 'completed' | 'failed' | 'awaiting_confirmation';
         /** Salida recortada, si terminó bien. */
         resultado?: string;
         /** Motivo, si falló. */
         error?: string;
+        /** Qué se hará si el usuario confirma. Solo en `awaiting_confirmation`. */
+        resumen?: string;
     };
 
 /**
- * Los cuatro marcadores, en un solo barrido.
+ * Los cinco marcadores, en un solo barrido.
  *
  * Se conserva LITERAL el patrón que había en el JSX, incluida la asimetría de
  * `[^:]+` para el nombre y `[^\]]*` para la carga: cambiarlo aquí cambiaría en
  * silencio qué se pinta en el hilo, y el escape de `]` y de los saltos de línea
  * lo hace `streamHandlers` contando con exactamente estas clases.
+ *
+ * `TOOL_CONFIRM` es el quinto y sigue la misma asimetría: una herramienta que
+ * pide permiso no ha terminado ni ha fallado, así que necesita marcador propio.
  */
 const MARCADORES =
-    /\[ARTIFACT:([^:]+):([^\]]+)\]|\[TOOL_START:([^\]]+)\]|\[TOOL_RESULT:([^:]+):([^\]]*)\]|\[TOOL_ERROR:([^:]+):([^\]]*)\]/g;
+    /\[ARTIFACT:([^:]+):([^\]]+)\]|\[TOOL_START:([^\]]+)\]|\[TOOL_RESULT:([^:]+):([^\]]*)\]|\[TOOL_ERROR:([^:]+):([^\]]*)\]|\[TOOL_CONFIRM:([^:]+):([^\]]*)\]/g;
 
 /**
  * Parte el contenido de un turno en piezas.
@@ -102,6 +107,12 @@ export function parseMessageParts(content: string): ParteDelTurno[] {
                 tipo: 'utensilio', nombre: m[6], estado: 'failed', error: m[7] || '',
             };
             const i = enCurso(m[6]);
+            if (i >= 0) partes[i] = pieza; else partes.push(pieza);
+        } else if (m[8]) {
+            const pieza: ParteDelTurno = {
+                tipo: 'utensilio', nombre: m[8], estado: 'awaiting_confirmation', resumen: m[9] || '',
+            };
+            const i = enCurso(m[8]);
             if (i >= 0) partes[i] = pieza; else partes.push(pieza);
         }
 

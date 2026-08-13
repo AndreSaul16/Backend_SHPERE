@@ -124,6 +124,13 @@ export function createStreamHandlers(ctx: StreamContext): StreamCallbacks {
             anadirALaActiva(`\n[TOOL_ERROR:${data.tool_name}:${safeError}]\n`);
         },
 
+        onToolConfirmation: (data) => {
+            // Mismo saneado que el error, por el mismo motivo: un ']' en el
+            // resumen cerraría el marcador antes de tiempo.
+            const safeSummary = data.summary.replace(/[\]\n\r]/g, ' ').substring(0, 200);
+            anadirALaActiva(`\n[TOOL_CONFIRM:${data.tool_name}:${safeSummary}]\n`);
+        },
+
         onDone: () => {
             // Lo pendiente se escribe ANTES de cerrar: si el último token se
             // quedara en el buffer, el turno terminaría con la frase a medias.

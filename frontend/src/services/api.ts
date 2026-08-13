@@ -69,6 +69,8 @@ export interface StreamCallbacks {
     onToolStart?: (data: { tool_name: string; args: Record<string, ValorJson> }) => void;
     onToolResult?: (data: { tool_name: string; result: string }) => void;
     onToolError?: (data: { tool_name: string; error: string }) => void;
+    // Tercer estado: la herramienta no falló, está esperando un sí del usuario.
+    onToolConfirmation?: (data: { tool_name: string; summary: string }) => void;
     onDone?: () => void;
     onError?: (error: unknown) => void;
 }
@@ -223,6 +225,11 @@ export const chatService = {
                             callbacks.onToolError?.({
                                 tool_name: data.tool_name || 'unknown',
                                 error: data.error || 'La herramienta falló.',
+                            });
+                        } else if (data.type === 'tool_confirmation') {
+                            callbacks.onToolConfirmation?.({
+                                tool_name: data.tool_name || 'unknown',
+                                summary: data.summary || 'Esta acción necesita tu confirmación.',
                             });
                         } else if (data.type === 'error') {
                             errorDelServidor = data.message || 'Unknown server error';

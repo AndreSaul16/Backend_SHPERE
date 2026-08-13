@@ -376,6 +376,21 @@ describe('artefactos y utensilios en streaming', () => {
         expect(texto).toContain('[TOOL_ERROR:buscar:a b c d');
         expect(texto.match(/\]/g)).toHaveLength(1);
     });
+
+    it('la petición de confirmación deja su propio marcador, saneado igual que el error', async () => {
+        // Sin `?.`: si el manejador no existe, esto tiene que reventar. Con
+        // encadenamiento opcional el hueco pasaría en silencio, que es justo el
+        // fallo que se está cerrando.
+        abrirSesion('cto-1');
+        await enviar((cb) => cb.onToolConfirmation!({
+            tool_name: 'whatsapp_send_message',
+            summary: 'Enviar a]b\nc\rd' + 'z'.repeat(300),
+        }));
+
+        const texto = mensajes()[1].content;
+        expect(texto).toContain('[TOOL_CONFIRM:whatsapp_send_message:Enviar a b c d');
+        expect(texto.match(/\]/g)).toHaveLength(1);
+    });
 });
 
 // ----------------------------------------------------------- cierre y fallos
