@@ -195,3 +195,104 @@ describe('DataGrid — celdas vacías y troceo (D35)', () => {
         expect(screen.getByText(/2 filas · 3 columnas/)).toBeDefined();
     });
 });
+
+/**
+ * AV-002 — la tabla de datos lee tablas markdown **y** valores separados.
+ *
+ * `csv` es el único tipo que lleva a este visor (`'csv' → 'data_table'` en los
+ * dos mapas del almacén) y es lo que el prompt le pide al modelo. Cuando el
+ * modelo obedecía y emitía CSV de verdad, aquí se pintaba una sola columna con
+ * la línea cruda dentro: una tabla de unit economics con las tres cifras
+ * apelotonadas en una celda, con cara de tabla correcta.
+ */
+describe('DataGrid — valores separados (AV-002)', () => {
+    it('un CSV real se pinta con sus columnas', () => {
+        const csv = 'Director,Voto,Confianza\nCTO,SI,90\nCFO,NO,60';
+        const { container } = render(<DataGrid artifact={makeArtifact(csv)} />);
+
+        const { cabeceras, filas } = leerRejilla(container);
+        expect(cabeceras).toEqual(['Director', 'Voto', 'Confianza']);
+        expect(filas).toEqual([['CTO', 'SI', '90'], ['CFO', 'NO', '60']]);
+    });
+
+    it('la barra manda aunque la cabecera lleve MÁS comas que barras', () => {
+        // La trampa de verdad, y hay que medirla en la PRIMERA línea, que es lo
+        // único que mira el husmeo: aquí hay cuatro comas contra tres barras.
+        // Elegir «el que más aparece» partiría la cabecera en cinco columnas
+        // creíbles y falsas; el orden fijo la deja en dos, que es lo que es.
+        const tabla = [
+            '| Métrica | Valores (Q1, Q2, Q3, Q4, Q5) |',
+            '|---|---|',
+            '| Ingresos | 120 |',
+        ].join('\n');
+        const { container } = render(<DataGrid artifact={makeArtifact(tabla)} />);
+
+        const { cabeceras, filas } = leerRejilla(container);
+        expect(cabeceras).toEqual(['Métrica', 'Valores (Q1, Q2, Q3, Q4, Q5)']);
+        expect(filas).toEqual([['Ingresos', '120']]);
+    });
+
+    it('las comas del cuerpo se quedan dentro de sus celdas', () => {
+        // El separador de millares es la razón por la que la ruta markdown no
+        // puede tocarse: sus comas son datos, no estructura.
+        const tabla = [
+            '| Concepto | Q1 | Q2 |',
+            '|---|---|---|',
+            '| Ingresos | 1,200 | 3,400 |',
+            '| Costes | 2,100 | 4,300 |',
+        ].join('\n');
+        const { container } = render(<DataGrid artifact={makeArtifact(tabla)} />);
+
+        const { cabeceras, filas } = leerRejilla(container);
+        expect(cabeceras).toEqual(['Concepto', 'Q1', 'Q2']);
+        expect(filas[0]).toEqual(['Ingresos', '1,200', '3,400']);
+    });
+
+    it('un campo entrecomillado se queda con su separador dentro', () => {
+        const csv = 'Concepto,Importe\n"Coste, con impuestos",1200';
+        const { container } = render(<DataGrid artifact={makeArtifact(csv)} />);
+
+        expect(leerRejilla(container).filas).toEqual([['Coste, con impuestos', '1200']]);
+    });
+
+    it('dos comillas seguidas dentro de un campo son una comilla literal', () => {
+        const csv = 'Concepto,Nota\n"El ""acta"" firmada",vigente';
+        const { container } = render(<DataGrid artifact={makeArtifact(csv)} />);
+
+        expect(leerRejilla(container).filas).toEqual([['El "acta" firmada', 'vigente']]);
+    });
+
+    it('el punto y coma del CSV español también parte la fila', () => {
+        const { container } = render(<DataGrid artifact={makeArtifact('A;B;C\n1;2;3')} />);
+
+        const { cabeceras, filas } = leerRejilla(container);
+        expect(cabeceras).toEqual(['A', 'B', 'C']);
+        expect(filas).toEqual([['1', '2', '3']]);
+    });
+
+    it('el tabulador tiene prioridad sobre la coma', () => {
+        // Un tabulador no aparece por accidente dentro de una celda; una coma sí.
+        const { container } = render(
+            <DataGrid artifact={makeArtifact('Concepto\tImporte\nCoste, total\t1200')} />,
+        );
+
+        expect(leerRejilla(container).filas).toEqual([['Coste, total', '1200']]);
+    });
+
+    it('en CSV una fila de guiones es un dato, no un adorno', () => {
+        // En markdown `---` separa la cabecera del cuerpo. En un CSV es texto.
+        const { container } = render(<DataGrid artifact={makeArtifact('A,B\n---,---\n1,2')} />);
+
+        expect(leerRejilla(container).filas).toEqual([['---', '---'], ['1', '2']]);
+    });
+
+    it('lo que no es tabla en ningún formato lo dice sin culpar al markdown', () => {
+        const { container } = render(
+            <DataGrid artifact={makeArtifact('Aquí tienes el resumen que me pediste')} />,
+        );
+
+        expect(container.querySelector('table')).toBeNull();
+        expect(screen.getByText(/no se ha podido leer/i)).toBeDefined();
+        expect(screen.queryByText(/markdown/i)).toBeNull();
+    });
+});

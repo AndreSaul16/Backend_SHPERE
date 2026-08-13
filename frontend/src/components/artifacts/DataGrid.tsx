@@ -53,6 +53,111 @@ function isSeparatorRow(cells: string[]): boolean {
     return cells.length > 0 && cells.every(cell => /^:?-+:?$/.test(cell));
 }
 
+/** Los separadores que este visor reconoce, **en orden de prioridad**. */
+const SEPARADORES = ['|', '\t', ';', ','] as const;
+type Separador = typeof SEPARADORES[number];
+
+/**
+ * Qué separa las celdas de esta tabla, mirando su primera línea con contenido.
+ *
+ * El orden es la decisión, y es fijo: `|`, tabulador, `;`, coma. **No se elige
+ * el que más aparece.** La heurística de frecuencia se equivoca justo en el
+ * caso caro —una tabla markdown de cifras con separador de millares,
+ * `| Ingresos | 1,200 | 3,400 |`, tiene más comas que barras— y ese error
+ * produce columnas creíbles y falsas, que es la clase de daño que este visor ya
+ * causó una vez (D35).
+ *
+ * Después de la barra: el tabulador no aparece por accidente dentro de una
+ * celda; el `;` es el CSV de locale español y casi nunca sale en prosa; la coma
+ * va la última porque es la más ambigua de las cuatro.
+ */
+function detectarSeparador(linea: string): Separador | null {
+    return SEPARADORES.find(sep => linea.includes(sep)) ?? null;
+}
+
+/**
+ * Trocea un texto separado por valores, respetando el entrecomillado.
+ *
+ * Un campo entre comillas dobles puede llevar dentro el separador y saltos de
+ * línea, y `""` representa una comilla literal. Por eso se recorre el contenido
+ * ENTERO y no línea a línea: partir por `\n` antes de mirar las comillas rompe
+ * exactamente los campos que el entrecomillado existe para proteger.
+ */
+function trocearValoresSeparados(texto: string, sep: string): string[][] {
+    const filas: string[][] = [];
+    let fila: string[] = [];
+    let campo = '';
+    let entreComillas = false;
+
+    for (let i = 0; i < texto.length; i++) {
+        const c = texto[i];
+
+        if (entreComillas) {
+            if (c === '"' && texto[i + 1] === '"') {
+                campo += '"';
+                i++;
+            } else if (c === '"') {
+                entreComillas = false;
+            } else {
+                campo += c;
+            }
+            continue;
+        }
+
+        if (c === '"' && campo.trim() === '') {
+            entreComillas = true;
+            campo = '';
+        } else if (c === sep) {
+            fila.push(campo);
+            campo = '';
+        } else if (c === '\n') {
+            fila.push(campo);
+            filas.push(fila);
+            fila = [];
+            campo = '';
+        } else if (c !== '\r') {
+            campo += c;
+        }
+    }
+    fila.push(campo);
+    filas.push(fila);
+
+    return filas
+        .map(f => f.map(celda => celda.trim()))
+        .filter(f => f.some(celda => celda !== ''));
+}
+
+/**
+ * La tabla, venga en markdown o en valores separados.
+ *
+ * La ruta markdown queda intacta byte a byte: `splitCells`, `parseRow`, la
+ * detección real de la fila de guiones y el relleno por la derecha siguen
+ * siendo los mismos, y los diez casos de regresión D35 los vigilan.
+ */
+function parseTabla(content: string): { headers: string[]; rows: string[][] } {
+    const texto = content.trim();
+    if (!texto) return { headers: [], rows: [] };
+
+    const primeraLinea = texto.split('\n').find(linea => linea.trim()) ?? '';
+    const separador = detectarSeparador(primeraLinea);
+    if (!separador) return { headers: [], rows: [] };
+
+    if (separador === '|') return parseMarkdownTable(texto);
+
+    const filas = trocearValoresSeparados(texto, separador);
+    if (filas.length < 2) return { headers: [], rows: [] };
+
+    const headers = filas[0];
+    // La fila de guiones NO se busca aquí: en markdown `---` separa la cabecera
+    // del cuerpo, pero en un CSV es un dato («sin valor» se escribe así).
+    const rows = filas.slice(1).map(cells => {
+        while (cells.length < headers.length) cells.push('');
+        return cells;
+    });
+
+    return { headers, rows };
+}
+
 function parseMarkdownTable(content: string): { headers: string[]; rows: string[][] } {
     const lines = content.trim().split('\n').filter(line => line.trim());
     if (lines.length < 2) return { headers: [], rows: [] };
@@ -83,7 +188,7 @@ function toCSV(headers: string[], rows: string[][]): string {
 }
 
 export function DataGrid({ artifact }: DataGridProps) {
-    const { headers, rows } = parseMarkdownTable(artifact.content);
+    const { headers, rows } = parseTabla(artifact.content);
 
     const handleDownload = () => {
         const csv = toCSV(headers, rows);
@@ -100,7 +205,7 @@ export function DataGrid({ artifact }: DataGridProps) {
     if (headers.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-content-muted font-mono text-xs">
-                La tabla no se ha podido leer: el contenido no es una tabla markdown.
+                La tabla no se ha podido leer: no se distinguen columnas en el contenido.
             </div>
         );
     }
