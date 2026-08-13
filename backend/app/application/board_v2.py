@@ -259,21 +259,62 @@ _ACTA_ARTIFACT_RE = re.compile(
 )
 
 
-async def _save_acta(user_id: Optional[str], session_id: Optional[str], content: str) -> None:
-    """Guarda el acta del debate. Tolerante a fallos: nunca rompe el debate."""
+async def _save_acta(
+    user_id: Optional[str],
+    session_id: Optional[str],
+    content: str,
+    regenerate: bool = False,
+) -> None:
+    """Guarda el acta del debate. Tolerante a fallos: nunca rompe el debate.
+
+    Un debate, un acta vigente. Con `regenerate` se **reemplaza** el acta más
+    reciente de la sesión en vez de añadir otra: antes, regenerar tres veces
+    dejaba tres actas, y como el CEO recibe «las 2 últimas de esta junta» como
+    contexto, el debate siguiente arrancaba citando borradores descartados como
+    si fueran conclusiones firmes.
+
+    Límite declarado (BA-003, con test): «el acta más reciente de la sesión» no
+    es lo mismo que «el acta de este debate». Regenerar desde un turno de junta
+    que no es el último reemplaza la del debate posterior y deja huérfana la
+    intermedia. Cerrarlo del todo pide un identificador de debate sellado en el
+    acta y en el checkpoint.
+    """
     if not (user_id and session_id and content):
         return
     try:
         m = _ACTA_ARTIFACT_RE.search(content)
         acta_md = m.group(1).strip() if m else content.strip()
         summary_text = _ACTA_ARTIFACT_RE.sub("", content).strip()
-        await get_board_actas_collection().insert_one({
-            "user_id": user_id,
-            "session_id": session_id,
-            "created_at": datetime.now(timezone.utc),
+        ahora = datetime.now(timezone.utc)
+        col = get_board_actas_collection()
+        filtro = {"user_id": user_id, "session_id": session_id}
+        doc = {
+            **filtro,
+            "created_at": ahora,
             "summary": summary_text[:500],
             "acta_md": acta_md,
-        })
+        }
+
+        if not regenerate:
+            await col.insert_one(doc)
+            return
+
+        # Se lee antes de reemplazar para conservar el `created_at` original.
+        # Si el reemplazo lo pisara, un acta regenerada saltaría por delante de
+        # debates posteriores en el orden de `_load_prior_actas_context` — se
+        # arreglaría el defecto introduciendo un desorden nuevo.
+        anterior = await col.find_one(filtro, sort=[("created_at", -1)])
+        if anterior and anterior.get("created_at"):
+            doc["created_at"] = anterior["created_at"]
+        doc["updated_at"] = ahora
+
+        # `find_one_and_replace` y no `update_one`: sin `sort`, el reemplazo cae
+        # sobre un documento cualquiera del filtro. El orden por `created_at`
+        # descendente es lo que hace de «la más reciente» una regla y no una
+        # casualidad. Con `upsert`, regenerar sin acta previa la crea.
+        await col.find_one_and_replace(
+            filtro, doc, sort=[("created_at", -1)], upsert=True
+        )
     except Exception as e:
         logger.warning(f"No se pudo guardar el acta (session={session_id}): {e}")
 
@@ -643,7 +684,14 @@ async def synthesis_node(state: AgentState):
 
     # Memoria ejecutiva (F8): persistir el acta de este debate (tolerante a fallos).
     acta_content = result.get("final_response") or (msgs[0].content if msgs else "")
-    await _save_acta(state.get("user_id"), state.get("session_id"), acta_content)
+    # La señal de «esto es el mismo debate otra vez» ya existía y ya se leía en
+    # este grafo: es la que `route_after_triage` usa para saltar a síntesis.
+    await _save_acta(
+        state.get("user_id"),
+        state.get("session_id"),
+        acta_content,
+        state.get("board_regenerate", False),
+    )
 
     return result
 
