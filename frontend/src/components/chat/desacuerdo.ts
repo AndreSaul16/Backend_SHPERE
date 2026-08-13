@@ -130,6 +130,13 @@ export function gradoDeDesacuerdo(
         };
     }
 
+    // BVT-004 — empate: ninguna decisión gana. No es lo mismo que un 2-1 con
+    // disenso convencido, que también sale «dividida»: allí la junta decidió y
+    // alguien discrepó; aquí NO decidió. El nivel se queda en `dividida` porque
+    // la severidad es la misma —y con ella el color de la barra—; lo que cambia
+    // es el veredicto, que es lo que se lee.
+    const empate = decisionMayoritaria.length > 1;
+
     // Cuánto pesa la minoría sobre el total: 2-1 → 33, 2-2 → 50.
     const pesoDeLaMinoria = Math.round(((total - mayor) / total) * 100);
     const disensoConCerteza =
@@ -140,8 +147,10 @@ export function gradoDeDesacuerdo(
 
     return {
         nivel: dividida ? 'dividida' : 'mayoria',
-        etiqueta: dividida ? 'Junta dividida' : 'Mayoría con reserva',
-        detalle: dividida
+        etiqueta: empate ? 'Empate' : dividida ? 'Junta dividida' : 'Mayoría con reserva',
+        detalle: empate
+            ? `${frase(recuento)}. Ninguna decisión gana: la junta no decidió.${seAbstienen}`
+            : dividida
             ? `${frase(recuento)}${
                 confianzaDelDisenso !== null
                     ? `. El disenso vota con un ${confianzaDelDisenso}% de confianza`

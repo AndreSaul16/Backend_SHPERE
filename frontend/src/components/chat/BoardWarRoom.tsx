@@ -62,6 +62,29 @@ export function BoardWarRoom({
         return parts.length ? `La junta votó ${parts.join(" · ")}` : null;
     })();
 
+    // BVT-004 — un empate no es un consenso, y el recuento no puede dejar que
+    // lo parezca: «1 a favor · 1 en contra · 1 condicional» a secas se lee como
+    // si la junta hubiera decidido algo. Y el sufijo de consenso queda excluido
+    // por construcción: si nadie ganó, no hubo con qué abreviar el debate.
+    const hayEmpate = veredicto.etiqueta === 'Empate';
+    const coletilla = hayEmpate
+        ? " — Empate: la junta no decidió"
+        : board.earlyExit
+            ? " — consenso, debate abreviado"
+            : "";
+
+    /* CS-010 — el importe y su motivo, en el mismo sitio y a la vez.
+       El motivo sale de `board.participants`, que es de donde sale el precio
+       de verdad (`stream.py`: `cost = BOARD_REDUCED_COST if len(participants)
+       <= 2 else BOARD_MEETING_COST`). NO del consenso: esa era la promesa que
+       PRODUCT.md hacía y el producto no cumplía (CS-008). Un descuento sin
+       motivo se lo explica el usuario solo, y se lo explicaba mal. */
+    const directores = board.participants?.length ?? 0;
+    const motivoDelCoste =
+        directores > 0 && directores <= 2
+            ? `junta reducida a ${directores} ${directores === 1 ? "director" : "directores"}`
+            : null;
+
     return (
         <motion.div
             initial={reducido ? false : { opacity: 0, y: -6 }}
@@ -106,7 +129,7 @@ export function BoardWarRoom({
                                 aria-hidden="true"
                             >
                                 {tallyText}
-                                {board.earlyExit && " — consenso, debate abreviado"}
+                                {coletilla}
                             </motion.span>
                         )}
                     </AnimatePresence>
@@ -124,6 +147,11 @@ export function BoardWarRoom({
                     </button>
                     <span className="text-micro font-mono text-content-muted uppercase shrink-0 tnum">
                         {board.cost} créditos
+                        {motivoDelCoste && (
+                            <span className="ms-1 normal-case text-content-quiet">
+                                ({motivoDelCoste})
+                            </span>
+                        )}
                     </span>
                 </div>
 
@@ -136,7 +164,7 @@ export function BoardWarRoom({
                     la vez que su contenido. */}
                 <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="live-tally">
                     {tallyText
-                        ? `${veredicto.nivel !== 'sin-datos' ? `${veredicto.etiqueta}. ` : ''}${tallyText}${board.earlyExit ? ' — consenso, debate abreviado' : ''}. Fase: ${faseActual?.etiqueta ?? 'en curso'}.`
+                        ? `${veredicto.nivel !== 'sin-datos' ? `${veredicto.etiqueta}. ` : ''}${tallyText}${coletilla}. Fase: ${faseActual?.etiqueta ?? 'en curso'}.${motivoDelCoste ? ` Coste: ${board.cost} créditos, ${motivoDelCoste}.` : ''}`
                         : ''}
                 </p>
             </div>

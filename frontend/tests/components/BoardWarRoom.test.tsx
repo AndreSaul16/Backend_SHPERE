@@ -111,3 +111,100 @@ describe('BoardWarRoom — la cabecera de la junta', () => {
         expect(screen.getByText('5 créditos')).toBeInTheDocument();
     });
 });
+
+/**
+ * lanzamiento-p0 · CS-010 — el importe y su motivo, juntos.
+ *
+ * El war-room decía «3 créditos» sin explicar por qué no eran 5. Un descuento
+ * sin motivo se lo explica el usuario solo, y la explicación que tenía a mano
+ * era la equivocada: PRODUCT.md prometía que el debate cuesta menos cuando hay
+ * consenso. El motivo real está en el propio evento `board_plan`, que ya trae
+ * `participants` y `cost`: lo decide el triaje por número de directores.
+ */
+describe('CS-010 — el coste se muestra con su motivo', () => {
+    it('una junta reducida dice cuánto cuesta Y por qué', () => {
+        render(
+            <BoardWarRoom
+                board={makeBoard({ participants: ['CTO', 'CFO'], cost: 3 })}
+                agents={AGENTS}
+            />,
+        );
+
+        expect(screen.getByText('3 créditos')).toBeInTheDocument();
+        expect(screen.getByText(/junta reducida a 2 directores/)).toBeInTheDocument();
+    });
+
+    it('una junta completa no inventa ningún descuento', () => {
+        render(
+            <BoardWarRoom
+                board={makeBoard({ participants: ['CTO', 'CFO', 'CMO'], cost: 5 })}
+                agents={AGENTS}
+            />,
+        );
+
+        expect(screen.getByText('5 créditos')).toBeInTheDocument();
+        expect(screen.queryByText(/junta reducida/)).toBeNull();
+    });
+
+    it('el motivo no menciona el consenso: lo decide el triaje', () => {
+        render(
+            <BoardWarRoom
+                board={makeBoard({ participants: ['CTO', 'CFO'], cost: 3, unanimous: true, earlyExit: true })}
+                agents={AGENTS}
+            />,
+        );
+
+        const motivo = screen.getByText(/junta reducida a 2 directores/);
+        expect(motivo.textContent).not.toMatch(/consenso|unanimidad/i);
+    });
+});
+
+/**
+ * lanzamiento-p0 · BVT-004 — un empate no es un consenso.
+ *
+ * Con 1-1-1 no hay decisión ganadora, y el veredicto lo llamaba «Junta
+ * dividida», que es lo mismo que llama a un 2-1 con disenso convencido. La
+ * diferencia importa: en un empate la junta NO decidió, y el war-room no puede
+ * dar a entender lo contrario.
+ */
+describe('BVT-004 — el empate se declara como empate', () => {
+    const empate = makeBoard({
+        phase: 'synthesis',
+        tally: { SI: 1, NO: 1, CONDICIONAL: 1 },
+        votes: {
+            CTO: { decision: 'SI', confidence: 80 },
+            CFO: { decision: 'NO', confidence: 78 },
+            CMO: { decision: 'CONDICIONAL', confidence: 75 },
+        },
+    });
+
+    it('el recuento visible dice «Empate», no «consenso»', () => {
+        render(<BoardWarRoom board={empate} agents={AGENTS} />);
+
+        // Dos apariciones, como en el resto del fichero: el equivalente visual
+        // y la región viva. La primera es la que se lee con los ojos.
+        const [recuento] = screen.getAllByText(/1 a favor · 1 en contra · 1 condicional/);
+        expect(recuento.textContent).toContain('Empate');
+        expect(recuento.textContent).not.toContain('consenso');
+    });
+
+    it('una mayoría real sigue sin llamarse empate', () => {
+        render(
+            <BoardWarRoom
+                board={makeBoard({
+                    phase: 'synthesis',
+                    tally: { SI: 2, NO: 1 },
+                    votes: {
+                        CTO: { decision: 'SI', confidence: 80 },
+                        CEO: { decision: 'SI', confidence: 82 },
+                        CFO: { decision: 'NO', confidence: 55 },
+                    },
+                })}
+                agents={AGENTS}
+            />,
+        );
+
+        const [recuento] = screen.getAllByText(/2 a favor · 1 en contra/);
+        expect(recuento.textContent).not.toContain('Empate');
+    });
+});
