@@ -51,8 +51,9 @@ El mecanismo que un chat multi-modelo genérico no puede copiar honestamente es 
   `frontend/src/store/useChatStore.ts`).
 - Cada director **vota** y el voto se persiste (`additional_kwargs.board_vote`).
 - Hay **recuento y consenso** (`tally`, `unanimous`, `earlyExit`): si el consejo
-  está de acuerdo pronto, el debate se abrevia y **cuesta menos** (3 créditos en
-  vez de 5).
+  está de acuerdo pronto, el debate **se abrevia** y se salta la ronda de
+  réplicas. Es un mecanismo de debate, no de precio: lo que cuesta la junta lo
+  decide el triaje, y está en §Operating Context.
 - Existe un **Abogado del Diablo** cuyo trabajo es romper el consenso.
 - El usuario puede **intervenir en mitad del debate** (`chatService.intervene`);
   su mensaje entra antes de la siguiente fase.

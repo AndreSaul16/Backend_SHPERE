@@ -114,6 +114,16 @@ jobs:
         working-directory: frontend
         run: node scripts/check-dead-classes.mjs
 
+      # PRODUCT.md decía dos cosas incompatibles sobre lo mismo: que el debate
+      # cuesta menos si hay consenso (§Positioning) y que el descuento lo da el
+      # triaje por número de participantes (§Operating Context). Sólo la segunda
+      # es cierta. Una promesa de precio que el producto no cumple es lo que el
+      # cliente cree haber comprado, así que la coherencia se comprueba, no se
+      # revisa a ojo: las dos frases estaban a trece líneas de distancia.
+      - name: Coherencia del precio del debate
+        working-directory: frontend
+        run: node scripts/check-product-pricing.mjs
+
       # ── Tarea 4.12 · presupuesto de arranque ──────────────────────────────
       #
       # La fase 4 sacó del arranque las trece rutas, los cinco visores de
