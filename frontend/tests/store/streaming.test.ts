@@ -58,3 +58,61 @@ describe('useChatStore - Integración Streaming SSE', () => {
         expect(state.activeArtifactId).toBe(artifacts[0].id);
     });
 });
+
+/**
+ * SFS-004 y SFS-005 — caracterización del cierre del turno fallido.
+ *
+ * `streamHandlers.onError` ya saca la sesión de `streamingSessionIds` y escribe
+ * «*La respuesta se cortó aquí.*» ignorando el objeto de error. No hay cambio de
+ * producción aquí: estos tests existen para que eso no pueda romperse en
+ * silencio cuando el stream EMPIECE a avisar de verdad (SFS-001/002).
+ */
+describe('el turno fallido cierra el estado de carga y se lee bien', () => {
+    beforeEach(() => {
+        useChatStore.getState().resetState();
+        vi.clearAllMocks();
+    });
+
+    const conFalloDeStream = (error: unknown) => {
+        (chatService.createSession as any).mockResolvedValue({ session_id: 's1', title: 'Junta' });
+        (chatService.streamChat as any).mockImplementation(
+            async (_q: string, _sid: string, callbacks: any) => {
+                callbacks.onToken('La caja aguanta ');
+                callbacks.onError(error);
+            },
+        );
+    };
+
+    it('la sesión sale de streamingSessionIds: nada de spinner infinito', async () => {
+        conFalloDeStream(new Error('La conexión se cortó antes de que el turno terminara.'));
+        await useChatStore.getState().createNewSession();
+
+        await useChatStore.getState().sendMessage('¿Lanzamos Enterprise?');
+
+        expect(useChatStore.getState().streamingSessionIds).not.toContain('s1');
+    });
+
+    it('el texto es presentable aunque el error no traiga mensaje', async () => {
+        conFalloDeStream({});
+        await useChatStore.getState().createNewSession();
+
+        await useChatStore.getState().sendMessage('¿Lanzamos Enterprise?');
+
+        const mensajes = useChatStore.getState().messagesBySession['s1'];
+        const ultimo = mensajes[mensajes.length - 1];
+        expect(ultimo.content).toContain('La respuesta se cortó aquí.');
+        expect(ultimo.content).not.toContain('[object Object]');
+        expect(ultimo.content).not.toContain('undefined');
+        expect(ultimo.interrupted).toBe(true);
+    });
+
+    it('el texto ya recibido se conserva: el corte marca dónde, no borra', async () => {
+        conFalloDeStream(new Error('corte'));
+        await useChatStore.getState().createNewSession();
+
+        await useChatStore.getState().sendMessage('¿Lanzamos Enterprise?');
+
+        const mensajes = useChatStore.getState().messagesBySession['s1'];
+        expect(mensajes[mensajes.length - 1].content).toContain('La caja aguanta');
+    });
+});

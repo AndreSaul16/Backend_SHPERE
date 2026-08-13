@@ -153,6 +153,12 @@ export const chatService = {
                         return;
                     }
 
+                    // El fallo del servidor se ANOTA aquí y se lanza fuera del
+                    // `try`: dentro, su propio `catch` —que existe para tolerar el
+                    // JSON corrupto (SFS-003)— lo registraría como error de parseo
+                    // y el turno seguiría vivo hasta ejecutar `onDone`.
+                    let errorDelServidor: string | null = null;
+
                     // Robust JSON parsing with validation
                     try {
                         const data = JSON.parse(dataStr);
@@ -219,19 +225,24 @@ export const chatService = {
                                 error: data.error || 'La herramienta falló.',
                             });
                         } else if (data.type === 'error') {
-                            throw new Error(data.message || 'Unknown server error');
+                            errorDelServidor = data.message || 'Unknown server error';
                         }
                     } catch (parseError) {
                         // Log but don't crash - continue processing other chunks
                         console.warn("SSE: Error parsing chunk, skipping:", parseError, "Data:", dataStr.substring(0, 100));
                     }
+
+                    if (errorDelServidor !== null) {
+                        throw new Error(errorDelServidor);
+                    }
                 }
             }
 
-            // Process any remaining buffer content after stream ends
-            if (buffer.trim()) {
-                console.warn("SSE: Unprocessed buffer content at end:", buffer.substring(0, 100));
-            }
+            // Llegar aquí significa, POR CONSTRUCCIÓN, cuerpo cerrado sin centinela:
+            // `[DONE]` (arriba) y la cancelación del usuario hacen `return`. Así que
+            // no hay que preguntarse si ya se avisó — no se avisó. Las callbacks
+            // terminales quedan garantizadas «como máximo una vez» por estructura.
+            throw new Error('La conexión se cortó antes de que el turno terminara.');
 
         } catch (error) {
             // Don't trigger error callback if request was intentionally aborted
