@@ -129,6 +129,34 @@ class StreamRequest(BaseModel):
 OPEN_TAG_PATTERN = re.compile(r"<sphere_artifact\s+([^>]+)>")
 
 
+def _cierre_forzado(artifact_buffer: str, razon: str) -> list[str]:
+    """Eventos SSE que cierran un artefacto que el modelo dejó abierto.
+
+    DEVUELVE la lista, no la emite. Ésa es la clave: emitir desde aquí obligaría
+    a que la función fuese un generador y a llamarla desde un solo sitio. Al
+    devolver, los dos únicos puntos donde un `yield` es legal —el final del
+    camino normal y la rama `except Exception`— pueden usarla igual.
+
+    Lo que NO se hace nunca es llamarla desde un `finally` alrededor del bucle:
+    en un generador asíncrono el `finally` también corre cuando el cliente se
+    desconecta, y un `yield` después de `GeneratorExit` produce
+    `RuntimeError: async generator ignored GeneratorExit`.
+
+    El resto retenido en `artifact_buffer` se emite antes de cerrar: es contenido
+    del artefacto que quedó esperando una etiqueta de cierre que nunca llegó, y
+    descartarlo es perder texto que el usuario ya había pagado.
+    """
+    eventos: list[str] = []
+    if artifact_buffer:
+        eventos.append(
+            f"data: {json.dumps({'type': 'artifact_chunk', 'content': artifact_buffer})}\n\n"
+        )
+    eventos.append(
+        f"data: {json.dumps({'type': 'artifact_close', 'truncated': True, 'reason': razon})}\n\n"
+    )
+    return eventos
+
+
 async def generate_chat_events(
     query: str,
     session_id: str,
@@ -157,6 +185,12 @@ async def generate_chat_events(
         charge_ctx: Contexto del cobro para refund en caso de error
         credit_manager: Instancia del CreditManager para refund
     """
+    # Estado del artefacto en curso. Vive FUERA del `try` a propósito: la rama
+    # `except Exception` necesita saber si quedó un artefacto abierto para
+    # cerrarlo antes de avisar del fallo, y un fallo temprano (antes del bucle)
+    # dejaría estos nombres sin definir.
+    artifact_buffer = ""
+    is_inside_artifact = False
     try:
         mode_str = "BOARD MEETING" if board_mode else "NORMAL"
         logger.info(
@@ -202,8 +236,6 @@ async def generate_chat_events(
             active_orchestrator = orchestrator_app
 
         buffer = ""
-        artifact_buffer = ""
-        is_inside_artifact = False
         current_board_agent = None  # Track which agent is speaking in board mode
         announced_board_nodes: set = set()  # Dedup de board_agent por NODO (no por rol)
         partial_refund_done = False  # Refund parcial del triage emitido una sola vez
@@ -545,6 +577,18 @@ async def generate_chat_events(
                                 yield f"data: {json.dumps({'type': 'token', 'content': buffer, 'role': current_board_agent})}\n\n"
                                 buffer = ""
 
+        # El modelo terminó de hablar con un artefacto todavía abierto: se vuelca
+        # lo retenido y se cierra. Sin esto el canal del artefacto se queda
+        # abierto en el cliente y el resto de `artifact_buffer` se pierde.
+        # El modelo terminó de hablar con un artefacto todavía abierto: se vuelca
+        # lo retenido y se cierra. Sin esto el canal del artefacto se queda
+        # abierto en el cliente y el resto de `artifact_buffer` se pierde.
+        if is_inside_artifact:
+            for evento in _cierre_forzado(artifact_buffer, "stream_ended"):
+                yield evento
+            is_inside_artifact = False
+            artifact_buffer = ""
+
         if buffer.strip():
             yield f"data: {json.dumps({'type': 'token', 'content': buffer, 'role': current_board_agent})}\n\n"
 
@@ -571,6 +615,10 @@ async def generate_chat_events(
 
     except GeneratorExit:
         logger.info(f"🛑 Cliente desconectado (Stop Generation): {session_id}")
+        # Aquí NO se cierra el artefacto aunque quede abierto: un `yield` tras
+        # `GeneratorExit` da `RuntimeError: async generator ignored GeneratorExit`,
+        # y el cliente ya no escucha — `stopGeneration` limpia el canal en el
+        # navegador (`frontend/src/store/chat/messagesSlice.ts`).
         if already_charged:
             await _safe_refund(credit_manager, charge_ctx, user_id, "client_disconnected")
         return
@@ -579,6 +627,13 @@ async def generate_chat_events(
         # silencio si el propio refund falla — ver _safe_refund).
         if already_charged:
             await _safe_refund(credit_manager, charge_ctx, user_id, "inference_failed")
+        # El artefacto se cierra ANTES de pintar el fallo: si el aviso llegara
+        # primero, el panel se quedaría con el artefacto "en curso" para siempre.
+        if is_inside_artifact:
+            for evento in _cierre_forzado(artifact_buffer, "stream_ended"):
+                yield evento
+            is_inside_artifact = False
+            artifact_buffer = ""
         error = safe_error_response(e)
         yield f"data: {json.dumps({'type': 'error', 'message': error['message']})}\n\n"
         yield "data: [DONE]\n\n"
