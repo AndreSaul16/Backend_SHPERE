@@ -78,7 +78,11 @@ respuestas fueron sometidas a réplica, voto y recuento.
   WhatsApp, n8n, Google Calendar, LinkedIn, Instagram, GitHub (issues desde el
   acta), Jules; OAuth y credenciales por servicio
   (`ServiceCredentialsSettings.tsx`, `IntegrationsSettings.tsx`,
-  `ConnectionsSettings.tsx`, `ToolExecutionCard.TOOL_LABELS`).
+  `ConnectionsSettings.tsx`, `ToolExecutionCard.TOOL_LABELS`),
+  disponibles en el **chat individual** de cada director.
+  **En la junta no se ejecuta ninguna herramienta**: la junta delibera y el acta
+  deja cada acción con su responsable, que el fundador lanza después desde el
+  chat de ese director.
 - **Agentes propios** con base de conocimiento (RAG): asistente de creación de
   agentes, subida de documentos, estado de procesamiento por chunks
   (`AgentCreationWizard.tsx`, `KnowledgeBasePanel.tsx`, `AgentDocument`).
@@ -173,7 +177,8 @@ marketing debe marcarse como sintético.
 3. **El coste siempre a la vista.** El usuario nunca debe descubrir a posteriori
    que una acción le costó cinco créditos.
 4. **El proceso es auditable.** Quién habló, en qué fase, qué votó, con qué
-   confianza y qué herramienta ejecutó: recuperable después, no solo en vivo.
+   confianza y, en el chat de cada director, qué herramienta se ejecutó:
+   recuperable después, no solo en vivo.
 5. **El usuario puede interrumpir.** Es su junta; puede intervenir, detener,
    regenerar y corregir el rumbo en mitad del debate.
 

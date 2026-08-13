@@ -10,7 +10,10 @@ import type { Agent, Message } from '../../types';
 
 // Saludos personalizados por agente (sin gastar tokens)
 const AGENT_GREETINGS: Record<string, string> = {
-    'group-chat': 'Bienvenido a la **Junta Directiva** de SPHERE. El Router analizará tu consulta y delegará al agente más adecuado.',
+    // junta-honesta · ASH-007: describía el modo router, no el debate. Y el
+    // canal Junta es justo donde el usuario decide si espera deliberación o
+    // ejecución: decirlo aquí es más barato que desmentirlo en el acta.
+    'group-chat': 'Bienvenido a la **Junta Directiva**. Tus directores debaten en fases, votan y el CEO firma el acta. Aquí se decide: cada próximo paso se ejecuta después, en el chat de su director.',
     'ceo-1': '¡Hola! Soy **Oberon**, tu CEO estratégico. Estoy aquí para ofrecerte visión de alto nivel, decisiones ejecutivas y liderazgo empresarial. ¿En qué puedo ayudarte?',
     'cto-1': '¡Saludos! Soy **Nexus**, tu CTO. Mi expertise incluye arquitectura cloud, DevOps, seguridad técnica y decisiones de infraestructura. ¿Cuál es tu desafío técnico?',
     'cmo-1': '¡Bienvenido! Soy **Vortex**, tu CMO. Me especializo en estrategia de marketing, branding, growth hacking y posicionamiento de mercado. ¿Qué necesitas impulsar?',

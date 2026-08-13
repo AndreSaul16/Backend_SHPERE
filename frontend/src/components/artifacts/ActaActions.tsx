@@ -345,6 +345,11 @@ export function ActaActions({ title, content }: ActaActionsProps) {
                         </p>
                     </div>
 
+                    {/* ASH-007: dónde acaba la junta y dónde empieza la ejecución. */}
+                    <p className="text-micro font-sans text-content-quiet">
+                        La junta decide; el paso lo lanzas tú con su director.
+                    </p>
+
                     <ul className="space-y-1">
                         {parsedIssues.map((issue) => {
                             const hecho = hechos.has(issue.title);

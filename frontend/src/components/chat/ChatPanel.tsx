@@ -953,7 +953,7 @@ export function ChatPanel() {
                                 <h2 className="text-content-strong font-semibold text-xl tracking-tight">Listo para empezar</h2>
                                 <p className="text-content-muted text-sm max-w-xs leading-relaxed">
                                     {isGroupChat
-                                        ? "Plantea una decisión y tu junta debatirá para darte una recomendación."
+                                        ? "Plantea una decisión y tu junta debatirá para darte una recomendación. Deliberan y firman el acta; cada próximo paso se abre en el chat de su director, y lo lanzas tú."
                                         : "Escribe tu primer mensaje para empezar la conversación."}
                                 </p>
                             </div>

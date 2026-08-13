@@ -73,6 +73,15 @@ export function BoardActivationModal({ open, loading, onActivate, onRouterOnly, 
                 único orquestador delega al experto más adecuado.
             </p>
 
+            {/* junta-honesta · ASH-007. El modal describía un debate sin decir
+                dónde acaba. Decirlo aquí es lo que impide que el usuario espere
+                que la junta actúe por él mientras habla. */}
+            <p className="mt-3 text-sm leading-relaxed text-content-muted">
+                La junta <strong className="text-content-strong">delibera</strong>: no consulta
+                datos en vivo ni ejecuta acciones. Cada próximo paso del acta se abre con un clic
+                en el chat de su director, y lo lanzas tú.
+            </p>
+
             {/* §P4 y §11: el coste se dice en cifras, no con un emoji de rayo. */}
             <div className="mt-5 flex flex-wrap items-center justify-between gap-2 rounded-sm border border-stroke-hairline bg-surface-1 p-3">
                 <span className="flex items-center gap-2 text-sm text-content">

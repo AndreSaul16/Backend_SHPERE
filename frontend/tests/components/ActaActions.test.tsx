@@ -366,3 +366,29 @@ describe('ASH-006 — si falla crear la sesión, no se navega', () => {
         expect(screen.getByText('Ejecutar con Oberon')).toBeTruthy();
     });
 });
+
+describe('ASH-007 · texto 4 — el bloque de próximos pasos dice quién lanza', () => {
+    it('bajo «Próximos pasos» se lee que el paso lo lanza el usuario', () => {
+        render(<ActaActions title="Acta de la junta" content={ACTA_CON_DUEÑOS} />);
+
+        expect(screen.getByText('La junta decide; el paso lo lanzas tú con su director.')).toBeTruthy();
+    });
+
+    it('el aria-label del botón nombra al director y su rol', () => {
+        render(<ActaActions title="Acta de la junta" content={ACTA_CON_DUEÑOS} />);
+
+        const boton = screen.getByText('Ejecutar con Nexus').closest('button');
+        expect(boton?.getAttribute('aria-label')).toBe(
+            'Abrir el chat de Nexus (CTO) con este paso preparado',
+        );
+    });
+
+    it('el bloque no contiene ninguna afirmación prohibida', () => {
+        render(<ActaActions title="Acta de la junta" content={ACTA_CON_DUEÑOS} />);
+        const visible = (document.body.textContent ?? '').toLowerCase();
+
+        for (const frase of ['la junta ejecuta', '28 integraciones', 'los directores consultan datos en tiempo real', 'tus agentes actúan por ti mientras debaten']) {
+            expect(visible, `copy prohibido: ${frase}`).not.toContain(frase);
+        }
+    });
+});
