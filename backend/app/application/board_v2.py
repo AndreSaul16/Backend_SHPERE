@@ -75,58 +75,132 @@ VOTE_INSTRUCTION = (
     "Donde NN es tu confianza de 0 a 100. Ejemplo: [VOTO] decision=CONDICIONAL confianza=70"
 )
 
-_VOTE_RE = re.compile(
-    r"\[VOTO\]\s*decision\s*=\s*(SI|NO|CONDICIONAL)\s*confianza\s*=\s*(\d{1,3})",
-    re.IGNORECASE,
-)
+# Localizador del marcador + extractores independientes. No se exige adyacencia
+# entre campos, así que la puntuación intermedia (`,`, `;`, `·`) deja de tirar el
+# voto, y la decoración markdown alrededor de la línea tampoco estorba.
+_VOTE_MARKER_RE = re.compile(r"\[\s*VOTO\s*\]", re.IGNORECASE)
+_VOTE_DECISION_RE = re.compile(r"decision\s*[:=]\s*(S[IÍ]|NO|CONDICIONAL)", re.IGNORECASE)
+_VOTE_CONFIDENCE_RE = re.compile(r"confianza\s*[:=]\s*(\d{1,3})", re.IGNORECASE)
+
+# Decisiones que cuentan como voto; el resto es abstención.
+DECISIVE_DECISIONS = ("SI", "NO", "CONDICIONAL")
+ABSTENTION = "ABSTENCION"
+
+# Confianza asumida cuando la decisión es válida pero el número no se puede leer:
+# el voto sigue siendo decisivo y ese 50 bloquea el early-exit.
+DEFAULT_VOTE_CONFIDENCE = 50
+
+# Confianza media mínima para abreviar el debate. Umbral único del early-exit.
+EARLY_EXIT_MIN_CONFIDENCE = 70
+
+# Roles que se sientan en la junta pero no votan.
+NON_VOTING_ROLES = {"CEO"}
 
 
 def _parse_vote(content: str) -> Optional[dict]:
-    """Extrae {decision, confidence} de la línea [VOTO] del contenido."""
+    """Extrae {decision, confidence} de la línea [VOTO] del contenido.
+
+    Devuelve None si no hay marcador o si la decisión no pertenece al whitelist:
+    ese caso es una abstención, no un voto inventado.
+    """
     if not content:
         return None
-    m = _VOTE_RE.search(content)
-    if not m:
+    marcadores = list(_VOTE_MARKER_RE.finditer(content))
+    if not marcadores:
         return None
-    decision = m.group(1).upper()
-    try:
-        confidence = max(0, min(100, int(m.group(2))))
-    except ValueError:
-        confidence = 50
+    # El protocolo pide el voto en la ÚLTIMA línea: si el modelo repitió antes el
+    # formato de la instrucción, gana el marcador final.
+    cola = content[marcadores[-1].end() :].split("\n", 1)[0]
+    decision_match = _VOTE_DECISION_RE.search(cola)
+    if not decision_match:
+        return None
+    decision = decision_match.group(1).upper().replace("Í", "I")
+    confidence_match = _VOTE_CONFIDENCE_RE.search(cola)
+    if confidence_match:
+        confidence = max(0, min(100, int(confidence_match.group(1))))
+    else:
+        confidence = DEFAULT_VOTE_CONFIDENCE
     return {"decision": decision, "confidence": confidence}
 
 
 def _strip_vote_line(content: str) -> str:
-    """Elimina la línea [VOTO] del contenido visible (se muestra como chip aparte)."""
+    """Elimina del contenido visible la LÍNEA ENTERA que lleva el marcador [VOTO].
+
+    Borrar sólo la coincidencia dejaría huérfana la decoración de una línea como
+    `**[voto] …**` (el voto se muestra como chip aparte).
+    """
     if not content:
         return content
-    cleaned = _VOTE_RE.sub("", content)
-    # Limpiar líneas vacías sobrantes al final.
-    return cleaned.rstrip()
+    lineas = [l for l in content.splitlines() if not _VOTE_MARKER_RE.search(l)]
+    return "\n".join(lineas).rstrip()
 
 
-def _tally(votes: dict) -> dict:
-    """Cuenta votos (ignora el sentinel) y calcula consenso/confianza media."""
+def _censo(participants: Optional[list] = None) -> list[str]:
+    """Censo de votantes: participantes deduplicados (preservando orden) menos los
+    roles que no votan. Sin participantes, la junta completa — que yerra hacia NO
+    abreviar el debate, que es la dirección segura."""
+    censo: list[str] = []
+    for rol in participants or BOARD_DIRECTORS:
+        if not isinstance(rol, str):
+            continue
+        rol = rol.upper()
+        if rol in NON_VOTING_ROLES or rol in censo:
+            continue
+        censo.append(rol)
+    return censo
+
+
+def _tally(votes: dict, participants: Optional[list] = None) -> dict:
+    """Recuento del CENSO, no de los votos parseados.
+
+    Cada votante del censo aporta exactamente una entrada: su decisión o una
+    abstención. De ahí salen `expected`, el `outcome` y el ÚNICO predicado del
+    early-exit, que los tres consumidores leen sin recalcularlo.
+    """
     real = {k: v for k, v in (votes or {}).items() if k != "__RESET__" and isinstance(v, dict)}
-    counts = {"SI": 0, "NO": 0, "CONDICIONAL": 0}
-    confs = []
-    for v in real.values():
-        d = v.get("decision")
-        if d in counts:
-            counts[d] += 1
-        c = v.get("confidence")
-        if isinstance(c, (int, float)):
-            confs.append(c)
-    total = sum(counts.values())
-    unanimous = total > 0 and max(counts.values()) == total
-    avg_conf = sum(confs) / len(confs) if confs else 0
-    winner = max(counts, key=counts.get) if total else "CONDICIONAL"
+    censo = _censo(participants)
+
+    counts = {"SI": 0, "NO": 0, "CONDICIONAL": 0, ABSTENTION: 0}
+    confs: list = []
+    abstentions: list[str] = []
+    for rol in censo:
+        voto = real.get(rol) or {}
+        decision = voto.get("decision")
+        if decision in DECISIVE_DECISIONS:
+            counts[decision] += 1
+            confianza = voto.get("confidence")
+            if isinstance(confianza, (int, float)):
+                confs.append(confianza)
+        else:
+            counts[ABSTENTION] += 1
+            abstentions.append(rol)
+
+    expected = len(censo)
+    total_decisivos = expected - counts[ABSTENTION]
+    avg_conf = round(sum(confs) / len(confs)) if confs else 0
+
+    mayor = max(counts[d] for d in DECISIVE_DECISIONS) if expected else 0
+    ganadoras = [d for d in DECISIVE_DECISIONS if mayor > 0 and counts[d] == mayor]
+    if total_decisivos == 0:
+        outcome, winner = "SIN_VOTOS", None
+    elif len(ganadoras) > 1:
+        # El empate se declara: `winner` no puede salir del orden del dict.
+        outcome, winner = "EMPATE", None
+    else:
+        winner = ganadoras[0]
+        outcome = "UNANIME" if mayor == expected else "MAYORIA"
+
+    unanimous = expected > 0 and counts[ABSTENTION] == 0 and mayor == expected
     return {
         "counts": counts,
-        "total": total,
+        "expected": expected,
+        "total_decisivos": total_decisivos,
         "unanimous": unanimous,
-        "avg_confidence": round(avg_conf),
+        "avg_confidence": avg_conf,
+        "outcome": outcome,
         "winner": winner,
+        "early_exit": unanimous and avg_conf >= EARLY_EXIT_MIN_CONFIDENCE,
+        "abstentions": abstentions,
     }
 
 
@@ -259,7 +333,13 @@ async def triage_node(state: AgentState):
         start, end = raw.find("{"), raw.rfind("}")
         if start >= 0 and end > start:
             data = json.loads(raw[start : end + 1])
-            chosen = [r.upper() for r in data.get("participants", []) if r.upper() in BOARD_DIRECTORS]
+            # Dedup ANTES del umbral: sin él, ["CTO","CTO"] pasaría el >= 2 y
+            # route_analysis devolvería dos veces el mismo nodo al fan-out.
+            chosen: list[str] = []
+            for r in data.get("participants", []):
+                r = str(r).upper()
+                if r in BOARD_DIRECTORS and r not in chosen:
+                    chosen.append(r)
             if len(chosen) >= 2:
                 participants = chosen
                 reason = str(data.get("reason", ""))[:200]
@@ -353,12 +433,22 @@ def board_v2_node_factory(role: str, phase: str):
                 ak["agent_role"] = role
                 ak["board_phase"] = phase
             if role != "CEO":
-                vote = _parse_vote(getattr(msg, "content", "") or "")
-                if vote:
-                    msg.content = _strip_vote_line(msg.content)
-                    if isinstance(ak, dict):
-                        ak["board_vote"] = vote
-                    out["board_votes"] = {role: vote}
+                contenido = getattr(msg, "content", "") or ""
+                hay_marcador = bool(_VOTE_MARKER_RE.search(contenido))
+                vote = _parse_vote(contenido)
+                # Se limpia SIEMPRE que haya marcador: una línea de voto rota ya se
+                # reporta como chip de abstención, enseñarla en crudo la contaría dos veces.
+                if hay_marcador:
+                    msg.content = _strip_vote_line(contenido)
+                if not vote:
+                    # La abstención se ESCRIBE en el canal de estado: de ahí salen
+                    # gratis el evento SSE, la persistencia y el chip de la UI.
+                    motivo = "línea [VOTO] sin decisión válida" if hay_marcador else "sin línea [VOTO]"
+                    logger.warning(f"Board V2: {role} no aporta voto decisivo ({motivo}) → {ABSTENTION}")
+                    vote = {"decision": ABSTENTION, "confidence": None}
+                if isinstance(ak, dict):
+                    ak["board_vote"] = vote
+                out["board_votes"] = {role: vote}
         return out
 
     return node
@@ -377,12 +467,13 @@ async def ceo_open_node(state: AgentState):
 
 async def consensus_gate_node(state: AgentState):
     """Join tras la ronda de análisis: calcula consenso e inyecta intervención."""
-    tally = _tally(state.get("board_votes", {}))
-    early_exit = tally["unanimous"] and tally["avg_confidence"] >= 70
-    logger.info(
-        f"Board V2 consensus: tally={tally['counts']} unanimous={tally['unanimous']} "
-        f"avg_conf={tally['avg_confidence']} early_exit={early_exit}"
-    )
+    tally = _tally(state.get("board_votes", {}), state.get("board_participants"))
+    early_exit = tally["early_exit"]
+    # Vuelca el recuento entero: interpolar campos sueltos invita a recalcular el
+    # predicado aquí (ver tests/test_board_predicado_unico.py).
+    logger.info(f"Board V2 consensus: {tally}")
+    if tally["abstentions"]:
+        logger.warning(f"Board V2: abstenciones en el recuento: {tally['abstentions']}")
 
     updates: dict[str, Any] = {"board_phase": "rebuttal" if not early_exit else "synthesis"}
 
@@ -420,15 +511,26 @@ solo siembra la duda productiva que el CEO debe resolver al cerrar.
 """
 
 
+def _tendencia(tally: dict) -> str:
+    """Cómo nombran los prompts el resultado del recuento. Con empate o sin votos
+    decisivos NO se nombra una decisión que la junta no tomó."""
+    if tally["outcome"] == "EMPATE":
+        return "empate, sin mayoría"
+    if tally["outcome"] == "SIN_VOTOS":
+        return "sin votos decisivos, sin mayoría"
+    return tally["winner"]
+
+
 async def devil_node(state: AgentState):
     """Devil's Advocate: ataca la opción ganadora antes de la síntesis."""
-    tally = _tally(state.get("board_votes", {}))
+    tally = _tally(state.get("board_votes", {}), state.get("board_participants"))
+    tendencia = _tendencia(tally)
     query = state.get("query", "")
     devil_query = (
-        DEVIL_PROMPT.format(winner=tally["winner"])
+        DEVIL_PROMPT.format(winner=tendencia)
         + f"\n\n[REUNIÓN DE JUNTA — ABOGADO DEL DIABLO]\n\n"
         f'Consulta del fundador:\n\n"{query}"\n\n'
-        f"La junta se inclina por: {tally['winner']}. Atacá esa decisión con tu mejor "
+        f"La junta se inclina por: {tendencia}. Atacá esa inclinación con tu mejor "
         f"contraargumento honesto."
     )
     modified_state = {
@@ -492,7 +594,7 @@ reflejar los votos reales de los directores.
 async def synthesis_node(state: AgentState):
     """CEO cierra el debate y emite el acta como artefacto."""
     role = "CEO"
-    tally = _tally(state.get("board_votes", {}))
+    tally = _tally(state.get("board_votes", {}), state.get("board_participants"))
     votes_summary = ", ".join(
         f"{r}={v.get('decision')}({v.get('confidence')})"
         for r, v in (state.get("board_votes") or {}).items()
@@ -504,7 +606,7 @@ async def synthesis_node(state: AgentState):
         + f"\n\n[REUNIÓN DE JUNTA — CIERRE]\n\n"
         f'Consulta original del fundador:\n\n"{query}"\n\n'
         f"Votos de la junta: {votes_summary or 'sin votos registrados'}. "
-        f"Tendencia: {tally['winner']} (confianza media {tally['avg_confidence']}). "
+        f"Tendencia: {_tendencia(tally)} (confianza media {tally['avg_confidence']}). "
         f"Cerrá la reunión con tu resumen ejecutivo + el acta como artefacto, usando los "
         f"votos reales en la tabla de votación."
     )
@@ -565,9 +667,8 @@ def route_analysis(state: AgentState) -> list[str]:
 
 def route_after_consensus(state: AgentState):
     """Tras el análisis: réplicas en paralelo, o saltar a devil/síntesis si hubo early-exit."""
-    tally = _tally(state.get("board_votes", {}))
-    early_exit = tally["unanimous"] and tally["avg_confidence"] >= 70
-    if early_exit:
+    tally = _tally(state.get("board_votes", {}), state.get("board_participants"))
+    if tally["early_exit"]:
         return ["devil"] if state.get("board_devil") else ["synthesis"]
     participants = state.get("board_participants") or BOARD_DIRECTORS
     return [f"{r.lower()}_rebuttal" for r in participants]

@@ -47,20 +47,20 @@ def test_strip_vote_line_quita_voto():
 
 def test_tally_unanime():
     votes = {"CTO": {"decision": "SI", "confidence": 80}, "CFO": {"decision": "SI", "confidence": 90}}
-    t = _tally(votes)
+    t = _tally(votes, participants=["CTO", "CFO"])
     assert t["unanimous"] is True and t["winner"] == "SI" and t["avg_confidence"] == 85
 
 
 def test_tally_dividido_no_unanime():
     votes = {"CTO": {"decision": "SI", "confidence": 80}, "CFO": {"decision": "NO", "confidence": 60}}
-    t = _tally(votes)
-    assert t["unanimous"] is False and t["total"] == 2
+    t = _tally(votes, participants=["CTO", "CFO"])
+    assert t["unanimous"] is False and t["total_decisivos"] == 2
 
 
 def test_tally_ignora_sentinel():
     votes = {"__RESET__": True, "CTO": {"decision": "NO", "confidence": 70}}
-    t = _tally(votes)
-    assert t["total"] == 1 and t["counts"]["NO"] == 1
+    t = _tally(votes, participants=["CTO"])
+    assert t["total_decisivos"] == 1 and t["counts"]["NO"] == 1
 
 
 # --- Reducer de votos (acumulación paralela + reset) ---
@@ -337,3 +337,338 @@ def test_partial_refund_clamp_no_devuelve_de_mas():
     ctx = ChargeContext(tx_id="tx_x", user_id="u1", cost=5, source="topup", counted_as=5)
     cm.partial_refund(ctx, 99)  # se clampa a 5
     assert cm.transactions_collection.inserts[0]["delta"] == 5
+
+
+# ---------------------------------------------------------------------------
+# lanzamiento-p0 — recuento con censo (specs/board-vote-tally)
+# ---------------------------------------------------------------------------
+
+import logging
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
+
+
+# --- BVT-001: normalización del voto ---
+
+@pytest.mark.parametrize(
+    "linea, esperado",
+    [
+        pytest.param(
+            "[VOTO] decision=SI, confianza=80",
+            {"decision": "SI", "confidence": 80},
+            id="coma",
+        ),
+        pytest.param(
+            "**[voto] decision = CONDICIONAL ; confianza = 70**",
+            {"decision": "CONDICIONAL", "confidence": 70},
+            id="punto-y-coma",
+        ),
+        pytest.param(
+            "[VOTO] decision=sí confianza=90",
+            {"decision": "SI", "confidence": 90},
+            id="si-con-tilde",
+        ),
+        pytest.param(
+            "[VOTO] decision=SI confianza=150",
+            {"decision": "SI", "confidence": 100},
+            id="confianza-fuera-de-rango",
+        ),
+        pytest.param(
+            "[VOTO] decision=NO confianza=55 (revisable)",
+            {"decision": "NO", "confidence": 55},
+            id="texto-tras-el-numero",
+        ),
+    ],
+)
+def test_normalizacion_del_voto(linea, esperado):
+    """BVT-001. Puntuación, decoración markdown, tilde y texto tras el número.
+
+    Los dos últimos casos ya pasaban antes del cambio: entran como regresión.
+    """
+    assert _parse_vote(f"Mi análisis ocupa varias líneas.\n\n{linea}") == esperado
+
+
+def test_confianza_ilegible_asume_50():
+    """BVT-001. Confianza ilegible con decisión válida → 50, y ese 50 bloquea
+    el early-exit aunque los tres voten lo mismo."""
+    assert _parse_vote("[VOTO] decision=SI confianza=alto") == {"decision": "SI", "confidence": 50}
+
+    votes = {
+        "CTO": {"decision": "SI", "confidence": 50},
+        "CFO": {"decision": "SI", "confidence": 75},
+        "CMO": {"decision": "SI", "confidence": 80},
+    }
+    tally = _tally(votes, participants=["CTO", "CFO", "CMO"])
+    assert tally["unanimous"] is True
+    assert tally["avg_confidence"] == 68
+    assert tally["early_exit"] is False
+
+
+# --- BVT-002: abstención explícita ---
+
+def test_voto_irreconocible_es_abstencion():
+    """BVT-002. El CFO vota QUIZÁS (no interpretable) y el CMO no escribe línea
+    de voto: los dos figuran como abstención del censo, no como ausentes."""
+    assert _parse_vote("Mi análisis.\n[VOTO] decision=QUIZÁS confianza=alto") is None
+
+    votes = {
+        "CTO": {"decision": "SI", "confidence": 90},
+        # El nodo escribe la abstención explícita del CFO; el CMO no aparece.
+        "CFO": {"decision": "ABSTENCION", "confidence": None},
+    }
+    tally = _tally(votes, participants=["CTO", "CFO", "CMO"])
+    assert tally["counts"]["ABSTENCION"] == 2
+    assert sorted(tally["abstentions"]) == ["CFO", "CMO"]
+    assert tally["counts"] == {"SI": 1, "NO": 0, "CONDICIONAL": 0, "ABSTENCION": 2}
+    assert tally["avg_confidence"] == 90  # la abstención no entra en la media
+
+
+def _fake_agent_node_contenido(contenido: str):
+    """agent_node que devuelve un contenido fijo (para probar el nodo director)."""
+
+    async def fake(state):
+        return {
+            "final_response": contenido,
+            "messages": [AIMessage(content=contenido)],
+            "tool_calls_remaining": 3,
+        }
+
+    return fake
+
+
+async def test_abstencion_se_escribe_en_board_votes(monkeypatch, caplog):
+    """BVT-002. El voto que no parsea se escribe como ABSTENCION en el canal de
+    estado (de ahí salen el SSE, la persistencia y el chip de la UI) y se loguea."""
+    monkeypatch.setattr(
+        board_v2_module,
+        "agent_node",
+        _fake_agent_node_contenido("Mi análisis.\n[VOTO] decision=QUIZÁS confianza=alto"),
+    )
+    monkeypatch.setattr(board_v2_module.logger, "propagate", True)
+
+    node = board_v2_module.board_v2_node_factory("CTO", "analysis")
+    with caplog.at_level(logging.WARNING, logger="sphere.checkpoint"):
+        out = await node(_initial_state(next_agent="CTO"))
+
+    assert out["board_votes"] == {"CTO": {"decision": "ABSTENCION", "confidence": None}}
+    assert "CTO" in caplog.text and "ABSTENCION" in caplog.text
+
+
+# --- BVT-003: unanimidad real ---
+
+@pytest.mark.parametrize(
+    "censo, votes, counts_esperados, expected_esperado, unanime_esperado",
+    [
+        pytest.param(
+            ["CTO", "CFO", "CMO"],
+            {
+                "CTO": {"decision": "SI", "confidence": 90},
+                "CFO": {"decision": "ABSTENCION", "confidence": None},
+                "CMO": {"decision": "ABSTENCION", "confidence": None},
+            },
+            {"SI": 1, "NO": 0, "CONDICIONAL": 0, "ABSTENCION": 2},
+            3,
+            False,
+            id="dos-malformados",
+        ),
+        pytest.param(
+            ["CTO", "CFO", "CMO"],
+            {
+                "CTO": {"decision": "SI", "confidence": 90},
+                "CFO": {"decision": "SI", "confidence": 80},
+                "CMO": {"decision": "SI", "confidence": 85},
+            },
+            {"SI": 3, "NO": 0, "CONDICIONAL": 0, "ABSTENCION": 0},
+            3,
+            True,
+            id="unanimidad-legitima",
+        ),
+        pytest.param(
+            ["CTO", "CTO"],
+            {"CTO": {"decision": "SI", "confidence": 90}},
+            {"SI": 1, "NO": 0, "CONDICIONAL": 0, "ABSTENCION": 0},
+            1,
+            True,
+            id="censo-duplicado",
+        ),
+    ],
+)
+def test_unanimidad_exige_censo_completo(
+    censo, votes, counts_esperados, expected_esperado, unanime_esperado
+):
+    """BVT-003. `unanimous` exige un voto decisivo por cada votante del censo,
+    y el censo se deduplica por rol."""
+    tally = _tally(votes, participants=censo)
+    assert tally["counts"] == counts_esperados
+    assert tally["expected"] == expected_esperado
+    assert tally["unanimous"] is unanime_esperado
+    assert sum(counts_esperados.values()) == tally["expected"]
+
+
+# --- BVT-004: empate declarado ---
+
+def test_empate_se_declara():
+    """BVT-004. 1-1-1 no tiene ganador, y sin votos decisivos tampoco."""
+    empate = {
+        "CTO": {"decision": "SI", "confidence": 80},
+        "CFO": {"decision": "NO", "confidence": 70},
+        "CMO": {"decision": "CONDICIONAL", "confidence": 60},
+    }
+    tally = _tally(empate)
+    assert tally["outcome"] == "EMPATE"
+    assert tally["winner"] is None
+    assert tally["unanimous"] is False
+
+    sin_votos = {r: {"decision": "ABSTENCION", "confidence": None} for r in BOARD_DIRECTORS}
+    vacio = _tally(sin_votos)
+    assert vacio["outcome"] == "SIN_VOTOS"
+    assert vacio["winner"] is None
+
+
+# --- BVT-005: invariante del enrutado ---
+
+def test_early_exit_no_con_abstenciones():
+    """BVT-005. Con una abstención no hay early-exit por alta que sea la
+    confianza de los decisivos, y el grafo devuelve la ronda de réplicas."""
+    votes = {
+        "CTO": {"decision": "SI", "confidence": 95},
+        "CFO": {"decision": "SI", "confidence": 95},
+        "CMO": {"decision": "ABSTENCION", "confidence": None},
+    }
+    tally = _tally(votes)
+    assert tally["early_exit"] is False
+    assert tally["counts"]["ABSTENCION"] == 1
+    assert tally["avg_confidence"] == 95
+
+    state = {
+        "board_votes": votes,
+        "board_participants": ["CTO", "CFO", "CMO"],
+        "board_devil": False,
+    }
+    assert sorted(route_after_consensus(state)) == [
+        "cfo_rebuttal",
+        "cmo_rebuttal",
+        "cto_rebuttal",
+    ]
+
+
+# --- BVT-006 y CS-009: el stream (payload y reembolsos) ---
+
+class _FakeOrchestrator:
+    """Sustituye board_v2_app: emite eventos fijos y expone el estado acumulado."""
+
+    def __init__(self, events, values):
+        self._events = events
+        self._values = values
+
+    async def astream_events(self, initial_state, config=None, version=None):
+        for event in self._events:
+            yield event
+
+    async def aget_state(self, config):
+        return SimpleNamespace(values=self._values)
+
+
+async def _drenar_stream(events, values, credit_manager=None, participants=None):
+    """Ejecuta generate_chat_events con el grafo falso y devuelve los payloads SSE."""
+    import app.presentation.api.v1.stream as stream_module
+    from app.application.credit_manager import ChargeContext
+
+    fake = _FakeOrchestrator(events, values)
+    ctx = ChargeContext(tx_id="tx_test", user_id="u_test", cost=5, source="plan", counted_as=5)
+
+    payloads = []
+    with patch.object(stream_module, "board_v2_app", fake):
+        async for chunk in stream_module.generate_chat_events(
+            query="¿Lanzamos en Q3?",
+            session_id="s_test",
+            user_id="u_test",
+            board_mode=True,
+            board_v2=True,
+            already_charged=True,
+            charge_ctx=ctx,
+            credit_manager=credit_manager,
+        ):
+            raw = chunk.removeprefix("data: ").strip()
+            if raw and raw != "[DONE]":
+                payloads.append(json.loads(raw))
+    return payloads
+
+
+async def test_payload_board_consensus():
+    """BVT-006. El evento board_consensus lleva censo, abstenciones y resultado."""
+    values = {
+        "board_participants": ["CTO", "CFO", "CMO"],
+        "board_votes": {
+            "CTO": {"decision": "SI", "confidence": 90},
+            "CFO": {"decision": "ABSTENCION", "confidence": None},
+            "CMO": {"decision": "ABSTENCION", "confidence": None},
+        },
+    }
+    events = [{"event": "on_chain_end", "name": "consensus_gate", "data": {"output": {}}}]
+    payloads = await _drenar_stream(events, values)
+
+    consenso = next(p for p in payloads if p["type"] == "board_consensus")
+    assert consenso["expected"] == 3
+    assert consenso["tally"]["ABSTENCION"] == 2
+    assert consenso["outcome"] == "MAYORIA"
+    assert consenso["winner"] == "SI"
+    assert consenso["total_decisivos"] == 1
+    assert consenso["unanimous"] is False
+    assert consenso["early_exit"] is False
+
+
+async def test_early_exit_no_reembolsa():
+    """CS-009. El debate abreviado no abarata el precio: el único reembolso
+    parcial es el del triaje, y con junta completa (5 créditos) no hay ninguno."""
+    unanime = {
+        "board_participants": ["CTO", "CFO", "CMO"],
+        "board_votes": {
+            "CTO": {"decision": "SI", "confidence": 90},
+            "CFO": {"decision": "SI", "confidence": 95},
+            "CMO": {"decision": "SI", "confidence": 92},
+        },
+    }
+    events = [
+        {
+            "event": "on_chain_end",
+            "name": "triage",
+            "data": {"output": {"board_participants": ["CTO", "CFO", "CMO"]}},
+        },
+        {"event": "on_chain_end", "name": "consensus_gate", "data": {"output": {}}},
+    ]
+    cm = SimpleNamespace(apartial_refund=AsyncMock(), aadjust_after_completion=AsyncMock())
+    payloads = await _drenar_stream(events, unanime, credit_manager=cm)
+
+    plan = next(p for p in payloads if p["type"] == "board_plan")
+    consenso = next(p for p in payloads if p["type"] == "board_consensus")
+    assert plan["cost"] == 5
+    assert consenso["early_exit"] is True  # el debate SÍ se abrevia
+    assert cm.apartial_refund.await_count == 0  # y aun así no se reembolsa nada
+
+
+async def test_junta_reducida_reembolsa_una_sola_vez():
+    """CS-009 (triangulación). Con junta reducida el reembolso del triaje se
+    emite exactamente una vez, y el consenso no añade un segundo."""
+    unanime = {
+        "board_participants": ["CTO", "CFO"],
+        "board_votes": {
+            "CTO": {"decision": "SI", "confidence": 90},
+            "CFO": {"decision": "SI", "confidence": 95},
+        },
+    }
+    events = [
+        {
+            "event": "on_chain_end",
+            "name": "triage",
+            "data": {"output": {"board_participants": ["CTO", "CFO"]}},
+        },
+        {"event": "on_chain_end", "name": "consensus_gate", "data": {"output": {}}},
+    ]
+    cm = SimpleNamespace(apartial_refund=AsyncMock(), aadjust_after_completion=AsyncMock())
+    payloads = await _drenar_stream(events, unanime, credit_manager=cm)
+
+    plan = next(p for p in payloads if p["type"] == "board_plan")
+    assert plan["cost"] == 3
+    assert cm.apartial_refund.await_count == 1
+    assert cm.apartial_refund.await_args.args[1] == 2

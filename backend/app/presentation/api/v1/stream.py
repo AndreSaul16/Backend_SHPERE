@@ -293,9 +293,23 @@ async def generate_chat_events(
                         # El tally se calcula leyendo el estado acumulado vía aget_state.
                         try:
                             snap = await active_orchestrator.aget_state(config)
-                            tally = _tally((snap.values or {}).get("board_votes", {}))
-                            early = tally["unanimous"] and tally["avg_confidence"] >= 70
-                            yield f"data: {json.dumps({'type': 'board_consensus', 'unanimous': tally['unanimous'], 'tally': tally['counts'], 'early_exit': early and node_name == 'consensus_gate'})}\n\n"
+                            valores = snap.values or {}
+                            tally = _tally(
+                                valores.get("board_votes", {}), valores.get("board_participants")
+                            )
+                            # Campos aditivos: un cliente que sólo lea unanimous/tally sigue funcionando.
+                            # El early-exit se LEE del recuento; aquí sólo se matiza cuándo se anuncia.
+                            consensus_payload = {
+                                "type": "board_consensus",
+                                "unanimous": tally["unanimous"],
+                                "tally": tally["counts"],
+                                "expected": tally["expected"],
+                                "total_decisivos": tally["total_decisivos"],
+                                "outcome": tally["outcome"],
+                                "winner": tally["winner"],
+                                "early_exit": tally["early_exit"] and node_name == "consensus_gate",
+                            }
+                            yield f"data: {json.dumps(consensus_payload)}\n\n"
                         except Exception as exc:
                             logger.debug(f"board_consensus snapshot falló: {exc}")
                     # board_intervention: si el gate/join/síntesis inyectó una intervención
