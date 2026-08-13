@@ -1,5 +1,5 @@
 import { FileCode, Download, ExternalLink, FileText, Table, GitBranch, Gavel } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 import { useChatStore } from '@/store/useChatStore';
 import { getDownloadExtension, type ArtifactType } from '@/types/artifact';
 
@@ -20,7 +20,11 @@ const getIcon = (type?: ArtifactType, lang?: string) => {
 };
 
 export function ArtifactCard({ content, language, artifactType, title: propsTitle, artifactId }: ArtifactCardProps) {
-    const { artifacts, setActiveArtifact } = useChatStore();
+    /* 4.6 · D20: la tarjeta seleccionaba el store entero para leer un
+       artefacto. Un turno con tres artefactos son tres suscripciones globales
+       dentro del transcript, y por token. */
+    const artifacts = useChatStore((s) => s.artifacts);
+    const setActiveArtifact = useChatStore((s) => s.setActiveArtifact);
 
     // Find artifact by ID first (streaming case), then fallback to content match
     const existingArtifact = artifactId
@@ -68,40 +72,42 @@ export function ArtifactCard({ content, language, artifactType, title: propsTitl
     const displayContent = existingArtifact?.content || content;
     const size = formatSize(displayContent);
 
-    // Board V2: el "Acta de la Junta" es el artefacto estrella del debate → reveal
-    // con borde conic-gradient animado para destacarla como decisión.
+    // Board V2: el «Acta de la Junta» es el artefacto estrella del debate.
+    //
+    // Lo destacaba un borde de `conic-gradient` girando en bucle infinito cada
+    // 6 s (cian → morado → magenta), que §7.4 prohíbe por nombre entre «los
+    // cuatro bucles heredados» y §0 rechaza como degradado morado→cian. Un
+    // bucle sólo se permite si representa un proceso real en curso, y un acta
+    // ya cerrada no está haciendo nada.
+    //
+    // Lo sustituye lo que el sistema sí usa para «esta tarjeta es la
+    // importante»: el filete de latón de §9.3 (`selected`) y la barra de 2px en
+    // el canto de inicio. Materia, no luz — y coste cero.
     const isActa = /acta/i.test(title);
 
     return (
         <div className="my-4 group relative">
-            {isActa && (
-                <motion.div
-                    aria-hidden
-                    className="absolute -inset-[1.5px] rounded-xl pointer-events-none"
-                    style={{
-                        background: 'conic-gradient(from 0deg, #00F5D4, #9D85FF, #FF2E97, #00F5D4)',
-                        filter: 'blur(0.5px)',
-                    }}
-                    animate={{ rotate: 360 }}
-                    transition={{ repeat: Infinity, duration: 6, ease: 'linear' }}
-                />
-            )}
-            <div className="relative bg-surface/50 border border-surface-highlight rounded-xl overflow-hidden hover:border-electric-cyan/30 transition-all shadow-lg backdrop-blur-sm">
+            <div className={cn(
+                "relative bg-surface-2 rounded-md overflow-hidden transition-colors shadow-e2",
+                isActa
+                    ? "border border-brass-500 border-s-2 border-s-brass-500"
+                    : "border border-stroke-edge hover:border-brass-600",
+            )}>
                 <div className="px-4 py-3 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3 min-w-0">
-                        <div className="p-2 bg-midnight rounded-lg text-electric-cyan group-hover:scale-110 transition-transform">
+                        <div className="p-2 bg-surface-inset rounded-sm text-accent">
                             {isActa ? <Gavel className="h-4 w-4" /> : getIcon(artifactType, language)}
                         </div>
                         <div className="min-w-0">
-                            <p className="text-xs font-mono text-text-primary truncate">
+                            <p className="text-xs font-mono text-content-strong truncate">
                                 {title}
                             </p>
                             <div className="flex items-center gap-2">
-                                <p className="text-[10px] text-text-secondary uppercase tracking-tight opacity-60">
+                                <p className="text-micro text-content-muted uppercase opacity-60">
                                     {language || artifactType || 'document'}
                                 </p>
-                                <span className="text-[10px] text-text-secondary opacity-40">•</span>
-                                <p className="text-[10px] text-text-secondary font-mono opacity-60">
+                                <span className="text-micro text-content-muted opacity-40">•</span>
+                                <p className="text-micro text-content-muted font-mono opacity-60">
                                     {size}
                                 </p>
                             </div>
@@ -111,14 +117,14 @@ export function ArtifactCard({ content, language, artifactType, title: propsTitl
                     <div className="flex items-center gap-2 flex-shrink-0">
                         <button
                             onClick={handleView}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-highlight hover:bg-electric-cyan/10 text-text-secondary hover:text-electric-cyan rounded-lg text-[11px] font-medium transition-colors border border-transparent hover:border-electric-cyan/20"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-highlight hover:bg-electric-cyan/10 text-content-muted hover:text-electric-cyan rounded-lg text-sm font-medium transition-colors border border-transparent hover:border-electric-cyan/20"
                         >
                             <ExternalLink className="h-3 w-3" />
                             {isActa ? 'Ver acta' : 'Ver Código'}
                         </button>
                         <button
                             onClick={handleDownload}
-                            className="p-1.5 bg-surface-highlight hover:bg-luxury-purple/10 text-text-secondary hover:text-luxury-purple rounded-lg transition-colors border border-transparent hover:border-luxury-purple/20"
+                            className="p-1.5 bg-surface-highlight hover:bg-luxury-purple/10 text-content-muted hover:text-luxury-purple rounded-lg transition-colors border border-transparent hover:border-luxury-purple/20"
                             title="Descargar"
                         >
                             <Download className="h-3.5 w-3.5" />

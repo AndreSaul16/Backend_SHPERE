@@ -21,6 +21,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '../setup';
 import { KnowledgeBasePanel } from '../../src/components/agents/KnowledgeBasePanel';
+import { __resetToastBus, subscribeToasts, type ToastRecord } from '../../src/lib/toastBus';
 
 // El token viaja por authHeaders() -> getAuthToken(), que hace
 // `await import("firebase/auth")`. vi.mock también intercepta el import dinámico.
@@ -36,15 +37,25 @@ const AGENT_ID = 'cto-1';
 const LIST_URL = `http://localhost:8000/api/v1/agents/${AGENT_ID}/documents`;
 const DELETE_URL = `http://localhost:8000/api/v1/agents/${AGENT_ID}/documents/:fileId`;
 
+/**
+ * La forma REAL de `DocumentResponse` (backend `documents.py`).
+ *
+ * Este fixture decía `id`, `file_size`, `status` y `created_at`, que es la
+ * forma que se había inventado el propio panel. Ninguno de los cuatro campos
+ * existe en la respuesta del backend, así que la prueba estaba verde contra
+ * una mentira mientras en producción no se pintaba el estado, el tamaño salía
+ * NaN y eliminar mandaba un DELETE a `.../documents/undefined` (D43 · 7.4).
+ */
 const doc = (overrides: Record<string, unknown> = {}) => ({
-    id: 'doc-1',
+    file_id: 'doc-1',
     filename: 'informe.pdf',
-    file_size: 2048,
+    file_size_bytes: 2048,
+    content_type: 'application/pdf',
     // 'completed' a propósito: con pending/processing el panel arranca un
     // setInterval de polling que ensuciaría el test.
-    status: 'completed',
+    processing_status: 'completed',
     chunks_count: 12,
-    created_at: '2026-07-30T10:00:00Z',
+    uploaded_at: '2026-07-30T10:00:00Z',
     ...overrides,
 });
 
@@ -55,6 +66,7 @@ const listResponse = (documents: unknown[]) =>
 describe('KnowledgeBasePanel — regresión P0 (b7452be)', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        __resetToastBus();
     });
 
     // ---------------------------------------------------------------------
@@ -87,7 +99,7 @@ describe('KnowledgeBasePanel — regresión P0 (b7452be)', () => {
         expect(screen.queryByText(/Error fetching documents/i)).not.toBeInTheDocument();
     });
 
-    it('propaga el error al usuario si el listado responde 401', async () => {
+    it('un listado que falla se cuenta con salida, y sin volcar el error del backend', async () => {
         server.use(
             http.get(LIST_URL, () =>
                 HttpResponse.json({ detail: 'Not authenticated' }, { status: 401 }),
@@ -96,7 +108,15 @@ describe('KnowledgeBasePanel — regresión P0 (b7452be)', () => {
 
         render(<KnowledgeBasePanel agentId={AGENT_ID} />);
 
-        expect(await screen.findByText(/Error fetching documents: 401/i)).toBeInTheDocument();
+        // §11: qué pasó, qué se conserva y qué hacer. Antes esto pintaba
+        // literalmente «Error fetching documents: 401» y nada más: en inglés,
+        // con el código dentro, sin decir si se había perdido algo y sin
+        // ninguna salida.
+        expect(await screen.findByText('No se han podido cargar los documentos')).toBeInTheDocument();
+        expect(screen.getByText(/Ninguno se ha borrado/)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Reintentar/ })).toBeInTheDocument();
+        expect(screen.queryByText(/Error fetching documents/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Not authenticated/i)).not.toBeInTheDocument();
     });
 
     // ---------------------------------------------------------------------
@@ -107,8 +127,8 @@ describe('KnowledgeBasePanel — regresión P0 (b7452be)', () => {
         server.use(
             http.get(LIST_URL, () =>
                 listResponse([
-                    doc({ id: 'doc-1', filename: 'informe.pdf', chunks_count: 12 }),
-                    doc({ id: 'doc-2', filename: 'contrato.docx', file_size: 4096, chunks_count: 7 }),
+                    doc({ file_id: 'doc-1', filename: 'informe.pdf', chunks_count: 12 }),
+                    doc({ file_id: 'doc-2', filename: 'contrato.docx', file_size_bytes: 4096, chunks_count: 7 }),
                 ]),
             ),
         );
@@ -150,8 +170,8 @@ describe('KnowledgeBasePanel — regresión P0 (b7452be)', () => {
         server.use(
             http.get(LIST_URL, () =>
                 listResponse([
-                    doc({ id: 'doc-1', filename: 'informe.pdf' }),
-                    doc({ id: 'doc-2', filename: 'contrato.docx' }),
+                    doc({ file_id: 'doc-1', filename: 'informe.pdf' }),
+                    doc({ file_id: 'doc-2', filename: 'contrato.docx' }),
                 ]),
             ),
             http.delete(DELETE_URL, ({ request, params }) => {
@@ -164,7 +184,10 @@ describe('KnowledgeBasePanel — regresión P0 (b7452be)', () => {
         render(<KnowledgeBasePanel agentId={AGENT_ID} />);
         await screen.findByText('informe.pdf');
 
-        const buttons = screen.getAllByTitle('Eliminar documento');
+        // El botón nombra el objeto (§11): `Eliminar el documento «X»`. Antes
+        // su única etiqueta era el `title`, que §9.6 prohíbe y que en táctil no
+        // aparece nunca.
+        const buttons = screen.getAllByRole('button', { name: /^Eliminar el documento/ });
         expect(buttons).toHaveLength(2);
         fireEvent.click(buttons[0]);
 
@@ -178,25 +201,40 @@ describe('KnowledgeBasePanel — regresión P0 (b7452be)', () => {
         expect(screen.getByText('contrato.docx')).toBeInTheDocument();
     });
 
-    it('mantiene la fila si el borrado falla', async () => {
+    /**
+     * Tarea 1.13. Antes esto sólo comprobaba que se había llamado a
+     * `console.error`: el borrado fallaba, la fila se quedaba y el usuario no
+     * tenía forma de enterarse salvo abriendo las herramientas del navegador.
+     *
+     * El `toHaveLength(1)` no es cosmético. Es la parte del test que caza el
+     * fallo del primer intento de esta tarea: cablear un aviso nuevo sin
+     * retirar el que ya emitía otra capa, y sacar el mismo error dos veces.
+     */
+    it('un borrado que falla emite exactamente un aviso, con su motivo, y deja la fila', async () => {
         server.use(
             http.get(LIST_URL, () => listResponse([doc({ filename: 'informe.pdf' })])),
             http.delete(DELETE_URL, () =>
                 HttpResponse.json({ detail: 'Not authenticated' }, { status: 401 }),
             ),
         );
-        const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const seen: ToastRecord[] = [];
+        const unsubscribe = subscribeToasts((t) => seen.push(t));
 
         render(<KnowledgeBasePanel agentId={AGENT_ID} />);
         await screen.findByText('informe.pdf');
 
-        fireEvent.click(screen.getByTitle('Eliminar documento'));
+        fireEvent.click(screen.getByRole('button', { name: 'Eliminar el documento informe.pdf' }));
 
-        await waitFor(() => expect(consoleError).toHaveBeenCalled());
+        await waitFor(() => expect(seen).toHaveLength(1));
+        expect(seen[0].variant).toBe('error');
+        expect(seen[0].title).toBe('No se pudo eliminar el documento');
+        // §9.5: un error siempre lleva acción o motivo. Aquí, el motivo.
+        expect(seen[0].detail).toBeTruthy();
+
         // No hay borrado optimista: si el backend rechaza, la fila sigue.
         expect(screen.getByText('informe.pdf')).toBeInTheDocument();
 
-        consoleError.mockRestore();
+        unsubscribe();
     });
 
     it('no pinta el botón de borrar en modo readOnly', async () => {
@@ -205,7 +243,7 @@ describe('KnowledgeBasePanel — regresión P0 (b7452be)', () => {
         render(<KnowledgeBasePanel agentId={AGENT_ID} readOnly />);
         await screen.findByText('informe.pdf');
 
-        expect(screen.queryByTitle('Eliminar documento')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^Eliminar el documento/ })).not.toBeInTheDocument();
     });
 
     // ---------------------------------------------------------------------

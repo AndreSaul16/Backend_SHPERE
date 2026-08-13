@@ -4,6 +4,7 @@
  * El client_secret se cifra en el backend y nunca se devuelve.
  */
 import { useEffect, useState, useCallback } from "react";
+import { useEstadoEfimero } from "@/hooks/useEstadoEfimero";
 import { useSearchParams } from "react-router-dom";
 import {
   Github,
@@ -13,18 +14,26 @@ import {
   Link2,
   Unlink,
   CheckCircle2,
-  XCircle,
   Copy,
   Check,
   Trash2,
   ExternalLink,
   KeyRound,
 } from "lucide-react";
+import { InlineError, type FalloDeSeccion } from "@/components/ui/InlineError";
 import {
   integrationsService,
   type IntegrationsList,
   type OAuthAppsList,
 } from "@/services/api";
+import { PasswordField, TextField } from "@/components/ui/Field";
+import { FilaDeConexion } from "@/pages/settings/FilaDeConexion";
+import {
+  pasaElFiltro,
+  useControlDeAcordeon,
+  type ControlDeAcordeon,
+} from "@/pages/settings/conexionesAcordeon";
+import { EsqueletoDeTarjetas } from "@/components/ui/Esqueleto";
 
 const PROVIDER_META: Record<
   string,
@@ -68,18 +77,20 @@ const PROVIDER_META: Record<
   },
 };
 
-export function IntegrationsSettings() {
+export function IntegrationsSettings({ control: controlExterno }: { control?: ControlDeAcordeon } = {}) {
+  const control = useControlDeAcordeon(controlExterno);
   const [data, setData] = useState<IntegrationsList | null>(null);
   const [apps, setApps] = useState<OAuthAppsList | null>(null);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Redactado donde se produce: el «qué se conserva» sólo lo sabe el sitio.
+  const [error, setError] = useState<FalloDeSeccion | null>(null);
   const [params, setParams] = useSearchParams();
 
   // Form state por provider
   const [clientIds, setClientIds] = useState<Record<string, string>>({});
   const [clientSecrets, setClientSecrets] = useState<Record<string, string>>({});
-  const [copied, setCopied] = useState<string | null>(null);
+  const [copied, marcarCopiado] = useEstadoEfimero<string | null>(null, 2000);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -91,8 +102,13 @@ export function IntegrationsSettings() {
       ]);
       setData(list);
       setApps(appsList);
-    } catch (e) {
-      setError(String(e));
+    } catch {
+      setError({
+        title: "No se han podido cargar tus integraciones",
+        detail:
+          "Ninguna conexión se ha perdido: es un fallo al traer la lista. Tus agentes siguen pudiendo usarlas.",
+        onRetry: () => { void load(); },
+      });
     } finally {
       setLoading(false);
     }
@@ -117,8 +133,7 @@ export function IntegrationsSettings() {
   const copyCallback = async (provider: string, url: string) => {
     try {
       await navigator.clipboard.writeText(url);
-      setCopied(provider);
-      setTimeout(() => setCopied((c) => (c === provider ? null : c)), 2000);
+      marcarCopiado(provider);
     } catch {
       /* clipboard no disponible */
     }
@@ -128,7 +143,12 @@ export function IntegrationsSettings() {
     const cid = (clientIds[provider] || "").trim();
     const secret = (clientSecrets[provider] || "").trim();
     if (!cid || !secret) {
-      setError("Introduce el Client ID y el Client Secret.");
+      setError({
+        title: "Faltan datos para registrar la aplicación",
+        detail:
+          "Introduce el Client ID y el Client Secret que te ha dado el proveedor. No se ha enviado nada.",
+        tone: "warning",
+      });
       return;
     }
     setWorking(provider);
@@ -138,8 +158,14 @@ export function IntegrationsSettings() {
       setClientIds((p) => ({ ...p, [provider]: "" }));
       setClientSecrets((p) => ({ ...p, [provider]: "" }));
       await load();
-    } catch (e) {
-      setError(String(e));
+    } catch {
+      setError({
+        title: `No se ha podido registrar tu aplicación de ${provider}`,
+        detail:
+          "Las credenciales que has escrito siguen en el formulario y no se ha guardado nada a medias.",
+        onRetry: () => { void handleRegister(provider); },
+        retryLabel: "Volver a registrarla",
+      });
     } finally {
       setWorking(null);
     }
@@ -151,8 +177,14 @@ export function IntegrationsSettings() {
     try {
       await integrationsService.connect(provider);
       // El flujo redirige al provider; si no, recargamos
-    } catch (e) {
-      setError(String(e));
+    } catch {
+      setError({
+        title: `No se ha podido empezar la conexión con ${provider}`,
+        detail:
+          "No se ha autorizado nada ni se ha compartido ningún dato. Vuelve a intentarlo.",
+        onRetry: () => { void handleConnect(provider); },
+        retryLabel: "Volver a conectar",
+      });
       setWorking(null);
     }
   };
@@ -163,8 +195,14 @@ export function IntegrationsSettings() {
     try {
       await integrationsService.disconnect(provider);
       await load();
-    } catch (e) {
-      setError(String(e));
+    } catch {
+      setError({
+        title: `No se ha podido desconectar ${provider}`,
+        detail:
+          "La conexión sigue activa y tus agentes pueden seguir usándola. Vuelve a intentarlo.",
+        onRetry: () => { void handleDisconnect(provider); },
+        retryLabel: "Volver a desconectar",
+      });
     } finally {
       setWorking(null);
     }
@@ -176,14 +214,21 @@ export function IntegrationsSettings() {
     try {
       await integrationsService.deleteApp(provider);
       await load();
-    } catch (e) {
-      setError(String(e));
+    } catch {
+      setError({
+        title: `No se ha podido borrar tu aplicación de ${provider}`,
+        detail:
+          "Sigue registrada con sus credenciales tal cual. Vuelve a intentarlo.",
+        onRetry: () => { void handleDeleteApp(provider); },
+        retryLabel: "Volver a borrarla",
+      });
     } finally {
       setWorking(null);
     }
   };
 
-  if (loading && !data) return <p className="text-text-secondary">Cargando...</p>;
+  if (loading && !data)
+    return <EsqueletoDeTarjetas etiqueta="Cargando tus integraciones" filas={4} />;
 
   const providers = data?.available || Object.keys(PROVIDER_META);
   const appByProvider = new Map((apps?.apps || []).map((a) => [a.provider, a]));
@@ -191,27 +236,22 @@ export function IntegrationsSettings() {
   return (
     <div className="space-y-6">
       {justConnected && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-success/10 border border-success/30 text-success">
           <CheckCircle2 className="h-4 w-4" />
           Conectado correctamente a {justConnected}
         </div>
       )}
 
-      {error && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
-          <XCircle className="h-4 w-4 shrink-0" />
-          {error}
-        </div>
-      )}
+      {error && <InlineError {...error} />}
 
-      <p className="text-sm text-text-secondary">
+      <p className="text-sm text-content-muted">
         Cada integración usa <strong>tu propia OAuth app</strong>: créala en el
         proveedor, registra aquí su <em>Client ID</em> y <em>Client Secret</em> (se
         cifran en reposo) y luego conecta tu cuenta. Los tokens se usan cuando los
         agentes actúan en tu nombre.
       </p>
 
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 gap-2">
         {providers.map((p) => {
           const meta =
             PROVIDER_META[p] || {
@@ -226,40 +266,31 @@ export function IntegrationsSettings() {
           const isWorking = working === p;
           const callbackUrl = apps?.callback_urls?.[p] || "";
 
+          // 6.8: el buscador filtra por lo que el usuario recuerda —el nombre
+          // del servicio o para qué servía—, no por su clave interna.
+          if (!pasaElFiltro(control.filtro, meta.label, p, meta.description)) return null;
+
           return (
-            <div
+            <FilaDeConexion
               key={p}
-              className="p-5 rounded-2xl bg-surface/30 border border-surface-highlight space-y-4"
+              id={p}
+              control={control}
+              icono={meta.icon}
+              titulo={meta.label}
+              descripcion={meta.description}
+              estado={
+                isConnected
+                  ? { texto: "Conectado", tono: "ok" }
+                  : registered
+                    ? { texto: "App registrada", tono: "medio" }
+                    : { texto: "Sin conectar", tono: "pendiente" }
+              }
             >
-              {/* Header */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3 text-text-primary">
-                  {meta.icon}
-                  <div>
-                    <h3 className="font-semibold flex items-center gap-2">
-                      {meta.label}
-                      {isConnected && (
-                        <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full text-[10px]">
-                          Conectado
-                        </span>
-                      )}
-                      {registered && !isConnected && (
-                        <span className="px-2 py-0.5 bg-sky-500/10 text-sky-400 border border-sky-500/30 rounded-full text-[10px]">
-                          App registrada
-                        </span>
-                      )}
-                    </h3>
-                    <p className="text-xs text-text-secondary mt-1">
-                      {meta.description}
-                    </p>
-                  </div>
-                </div>
-              </div>
 
               {!registered ? (
                 /* ---- Paso 1: registrar la OAuth app ---- */
                 <div className="space-y-3 border-t border-surface-highlight pt-3">
-                  <div className="text-xs text-text-secondary space-y-2">
+                  <div className="text-xs text-content-muted space-y-2">
                     <p className="flex items-center gap-1.5">
                       <KeyRound className="h-3.5 w-3.5" />
                       Crea tu OAuth app:
@@ -279,16 +310,16 @@ export function IntegrationsSettings() {
                           Usa esta <strong>Authorization callback URL</strong>:
                         </span>
                         <div className="flex items-center gap-2">
-                          <code className="flex-1 px-2 py-1.5 bg-surface/60 border border-surface-highlight rounded-lg text-[11px] text-text-primary break-all">
+                          <code className="flex-1 px-2 py-1.5 bg-surface/60 border border-surface-highlight rounded-lg text-xs text-content-strong break-all">
                             {callbackUrl}
                           </code>
                           <button
                             onClick={() => copyCallback(p, callbackUrl)}
-                            className="p-1.5 rounded-lg border border-surface-highlight hover:border-electric-cyan/50 text-text-secondary hover:text-electric-cyan transition-all"
+                            className="p-1.5 rounded-lg border border-surface-highlight hover:border-electric-cyan/50 text-content-muted hover:text-electric-cyan transition-all"
                             title="Copiar"
                           >
                             {copied === p ? (
-                              <Check className="h-3.5 w-3.5 text-emerald-400" />
+                              <Check className="h-3.5 w-3.5 text-success" />
                             ) : (
                               <Copy className="h-3.5 w-3.5" />
                             )}
@@ -299,34 +330,24 @@ export function IntegrationsSettings() {
                   </div>
 
                   <div className="space-y-2">
-                    <div>
-                      <label className="block text-xs text-text-secondary mb-1">
-                        Client ID
-                      </label>
-                      <input
-                        type="text"
-                        value={clientIds[p] || ""}
-                        onChange={(e) =>
-                          setClientIds((prev) => ({ ...prev, [p]: e.target.value }))
-                        }
-                        placeholder="Tu Client ID"
-                        className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-text-primary text-sm focus:outline-none focus:border-electric-cyan/50 placeholder:text-text-secondary/50"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-text-secondary mb-1">
-                        Client Secret
-                      </label>
-                      <input
-                        type="password"
-                        value={clientSecrets[p] || ""}
-                        onChange={(e) =>
-                          setClientSecrets((prev) => ({ ...prev, [p]: e.target.value }))
-                        }
-                        placeholder="Tu Client Secret"
-                        className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-text-primary text-sm focus:outline-none focus:border-electric-cyan/50 placeholder:text-text-secondary/50"
-                      />
-                    </div>
+                    <TextField
+                      label="Client ID"
+                      id={`oauth-client-id-${p}`}
+                      value={clientIds[p] || ""}
+                      onChange={(e) =>
+                        setClientIds((prev) => ({ ...prev, [p]: e.target.value }))
+                      }
+                      placeholder="Tu Client ID"
+                    />
+                    <PasswordField
+                      label="Client Secret"
+                      id={`oauth-client-secret-${p}`}
+                      value={clientSecrets[p] || ""}
+                      onChange={(e) =>
+                        setClientSecrets((prev) => ({ ...prev, [p]: e.target.value }))
+                      }
+                      placeholder="Tu Client Secret"
+                    />
                   </div>
 
                   <button
@@ -341,16 +362,16 @@ export function IntegrationsSettings() {
               ) : (
                 /* ---- Paso 2: conectar / desconectar + gestionar la app ---- */
                 <div className="space-y-3 border-t border-surface-highlight pt-3">
-                  <p className="text-xs text-text-secondary">
+                  <p className="text-xs text-content-muted">
                     Client ID:{" "}
-                    <code className="text-text-primary">{registered.client_id}</code>
+                    <code className="text-content-strong">{registered.client_id}</code>
                   </p>
 
                   {isConnected ? (
                     <button
                       onClick={() => handleDisconnect(p)}
                       disabled={isWorking}
-                      className="w-full flex items-center justify-center gap-2 py-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl hover:bg-red-500 hover:text-white transition-all text-sm font-medium disabled:opacity-50"
+                      className="w-full flex items-center justify-center gap-2 py-2 bg-oxblood-500/10 text-danger border border-oxblood-500/20 rounded-xl hover:bg-oxblood-500 hover:text-content-strong transition-all text-sm font-medium disabled:opacity-50"
                     >
                       <Unlink className="h-4 w-4" />
                       {isWorking ? "Desconectando..." : "Desconectar"}
@@ -369,7 +390,7 @@ export function IntegrationsSettings() {
                   <button
                     onClick={() => handleDeleteApp(p)}
                     disabled={isWorking}
-                    className="w-full flex items-center justify-center gap-1.5 py-1.5 text-text-secondary hover:text-red-400 transition-all text-xs disabled:opacity-50"
+                    className="w-full flex items-center justify-center gap-1.5 py-1.5 text-content-muted hover:text-danger transition-all text-xs disabled:opacity-50"
                     title="Elimina el client_id/secret y revoca los tokens emitidos"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -377,7 +398,7 @@ export function IntegrationsSettings() {
                   </button>
                 </div>
               )}
-            </div>
+            </FilaDeConexion>
           );
         })}
       </div>

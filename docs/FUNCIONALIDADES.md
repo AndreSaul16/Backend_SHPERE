@@ -4,6 +4,13 @@
 > que están a medias (WIP). Generado a partir de una auditoría del código en
 > `feat/v3-thelastdance`.
 >
+> ⚠️ **Corregido el 8 de agosto de 2026 (tarea 7.8 · D39).** Este documento tenía
+> filas marcadas ✅ que eran falsas: un modal que no existe, dos secciones de
+> ajustes que hoy son redirecciones y un endpoint que el backend expone y el
+> frontend nunca llama. Están corregidas **en su sitio**, no borradas, para que se
+> vea qué se creía y qué es. El resto del documento sigue siendo de
+> `feat/v3-thelastdance` y **no** refleja la rama `redesign/visual-identity-v3`.
+>
 > Cada funcionalidad de frontend (botón/acción) se mapea a su endpoint de backend
 > cuando aplica, de forma que el harness de pruebas [`test/complete_test.sh`](test/complete_test.sh)
 > (y su lanzador [`test/complete_test.ps1`](test/complete_test.ps1)) pueda ejercitar cada una con `curl`.
@@ -55,7 +62,7 @@ Leyenda estado: ✅ completo · 🟡 parcial/WIP · 🔒 requiere auth · 🌐 p
 | A1 | GET | `/me` | — | Perfil completo del usuario | ✅ |
 | A2 | PATCH | `/me` | `display_name`, `avatar_url`, `ui_preferences`, `professional_profile`, `communication_style`, `financial_preferences`, `personal_kb_enabled` | Actualiza perfil parcial | ✅ |
 | A3 | POST | `/me/onboarding/complete` | — | Marca onboarding completado | ✅ |
-| A4 | GET | `/me/usage` | — | Presupuesto/uso de tokens del día | ✅ |
+| A4 | GET | `/me/usage` | — | Presupuesto/uso de tokens del día | ⛔ **el backend lo expone; el frontend NO lo llama.** `TokenUsageBar.tsx` lo consumía y fue borrado sin sustituto (7.8, 2026-08-08) |
 | A5 | GET | `/me/agent-overrides` | — | Lista overrides de agentes core | ✅ |
 | A6 | PUT | `/me/agent-overrides/{agent_role}` | `system_prompt_addition`, `temperature_override`, `model_override` | Crea/actualiza override (CEO/CTO/CFO/CMO) | ✅ |
 | A7 | DELETE | `/me/agent-overrides/{agent_role}` | — | Borra override → vuelve a default | ✅ |
@@ -130,7 +137,7 @@ Proveedores: `github`, `notion`, `slack`, `google`. State CSRF firmado HMAC, TTL
 | # | Método | Ruta | Body | Descripción | Estado |
 |---|--------|------|------|-------------|--------|
 | B1 | POST | `/billing/checkout` | `plan_id` | Crea sesión de checkout Stripe (valida tier en top-ups) | ✅ |
-| B2 | POST | `/billing/portal` | — | Portal de cliente Stripe (404 si no hay customer) | ✅ |
+| B2 | POST | `/billing/portal` | — | Portal de cliente Stripe (404 si no hay customer) | ✅ **desde la tarea 6.10.** Hasta esa fecha esta fila decía ✅ y era falsa: el endpoint existía desde el principio y no lo llamaba nadie |
 | B3 | GET | `/billing/me` | — | Plan, balance, uso RAG, nº agentes, `stripe_configured` | ✅ |
 
 Planes: `starter`, `premium`. Top-ups: `topup_free/starter/premium_1k/2k/10k`.
@@ -204,11 +211,11 @@ Token Firebase adjunto en cada llamada vía `authHeaders()` ([`services/api.ts`]
 |-------------|------------------|---------|--------|
 | `profile` | Guardar perfil (identidad, profesional, estilo, finanzas, interfaz) | `GET/PATCH /me` (A1/A2) | ✅ |
 | `integrations` | Connect / Disconnect (GitHub/Notion/Slack) | `GET /integrations/` (I3), `GET /integrations/{p}/connect` (I1), `DELETE /integrations/{p}` (I4) | ✅ |
-| `api-keys` | Guardar / Test / Borrar credencial (5 servicios) | `POST /me/service-credentials` (A12), `POST .../{s}/test` (A14), `DELETE .../{s}` (A13) | ✅ (test Jules 🟡) |
+| `api-keys` | **Ya no es una sección: es una redirección.** `SettingsPage.LEGACY_REDIRECTS` la manda a `/settings/integrations`, donde vive `ServiceCredentialsSettings` | `POST /me/service-credentials` (A12), `POST .../{s}/test` (A14), `DELETE .../{s}` (A13) | ✅ como parte de Conexiones |
 | `board-meeting` | Toggle + iteraciones (1/2) | `GET/PATCH /me/board-settings` (A15/A16) | ✅ |
 | `agent-overrides` | Guardar / Reset override (CEO/CTO/CMO/CFO) | `GET /me/agent-overrides` (A5), `PUT .../{role}` (A6), `DELETE .../{role}` (A7) | ✅ |
 | `contacts` | Añadir / Borrar contacto whitelist | `GET/POST /me/contacts` (A8/A9), `DELETE /me/contacts/{id}` (A10) | ✅ |
-| `storage` | Ver uso de tokens (refresh) | `GET /me/usage` (A4) | 🟡 uso de almacenamiento de docs no expuesto |
+| `storage` | **Ya no es una sección: es una redirección** a `/billing`, donde `BillingPage` pinta el almacenamiento | `GET /me/storage` | ✅ como parte de Facturación. `GET /me/usage` (A4) sigue sin llamarse desde ningún sitio |
 
 ### 2.7 `/billing` — BillingPage ✅
 | Elemento | Acción | Backend |
@@ -225,17 +232,17 @@ Token Firebase adjunto en cada llamada vía `authHeaders()` ([`services/api.ts`]
 | Seleccionar agente y crear sesión | `createNewSession` | `POST /sessions/` (S1) | ✅ |
 | Listar historial de sesiones | `fetchSessions` | `GET /sessions/` (S2) | ✅ |
 | Borrar sesión (menú ⋮) | `deleteSession` | `DELETE /sessions/{id}` (S5) | ✅ |
-| Compartir sesión (menú ⋮) | placeholder | — | 🟡 sin backend |
-| Buscar sesiones | placeholder | — | 🟡 no funcional |
+| Compartir sesión (menú ⋮) | `shareSession` / `unshareSession` | `POST/DELETE /sessions/{id}/share` | ✅ desde la fase 1 |
+| Buscar sesiones | filtrado en cliente, sin distinguir acentos ni mayúsculas | — | ✅ desde la tarea 1.4 (D10) |
 | Links: Perfil / Facturación / Configuración | navegación | — | ✅ |
 
 ### 2.9 Modales / componentes transversales
 | Componente | Función | Backend | Estado |
 |------------|---------|---------|--------|
 | AgentSelectorModal | Elegir agente para nueva sesión | `POST /sessions/` (S1) | ✅ |
-| AgentCreationWizard | Crear agente custom (multi-paso + template + docs) | `GET /agents/templates` (AG1), `POST /agents/` (AG3), `POST /agents/{id}/documents` (D1) | 🟡 pasos 2-3 en pulido |
+| AgentCreationWizard | Crear agente custom (multi-paso + template + docs) | `GET /agents/templates` (AG1), `POST /agents/` (AG3), `POST /agents/{id}/documents` (D1) | ✅ (troceado en `modals/agent-wizard/` en la tarea 7.2) |
 | PaywallModal | Upsell ante 402 / cuotas | navega a `/billing` | 🟡 mapeo de razones en curso |
-| ToolConfirmationModal | Confirmar tools destructivas | — (SSE) | ✅ |
+| ~~ToolConfirmationModal~~ | Confirmar tools destructivas | — (SSE) | ⛔ **el fichero NO existe.** Fue borrado, no integrado. La preferencia `ui_preferences.tool_confirmation_level` del perfil se guarda y **nadie la lee** (7.8, 2026-08-08) |
 | CreditsIndicator | Balance en header | `GET /billing/me` (B3) | ✅ |
 | ArtifactPanel / ArtifactRenderer | Render code/markdown/mermaid/tabla | — | ✅ |
 

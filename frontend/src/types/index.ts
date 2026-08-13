@@ -66,6 +66,25 @@ export interface Message {
     isConclusion?: boolean; // Board meeting: síntesis ejecutiva final del CEO
     vote?: BoardVote; // Board V2: voto del director (se muestra como chip)
     phase?: BoardPhase; // Board V2: fase del debate en la que se emitió
+    /**
+     * El turno se cortó a medias (stream muerto o red caída), no lo paró el
+     * usuario. Lo pone el store y lo lee el hilo para ofrecer «Reintentar» ahí
+     * mismo, que es donde el usuario está mirando. No se persiste: al recargar,
+     * lo que queda es el texto del aviso dentro del propio contenido.
+     */
+    interrupted?: boolean;
+    /**
+     * Versiones anteriores de ESTE turno, en orden (v1 primero) — Q12 (5.11).
+     *
+     * «Regenerar» truncaba el hilo desde la burbuja y la respuesta anterior
+     * desaparecía: si habías gastado créditos en dos versiones, la primera se
+     * perdía en silencio. Ahora viaja aquí y la burbuja ofrece «v1 / v2».
+     *
+     * No se persiste en el backend: el historial guarda el hilo final, así que
+     * al recargar queda la versión buena y el conmutador desaparece. Es la
+     * decisión honesta hasta que el servidor tenga dónde guardarlas.
+     */
+    versionesPrevias?: string[];
 }
 
 export interface ChatSession {

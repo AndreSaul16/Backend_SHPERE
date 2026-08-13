@@ -108,4 +108,60 @@ describe('ErrorBoundary Component', () => {
     expect(screen.queryByText(/Test explosion/i)).toBeNull();
     expect(screen.queryByText(/ErrorBoundary.test/i)).toBeNull();
   });
+  /* D51 · 7.7 — lo que la frontera de raíz NO hacía. */
+  describe('D51 — reintentos y rearme', () => {
+    it('un error determinista deja de prometer un reintento que no funciona', () => {
+      render(
+        <ErrorBoundary>
+          <Bomb shouldThrow={true} />
+        </ErrorBoundary>
+      );
+
+      // Los tres primeros intentos vuelven a montar el mismo arbol, que vuelve
+      // a reventar: el boton sigue diciendo «Reintentar».
+      for (let i = 0; i < 3; i++) {
+        fireEvent.click(screen.getByRole('button', { name: /reintentar/i }));
+      }
+
+      // Al cuarto ya no se miente: la salida que si funciona es recargar.
+      expect(screen.queryByRole('button', { name: /^reintentar$/i })).toBeNull();
+      expect(screen.getByRole('button', { name: /recargar la página/i })).toBeDefined();
+    });
+
+    it('cambiar de contexto (`resetKeys`) rearma el subárbol sin pulsar nada', () => {
+      const { rerender } = render(
+        <ErrorBoundary resetKeys={['/billing']}>
+          <Bomb shouldThrow={true} />
+        </ErrorBoundary>
+      );
+      expect(screen.getByRole('alert')).toBeDefined();
+
+      rerender(
+        <ErrorBoundary resetKeys={['/settings']}>
+          <Bomb shouldThrow={false} />
+        </ErrorBoundary>
+      );
+      expect(screen.getByTestId('healthy-child')).toBeDefined();
+    });
+
+    it('el contador vuelve a cero al cambiar de contexto', () => {
+      const { rerender } = render(
+        <ErrorBoundary resetKeys={['/a']}>
+          <Bomb shouldThrow={true} />
+        </ErrorBoundary>
+      );
+      for (let i = 0; i < 3; i++) {
+        fireEvent.click(screen.getByRole('button', { name: /reintentar/i }));
+      }
+      expect(screen.getByRole('button', { name: /recargar la página/i })).toBeDefined();
+
+      rerender(
+        <ErrorBoundary resetKeys={['/b']}>
+          <Bomb shouldThrow={true} />
+        </ErrorBoundary>
+      );
+      // Otro contexto, otro fallo: se vuelve a ofrecer reintentar.
+      expect(screen.getByRole('button', { name: /^reintentar$/i })).toBeDefined();
+    });
+  });
 });

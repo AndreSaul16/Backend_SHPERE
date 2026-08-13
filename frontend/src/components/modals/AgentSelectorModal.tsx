@@ -1,13 +1,51 @@
-import { useState, useEffect } from 'react';
-import { Search, X, Zap, Crown, Monitor, TrendingUp, Briefcase, Plus, Users, Cpu, Trash2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useChatStore } from '@/store/useChatStore';
+import { useState, useEffect, lazy, Suspense } from 'react';
+import { Search, Zap, Crown, Monitor, TrendingUp, Briefcase, Plus, Users, Trash2, Landmark } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useAgentes, useChatStore } from '@/store/useChatStore';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import type { Role } from '@/types';
-import { AgentCreationWizard } from './AgentCreationWizard';
+/**
+ * Tarea 4.5 · D17d — el asistente no viaja con el selector.
+ *
+ * `AgentCreationWizard` son 4 pasos, un reducer de 19 campos, la subida de
+ * documentos y el catálogo de plantillas, y estaba importado de forma estática
+ * desde un modal que se monta con la app. O sea que se descargaba entero para
+ * ABRIR UN CHAT, que es lo que hace el 99% de las veces quien abre el selector.
+ *
+ * `AgentSelectorModal` lo monta siempre (con `isOpen={false}`), así que el
+ * `lazy` se envuelve en un componente que no pide nada hasta que de verdad se
+ * abre: si no, el `import()` arrancaría igual en el montaje y no habríamos
+ * movido nada.
+ */
+const AgentCreationWizardPerezoso = lazy(() =>
+    import('./AgentCreationWizard').then((m) => ({ default: m.AgentCreationWizard }))
+);
+
+function AsistenteDeAgente(props: {
+    isOpen: boolean;
+    onClose: () => void;
+    onAgentCreated: (id: string) => void;
+}) {
+    if (!props.isOpen) return null;
+    return (
+        // Sin `fallback` visible a propósito: encima ya está el selector, que es
+        // una superficie completa. Un esqueleto de asistente sobre el selector
+        // sería una segunda pantalla de espera para una descarga que dura lo que
+        // dura pulsar el botón.
+        <Suspense fallback={null}>
+            <AgentCreationWizardPerezoso {...props} />
+        </Suspense>
+    );
+}
 import { BoardActivationModal } from './BoardActivationModal';
-import { chatService } from '@/services/api';
+import { Modal } from '@/components/ui/Modal';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { reasonOf, toast } from '@/lib/toastBus';
+import { useBoardSettingsStore } from '@/store/useBoardSettingsStore';
+import { EstadoVacio } from '@/components/ui/EstadoVacio';
+import { SearchX } from 'lucide-react';
+import { panelClass } from '@/components/ui/cardStyles';
 
 const getRoleIcon = (role: Role) => {
     switch (role) {
@@ -22,28 +60,31 @@ const getRoleIcon = (role: Role) => {
 
 export function AgentSelectorModal() {
     const navigate = useNavigate();
-    const {
-        isAgentModalOpen,
-        toggleAgentModal,
-        createNewSession,
-        getAgents,
-        fetchCustomAgents,
-        deleteCustomAgent
-    } = useChatStore();
+    /* 4.6 · D20: el selector está montado SIEMPRE (cerrado casi todo el
+       tiempo), y se suscribía al store entero. O sea que un modal invisible se
+       re-renderizaba con cada token del debate. */
+    const isAgentModalOpen = useChatStore((s) => s.isAgentModalOpen);
+    const toggleAgentModal = useChatStore((s) => s.toggleAgentModal);
+    const createNewSession = useChatStore((s) => s.createNewSession);
+    const fetchCustomAgents = useChatStore((s) => s.fetchCustomAgents);
+    const deleteCustomAgent = useChatStore((s) => s.deleteCustomAgent);
+    const allAgents = useAgentes();
+    const loadBoardSettings = useBoardSettingsStore((s) => s.load);
+    const setBoardEnabled = useBoardSettingsStore((s) => s.setEnabled);
 
     const [searchQuery, setSearchQuery] = useState("");
     const [isWizardOpen, setIsWizardOpen] = useState(false);
     const [isLoadingSession, setIsLoadingSession] = useState(false);
     // Board activation modal: al elegir "Junta Directiva" sin debate activado.
     const [boardModalOpen, setBoardModalOpen] = useState(false);
+    // D18 (1.9): borrar un agente propio era un clic sin vuelta atrás.
+    const [confirmDeleteAgent, setConfirmDeleteAgent] = useState<{ id: string; name: string } | null>(null);
 
     useEffect(() => {
         if (isAgentModalOpen) {
             fetchCustomAgents();
         }
-    }, [isAgentModalOpen]);
-
-    const allAgents = getAgents();
+    }, [isAgentModalOpen, fetchCustomAgents]);
 
     // Separate group chat from individual agents
     const groupChat = allAgents.find(a => a.id === 'group-chat');
@@ -78,88 +119,61 @@ export function AgentSelectorModal() {
         // activado, ofrecemos activarlo en 1 clic (con su coste) en vez de obligar
         // a ir a Configuración.
         if (agentId === 'group-chat') {
-            try {
-                const settings = await chatService.getBoardSettings();
-                if (!settings.board_meeting_enabled) {
-                    setBoardModalOpen(true);
-                    return;
-                }
-            } catch { /* si falla, seguimos al chat igualmente */ }
+            // D47: por el store, no por `chatService` directamente. Este modal
+            // es el TERCER sitio que tocaba el mismo ajuste, y activarlo desde
+            // aquí no se veía en ninguna de las dos pantallas de configuración
+            // hasta recargar.
+            await loadBoardSettings();
+            if (!useBoardSettingsStore.getState().enabled) {
+                setBoardModalOpen(true);
+                return;
+            }
         }
         await openSession(agentId);
     };
 
     const handleActivateBoard = async (devil: boolean) => {
         setIsLoadingSession(true);
-        try {
-            await chatService.updateBoardSettings({ board_meeting_enabled: true, board_devils_advocate: devil });
-        } catch { /* continuamos aunque el PATCH falle */ }
+        // Continuamos aunque el PATCH falle: el store deja el aviso puesto y el
+        // interruptor sin mover.
+        await setBoardEnabled(true, devil);
         setBoardModalOpen(false);
         await openSession('group-chat');
     };
 
-    const handleAgentCreated = (_agentId: string) => {
+    /* El asistente devuelve el id del agente recién creado (D67). Aquí no se
+       usa —el modal sólo refresca la lista—, así que se recibe sin nombrarlo
+       en vez de con un parámetro tachado que ESLint marcaba. */
+    const handleAgentCreated = () => {
         setIsWizardOpen(false);
         fetchCustomAgents();
     };
 
     return (
         <>
-        <AnimatePresence>
-            {isAgentModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-hidden">
-                    {/* Backdrop */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => toggleAgentModal(false)}
-                        className="absolute inset-0 bg-midnight/80 backdrop-blur-xl"
-                    />
-
-                    {/* Modal Content */}
-                    <motion.div
-                        initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                        animate={{ scale: 1, opacity: 1, y: 0 }}
-                        exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                        className="glass-panel w-full max-w-2xl rounded-[32px] overflow-hidden flex flex-col max-h-[90vh] relative z-10 shadow-[0_0_50px_rgba(0,0,0,0.5)]"
-                    >
-                        {/* Header */}
-                        <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
-                            <div>
-                                <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                                    <div className="p-2 bg-electric-cyan/10 rounded-xl">
-                                        <Cpu className="h-6 w-6 text-electric-cyan" />
-                                    </div>
-                                    Nuevo Chat
-                                </h2>
-                                <p className="text-sm text-gray-400 mt-2">
-                                    Elige un modo de trabajo para iniciar una nueva conversación.
-                                </p>
-                            </div>
-                            <button
-                                onClick={() => toggleAgentModal(false)}
-                                className="p-2.5 rounded-full hover:bg-white/5 transition-colors text-gray-400 hover:text-white active-scale"
-                            >
-                                <X className="h-6 w-6" />
-                            </button>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
+        <Modal
+            open={isAgentModalOpen}
+            onClose={() => toggleAgentModal(false)}
+            size="lg"
+            title="Nuevo chat"
+            description="Elige un modo de trabajo para iniciar una nueva conversación."
+        >
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                className="p-8 pt-4 space-y-8"
+                                className="space-y-8"
                             >
                                 {/* Search Area */}
                                 <div className="relative group">
-                                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500 group-focus-within:text-electric-cyan transition-colors" />
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-content-muted group-focus-within:text-accent transition-colors" aria-hidden="true" />
                                     <input
-                                        type="text"
+                                        id="agent-search"
+                                        aria-label="Buscar agente o grupo"
+                                        type="search"
                                         placeholder="Buscar agente o grupo..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full glass-input rounded-2xl py-4 pl-14 pr-6 text-base text-white placeholder:text-gray-600"
+                                        className="w-full glass-input rounded-sm py-3 pl-12 pr-5 text-base text-content placeholder:text-content-quiet"
                                     />
                                 </div>
 
@@ -167,27 +181,28 @@ export function AgentSelectorModal() {
                                     {/* ── SECTION 1: CHATS GRUPALES ── */}
                                     {showGroupChat && groupChat && (
                                         <section>
-                                            <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                                <Users className="h-3.5 w-3.5" /> Chats Grupales
+                                            <h3 className="text-micro font-bold text-content-muted uppercase mb-3 flex items-center gap-2">
+                                                <Users className="h-3.5 w-3.5" aria-hidden="true" /> Chats grupales
                                             </h3>
-                                            <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-                                                Un orquestador analiza tu consulta y delega al experto más adecuado. Al entrar podrás activar el <strong className="text-electric-cyan">Board Meeting</strong> con un clic para que todos los agentes debatan entre sí.
+                                            <p className="text-xs text-content-muted mb-4 leading-relaxed">
+                                                Un orquestador analiza tu consulta y delega al experto más adecuado. Al entrar podrás activar el <strong className="text-accent">debate de la junta</strong> con un clic para que todos los directores debatan entre sí.
                                             </p>
                                             <motion.button
-                                                whileHover={{ y: -4, scale: 1.02 }}
-                                                whileTap={{ scale: 0.98 }}
+                                                type="button"
+                                                whileTap={{ scale: 0.985 }}
                                                 onClick={() => handleSelectAgent(groupChat.id)}
-                                                className="w-full flex items-center gap-4 p-5 rounded-3xl bg-gradient-to-r from-electric-cyan/[0.04] to-luxury-purple/[0.04] border border-white/5 hover:border-electric-cyan/40 hover:bg-white/[0.07] transition-all text-left relative overflow-hidden group shadow-lg"
+                                                className={panelClass({ padding: 'compact', interactive: true, className: 'w-full flex items-center gap-4 relative overflow-hidden group' })}
                                             >
-                                                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-electric-cyan/20 to-luxury-purple/20 border border-white/10 flex items-center justify-center shadow-inner">
-                                                    <span className="text-2xl">🏛️</span>
+                                                <div className="h-14 w-14 rounded-sm bg-brass-600/20 border border-brass-400/40 flex items-center justify-center">
+                                                    {/* D53 · §10: el mismo glifo con el que la
+                                                        cabecera del chat firma la junta. El emoji
+                                                        se pintaba a todo color y rompía el latón
+                                                        de la propia tarjeta que decora. */}
+                                                    <Landmark className="h-7 w-7 text-accent" aria-hidden="true" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="font-bold text-white group-hover:text-electric-cyan transition-colors">Junta Directiva</p>
-                                                    <p className="text-xs text-gray-500 mt-1">Orquestación multi-agente — CEO, CTO, CMO y CFO colaboran en tus consultas.</p>
-                                                </div>
-                                                <div className="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Zap className="h-3 w-3 text-electric-cyan" />
+                                                    <p className="font-bold text-content-strong group-hover:text-accent transition-colors">Junta Directiva</p>
+                                                    <p className="text-xs text-content-muted mt-1">Orquestación multi-agente — CEO, CTO, CMO y CFO colaboran en tus consultas.</p>
                                                 </div>
                                             </motion.button>
                                         </section>
@@ -195,95 +210,123 @@ export function AgentSelectorModal() {
 
                                     {/* ── SECTION 2: MIS EXPERTOS ── */}
                                     <section>
-                                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                            <Crown className="h-3.5 w-3.5" /> Mis Expertos
+                                        <h3 className="text-micro font-bold text-content-muted uppercase mb-3 flex items-center gap-2">
+                                            <Crown className="h-3.5 w-3.5" aria-hidden="true" /> Mis expertos
                                         </h3>
-                                        <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+                                        <p className="text-xs text-content-muted mb-4 leading-relaxed">
                                             Chats individuales con un experto específico. Respuestas rápidas y enfocadas.
                                         </p>
+                                        {filteredCoreExperts.length === 0 && filteredCustomExperts.length === 0 && searchQuery && (
+                                            /* 6.12 · §9.14: tenía frase pero ni glifo
+                                               ni salida. La salida es la única que
+                                               sirve aquí: quitar el filtro. */
+                                            <EstadoVacio
+                                                className="mb-4"
+                                                glifo={<SearchX aria-hidden="true" />}
+                                                titulo={`Ningún experto se llama «${searchQuery}»`}
+                                                frase="Prueba con otra palabra, o quita el filtro para ver a los que tienes."
+                                                accion={{ etiqueta: 'Ver todos', onClick: () => setSearchQuery('') }}
+                                            />
+                                        )}
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             {/* Core experts: CEO, CTO, CMO, CFO */}
-                                            {filteredCoreExperts.map((agent: any) => {
+                                            {filteredCoreExperts.map((agent) => {
                                                 const Icon = getRoleIcon(agent.role);
                                                 return (
                                                     <motion.button
-                                                        whileHover={{ y: -4, scale: 1.02 }}
-                                                        whileTap={{ scale: 0.98 }}
+                                                        type="button"
+                                                        whileTap={{ scale: 0.985 }}
                                                         key={agent.id}
                                                         onClick={() => handleSelectAgent(agent.id)}
-                                                        className="flex items-center gap-4 p-5 rounded-3xl bg-white/[0.03] border border-white/5 hover:border-electric-cyan/40 hover:bg-white/[0.07] transition-all text-left relative overflow-hidden group shadow-lg"
+                                                        className={panelClass({ padding: 'compact', interactive: true, className: 'flex items-center gap-4 relative overflow-hidden group' })}
                                                     >
                                                         <div className={cn(
-                                                            "h-14 w-14 rounded-2xl flex items-center justify-center border shadow-inner bg-white/[0.05] border-white/5",
+                                                            "h-14 w-14 rounded-sm flex items-center justify-center border border-stroke-edge bg-surface-3",
                                                             agent.color
                                                         )}>
-                                                            <Icon className="h-7 w-7" />
+                                                            <Icon className="h-7 w-7" aria-hidden="true" />
                                                         </div>
                                                         <div className="flex-1 min-w-0">
-                                                            <p className="font-bold text-white group-hover:text-electric-cyan transition-colors">{agent.name}</p>
-                                                            <p className="text-xs text-gray-500 mt-1 line-clamp-1">{agent.description}</p>
-                                                        </div>
-                                                        <div className="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <Zap className="h-3 w-3 text-electric-cyan" />
+                                                            <p className="font-bold text-content-strong group-hover:text-accent transition-colors">{agent.name}</p>
+                                                            <p className="text-xs text-content-muted mt-1 line-clamp-1">{agent.description}</p>
                                                         </div>
                                                     </motion.button>
                                                 );
                                             })}
 
                                             {/* Custom experts */}
-                                            {filteredCustomExperts.map((agent: any) => (
-                                                <motion.div
-                                                    key={agent.id}
-                                                    whileHover={{ y: -4, scale: 1.02 }}
-                                                    className="relative group"
-                                                >
+                                            {filteredCustomExperts.map((agent) => (
+                                                <div key={agent.id} className="relative group" data-row>
                                                     <button
+                                                        type="button"
                                                         onClick={() => handleSelectAgent(agent.id)}
-                                                        className="w-full flex items-center gap-4 p-5 rounded-3xl bg-white/[0.03] border border-white/5 hover:border-luxury-purple/40 hover:bg-white/[0.07] transition-all text-left shadow-lg"
+                                                        className={panelClass({ padding: 'compact', interactive: true, className: 'w-full flex items-center gap-4 pe-14' })}
                                                     >
-                                                        <div className="h-14 w-14 rounded-2xl bg-white/[0.05] border border-white/5 flex items-center justify-center font-bold text-luxury-purple shadow-inner">
+                                                        <div className="h-14 w-14 rounded-sm bg-surface-3 border border-stroke-edge flex items-center justify-center font-bold text-accent">
                                                             {agent.avatar}
                                                         </div>
                                                         <div className="flex-1 min-w-0">
-                                                            <p className="font-bold text-white group-hover:text-luxury-purple transition-colors truncate">{agent.name}</p>
-                                                            <p className="text-xs text-gray-500 mt-1 line-clamp-1 truncate">{agent.description}</p>
+                                                            <p className="font-bold text-content-strong group-hover:text-accent transition-colors truncate">{agent.name}</p>
+                                                            <p className="text-xs text-content-muted mt-1 line-clamp-1 truncate">{agent.description}</p>
                                                         </div>
                                                     </button>
+                                                    {/* El borrado de un agente propio es destructivo: pasa por <ConfirmDialog> (1.9). */}
                                                     <button
-                                                        onClick={(e) => { e.stopPropagation(); deleteCustomAgent(agent.id); }}
-                                                        className="absolute top-3 right-3 p-2 opacity-0 group-hover:opacity-100 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-all active-scale"
+                                                        type="button"
+                                                        onClick={() => setConfirmDeleteAgent({ id: agent.id, name: agent.name })}
+                                                        aria-label={`Eliminar el agente ${agent.name}`}
+                                                        data-row-actions
+                                                        className="absolute top-1/2 end-2 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-sm text-dissent hover:bg-dissent/10 transition-colors"
                                                     >
-                                                        <Trash2 className="h-4 w-4" />
+                                                        <Trash2 className="h-4 w-4" aria-hidden="true" />
                                                     </button>
-                                                </motion.div>
+                                                </div>
                                             ))}
 
                                             {/* Create new agent button */}
                                             <motion.button
-                                                whileHover={{ scale: 1.02, backgroundColor: "rgba(255,255,255,0.05)" }}
-                                                whileTap={{ scale: 0.98 }}
+                                                type="button"
+                                                whileTap={{ scale: 0.985 }}
                                                 onClick={() => setIsWizardOpen(true)}
-                                                className="flex flex-col items-center justify-center gap-3 p-5 rounded-3xl border-2 border-dashed border-white/5 hover:border-electric-cyan/30 transition-all font-medium text-gray-500 hover:text-electric-cyan"
+                                                className="flex flex-col items-center justify-center gap-3 p-5 rounded-md border-2 border-dashed border-stroke-edge hover:border-brass-600 transition-colors font-medium text-content-muted hover:text-accent"
                                             >
-                                                <div className="p-3 bg-white/5 rounded-2xl group-hover:bg-electric-cyan/10 transition-colors">
-                                                    <Plus className="h-6 w-6" />
+                                                <div className="p-3 bg-surface-3 rounded-sm">
+                                                    <Plus className="h-6 w-6" aria-hidden="true" />
                                                 </div>
-                                                <span className="text-sm">Crear Nuevo Agente</span>
+                                                <span className="text-sm">Crear agente nuevo</span>
                                             </motion.button>
                                         </div>
                                     </section>
                                 </div>
                             </motion.div>
-                        </div>
-                    </motion.div>
-                </div>
-            )}
-        </AnimatePresence>
+        </Modal>
 
-        <AgentCreationWizard
+        <AsistenteDeAgente
             isOpen={isWizardOpen}
             onClose={() => setIsWizardOpen(false)}
             onAgentCreated={handleAgentCreated}
+        />
+        <ConfirmDialog
+            open={confirmDeleteAgent !== null}
+            onClose={() => setConfirmDeleteAgent(null)}
+            onConfirm={async () => {
+                if (!confirmDeleteAgent) return;
+                try {
+                    await deleteCustomAgent(confirmDeleteAgent.id);
+                    toast.success(`Agente «${confirmDeleteAgent.name}» eliminado`);
+                    setConfirmDeleteAgent(null);
+                } catch (error) {
+                    // El diálogo se queda abierto: el agente sigue existiendo,
+                    // así que cerrarlo daría a entender que se ha borrado.
+                    toast.error(
+                        `No se pudo eliminar «${confirmDeleteAgent.name}»`,
+                        reasonOf(error) ?? 'El agente sigue en tu lista.',
+                    );
+                }
+            }}
+            question="¿Eliminar el agente"
+            objectName={confirmDeleteAgent?.name ?? ''}
+            consequence="Se borran su configuración y su base de conocimiento. No se puede deshacer."
         />
         <BoardActivationModal
             open={boardModalOpen}

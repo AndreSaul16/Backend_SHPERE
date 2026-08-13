@@ -3,8 +3,12 @@
  * externo (WhatsApp, Calendar, etc.). Sin contactos aquí, las tools bloquean.
  */
 import { useEffect, useState } from "react";
-import { Trash2, Plus, Users, Shield } from "lucide-react";
+import { Trash2, Plus, Users, Shield, Check, UserPlus } from "lucide-react";
 import { contactsService, type Contact } from "@/services/api";
+import { SelectField, TextField } from "@/components/ui/Field";
+import { InlineError, type FalloDeSeccion } from "@/components/ui/InlineError";
+import { EstadoVacio } from '@/components/ui/EstadoVacio';
+import { EsqueletoDeFilas } from "@/components/ui/Esqueleto";
 
 const CONTACT_TYPES: Record<string, string> = {
   email: "Email",
@@ -24,10 +28,12 @@ const AVAILABLE_PERMISSIONS = [
 export function ContactsSettings() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // El fallo se guarda ya redactado: quien lo escribe es quien sabe qué se
+  // estaba intentando. Antes era un `String(e)` y salía «Error: TypeError».
+  const [error, setError] = useState<FalloDeSeccion | null>(null);
 
   // Form state
-  const [newType, setNewType] = useState<string>("email");
+  const [newType, setNewType] = useState<Contact["type"]>("email");
   const [newValue, setNewValue] = useState("");
   const [newName, setNewName] = useState("");
   const [newPerms, setNewPerms] = useState<string[]>([]);
@@ -37,8 +43,13 @@ export function ContactsSettings() {
     setLoading(true);
     try {
       setContacts(await contactsService.list());
-    } catch (e) {
-      setError(String(e));
+      setError(null);
+    } catch {
+      setError({
+        title: "No se ha podido cargar tu lista de contactos",
+        detail: "Ningún contacto se ha borrado: es un fallo al traer la lista.",
+        onRetry: () => { void load(); },
+      });
     } finally {
       setLoading(false);
     }
@@ -46,6 +57,10 @@ export function ContactsSettings() {
 
   useEffect(() => {
     load();
+    // Sólo al montar. `load` se referencia ahora a sí misma como salida del
+    // aviso de fallo, así que la regla la ve reactiva; volver a cargar cada vez
+    // que cambie su identidad sería un bucle de peticiones.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const togglePerm = (perm: string) => {
@@ -60,7 +75,7 @@ export function ContactsSettings() {
     setError(null);
     try {
       await contactsService.add({
-        type: newType as any,
+        type: newType,
         value: newValue.trim(),
         display_name: newName.trim() || undefined,
         authorized_for: newPerms,
@@ -69,8 +84,14 @@ export function ContactsSettings() {
       setNewName("");
       setNewPerms([]);
       await load();
-    } catch (e) {
-      setError(String(e));
+    } catch {
+      setError({
+        title: "No se ha podido añadir el contacto",
+        detail:
+          "Lo que has escrito sigue en el formulario: revísalo y vuelve a darle a añadir.",
+        onRetry: () => { void handleAdd(); },
+        retryLabel: "Volver a añadirlo",
+      });
     } finally {
       setSaving(false);
     }
@@ -80,102 +101,96 @@ export function ContactsSettings() {
     try {
       await contactsService.remove(id);
       await load();
-    } catch (e) {
-      setError(String(e));
+    } catch {
+      setError({
+        title: "No se ha podido eliminar el contacto",
+        detail:
+          "Sigue en la lista y sus permisos siguen activos. Vuelve a intentarlo.",
+        onRetry: () => { void handleRemove(id); },
+        retryLabel: "Volver a eliminarlo",
+      });
     }
   };
 
   return (
     <div className="space-y-6">
-      <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 flex gap-3 text-sm">
-        <Shield className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
-        <div className="text-text-secondary">
-          <strong className="text-amber-400">Whitelist obligatoria:</strong> los
+      <div className="p-4 rounded-xl bg-warning/5 border border-warning/20 flex gap-3 text-sm">
+        <Shield className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+        <div className="text-content-muted">
+          <strong className="text-warning">Whitelist obligatoria:</strong> los
           agentes solo pueden enviar mensajes o crear eventos a contactos que
           añadas aquí. Esto previene que un prompt malicioso dispare envíos no
           autorizados.
         </div>
       </div>
 
-      {error && (
-        <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
-          {error}
-        </div>
-      )}
+      {error && <InlineError {...error} />}
 
       {/* Añadir contacto */}
-      <section className="p-5 rounded-2xl bg-surface/30 border border-surface-highlight space-y-4">
-        <div className="flex items-center gap-3 text-text-primary font-semibold">
+      <section className="p-5 rounded-md bg-surface/30 border border-surface-highlight space-y-4">
+        <div className="flex items-center gap-3 text-content-strong font-semibold">
           <Plus className="h-5 w-5 text-electric-cyan" />
           <h3>Añadir contacto</h3>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="text-[10px] uppercase font-mono text-text-secondary block mb-1">
-              Tipo
-            </label>
-            <select
-              className={inputCls}
-              value={newType}
-              onChange={(e) => setNewType(e.target.value)}
-            >
-              {Object.entries(CONTACT_TYPES).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="text-[10px] uppercase font-mono text-text-secondary block mb-1">
-              Valor
-            </label>
-            <input
-              type="text"
-              className={inputCls}
-              placeholder={
-                newType === "phone"
-                  ? "+34612345678"
-                  : newType === "email"
-                  ? "alguien@empresa.com"
-                  : "..."
-              }
-              value={newValue}
-              onChange={(e) => setNewValue(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="text-[10px] uppercase font-mono text-text-secondary block mb-1">
-            Nombre (opcional)
-          </label>
-          <input
-            type="text"
-            className={inputCls}
-            placeholder="Juan Pérez"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
+          <SelectField
+            label="Tipo"
+            id="contact-type"
+            value={newType}
+            onChange={(e) => setNewType(e.target.value as Contact["type"])}
+          >
+            {Object.entries(CONTACT_TYPES).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v}
+              </option>
+            ))}
+          </SelectField>
+          <TextField
+            label="Valor"
+            id="contact-value"
+            placeholder={
+              newType === "phone"
+                ? "+34612345678"
+                : newType === "email"
+                ? "alguien@empresa.com"
+                : "..."
+            }
+            value={newValue}
+            onChange={(e) => setNewValue(e.target.value)}
           />
         </div>
 
+        <TextField
+          label="Nombre (opcional)"
+          id="contact-name"
+          placeholder="Juan Pérez"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+        />
+
         <div>
-          <label className="text-[10px] uppercase font-mono text-text-secondary block mb-2">
+          {/* Grupo de chips, no campo: `role="group"` + aria-labelledby (§12.7).
+              Y cada chip lleva `aria-pressed` y un glifo Check cuando está
+              activo, porque §9.9 prohíbe que su estado sea sólo cromático —
+              que es lo que era. */}
+          <span id="contact-perms-label" className="text-micro uppercase font-mono text-content-muted block mb-2">
             Autorizado para
-          </label>
-          <div className="flex flex-wrap gap-2">
+          </span>
+          <div className="flex flex-wrap gap-2" role="group" aria-labelledby="contact-perms-label">
             {AVAILABLE_PERMISSIONS.map((p) => (
               <button
                 key={p}
                 type="button"
                 onClick={() => togglePerm(p)}
-                className={`px-3 py-1 rounded-full text-xs border transition-colors ${
+                aria-pressed={newPerms.includes(p)}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs border transition-colors ${
                   newPerms.includes(p)
-                    ? "bg-electric-cyan/20 border-electric-cyan/50 text-electric-cyan"
-                    : "bg-midnight/50 border-surface-highlight text-text-secondary hover:border-electric-cyan/30"
+                    ? "bg-accent/20 border-accent/50 text-accent"
+                    : "bg-midnight/50 border-surface-highlight text-content-muted hover:border-accent/30"
                 }`}
               >
+                {newPerms.includes(p) && <Check className="h-3 w-3" aria-hidden="true" />}
                 {p}
               </button>
             ))}
@@ -193,19 +208,31 @@ export function ContactsSettings() {
       </section>
 
       {/* Lista de contactos */}
-      <section className="p-5 rounded-2xl bg-surface/30 border border-surface-highlight space-y-3">
-        <div className="flex items-center gap-3 text-text-primary font-semibold">
+      <section className="p-5 rounded-md bg-surface/30 border border-surface-highlight space-y-3">
+        <div className="flex items-center gap-3 text-content-strong font-semibold">
           <Users className="h-5 w-5 text-luxury-purple" />
           <h3>Contactos autorizados ({contacts.length})</h3>
         </div>
 
         {loading ? (
-          <p className="text-text-secondary text-sm">Cargando...</p>
+          <EsqueletoDeFilas etiqueta="Cargando tus contactos" />
         ) : contacts.length === 0 ? (
-          <p className="text-text-secondary text-sm">
-            Aún no tienes contactos. Añade al menos uno para que los agentes
-            puedan enviar mensajes o crear eventos.
-          </p>
+          /* 6.12 · §9.14: era una frase suelta en medio de un hueco. Ahora
+             tiene glifo, título, la frase y UNA acción — que aquí es llevar el
+             foco al campo de añadir, porque el formulario está debajo y a
+             mucha gente le pasa desapercibido. */
+          <EstadoVacio
+            glifo={<UserPlus aria-hidden="true" />}
+            titulo="Aún no tienes contactos autorizados"
+            frase="Sin al menos uno, tus agentes no pueden escribir a nadie ni crear eventos: las herramientas se bloquean."
+            accion={{
+              etiqueta: "Añadir el primero",
+              // Por id y no por `ref`: `<TextField>` no expone el control, y
+              // abrirle la API entera a un componente canónico para mover un
+              // foco no compensa. El id es el mismo que usa su `<label>`.
+              onClick: () => document.getElementById("contact-value")?.focus(),
+            }}
+          />
         ) : (
           <div className="space-y-2">
             {contacts.map((c) => (
@@ -215,14 +242,14 @@ export function ContactsSettings() {
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm text-text-primary truncate">
+                    <span className="text-sm text-content-strong truncate">
                       {c.display_name || c.value}
                     </span>
-                    <span className="px-2 py-0.5 bg-surface-highlight rounded-full text-[10px] text-text-secondary">
+                    <span className="px-2 py-0.5 bg-surface-highlight rounded-full text-micro text-content-muted">
                       {CONTACT_TYPES[c.type] || c.type}
                     </span>
                   </div>
-                  <div className="text-xs text-text-secondary font-mono mt-1 truncate">
+                  <div className="text-xs text-content-muted font-mono mt-1 truncate">
                     {c.value}
                   </div>
                   {c.authorized_for.length > 0 && (
@@ -230,7 +257,7 @@ export function ContactsSettings() {
                       {c.authorized_for.map((p) => (
                         <span
                           key={p}
-                          className="px-2 py-0.5 bg-electric-cyan/10 text-electric-cyan rounded text-[10px]"
+                          className="px-2 py-0.5 bg-electric-cyan/10 text-electric-cyan rounded text-micro"
                         >
                           {p}
                         </span>
@@ -241,7 +268,7 @@ export function ContactsSettings() {
                 {c.id && (
                   <button
                     onClick={() => handleRemove(c.id!)}
-                    className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                    className="p-2 text-danger hover:bg-oxblood-500/10 rounded-lg transition-colors"
                     title="Eliminar"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -256,5 +283,3 @@ export function ContactsSettings() {
   );
 }
 
-const inputCls =
-  "w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-electric-cyan/50 transition-all";

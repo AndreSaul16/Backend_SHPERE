@@ -54,7 +54,10 @@ describe('BillingPage - Loading / Error / Stripe States (Task 2.3)', () => {
 
         renderPage();
 
-        expect(screen.getByText('Error al cargar la información de facturación')).toBeInTheDocument();
+        // §11: el error dice qué pasó, qué hacer y qué se conservó — no el
+        // volcado del código de error del store, que era lo que salía antes.
+        expect(screen.getByText('No hemos podido cargar tus créditos')).toBeInTheDocument();
+        expect(screen.getByText(/no han cambiado/i)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /reintentar/i })).toBeInTheDocument();
     });
 
@@ -106,8 +109,11 @@ describe('BillingPage - Loading / Error / Stripe States (Task 2.3)', () => {
         expect(screen.getByText('Créditos y Facturación')).toBeInTheDocument();
         expect(screen.getByText('100')).toBeInTheDocument();
         expect(screen.getByText('Packs de recarga')).toBeInTheDocument();
-        expect(screen.getByText('Total disponible')).toBeInTheDocument();
+        // 6.10: el total es LA cifra de la tarjeta, con su unidad al lado, y
+        // los dos sumandos quedan debajo en letra de detalle.
         expect(screen.getByText('150')).toBeInTheDocument();
+        expect(screen.getByText('créditos disponibles')).toBeInTheDocument();
+        expect(screen.getByText('Del plan gratuito (30/mes)')).toBeInTheDocument();
     });
 
     it('checkout buttons stay disabled until EU consent is accepted', () => {
@@ -128,11 +134,12 @@ describe('BillingPage - Loading / Error / Stripe States (Task 2.3)', () => {
         screen.getAllByRole('button', { name: /comprar/i }).forEach((b) => expect(b).toBeEnabled());
     });
 
-    it('shows inline error on checkout failure (BF-004)', async () => {
+    it('un checkout que falla dice que no se ha cobrado nada, y no vuelca el cuerpo del 500', async () => {
         global.fetch = vi.fn().mockResolvedValue({
             ok: false,
             status: 500,
             text: () => Promise.resolve('Internal Server Error'),
+            json: () => Promise.reject(new Error('no es JSON')),
         }) as any;
 
         useBillingStore.setState({
@@ -149,9 +156,17 @@ describe('BillingPage - Loading / Error / Stripe States (Task 2.3)', () => {
         const buyButtons = screen.getAllByRole('button', { name: /comprar/i });
         buyButtons[0].click();
 
-        // En vez de un alert(), ahora se muestra un mensaje de error inline.
+        // En vez de un alert(), un aviso en línea con lo que §11 exige en una
+        // pantalla de pagos: qué pasó y —lo primero que importa— que no se ha
+        // cobrado nada.
         await vi.waitFor(() => {
-            expect(screen.getByText(/Internal Server Error|No se pudo iniciar el pago/i)).toBeInTheDocument();
+            expect(screen.getByText('No se ha podido iniciar el pago')).toBeInTheDocument();
         });
+        expect(screen.getByText(/No se te ha cobrado nada/i)).toBeInTheDocument();
+        // El cuerpo crudo del 500 NO se pinta: §11 prohíbe volcarlo, y un proxy
+        // caído devolvería HTML entero en la pantalla de pagos.
+        expect(screen.queryByText(/Internal Server Error/)).not.toBeInTheDocument();
+        // Y se puede apartar: un cobro que no ha salido no bloquea la pantalla.
+        expect(screen.getByRole('button', { name: /Cerrar aviso/ })).toBeInTheDocument();
     });
 });

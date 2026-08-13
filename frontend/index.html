@@ -1,12 +1,92 @@
 <!doctype html>
-<html lang="en">
+<!-- `data-theme="dark"` explícito (B1 de la auditoría del plan): el fallo
+     seguro con el atributo ausente tiene que ser el tema que la app ya tiene.
+     `main.tsx` lo reescribe con la elección real antes del primer pintado. -->
+<html lang="es" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SPHERE | Intelligent Orchestration</title>
+
+    <!-- Fuentes auto-hospedadas: preload de las dos críticas ANTES de la hoja de
+         estilos, para que la petición salga en paralelo y no en cadena. Archivo
+         es el cromo (visible en el primer pixel) y Literata el cuerpo del
+         transcript y del acta. JetBrains Mono NO se precarga a propósito
+         (DESIGN §3.1.4): sólo la referencian el visor de código y
+         `.doc-prose code`, que van en un chunk diferido. -->
+    <link rel="preload" href="/fonts/archivo-var.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/literata-var.woff2" as="font" type="font/woff2" crossorigin />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <title>SPHERE — Tu consejo de dirección</title>
+    <meta
+      name="description"
+      content="Somete una decisión de negocio a un consejo de directores que debate, vota con su grado de confianza y te deja un acta con los próximos pasos."
+    />
+    <!-- baize-950, el fondo de página del tema oscuro: la barra del navegador en
+         móvil continúa el paño en vez de cortarlo. -->
+    <meta name="theme-color" content="#060F09" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="SPHERE" />
+    <meta property="og:title" content="SPHERE — Tu consejo de dirección" />
+    <meta
+      property="og:description"
+      content="Somete una decisión de negocio a un consejo de directores que debate, vota con su grado de confianza y te deja un acta con los próximos pasos."
+    />
+    <meta property="og:locale" content="es_ES" />
+    <!-- Sin og:image todavía: hace falta el logo, que es un activo pendiente de
+         la tarea 3.9 (DESIGN §10 dice expresamente que no se improvisa).
+         Apuntar a un fichero que no existe es peor que no declarar la etiqueta.
+         La vista previa por sesión compartida es además tarea de backend (2.4):
+         los crawlers no ejecutan JS en una SPA. -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="SPHERE — Tu consejo de dirección" />
+    <meta
+      name="twitter:description"
+      content="Somete una decisión de negocio a un consejo de directores que debate, vota con su grado de confianza y te deja un acta con los próximos pasos."
+    />
   </head>
   <body>
+    <!-- Contrato de dirección (DESIGN §0), copiado verbatim como primer hijo de
+         <body> para que sobreviva al build de producción y se pueda auditar con
+         grep sobre dist/. No se edita aquí: si cambia, cambia en DESIGN.md.
+
+THESIS — SPHERE es una junta que deja constancia. La interfaz es la sala y el
+libro de actas, no un chat con avatares. Rechaza el arreglo que su categoría
+siempre envía: fondo casi negro, un acento neón, glass y degradado violeta→cian.
+
+OWN-WORLD — Sala capitular: paño verde (baize) como campo que ocupa el 60%+ de
+la superficie, latón como único metal estructural y acción primaria, oxblood
+para el disenso y el riesgo, violeta anilina sólo para el sello de certificación,
+papel cálido para todo documento. Latón y paño, no vidrio y luz. Radios cortos
+(2/4/8/12px), filetes de 1px en toda superficie elevada, cero blur decorativo.
+
+STORY — El usuario entiende que su pregunta se somete a un procedimiento; cree
+la recomendación porque ve quién votó qué y con cuánta confianza; y se va con un
+acta sellada y unos próximos pasos que puede ejecutar.
+
+FIRST VIEWPORT (MÓVIL, caso mayoritario y de diseño, 390×844) — El Palco arriba:
+todos los asientos visibles a la vez como placas de latón con su aguja, el que
+habla alzado bajo la lámpara; el Canto del orden del día como uñero de 3px en el
+borde izquierdo, con el cursor de latón ligado al scroll; transcript a ancho
+completo con nombres sobre el turno; la entrada anclada abajo en la zona del
+pulgar, con la acción primaria (enviar / convocar y su coste) en latón macizo,
+único elemento macizo de la pantalla.
+
+FIRST VIEWPORT (ESCRITORIO, expansión) — La mesa a la izquierda del transcript,
+no encima: el Canto ensanchado a rail de 56px en la canal izquierda; transcript
+en columna de 68ch de medida sobre paño; asientos de la junta desplegados en la
+Sala a la derecha, cada uno con placa de latón y aguja de confianza. La acción
+primaria vive abajo a la derecha del campo de entrada.
+
+FORM — Sala capitular (candidato 5 de la lista ordenada por resonancia).
+Staging: geometría de anillo con asiento por rumbo, tomada del sweep-and-decay
+SIN su gating por barrido. Seed key: b620ecfd.
+
+FINISH — unreviewed and undocumented is unfinished; this build ends with the
+finish review, the verdict, and DESIGN.md
+    -->
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

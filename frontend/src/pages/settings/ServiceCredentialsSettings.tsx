@@ -4,6 +4,17 @@
  * Las credenciales se cifran con Fernet y se inyectan en los payloads de n8n.
  */
 import { useEffect, useState, useCallback } from "react";
+import { serviceCredentialsService } from "@/services/api";
+import type { ServiceCredentialsResponse } from "@/services/api";
+import { motivoLegible } from "@/lib/errors";
+import { PasswordField, TextField } from "@/components/ui/Field";
+import { InlineError, type FalloDeSeccion } from "@/components/ui/InlineError";
+import { FilaDeConexion } from "@/pages/settings/FilaDeConexion";
+import {
+  pasaElFiltro,
+  useControlDeAcordeon,
+  type ControlDeAcordeon,
+} from "@/pages/settings/conexionesAcordeon";
 import {
   Key,
   Calendar,
@@ -19,23 +30,10 @@ import {
   Shield,
   TestTube2,
   TrendingUp,
+  SearchX,
 } from "lucide-react";
-
-interface ServiceDefinition {
-  service: string;
-  label: string;
-  description: string;
-  credential_type: string;
-  connected: boolean;
-  metadata: Record<string, string>;
-  created_at: string | null;
-  tools?: string[];
-}
-
-interface ServiceCredentialsResponse {
-  services: ServiceDefinition[];
-  available: string[];
-}
+import { EstadoVacio } from "@/components/ui/EstadoVacio";
+import { EsqueletoDeTarjetas } from "@/components/ui/Esqueleto";
 
 const SERVICE_ICONS: Record<string, React.ReactNode> = {
   google_calendar: <Calendar className="h-5 w-5" />,
@@ -46,41 +44,41 @@ const SERVICE_ICONS: Record<string, React.ReactNode> = {
   financial_api: <TrendingUp className="h-5 w-5" />,
 };
 
-const SERVICE_COLORS: Record<string, string> = {
-  google_calendar: "text-blue-400",
-  linkedin: "text-sky-400",
-  whatsapp: "text-emerald-400",
-  jules: "text-purple-400",
-  instagram: "text-pink-400",
-  financial_api: "text-amber-400",
-};
-
-export function ServiceCredentialsSettings() {
+export function ServiceCredentialsSettings({ control: controlExterno }: { control?: ControlDeAcordeon } = {}) {
+  const control = useControlDeAcordeon(controlExterno);
   const [data, setData] = useState<ServiceCredentialsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [testing, setTesting] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Antes era una cadena y se pintaba tal cual: el «qué se conserva» y la
+  // salida no existían. Ahora el fallo se redacta donde se produce.
+  const [error, setError] = useState<FalloDeSeccion | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   // Form state per service
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const [metadataFields, setMetadataFields] = useState<Record<string, Record<string, string>>>({});
-  const [testResults, setTestResults] = useState<Record<string, { success: boolean; message: string }>>({});
+  /* `undefined` es un valor legítimo aquí: «probando, todavía no hay
+     resultado». Estaba escrito como `undefined as any` sobre un mapa que no
+     lo admitía; ahora el tipo lo dice. */
+  const [testResults, setTestResults] = useState<Record<string, { success: boolean; message: string } | undefined>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const token = await getAuthToken();
-      const resp = await fetch("/api/v1/me/service-credentials", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!resp.ok) throw new Error("Error cargando credenciales");
-      const result = await resp.json();
-      setData(result);
+      setData(await serviceCredentialsService.list());
     } catch (e) {
-      setError(String(e));
+      setError({
+        title: "No se han podido cargar tus credenciales",
+        detail:
+          "Ninguna se ha borrado ni se ha visto comprometida: es un fallo al traer la lista.",
+        // El motivo del backend SÍ se enseña aquí, en pequeño y debajo: un
+        // fallo de credenciales suele ser accionable («la clave no es válida»).
+        // Lo que no se enseña es el prefijo con el código interno.
+        reason: motivoLegible(e),
+        onRetry: () => { void load(); },
+      });
     } finally {
       setLoading(false);
     }
@@ -90,40 +88,28 @@ export function ServiceCredentialsSettings() {
     load();
   }, [load]);
 
-  const getAuthToken = async () => {
-    const { getAuth } = await import("firebase/auth");
-    const user = getAuth().currentUser;
-    if (!user) throw new Error("No autenticado");
-    return user.getIdToken();
-  };
-
   const handleSave = async (service: string) => {
     setSaving(service);
     setError(null);
     setSuccess(null);
     try {
-      const token = await getAuthToken();
-      const resp = await fetch("/api/v1/me/service-credentials", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          service,
-          api_key: apiKeys[service] || "",
-          metadata: metadataFields[service] || {},
-        }),
-      });
-      if (!resp.ok) {
-        const err = await resp.json();
-        throw new Error(err.detail || "Error guardando credencial");
-      }
+      await serviceCredentialsService.save(
+        service,
+        apiKeys[service] || "",
+        metadataFields[service] || {},
+      );
       setSuccess(`${service} configurado correctamente`);
       setApiKeys((prev) => ({ ...prev, [service]: "" }));
       await load();
     } catch (e) {
-      setError(String(e));
+      setError({
+        title: `No se ha podido guardar la credencial de ${service}`,
+        detail:
+          "La clave que has escrito sigue en el campo y la anterior, si la había, no se ha tocado.",
+        reason: motivoLegible(e),
+        onRetry: () => { void handleSave(service); },
+        retryLabel: "Volver a guardarla",
+      });
     } finally {
       setSaving(null);
     }
@@ -133,16 +119,17 @@ export function ServiceCredentialsSettings() {
     setSaving(service);
     setError(null);
     try {
-      const token = await getAuthToken();
-      const resp = await fetch(`/api/v1/me/service-credentials/${service}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!resp.ok) throw new Error("Error eliminando credencial");
+      await serviceCredentialsService.remove(service);
       setSuccess(`${service} eliminado correctamente`);
       await load();
     } catch (e) {
-      setError(String(e));
+      setError({
+        title: `No se ha podido eliminar la credencial de ${service}`,
+        detail: "Sigue guardada y activa. Vuelve a intentarlo.",
+        reason: motivoLegible(e),
+        onRetry: () => { void handleDelete(service); },
+        retryLabel: "Volver a eliminarla",
+      });
     } finally {
       setSaving(null);
     }
@@ -150,34 +137,33 @@ export function ServiceCredentialsSettings() {
 
   const handleTest = async (service: string) => {
     setTesting(service);
-    setTestResults((prev) => ({ ...prev, [service]: undefined as any }));
+    setTestResults((prev) => ({ ...prev, [service]: undefined }));
     try {
-      const token = await getAuthToken();
-      const resp = await fetch(`/api/v1/me/service-credentials/${service}/test`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const result = await resp.json();
+      const result = await serviceCredentialsService.test(service);
       setTestResults((prev) => ({ ...prev, [service]: result }));
     } catch (e) {
       setTestResults((prev) => ({
         ...prev,
-        [service]: { success: false, message: String(e) },
+        [service]: {
+          success: false,
+          message: motivoLegible(e) ?? "No se pudo probar la credencial.",
+        },
       }));
     } finally {
       setTesting(null);
     }
   };
 
-  if (loading && !data) return <p className="text-text-secondary">Cargando...</p>;
+  if (loading && !data)
+    return <EsqueletoDeTarjetas etiqueta="Cargando tus credenciales" filas={4} />;
 
   return (
     <div className="space-y-6">
       {/* Security notice */}
       <div className="flex items-start gap-3 p-4 rounded-xl bg-electric-cyan/5 border border-electric-cyan/20">
         <Shield className="h-5 w-5 text-electric-cyan mt-0.5 flex-shrink-0" />
-        <div className="text-sm text-text-secondary">
-          <p className="font-medium text-text-primary mb-1">Seguridad de credenciales</p>
+        <div className="text-sm text-content-muted">
+          <p className="font-medium text-content-strong mb-1">Seguridad de credenciales</p>
           <p>
             Todas las API keys se cifran con Fernet (AES-128-CBC) antes de almacenarse.
             Se inyectan en los payloads de n8n solo cuando los agentes ejecutan acciones
@@ -187,46 +173,71 @@ export function ServiceCredentialsSettings() {
       </div>
 
       {/* Success/Error banners */}
+      {/* §12.6: el resultado de guardar se anuncia. Antes cambiaba el DOM en
+          silencio y quien no ve la pantalla no sabía si había funcionado. */}
       {success && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
-          <CheckCircle2 className="h-4 w-4" />
+        <div role="status" className="flex items-center gap-2 p-3 rounded-xl bg-success/10 border border-success/30 text-success">
+          <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
           {success}
         </div>
       )}
-      {error && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400">
-          <XCircle className="h-4 w-4" />
-          {error}
-        </div>
-      )}
+      {error && <InlineError {...error} />}
 
-      {/* Service cards */}
-      <div className="grid grid-cols-1 gap-4">
-        {data?.services.map((svc) => (
-          <div
+      {/* Service cards — 6.8: plegadas, y sólo una abierta en toda la página. */}
+      {(() => {
+        const visibles = (data?.services ?? []).filter((svc) =>
+          pasaElFiltro(control.filtro, svc.label, svc.service, svc.description),
+        );
+        if (visibles.length === 0) {
+          /* 6.12 · §9.14: con la lista vacía esto no pintaba NADA — página en
+             blanco bajo el aviso de seguridad. Son dos vacíos distintos y
+             merecen dos textos distintos: «tu búsqueda no encuentra» y «el
+             backend no ofrece ninguno», que es un fallo de despliegue y no
+             algo que el usuario pueda arreglar. */
+          return control.filtro ? (
+            <EstadoVacio
+              glifo={<SearchX aria-hidden="true" />}
+              titulo="Ningún servicio coincide con tu búsqueda"
+              frase="Prueba con otra palabra: se busca por el nombre del servicio y por lo que hace."
+            />
+          ) : (
+            <EstadoVacio
+              glifo={<Key aria-hidden="true" />}
+              titulo="No hay servicios disponibles"
+              frase="Tus agentes no tienen ninguna herramienta externa que configurar todavía. No has perdido nada: si tenías credenciales, siguen guardadas."
+              accion={{ etiqueta: 'Volver a comprobarlo', onClick: () => { void load(); } }}
+            />
+          );
+        }
+        return visibles.map((svc) => (
+          <FilaDeConexion
             key={svc.service}
-            className="p-5 rounded-2xl bg-surface/30 border border-surface-highlight space-y-4"
+            id={svc.service}
+            control={control}
+            icono={SERVICE_ICONS[svc.service] || <Key className="h-5 w-5" />}
+            titulo={svc.label}
+            descripcion={svc.description}
+            estado={
+              svc.connected
+                ? { texto: "Configurado", tono: "ok" }
+                : { texto: "Sin configurar", tono: "pendiente" }
+            }
           >
-            {/* Header */}
+            {/* Herramientas que desbloquea */}
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <div className={SERVICE_COLORS[svc.service] || "text-text-primary"}>
-                  {SERVICE_ICONS[svc.service] || <Key className="h-5 w-5" />}
-                </div>
                 <div className="min-w-0">
-                  <h3 className="font-semibold text-text-primary">{svc.label}</h3>
-                  <p className="text-xs text-text-secondary mt-1">{svc.description}</p>
                   {svc.tools && svc.tools.length > 0 && (
                     <div className="relative group/tools inline-block mt-2">
-                      <span className="px-2 py-0.5 bg-surface-highlight/70 text-text-secondary border border-surface-highlight rounded-full text-[10px] font-medium cursor-default">
+                      <span className="px-2 py-0.5 bg-surface-highlight/70 text-content-muted border border-surface-highlight rounded-full text-micro font-medium cursor-default">
                         {svc.tools.length} herramienta{svc.tools.length !== 1 ? "s" : ""}
                       </span>
                       <div className="absolute bottom-full left-0 mb-2 opacity-0 invisible group-hover/tools:opacity-100 group-hover/tools:visible transition-all duration-200 z-50 pointer-events-none">
                         <div className="bg-surface border border-surface-highlight rounded-xl p-3 shadow-2xl min-w-[200px]">
-                          <p className="text-[10px] text-text-secondary/60 uppercase tracking-widest mb-2">Herramientas disponibles</p>
+                          <p className="text-micro text-content-muted uppercase mb-2">Herramientas disponibles</p>
                           <ul className="space-y-1">
                             {svc.tools.map((t) => (
-                              <li key={t} className="text-xs text-text-primary font-mono">{t}</li>
+                              <li key={t} className="text-xs text-content-strong font-mono">{t}</li>
                             ))}
                           </ul>
                         </div>
@@ -235,123 +246,99 @@ export function ServiceCredentialsSettings() {
                   )}
                 </div>
               </div>
-              {svc.connected && (
-                <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full text-[10px] flex-shrink-0">
-                  Configurado
-                </span>
-              )}
             </div>
 
             {/* Input fields */}
             <div className="space-y-3">
-              {/* API Key / Token input */}
-              <div>
-                <label className="block text-xs text-text-secondary mb-1">
-                  {svc.credential_type === "oauth_token" ? "Access Token" : "API Key"}
-                </label>
-                <input
-                  type="password"
-                  value={apiKeys[svc.service] || ""}
-                  onChange={(e) =>
-                    setApiKeys((prev) => ({ ...prev, [svc.service]: e.target.value }))
-                  }
-                  placeholder={
-                    svc.connected
-                      ? "••••••••••••••••••••••••"
-                      : `Ingresa tu ${svc.credential_type === "oauth_token" ? "token" : "API key"}`
-                  }
-                  className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-text-primary text-sm focus:outline-none focus:border-electric-cyan/50 placeholder:text-text-secondary/50"
-                />
-              </div>
+              {/* §9.2: la clave se escribe con conmutador de visibilidad. */}
+              <PasswordField
+                label={svc.credential_type === "oauth_token" ? "Access Token" : "API Key"}
+                value={apiKeys[svc.service] || ""}
+                onChange={(e) =>
+                  setApiKeys((prev) => ({ ...prev, [svc.service]: e.target.value }))
+                }
+                placeholder={
+                  svc.connected
+                    ? "••••••••••••••••••••••••"
+                    : `Escribe tu ${svc.credential_type === "oauth_token" ? "token" : "API key"}`
+                }
+              />
 
               {/* Metadata fields */}
               {svc.service === "whatsapp" && (
-                <div>
-                  <label className="block text-xs text-text-secondary mb-1">
-                    Phone Number ID
-                  </label>
-                  <input
-                    type="text"
-                    value={metadataFields[svc.service]?.phone_number_id || ""}
-                    onChange={(e) =>
-                      setMetadataFields((prev) => ({
-                        ...prev,
-                        [svc.service]: {
-                          ...prev[svc.service],
-                          phone_number_id: e.target.value,
-                        },
-                      }))
-                    }
-                    placeholder="123456789012345"
-                    className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-text-primary text-sm focus:outline-none focus:border-electric-cyan/50 placeholder:text-text-secondary/50"
-                  />
-                </div>
+                <TextField
+                  label="Phone Number ID"
+                  value={metadataFields[svc.service]?.phone_number_id || ""}
+                  onChange={(e) =>
+                    setMetadataFields((prev) => ({
+                      ...prev,
+                      [svc.service]: {
+                        ...prev[svc.service],
+                        phone_number_id: e.target.value,
+                      },
+                    }))
+                  }
+                  placeholder="123456789012345"
+                />
               )}
 
               {svc.service === "google_calendar" && (
-                <div>
-                  <label className="block text-xs text-text-secondary mb-1">
-                    Calendar ID (opcional)
-                  </label>
-                  <input
-                    type="text"
-                    value={metadataFields[svc.service]?.calendar_id || ""}
-                    onChange={(e) =>
-                      setMetadataFields((prev) => ({
-                        ...prev,
-                        [svc.service]: {
-                          ...prev[svc.service],
-                          calendar_id: e.target.value,
-                        },
-                      }))
-                    }
-                    placeholder="primary"
-                    className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-text-primary text-sm focus:outline-none focus:border-electric-cyan/50 placeholder:text-text-secondary/50"
-                  />
-                </div>
+                <TextField
+                  label="Calendar ID (opcional)"
+                  value={metadataFields[svc.service]?.calendar_id || ""}
+                  onChange={(e) =>
+                    setMetadataFields((prev) => ({
+                      ...prev,
+                      [svc.service]: {
+                        ...prev[svc.service],
+                        calendar_id: e.target.value,
+                      },
+                    }))
+                  }
+                  placeholder="primary"
+                />
               )}
 
               {svc.service === "instagram" && (
-                <div>
-                  <label className="block text-xs text-text-secondary mb-1">
-                    Instagram Account ID
-                  </label>
-                  <input
-                    type="text"
-                    value={metadataFields[svc.service]?.instagram_account_id || ""}
-                    onChange={(e) =>
-                      setMetadataFields((prev) => ({
-                        ...prev,
-                        [svc.service]: {
-                          ...prev[svc.service],
-                          instagram_account_id: e.target.value,
-                        },
-                      }))
-                    }
-                    placeholder="17841400123456789"
-                    className="w-full px-3 py-2 bg-surface/50 border border-surface-highlight rounded-xl text-text-primary text-sm focus:outline-none focus:border-electric-cyan/50 placeholder:text-text-secondary/50"
-                  />
-                </div>
+                <TextField
+                  label="Instagram Account ID"
+                  value={metadataFields[svc.service]?.instagram_account_id || ""}
+                  onChange={(e) =>
+                    setMetadataFields((prev) => ({
+                      ...prev,
+                      [svc.service]: {
+                        ...prev[svc.service],
+                        instagram_account_id: e.target.value,
+                      },
+                    }))
+                  }
+                  placeholder="17841400123456789"
+                />
               )}
             </div>
 
             {/* Test result */}
-            {testResults[svc.service] && (
-              <div
-                className={`flex items-center gap-2 p-2 rounded-lg text-xs ${
-                  testResults[svc.service].success
-                    ? "bg-emerald-500/10 text-emerald-400"
-                    : "bg-red-500/10 text-red-400"
-                }`}
-              >
-                {testResults[svc.service].success ? (
-                  <CheckCircle2 className="h-3 w-3" />
-                ) : (
-                  <XCircle className="h-3 w-3" />
-                )}
-                {testResults[svc.service].message}
-              </div>
-            )}
+            {(() => {
+              const resultado = testResults[svc.service];
+              if (!resultado) return null;
+              return (
+                <div
+                  role="status"
+                  className={`flex items-center gap-2 p-2 rounded-lg text-xs ${
+                    resultado.success
+                      ? "bg-success/10 text-success"
+                      : "bg-oxblood-500/10 text-danger"
+                  }`}
+                >
+                  {resultado.success ? (
+                    <CheckCircle2 className="h-3 w-3" />
+                  ) : (
+                    <XCircle className="h-3 w-3" />
+                  )}
+                  {resultado.message}
+                </div>
+              );
+            })()}
 
             {/* Action buttons */}
             <div className="flex items-center gap-2">
@@ -373,7 +360,7 @@ export function ServiceCredentialsSettings() {
                   <button
                     onClick={() => handleTest(svc.service)}
                     disabled={testing === svc.service}
-                    className="flex items-center gap-2 px-4 py-2 bg-surface/50 text-text-secondary border border-surface-highlight rounded-xl hover:text-text-primary transition-all text-sm disabled:opacity-50"
+                    className="flex items-center gap-2 px-4 py-2 bg-surface/50 text-content-muted border border-surface-highlight rounded-xl hover:text-content-strong transition-all text-sm disabled:opacity-50"
                   >
                     {testing === svc.service ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -386,7 +373,7 @@ export function ServiceCredentialsSettings() {
                   <button
                     onClick={() => handleDelete(svc.service)}
                     disabled={saving === svc.service}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl hover:bg-red-500 hover:text-white transition-all text-sm disabled:opacity-50"
+                    className="flex items-center gap-2 px-4 py-2 bg-oxblood-500/10 text-danger border border-oxblood-500/20 rounded-xl hover:bg-oxblood-500 hover:text-content-strong transition-all text-sm disabled:opacity-50"
                   >
                     <Trash2 className="h-4 w-4" />
                     Eliminar
@@ -394,9 +381,9 @@ export function ServiceCredentialsSettings() {
                 </>
               )}
             </div>
-          </div>
-        ))}
-      </div>
+          </FilaDeConexion>
+        ));
+      })()}
     </div>
   );
 }

@@ -1,6 +1,9 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Download, FileText } from 'lucide-react';
+import { DocTable } from '@/components/shared/DocTable';
+import { ActaHeader } from './ActaHeader';
+import { esActa } from '@/utils/acta';
 import type { Artifact } from '@/types/artifact';
 
 interface MarkdownViewerProps {
@@ -8,6 +11,8 @@ interface MarkdownViewerProps {
 }
 
 export function MarkdownViewer({ artifact }: MarkdownViewerProps) {
+    const acta = esActa(artifact);
+
     const handleDownload = () => {
         const filename = `${artifact.title.replace(/\s+/g, '_').toLowerCase()}.md`;
         const blob = new Blob([artifact.content], { type: 'text/markdown' });
@@ -20,18 +25,18 @@ export function MarkdownViewer({ artifact }: MarkdownViewerProps) {
     };
 
     return (
-        <div className="flex flex-col h-full bg-[#0d0d12]">
+        <div className="flex flex-col h-full bg-surface-code">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-3 bg-white/[0.02] border-b border-white/5">
+            <div className="flex items-center justify-between px-6 py-3 bg-surface-1 border-b border-stroke-hairline">
                 <div className="flex items-center gap-3">
-                    <FileText className="h-4 w-4 text-gray-500" />
-                    <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">
-                        Document Preview
+                    <FileText className="h-4 w-4 text-content-muted" aria-hidden="true" />
+                    <span className="text-micro font-sans text-content-muted uppercase">
+                        {acta ? 'Acta' : 'Documento'}
                     </span>
                 </div>
                 <button
                     onClick={handleDownload}
-                    className="p-2 rounded-xl hover:bg-white/5 transition-all text-gray-400 hover:text-electric-cyan"
+                    className="p-2 rounded-sm hover:bg-stroke-highlight transition-colors text-content-muted hover:text-accent"
                     title="Descargar .md"
                 >
                     <Download className="h-4 w-4" />
@@ -39,24 +44,32 @@ export function MarkdownViewer({ artifact }: MarkdownViewerProps) {
             </div>
 
             {/* Markdown Content */}
-            <div className="flex-1 overflow-auto p-8 sm:p-12 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-                <div className="max-w-3xl mx-auto">
-                    <div className="prose prose-invert prose-sm 
-                        prose-headings:text-white prose-headings:font-bold prose-headings:tracking-tight
-                        prose-p:text-gray-400 prose-p:leading-relaxed prose-p:mb-6
-                        prose-a:text-luxury-purple prose-a:no-underline hover:prose-a:underline
-                        prose-code:text-electric-cyan prose-code:bg-white/5 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:before:content-none prose-code:after:content-none
-                        prose-pre:bg-white/[0.03] prose-pre:border prose-pre:border-white/5 prose-pre:rounded-2xl
-                        prose-strong:text-white prose-strong:font-bold
-                        prose-ul:text-gray-400 prose-ol:text-gray-400
-                        prose-blockquote:border-l-luxury-purple prose-blockquote:bg-luxury-purple/5 prose-blockquote:py-1 prose-blockquote:px-6 prose-blockquote:rounded-r-xl
-                        prose-img:rounded-2xl prose-img:border prose-img:border-white/5
-                    ">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {/* F3: el relleno era `p-8 sm:p-12` + `p-8 sm:p-10` en la hoja, o
+                sea 176px de márgenes dentro de un panel de 480px, y `sm:` mide
+                el VIEWPORT, no el panel: en escritorio se aplicaba el relleno
+                grande justo donde menos sitio hay. Con la tira de pestañas
+                horizontal y estos valores, al acta le queda ~370px de columna
+                en el ancho por defecto en vez de ~119px. */}
+            <div className="flex-1 overflow-auto p-4 sm:p-6 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                {/* El acta se lee sobre papel, en los dos temas: `.acta-sheet`
+                    aporta la superficie, el bisel de 6px y — lo importante — el
+                    re-mapeo de contexto de variables de DESIGN §13, sin el cual
+                    `.doc-prose` sacaría tinta clara sobre papel (blockquote a
+                    1.13:1, viñetas a 2.10:1). La cabecera con fecha y recuento y
+                    la medida definitiva son de la tarea 2.1. */}
+                <article className="acta-sheet mx-auto p-6 sm:p-8">
+                    {/* Tarea 2.1: fecha y recuento, y el sitio donde aterriza el
+                        Sello (§8.3). Sólo en el acta: un artefacto markdown
+                        cualquiera no tiene junta que datar ni votos que contar. */}
+                    {acta && <ActaHeader actaId={artifact.id} date={artifact.createdAt} />}
+                    <div className="doc-prose">
+                        {/* F4: la tabla del acta se desplaza dentro de su
+                            contenedor (§9.7), nunca rompe la hoja. */}
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ table: DocTable }}>
                             {artifact.content}
                         </ReactMarkdown>
                     </div>
-                </div>
+                </article>
             </div>
         </div>
     );

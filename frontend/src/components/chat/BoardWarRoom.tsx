@@ -1,29 +1,59 @@
-import { motion, AnimatePresence } from "framer-motion";
-import { Check } from "lucide-react";
+import { useCallback, useState } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { Columns2 } from "lucide-react";
 import type { Agent } from "@/types";
-import { getBoardAgentByRole, type BoardSessionState } from "@/store/useChatStore";
-import { cn } from "@/lib/utils";
-
-const PHASE_LABELS: { key: string; label: string }[] = [
-    { key: "opening", label: "Apertura" },
-    { key: "analysis", label: "Análisis" },
-    { key: "rebuttal", label: "Réplicas" },
-    { key: "synthesis", label: "Síntesis" },
-];
-
-const VOTE_GLYPH: Record<string, string> = { SI: "✓", NO: "✗", CONDICIONAL: "~" };
+import type { BoardSessionState } from "@/store/useChatStore";
+import { conMovimiento, CURVA, DURACION } from "@/lib/motion";
+import { fasesDe } from "./agendaPhases";
+import { BoardTable } from "./BoardTable";
+import { DisagreementBar } from "./DisagreementBar";
+import { gradoDeDesacuerdo } from "./desacuerdo";
+import { DirectorCompare } from "./DirectorCompare";
+import { comboDe, useAtajo } from "@/hooks/useShortcuts";
 
 /**
- * Cabecera "war-room" del Board V2: muestra los directores en sesión con su estado
- * vivo (anillo pulsante de quien habla, check + voto de quien terminó) y la barra
- * de fases del debate. Solo se renderiza durante un debate activo.
+ * La cabecera de la junta: la Mesa (§8.1) y lo que la mesa no puede decir sola.
+ *
+ * Qué cambió y por qué:
+ *
+ * - **Las placas y el orden del día se han ido de aquí.** Las primeras a
+ *   `BoardTable`, que es el Palco de §8.1; el segundo al Canto de §8.4, porque
+ *   la barra de fases que vivía aquí era `hidden sm:flex` — o sea que **a 390px
+ *   el orden del día desaparecía entero**, justo en el ancho que §4.3 declara
+ *   caso base.
+ * - **Ya no se anima el alto.** La banda entraba con `height: 0 → auto`, que
+ *   §7.4 prohíbe por su nombre. Entra con opacidad y 6px de recorrido, que se
+ *   componen.
+ * - **Ya no hay resplandor en bucle** bajo el que habla. El pulso vive ahora en
+ *   el punto de 4px de la placa, que es el único bucle que §8.11 presupuesta
+ *   para esta superficie.
+ *
+ * Lo que sí se queda: el recuento, el coste y la región viva. La mesa dice
+ * quién y cuánto; esto dice en qué ha quedado.
  */
-export function BoardWarRoom({ board, agents }: { board: BoardSessionState; agents: Agent[] }) {
-    // Roles a mostrar: CEO siempre + participantes + DEVIL si aplica.
-    const roles = ["CEO", ...board.participants.filter((r) => r !== "CEO")];
-    if (board.devil) roles.push("DEVIL");
+export function BoardWarRoom({
+    board,
+    agents,
+    intervencionPorRol,
+}: {
+    board: BoardSessionState;
+    agents: Agent[];
+    intervencionPorRol?: Record<string, string>;
+}) {
+    const reducido = useReducedMotion();
 
-    const phaseIndex = PHASE_LABELS.findIndex((p) => p.key === board.phase);
+    /* 5.9 · Q2 — el comparador. Vive aquí porque aquí está la mesa: el atajo
+       sólo existe donde hay una junta con debate, y en `/settings` pulsar ⇧C no
+       puede abrir una ventana sobre datos que no hay. */
+    const [comparando, setComparando] = useState(false);
+    useAtajo(comboDe('comparar'), useCallback(() => setComparando(true), []));
+
+    const fases = fasesDe(board);
+    const faseActual = fases.find((f) => f.clave === board.phase);
+
+    // Q8: el veredicto también se anuncia. Quien no ve la barra tiene que
+    // recibir la lectura, no sólo la aritmética.
+    const veredicto = gradoDeDesacuerdo(board.votes);
 
     const tallyText = (() => {
         if (!board.tally) return null;
@@ -34,104 +64,81 @@ export function BoardWarRoom({ board, agents }: { board: BoardSessionState; agen
 
     return (
         <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="border-b border-white/5 bg-midnight/50 backdrop-blur-xl overflow-hidden z-10"
+            initial={reducido ? false : { opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={conMovimiento(reducido, { duration: DURACION.reveal, ease: CURVA.settle })}
+            className="border-b border-stroke-hairline bg-surface-1 z-10"
         >
-            <div className="max-w-4xl mx-auto px-6 py-3">
-                <div className="flex items-center justify-between gap-4">
-                    {/* Avatares de los directores en sesión */}
-                    <div className="flex items-center gap-3">
-                        {roles.map((role) => {
-                            const agent = getBoardAgentByRole(agents, role);
-                            const status = board.statusByRole[role] || "idle";
-                            const vote = board.votes[role];
-                            const hex = agent?.hexColor || "#00F0C8";
-                            return (
-                                <div key={role} className="flex flex-col items-center gap-1 w-12">
-                                    <div className="relative">
-                                        <motion.div
-                                            className="h-9 w-9 rounded-xl flex items-center justify-center text-sm font-bold border"
-                                            style={{
-                                                color: hex,
-                                                borderColor: `${hex}40`,
-                                                backgroundColor: `${hex}12`,
-                                                opacity: status === "idle" ? 0.4 : 1,
-                                            }}
-                                            animate={
-                                                status === "speaking"
-                                                    ? { boxShadow: [`0 0 0px ${hex}00`, `0 0 14px ${hex}99`, `0 0 0px ${hex}00`] }
-                                                    : { boxShadow: `0 0 0px ${hex}00` }
-                                            }
-                                            transition={status === "speaking" ? { repeat: Infinity, duration: 1.4 } : { duration: 0.3 }}
-                                        >
-                                            {agent?.avatar || role[0]}
-                                        </motion.div>
-                                        {status === "done" && (
-                                            <motion.div
-                                                initial={{ scale: 0 }}
-                                                animate={{ scale: 1 }}
-                                                className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-emerald-500 border-2 border-midnight flex items-center justify-center"
-                                            >
-                                                <Check className="h-2 w-2 text-white" />
-                                            </motion.div>
-                                        )}
-                                    </div>
-                                    {vote ? (
-                                        <span
-                                            className="text-[9px] font-mono font-bold leading-none"
-                                            style={{ color: hex }}
-                                            title={`${vote.decision} · ${vote.confidence}%`}
-                                        >
-                                            {VOTE_GLYPH[vote.decision] || "·"} {vote.confidence}%
-                                        </span>
-                                    ) : (
-                                        <span className="text-[8px] font-mono uppercase tracking-tight text-gray-600 leading-none truncate w-full text-center">
-                                            {status === "speaking" ? "hablando" : role}
-                                        </span>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
+            <DirectorCompare
+                open={comparando}
+                onClose={() => setComparando(false)}
+                board={board}
+                agents={agents}
+            />
+            <div className="max-w-5xl mx-auto px-4 py-2 sm:px-6">
+                <BoardTable board={board} agents={agents} intervencionPorRol={intervencionPorRol} />
 
-                    {/* Barra de fases */}
-                    <div className="hidden sm:flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-widest">
-                        {PHASE_LABELS.map((p, i) => (
-                            <div key={p.key} className="flex items-center gap-1.5">
-                                <span
-                                    className={cn(
-                                        "transition-colors",
-                                        i === phaseIndex ? "text-electric-cyan font-bold" : i < phaseIndex ? "text-gray-500" : "text-gray-700"
-                                    )}
-                                >
-                                    {p.label}
-                                </span>
-                                {i < PHASE_LABELS.length - 1 && <span className="text-gray-700">▸</span>}
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                {/* Consenso / coste.
+                    3.7 · §4.3 — el recuento NO se trunca. A 390px disponía de
+                    266px para 426 y salía «La junta votó 2 a favor · 1 en c…»:
+                    o sea que la línea que dice EN QUÉ HA QUEDADO la junta —el
+                    entregable del producto— se cortaba justo en el disenso.
+                    Medido en el navegador. Ahora envuelve en dos líneas: el
+                    contenedor pasa a `flex-wrap`, el recuento suelta el
+                    `truncate` y el coste se va al final con `ml-auto`. El alto
+                    mínimo deja de ser fijo por lo mismo. */}
+                {/* 5.5 · Q8 — el grado de desacuerdo, encima del recuento.
+                    El recuento dice CUÁNTOS; esto dice QUÉ significa. Va
+                    primero porque es lo que se quiere saber al abrir un debate
+                    viejo, y porque §P2 pide que el conflicto se encuentre antes
+                    que la conformidad. */}
+                <DisagreementBar votes={board.votes} className="mt-2" />
 
-                {/* Consenso / coste */}
-                <div className="flex items-center justify-between mt-2 min-h-[14px]">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 mt-2 min-h-[14px]">
                     <AnimatePresence>
                         {tallyText && (
                             <motion.span
-                                initial={{ opacity: 0, y: 4 }}
+                                initial={reducido ? false : { opacity: 0, y: 4 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="text-[10px] text-electric-cyan font-mono"
+                                transition={conMovimiento(reducido, { duration: DURACION.pop, ease: CURVA.settle })}
+                                className="text-micro text-brass-800 dark:text-accent font-mono min-w-0 [text-wrap:pretty]"
+                                aria-hidden="true"
                             >
                                 {tallyText}
                                 {board.earlyExit && " — consenso, debate abreviado"}
                             </motion.span>
                         )}
                     </AnimatePresence>
-                    <span className="text-[9px] font-mono text-gray-600 uppercase tracking-widest ml-auto">
-                        ⚡ {board.cost} créditos
+                    {/* 5.9 · Q2 — la puerta del comparador sin teclado. A 390px
+                        no hay ⇧C que pulsar, y sin este botón la función no
+                        existiría para la mayoría del tráfico. */}
+                    <button
+                        type="button"
+                        onClick={() => setComparando(true)}
+                        className="ml-auto flex shrink-0 items-center gap-1 rounded-xs border border-stroke-edge px-2 py-0.5 font-mono text-micro uppercase text-content-muted transition-colors duration-(--duration-tap) hover:border-brass-600 hover:text-content-strong"
+                    >
+                        <Columns2 className="h-3 w-3" aria-hidden="true" />
+                        Comparar
+                        <kbd className="ms-1 hidden text-content-quiet sm:inline">⇧C</kbd>
+                    </button>
+                    <span className="text-micro font-mono text-content-muted uppercase shrink-0 tnum">
+                        {board.cost} créditos
                     </span>
                 </div>
+
+                {/* §12.6: el recuento cambia solo, según van votando los
+                    directores, así que se anuncia. `aria-atomic` para que se lea
+                    la frase entera y no el número que acaba de cambiar; el
+                    equivalente visual ya está arriba, por eso esto es `sr-only`.
+                    La región está SIEMPRE en el DOM aunque el recuento aún no
+                    exista: varios lectores no anuncian una región que aparece a
+                    la vez que su contenido. */}
+                <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="live-tally">
+                    {tallyText
+                        ? `${veredicto.nivel !== 'sin-datos' ? `${veredicto.etiqueta}. ` : ''}${tallyText}${board.earlyExit ? ' — consenso, debate abreviado' : ''}. Fase: ${faseActual?.etiqueta ?? 'en curso'}.`
+                        : ''}
+                </p>
             </div>
         </motion.div>
     );

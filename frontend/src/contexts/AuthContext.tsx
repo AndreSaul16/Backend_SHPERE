@@ -3,8 +3,6 @@
  * Proporciona user, idToken, signIn, signUp, signOut.
  */
 import {
-  createContext,
-  useContext,
   useEffect,
   useState,
   useCallback,
@@ -17,35 +15,16 @@ import {
   signInWithPopup,
   signOut as firebaseSignOut,
   sendEmailVerification,
+  sendPasswordResetEmail,
+  verifyPasswordResetCode,
+  confirmPasswordReset,
   type User as FirebaseUser,
 } from "firebase/auth";
 import { auth, googleProvider, githubProvider, microsoftProvider } from "@/lib/firebase";
 import { initAnalytics, identify, capture, resetAnalytics, ANALYTICS_EVENTS } from "@/lib/analytics";
+import { toast } from "@/lib/toastBus";
+import { AuthContext, type AuthUser } from "./auth";
 
-interface AuthUser {
-  uid: string;
-  email: string | null;
-  displayName: string | null;
-  photoURL: string | null;
-  emailVerified: boolean;
-  providerId: string; // 'password' | 'google.com' | 'github.com'
-}
-
-interface AuthContextType {
-  user: AuthUser | null;
-  idToken: string | null;
-  loading: boolean;
-  signInWithEmail: (email: string, password: string) => Promise<void>;
-  signUpWithEmail: (email: string, password: string) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
-  signInWithGithub: () => Promise<void>;
-  signInWithMicrosoft: () => Promise<void>;
-  signOut: () => Promise<void>;
-  resendVerification: () => Promise<void>;
-  reloadUser: () => Promise<boolean>; // devuelve emailVerified tras refrescar
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -104,8 +83,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // /stream hasta que el email esté verificado.
     try {
       await sendEmailVerification(cred.user);
-    } catch (e) {
-      if (import.meta.env.DEV) console.error("sendEmailVerification falló:", e);
+    } catch {
+      // La cuenta SÍ se ha creado; lo que ha fallado es el correo. Sin él, el
+      // backend no da créditos ni deja usar /stream, así que quien se acaba de
+      // registrar se queda mirando una app que no responde sin saber por qué.
+      //
+      // `warning` y no `error`: no se ha perdido nada y hay salida (reenviar).
+      // El motivo técnico de Firebase no se enseña: no es accionable.
+      toast.warning(
+        'Tu cuenta está creada, pero no ha salido el correo de verificación',
+        'Pídelo de nuevo desde la pantalla de verificación para activar tus créditos.',
+      );
     }
     capture(ANALYTICS_EVENTS.SIGNUP_COMPLETED, { method: "password" });
   }, []);
@@ -131,6 +119,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     return cur.emailVerified;
   }, []);
+
+  const sendPasswordReset = useCallback(async (email: string) => {
+    await sendPasswordResetEmail(auth, email);
+  }, []);
+
+  const verifyPasswordReset = useCallback(async (code: string) => {
+    return await verifyPasswordResetCode(auth, code);
+  }, []);
+
+  const confirmPasswordResetWithCode = useCallback(
+    async (code: string, newPassword: string) => {
+      await confirmPasswordReset(auth, code, newPassword);
+    },
+    [],
+  );
 
   const signInWithGoogle = useCallback(async () => {
     await signInWithPopup(auth, googleProvider);
@@ -168,17 +171,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signOut,
         resendVerification,
         reloadUser,
+        sendPasswordReset,
+        verifyPasswordReset,
+        confirmPasswordResetWithCode,
       }}
     >
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
 }

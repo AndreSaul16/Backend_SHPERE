@@ -1,16 +1,32 @@
-import { useRef, useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Save, Camera, Zap, Pencil, X, Users, Loader2 } from "lucide-react";
+import { useRef, useState, useEffect } from "react";
+import { ArrowLeft, Save, Camera, Zap, Palette, Pencil, Users, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { useChatStore, getGroupMembers } from "@/store/useChatStore";
+import { motion } from "framer-motion";
+import { AGENT_HEX, getGroupMembers, useAgentes, useChatStore } from "@/store/useChatStore";
 import { cn } from "@/lib/utils";
+import { panelClass } from "@/components/ui/cardStyles";
+import type { VisualConfig } from "@/types";
+import { TextField } from "@/components/ui/Field";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
+import { AvatarImage } from "@/components/ui/AvatarImage";
+import { notify, reasonOf } from "@/lib/toastBus";
+import { useBoardSettingsStore } from "@/store/useBoardSettingsStore";
+import { InlineError } from "@/components/ui/InlineError";
+import { UnsavedGuardDialog } from "@/components/ui/UnsavedGuardDialog";
+import { BarraDeGuardado } from "@/components/ui/BarraDeGuardado";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
 export function ChatSettingsPage() {
     const navigate = useNavigate();
-    const { getAgents, selectedAgentId, currentSessionId, sessions, updateSessionMetadata } = useChatStore();
-    const agents = getAgents();
+    /* 4.6 · D20: cinco campos y `getAgents()` llamado en el render, que lee
+       bien pero no suscribe — funcionaba de rebote porque el store entero ya
+       forzaba el render. */
+    const selectedAgentId = useChatStore((s) => s.selectedAgentId);
+    const currentSessionId = useChatStore((s) => s.currentSessionId);
+    const sessions = useChatStore((s) => s.sessions);
+    const updateSessionMetadata = useChatStore((s) => s.updateSessionMetadata);
+    const agents = useAgentes();
     const currentSession = sessions.find(s => s.session_id === currentSessionId);
     const activeAgent = agents.find(a => a.id === selectedAgentId) || agents[0];
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -21,15 +37,24 @@ export function ChatSettingsPage() {
     // Determine if it's a group chat early (needed by hooks below)
     const isGroupChat = currentSession?.type === 'group' || activeAgent?.id === 'group-chat';
 
+    // D28: el guardado real del botón de la cabecera.
+    const [savingAll, setSavingAll] = useState(false);
+
     // Member edit modal state
     const [editingMember, setEditingMember] = useState<string | null>(null);
     const [editName, setEditName] = useState("");
     const [editColor, setEditColor] = useState("");
 
-    // Board Meeting state
-    const [boardEnabled, setBoardEnabled] = useState(false);
-    const [boardLoading, setBoardLoading] = useState(false);
-    const [boardError, setBoardError] = useState<string | null>(null);
+    // D47 — el ajuste de debate NO tiene estado local aquí. Es el mismo que
+    // pinta `BoardMeetingSettings`, y con un `useState` en cada pantalla las
+    // dos podían enseñar posiciones contrarias del mismo interruptor.
+    const {
+        enabled: boardEnabled,
+        saving: boardSaving,
+        error: boardError,
+        load: loadBoardSettings,
+        setEnabled: setBoardEnabled,
+    } = useBoardSettingsStore();
 
     // Nombre base derivado de la sesión/agente. Se calcula ANTES de cualquier
     // return condicional porque `localName` y su efecto de sincronización son
@@ -49,62 +74,33 @@ export function ChatSettingsPage() {
     // Input controlado con debounce para el nombre
     const [localName, setLocalName] = useState(baseName);
 
-    // Sincronizar cuando cambia la sesión (o cuando llega por primera vez)
-    useEffect(() => {
+    // Sincronizar cuando cambia la sesión (o cuando llega por primera vez).
+    //
+    // Se ajusta DURANTE EL RENDER y no en un `useEffect`: es el patrón que
+    // React documenta para «reiniciar estado cuando cambia una prop». Con el
+    // efecto había un render intermedio pintando el nombre viejo, y `useState`
+    // + `setState` en efecto es además lo que el compilador marca. Se guarda de
+    // qué sesión y de qué nombre base viene el valor actual, así que el ajuste
+    // corre una sola vez por cambio real y no pisa lo que el usuario escribe.
+    const [sincronizadoDe, setSincronizadoDe] = useState({ sessionId: currentSessionId, baseName });
+    if (sincronizadoDe.sessionId !== currentSessionId || sincronizadoDe.baseName !== baseName) {
+        setSincronizadoDe({ sessionId: currentSessionId, baseName });
         setLocalName(baseName);
-    }, [currentSessionId, baseName]);
-
-    const getAuthToken = useCallback(async () => {
-        const { getAuth } = await import("firebase/auth");
-        const user = getAuth().currentUser;
-        if (!user) throw new Error("No autenticado");
-        return user.getIdToken();
-    }, []);
+    }
 
     // Load board meeting status for group chats
     useEffect(() => {
         if (!isGroupChat) return;
-        (async () => {
-            try {
-                const token = await getAuthToken();
-                const resp = await fetch(`${API_URL}/me/board-settings`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                if (resp.ok) {
-                    const data = await resp.json();
-                    setBoardEnabled(data.board_meeting_enabled);
-                } else {
-                    setBoardError("No se pudo cargar el estado del Board Meeting.");
-                }
-            } catch {
-                setBoardError("No se pudo cargar el estado del Board Meeting.");
-            }
-        })();
-    }, [isGroupChat, getAuthToken]);
+        loadBoardSettings();
+    }, [isGroupChat, loadBoardSettings]);
 
-    const toggleBoardMeeting = async () => {
-        setBoardLoading(true);
-        setBoardError(null);
-        try {
-            const token = await getAuthToken();
-            const resp = await fetch(`${API_URL}/me/board-settings`, {
-                method: "PATCH",
-                headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-                body: JSON.stringify({ board_meeting_enabled: !boardEnabled }),
-            });
-            if (resp.ok) {
-                const data = await resp.json();
-                setBoardEnabled(data.board_meeting_enabled);
-            } else {
-                setBoardError("No se pudo guardar el cambio. Inténtalo de nuevo.");
-            }
-        } catch (e) {
-            console.error("Error toggling board meeting:", e);
-            setBoardError("Error de conexión al guardar el cambio. Inténtalo de nuevo.");
-        } finally {
-            setBoardLoading(false);
-        }
-    };
+    // Sin aviso: el mensaje de fallo sale pegado al propio interruptor, que es
+    // donde está mirando quien acaba de pulsarlo. Un toast repetiría lo que ya
+    // se lee ahí mismo.
+    const toggleBoardMeeting = () => setBoardEnabled(!boardEnabled);
+
+    /* 6.5 — lo único que esta pantalla puede tener pendiente. */
+    const nombreSinGuardar = localName.trim() !== baseName.trim();
 
     const openMemberEdit = (member: typeof groupMembers[0]) => {
         const match = member.name.match(/^(.+?)\s*\(([A-Z]+)\)$/);
@@ -113,19 +109,45 @@ export function ChatSettingsPage() {
         setEditingMember(member.id);
     };
 
+    /**
+     * D28 (segunda mitad) — editar un miembro sobrevive a la recarga.
+     *
+     * `renameAgent`/`updateAgentColor` sólo tocaban el array en memoria del
+     * store: sin `persist` y sin API, el nombre y el color que el usuario le
+     * daba a un director se perdían al recargar mientras el modal decía
+     * «Guardar cambios». Ahora los dos escriben también en el almacén local
+     * (`agentIdentityOverrides`), que se rehidrata al arrancar el store.
+     *
+     * Ojo: NO es guardado por API. El backend de este repo no tiene dónde
+     * guardarlo —`/me/agent-overrides` sólo acepta prompt/temperatura/modelo,
+     * y `visual_config` de la sesión es un modelo de campos fijos—, así que
+     * hacerlo de verdad exige tocar el servidor. El detalle está en la cabecera
+     * de `lib/agentIdentityOverrides.ts`.
+     */
     const saveMemberEdit = () => {
         if (!editingMember) return;
-        useChatStore.getState().renameAgent(editingMember, editName);
-        useChatStore.getState().updateAgentColor(editingMember, editColor);
+        const nombreOk = useChatStore.getState().renameAgent(editingMember, editName);
+        const colorOk = useChatStore.getState().updateAgentColor(editingMember, editColor);
         setEditingMember(null);
+        if (!nombreOk || !colorOk) {
+            // Modo privado, cuota llena, storage bloqueado. §11: qué pasó, qué
+            // hacer y qué se conserva.
+            notify({
+                title: 'El cambio no se guardará al recargar',
+                detail:
+                    'Este navegador no deja guardar preferencias. El nombre y el color se ven ahora, pero volverán a los de fábrica al recargar.',
+                variant: 'warning',
+                dedupeKey: 'member-identity',
+            });
+        }
     };
 
     if (!activeAgent || !currentSessionId || !currentSession) {
         return (
-            <div className="flex items-center justify-center h-full text-text-secondary">
+            <div className="flex items-center justify-center h-full text-content-muted">
                 <div className="text-center space-y-3">
                     <p className="text-lg font-medium">Sin chat activo</p>
-                    <p className="text-sm text-text-secondary/60">Selecciona o crea un chat primero para acceder a su configuración.</p>
+                    <p className="text-sm text-content-quiet">Selecciona o crea un chat primero para acceder a su configuración.</p>
                     <button
                         onClick={() => navigate('/')}
                         className="mt-2 px-4 py-2 bg-electric-cyan/10 text-electric-cyan rounded-xl hover:bg-electric-cyan/20 transition-all text-sm font-medium"
@@ -145,12 +167,22 @@ export function ChatSettingsPage() {
             const reader = new FileReader();
             reader.onloadend = () => {
                 const base64 = reader.result as string;
-                // Persistir SOLO en visual_config de la sesión (atómico, aislado)
+                // Persistir SOLO en visual_config de la sesión (atómico, aislado).
+                // El `.catch` no es decorativo: `updateSessionMetadata` relanza,
+                // y sin él esto era una promesa rechazada sin dueño — el avatar
+                // se veía cambiado hasta recargar y luego volvía al anterior.
                 updateSessionMetadata(currentSessionId, {
                     visual_config: {
                         ...currentSession?.visual_config,
                         avatar: base64
                     }
+                }).catch((error) => {
+                    notify({
+                        title: 'No se pudo guardar el avatar',
+                        detail: reasonOf(error) ?? 'La sesión mantiene la imagen anterior.',
+                        variant: 'error',
+                        dedupeKey: 'session-avatar',
+                    });
                 });
             };
             reader.readAsDataURL(file);
@@ -178,8 +210,9 @@ export function ChatSettingsPage() {
         }, 500);
     };
 
-    const handleNameChange = async (newName: string) => {
-        if (!currentSessionId) return;
+    /** `true` si el nombre quedó guardado. */
+    const handleNameChange = async (newName: string): Promise<boolean> => {
+        if (!currentSessionId) return false;
 
         try {
             await updateSessionMetadata(currentSessionId, {
@@ -189,66 +222,113 @@ export function ChatSettingsPage() {
                     name: newName
                 }
             });
+            return true;
         } catch (error) {
-            console.error("Failed to update session name:", error);
+            // Avisa la página, no el store: `updateSessionMetadata` sirve a
+            // nombre, color y avatar por igual, y sólo aquí se sabe cuál de los
+            // tres se ha quedado sin guardar.
+            //
+            // `dedupeKey` porque el guardado va con rebote de 500ms al teclear:
+            // con el backend caído, cada pausa al escribir apilaría un aviso.
+            notify({
+                title: 'No se pudo guardar el nombre',
+                detail: reasonOf(error) ?? 'Tu texto sigue en el campo. Vuelve a intentarlo.',
+                variant: 'error',
+                dedupeKey: 'session-name',
+            });
+            return false;
         }
+    };
+
+    /**
+     * D28 — el botón «Guardar» guarda.
+     *
+     * Antes era literalmente `onClick={() => navigate(-1)}`: la fila de §11
+     * «El botón dice lo que hace» lo cita por su nombre como el ejemplo de lo
+     * que no se debe hacer.
+     *
+     * Lo que quedaba de verdad sin guardar al pulsarlo era el nombre: se manda
+     * con un rebote de 500ms, así que escribir y pulsar «Guardar» de seguido
+     * dejaba el PATCH en el aire. Ahora el rebote se cancela y el guardado se
+     * hace aquí, esperado: sólo se vuelve atrás cuando ha ido bien. Si falla,
+     * la página se queda donde está —con el texto en el campo— y el aviso de
+     * `handleNameChange` explica qué pasó (§11).
+     */
+    const handleSave = async () => {
+        if (savingAll) return;
+        if (debouncedSave.current) {
+            clearTimeout(debouncedSave.current);
+            debouncedSave.current = null;
+        }
+        setSavingAll(true);
+        const guardado = await handleNameChange(localName || baseName);
+        setSavingAll(false);
+        if (guardado) navigate(-1);
     };
 
     const handleColorChange = async (newHex: string, themeName?: string) => {
         if (!currentSessionId) return;
 
-        const updates: any = {
-            visual_config: {
-                ...currentSession?.visual_config,
-                color: newHex // Always set primary color for consistency
-            }
+        const visual_config: VisualConfig = {
+            ...currentSession?.visual_config,
+            color: newHex, // el color primario siempre, por coherencia
+            ...(isGroupChat
+                ? { theme: themeName || 'Manual' }
+                : { bubble_color: newHex }),
         };
-
-        if (isGroupChat) {
-            updates.visual_config.theme = themeName || 'Manual';
-        } else {
-            updates.visual_config.bubble_color = newHex;
-        }
+        const updates = { visual_config };
 
         try {
             await updateSessionMetadata(currentSessionId, updates);
         } catch (error) {
-            console.error("Failed to update session color:", error);
+            notify({
+                title: 'No se pudo guardar el color',
+                detail: reasonOf(error) ?? 'La sesión mantiene el color anterior.',
+                variant: 'error',
+                dedupeKey: 'session-color',
+            });
         }
     };
 
     return (
         <div className="flex flex-col h-full bg-midnight/40 relative overflow-hidden">
-            {/* Background Living Effect */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                <div
-                    className="aurora-blob w-[60%] h-[60%] top-[-15%] left-[-10%] animate-aurora"
-                    style={{ backgroundColor: 'rgba(30, 58, 95, 0.5)' }}
-                />
-                <div
-                    className="aurora-blob w-[45%] h-[45%] bottom-[-10%] right-[-5%] animate-aurora"
-                    style={{ backgroundColor: 'rgba(13, 74, 74, 0.4)', animationDelay: '-6s' }}
-                />
-            </div>
-
+            {/* 5.15 · D63. Aquí lo sucio es el nombre tecleado que todavía no
+                ha salido: el guardado va con rebote de 500 ms, así que salir
+                dentro de esa media ventana se lleva lo último escrito sin que
+                el usuario lo sepa. Los demás ajustes de esta pantalla (color,
+                avatar, interruptor de debate) se guardan al instante y no
+                tienen nada pendiente que perder. */}
+            <UnsavedGuardDialog
+                sucio={nombreSinGuardar}
+                objeto={baseName || "esta junta"}
+                consecuencia="El nombre que acabas de escribir aún no se ha guardado."
+            />
             {/* Header */}
-            <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-surface flex items-center justify-between bg-midnight/90 backdrop-blur-md sticky top-0 z-10">
+            <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-surface flex items-center justify-between bg-surface-0 sticky top-0 z-10">
                 <div className="flex items-center gap-3 sm:gap-4">
                     <button
                         onClick={() => navigate(-1)}
-                        className="p-2 hover:bg-surface rounded-full transition-colors text-text-secondary hover:text-text-primary"
+                        className="p-2 hover:bg-surface rounded-full transition-colors text-content-muted hover:text-content-strong"
                     >
                         <ArrowLeft className="h-5 w-5" />
                     </button>
-                    <h1 className="text-base sm:text-xl font-bold text-text-primary">Configuración</h1>
+                    <h1 className="text-base sm:text-xl font-bold text-content-strong">Configuración</h1>
                 </div>
-                <button
-                    onClick={() => navigate(-1)}
-                    className="flex items-center gap-2 px-3 py-2 bg-electric-cyan/10 text-electric-cyan rounded-xl hover:bg-electric-cyan hover:text-midnight transition-all font-medium text-sm"
+                {/* D28 + §11 «El botón dice lo que hace»: decía «Guardar» y
+                    sólo hacía `navigate(-1)`. Ahora guarda de verdad, y el
+                    rótulo es el de la fila «Bien» de esa misma tabla. El
+                    `<Button>` trae el estado `loading` de §9.1 —ancho
+                    congelado, gerundio, `aria-busy`— de serie. */}
+                <Button
+                    variant="primary"
+                    onClick={() => void handleSave()}
+                    loading={savingAll}
+                    loadingLabel="Guardando"
+                    data-testid="guardar-cambios"
                 >
-                    <Save className="h-4 w-4" />
-                    <span className="hidden sm:inline">Guardar</span>
-                </button>
+                    <Save className="h-4 w-4" aria-hidden="true" />
+                    Guardar cambios
+                </Button>
             </div>
 
             {/* Content - Added pb-32 for mobile scrollability */}
@@ -256,70 +336,78 @@ export function ChatSettingsPage() {
                 <div className="max-w-xl mx-auto space-y-6 sm:space-y-8">
 
                     {/* Agent Avatar & Identity Section */}
-                    <section className="flex flex-col items-center gap-4 sm:gap-6 p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-surface/60 border border-surface-highlight backdrop-blur-sm text-center">
-                        <h2 className="text-text-secondary text-xs sm:text-sm uppercase tracking-widest font-mono">
+                    <section className={panelClass({ className: 'flex flex-col items-center gap-4 sm:gap-6 text-center' })}>
+                        <h2 className="text-content-muted text-xs sm:text-sm uppercase tracking-widest font-mono">
                             {isGroupChat ? 'Identidad del Grupo' : 'Identidad del Agente'}
                         </h2>
 
                         <div className="relative group">
                             <input
+                                id="session-avatar-file"
+                                aria-label="Subir imagen de avatar"
                                 type="file"
                                 ref={fileInputRef}
                                 onChange={handleAvatarChange}
                                 accept="image/*"
-                                className="hidden"
+                                className="sr-only"
                             />
-                            <div
-                                onClick={triggerFileInput}
-                                className="h-24 w-24 sm:h-32 sm:w-32 rounded-2xl sm:rounded-3xl bg-surface border border-surface-highlight flex items-center justify-center text-3xl sm:text-4xl font-bold shadow-2xl transition-transform group-hover:scale-105 cursor-pointer overflow-hidden"
-                            >
-                                {avatarUrl ? (
-                                    <img src={avatarUrl} alt="Agent Avatar" className="h-full w-full object-cover" />
-                                ) : (
-                                    <span style={{ color: sessionColor }}>{activeAgent.avatar}</span>
-                                )}
-                            </div>
+                            {/* D14/§12.4: era un `<div onClick>` MÁS un botón que
+                                hacía exactamente lo mismo — un camino de ratón
+                                duplicado y ninguno de teclado. Ahora el avatar
+                                entero es el <button> (área táctil de sobra,
+                                §12.11) y la chapa de la cámara es decoración
+                                dentro de él, no un segundo punto de tabulación. */}
                             <button
+                                type="button"
                                 onClick={triggerFileInput}
-                                className="absolute -bottom-2 -right-2 p-2 sm:p-2.5 bg-surface border border-surface-highlight rounded-xl text-electric-cyan shadow-lg hover:scale-110 transition-transform"
+                                aria-label={isGroupChat ? 'Cambiar la imagen del grupo' : 'Cambiar la imagen del agente'}
+                                className="relative h-24 w-24 sm:h-32 sm:w-32 rounded-md bg-surface border border-surface-highlight flex items-center justify-center text-3xl sm:text-4xl font-bold shadow-2xl transition-transform group-hover:scale-105 cursor-pointer overflow-hidden"
+                            >
+                                <AvatarImage
+                                    src={avatarUrl}
+                                    className="h-full w-full object-cover"
+                                    fallback={<span style={{ color: sessionColor }}>{activeAgent.avatar}</span>}
+                                />
+                            </button>
+                            <span
+                                aria-hidden="true"
+                                className="pointer-events-none absolute -bottom-2 -right-2 p-2 sm:p-2.5 bg-surface border border-surface-highlight rounded-xl text-electric-cyan shadow-lg"
                             >
                                 <Camera className="h-4 w-4 sm:h-5 sm:w-5" />
-                            </button>
+                            </span>
                         </div>
 
                         <div className="w-full max-w-sm space-y-4">
                             <div className="space-y-1.5">
-                                <label className="text-[10px] text-text-secondary uppercase tracking-widest font-mono block text-left ml-1 opacity-60">
-                                    {isGroupChat ? 'Nombre del Grupo' : 'Nombre del Agente'}
-                                </label>
                                 <div className="relative group/input">
-                                    <input
-                                        type="text"
+                                    <TextField
+                                        label={isGroupChat ? 'Nombre del grupo' : 'Nombre del agente'}
+                                        id="session-name"
                                         value={localName}
                                         onChange={(e) => handleNameInput(e.target.value)}
-                                        className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-3 text-lg font-bold text-text-primary focus:outline-none focus:border-electric-cyan/50 focus:ring-1 focus:ring-electric-cyan/20 transition-all text-center"
+                                        controlClassName="py-3 pe-11 text-lg font-bold text-center"
                                         placeholder={isGroupChat ? "Junta Directiva" : "Ej: Oberon"}
                                     />
-                                    <Pencil className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/30 group-focus-within/input:text-electric-cyan transition-colors" />
+                                    <Pencil className="absolute right-4 top-[2.6rem] h-4 w-4 text-content-muted group-focus-within/input:text-accent transition-colors" aria-hidden="true" />
                                 </div>
                             </div>
 
                             <div className="flex flex-col items-center gap-1">
                                 <div className="flex items-center gap-2">
                                     {activeAgent.role !== 'system' && (
-                                        <span className="px-2 py-0.5 bg-electric-cyan/10 text-electric-cyan rounded text-[10px] font-mono border border-electric-cyan/20">
+                                        <span className="px-2 py-0.5 bg-electric-cyan/10 text-electric-cyan rounded text-micro font-mono border border-electric-cyan/20">
                                             {roleLabel}
                                         </span>
                                     )}
-                                    <h3 className="text-sm font-medium text-text-secondary">
+                                    <h3 className="text-sm font-medium text-content-muted">
                                         {isGroupChat ? 'Orquestación' : 'Nivel de Cargo'}
                                     </h3>
                                 </div>
-                                <p className="text-text-secondary/60 text-xs italic">{activeAgent.description}</p>
+                                <p className="text-content-quiet text-xs italic">{activeAgent.description}</p>
                             </div>
                         </div>
 
-                        <p className="text-[10px] text-text-secondary/40 max-w-[280px]">
+                        <p className="text-xs text-content-quiet max-w-[280px]">
                             {isGroupChat
                                 ? "La identidad del grupo se comparte con todos los miembros."
                                 : "La personalización es única para esta conversación."}
@@ -327,23 +415,23 @@ export function ChatSettingsPage() {
                     </section>
 
                     {/* Color Settings Section */}
-                    <section className="p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-surface/60 border border-surface-highlight backdrop-blur-sm space-y-4 sm:space-y-6">
+                    <section className={panelClass({ className: 'space-y-4 sm:space-y-6' })}>
                         <div className="flex items-center gap-2">
                             <Zap className="h-4 w-4 text-electric-cyan" />
-                            <h2 className="text-text-secondary text-xs sm:text-sm uppercase tracking-widest font-mono">
+                            <h2 className="text-content-muted text-xs sm:text-sm uppercase tracking-widest font-mono">
                                 {isGroupChat ? 'Paleta de Grupo' : 'Frecuencia del Experto (Color)'}
                             </h2>
                         </div>
 
                         {isGroupChat ? (
                             /* Presets for Group Chat */
-                            <div className="grid grid-cols-5 gap-3 sm:gap-4">
+                            <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 sm:gap-4">
                                 {[
-                                    { name: 'Cyan', hex: '#00F0C8' },
-                                    { name: 'Teal', hex: '#00C1B3' },
-                                    { name: 'Indigo', hex: '#6B8AFD' },
-                                    { name: 'Purple', hex: '#8A63D2' },
-                                    { name: 'Magenta', hex: '#E34A95' },
+                                    { name: 'Latón', hex: AGENT_HEX.custom },
+                                    { name: 'Nexus', hex: AGENT_HEX.CTO },
+                                    { name: 'Ledger', hex: AGENT_HEX.CFO },
+                                    { name: 'Oberon', hex: AGENT_HEX.CEO },
+                                    { name: 'Vortex', hex: AGENT_HEX.CMO },
                                 ].map((c) => (
                                     <button
                                         key={c.hex}
@@ -368,7 +456,7 @@ export function ChatSettingsPage() {
                                                 <div className="h-2 w-2 rounded-full" style={{ backgroundColor: c.hex }} />
                                             </div>
                                         </div>
-                                        <span className="text-[8px] sm:text-[10px] font-mono uppercase tracking-tighter opacity-50">{c.name}</span>
+                                        <span className="text-micro font-mono uppercase opacity-50">{c.name}</span>
 
                                         {sessionColor === c.hex && (
                                             <motion.div
@@ -392,31 +480,32 @@ export function ChatSettingsPage() {
                                             backgroundColor: `${sessionColor}10`
                                         }}
                                     >
-                                        <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none" />
-                                        <input
+                                                                                <input
+                                            id="session-color"
+                                            aria-label="Color de la sesión"
                                             type="color"
                                             value={sessionColor}
                                             onChange={(e) => handleColorChange(e.target.value)}
                                             className="absolute inset-[10%] w-[80%] h-[80%] opacity-0 cursor-pointer z-10"
                                         />
-                                        <div className="text-[32px] pointer-events-none z-0" style={{ color: activeAgent.hexColor }}>
-                                            🎨
+                                        <div className="pointer-events-none z-0" style={{ color: activeAgent.hexColor }}>
+                                            <Palette className="h-8 w-8" aria-hidden="true" />
                                         </div>
                                     </div>
                                     <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-midnight border border-surface-highlight rounded-xl shadow-2xl pointer-events-none flex items-center gap-2 min-w-[100px] justify-center">
                                         <div className="h-2 w-2 rounded-full" style={{ backgroundColor: sessionColor }} />
-                                        <span className="text-[10px] font-bold font-mono uppercase tracking-widest text-text-primary">
+                                        <span className="text-micro font-bold font-mono uppercase text-content-strong">
                                             {sessionColor}
                                         </span>
                                     </div>
                                 </div>
-                                <p className="text-[10px] sm:text-xs text-text-secondary/60 italic text-center max-w-[240px] leading-relaxed">
+                                <p className="text-xs text-content-quiet italic text-center max-w-[240px] leading-relaxed">
                                     Haz clic en el icono para abrir la rueda de colores y sintonizar la firma espectral del experto.
                                 </p>
                             </div>
                         )}
 
-                        <p className="text-[10px] sm:text-xs text-text-secondary/40 leading-relaxed text-center">
+                        <p className="text-xs text-content-quiet leading-relaxed text-center">
                             {isGroupChat
                                 ? "La paleta define los colores de burbujas de todos los miembros."
                                 : "Personaliza el color de los mensajes de este agente."}
@@ -425,27 +514,36 @@ export function ChatSettingsPage() {
 
                     {/* Board Meeting Toggle - Only for Group Chats */}
                     {isGroupChat && (
-                        <section className="p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-surface/60 border border-surface-highlight backdrop-blur-sm space-y-4">
+                        <section className={panelClass({ className: 'space-y-4' })}>
                             <div className="flex items-center gap-2">
-                                <Users className="h-4 w-4 text-purple-400" />
-                                <h2 className="text-text-secondary text-xs sm:text-sm uppercase tracking-widest font-mono">Board Meeting</h2>
+                                <Users className="h-4 w-4 text-accent" aria-hidden="true" />
+                                <h2 className="text-content-muted text-xs sm:text-sm uppercase tracking-widest font-mono">Junta directiva</h2>
                             </div>
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-text-primary">Debate entre agentes</p>
-                                    <p className="text-[10px] text-text-secondary mt-0.5">Los agentes discuten entre sí antes de responderte (consume más tokens)</p>
+                                    <p className="text-sm font-medium text-content-strong">Debate entre agentes</p>
+                                    <p className="text-xs text-content-muted mt-0.5">Los agentes discuten entre sí antes de responderte (consume más tokens)</p>
                                 </div>
+                                {/* §12.7: un interruptor es `role="switch"` con
+                                    `aria-checked`; hasta ahora su estado era sólo
+                                    la posición del punto y el color. */}
                                 <button
-                                    onClick={toggleBoardMeeting}
-                                    disabled={boardLoading}
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={boardEnabled}
+                                    aria-label="Debate entre agentes antes de responder"
+                                    aria-busy={boardSaving}
+                                    data-testid="board-toggle-chat"
+                                    onClick={() => void toggleBoardMeeting()}
+                                    disabled={boardSaving}
                                     className={cn(
                                         "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
                                         boardEnabled ? "bg-electric-cyan" : "bg-surface-highlight",
-                                        boardLoading && "opacity-50"
+                                        boardSaving && "opacity-50"
                                     )}
                                 >
-                                    {boardLoading ? (
-                                        <Loader2 className="h-4 w-4 animate-spin mx-auto text-text-secondary" />
+                                    {boardSaving ? (
+                                        <Loader2 className="h-4 w-4 animate-spin mx-auto text-content-muted" aria-hidden="true" />
                                     ) : (
                                         <span className={cn(
                                             "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
@@ -455,19 +553,33 @@ export function ChatSettingsPage() {
                                 </button>
                             </div>
                             {boardError && (
-                                <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2">
-                                    {boardError}
-                                </p>
+                                <InlineError
+                                    title={boardError.title}
+                                    detail={boardError.detail}
+                                    onRetry={() => { void loadBoardSettings(); }}
+                                    retryLabel="Volver a consultarlo"
+                                />
                             )}
+                            {/* §12.6: el resultado de guardar se anuncia. El
+                                mensaje de error de arriba aparecía en silencio. */}
+                            <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="live-board-save">
+                                {boardSaving
+                                    ? "Guardando la preferencia de debate…"
+                                    : boardError
+                                        ? `${boardError.title}. ${boardError.detail}`
+                                        : boardEnabled
+                                            ? "Debate entre agentes activado."
+                                            : "Debate entre agentes desactivado."}
+                            </p>
                         </section>
                     )}
 
                     {/* Group Members Section - Only for Group Chats */}
                     {isGroupChat && (
-                        <section className="p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-surface/60 border border-surface-highlight backdrop-blur-sm space-y-4 sm:space-y-6">
+                        <section className={panelClass({ className: 'space-y-4 sm:space-y-6' })}>
                             <div className="flex items-center gap-2">
-                                <span className="text-lg">👥</span>
-                                <h2 className="text-text-secondary text-xs sm:text-sm uppercase tracking-widest font-mono">Miembros del Grupo</h2>
+                                <Users className="h-4 w-4 text-content-muted" aria-hidden="true" />
+                                <h2 className="text-content-muted text-xs sm:text-sm uppercase tracking-widest font-mono">Miembros del Grupo</h2>
                             </div>
 
                             <div className="space-y-2">
@@ -491,11 +603,11 @@ export function ChatSettingsPage() {
                                                 <span className={cn("text-sm font-bold", member.color)}>{member.avatar}</span>
                                             </div>
                                             <div className="flex-1 text-left">
-                                                <p className="text-sm font-medium text-text-primary">{memberName}</p>
-                                                <p className="text-[10px] text-text-secondary/60 font-mono">{member.description}</p>
+                                                <p className="text-sm font-medium text-content-strong">{memberName}</p>
+                                                <p className="text-xs text-content-quiet font-mono">{member.description}</p>
                                             </div>
                                             <span
-                                                className="px-2 py-1 rounded text-[10px] font-bold font-mono border"
+                                                className="px-2 py-1 rounded text-micro font-bold font-mono border"
                                                 style={{
                                                     color: member.hexColor,
                                                     borderColor: `${member.hexColor}40`,
@@ -509,97 +621,100 @@ export function ChatSettingsPage() {
                                 })}
                             </div>
 
-                            <p className="text-[10px] sm:text-xs text-text-secondary/40 leading-relaxed text-center">
+                            <p className="text-xs text-content-quiet leading-relaxed text-center">
                                 Haz clic en un miembro para personalizar su nombre y color.
                             </p>
                         </section>
                     )}
 
-                    {/* Member Edit Modal */}
-                    <AnimatePresence>
-                        {editingMember && (
-                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.95 }}
-                                    className="bg-surface border border-surface-highlight rounded-2xl p-6 max-w-sm mx-4 space-y-5 w-full"
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="text-lg font-semibold text-text-primary">Editar miembro</h3>
-                                        <button onClick={() => setEditingMember(null)} className="p-1.5 hover:bg-surface-highlight rounded-lg text-text-secondary hover:text-text-primary transition-colors">
-                                            <X className="h-4 w-4" />
-                                        </button>
-                                    </div>
+                    {/* 6.5 · La barra adherida. Aquí el recuento es como
+                        mucho 1: color, avatar e interruptor de debate se
+                        guardan al instante y no tienen nada pendiente. Lo
+                        único diferido es el nombre, que sale con un rebote de
+                        500 ms. Decir «1 cambio sin guardar» en vez de nada es
+                        justo lo que faltaba para que el usuario supiera que el
+                        botón de arriba todavía tiene trabajo. */}
+                    <BarraDeGuardado
+                        cambios={nombreSinGuardar ? 1 : 0}
+                        guardando={savingAll}
+                        onGuardar={() => { void handleSave(); }}
+                        onDescartar={() => setLocalName(baseName)}
+                        objeto={baseName || "esta junta"}
+                        data-testid="barra-de-guardado-chat"
+                    />
 
-                                    <div className="space-y-4">
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] text-text-secondary uppercase tracking-widest font-mono">Nombre</label>
-                                            <input
-                                                type="text"
-                                                value={editName}
-                                                onChange={(e) => setEditName(e.target.value)}
-                                                className="w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm text-text-primary focus:outline-none focus:border-electric-cyan/50 transition-all"
-                                                placeholder="Ej: Hernesto"
-                                            />
-                                        </div>
-
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] text-text-secondary uppercase tracking-widest font-mono">Color</label>
-                                            <div className="flex items-center gap-3">
-                                                <div
-                                                    className="h-10 w-10 rounded-xl border-2 cursor-pointer relative overflow-hidden"
-                                                    style={{ borderColor: editColor, backgroundColor: `${editColor}20` }}
-                                                >
-                                                    <input
-                                                        type="color"
-                                                        value={editColor}
-                                                        onChange={(e) => setEditColor(e.target.value)}
-                                                        className="absolute inset-0 opacity-0 cursor-pointer"
-                                                    />
-                                                    <div className="h-full w-full flex items-center justify-center">
-                                                        <div className="h-3 w-3 rounded-full" style={{ backgroundColor: editColor }} />
-                                                    </div>
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    {['#8A63D2', '#00C1B3', '#E34A95', '#6B8AFD', '#00F0C8'].map(c => (
-                                                        <button
-                                                            key={c}
-                                                            onClick={() => setEditColor(c)}
-                                                            className={cn(
-                                                                "h-7 w-7 rounded-lg border-2 transition-all",
-                                                                editColor === c ? "scale-110 shadow-lg" : "border-transparent opacity-60 hover:opacity-100"
-                                                            )}
-                                                            style={{ backgroundColor: `${c}30`, borderColor: editColor === c ? c : 'transparent' }}
-                                                        >
-                                                            <div className="h-full w-full flex items-center justify-center">
-                                                                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: c }} />
-                                                            </div>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex gap-3 pt-2">
-                                        <button
-                                            onClick={() => setEditingMember(null)}
-                                            className="flex-1 py-2.5 bg-surface/50 text-text-secondary border border-surface-highlight rounded-xl hover:text-text-primary transition-all text-sm"
-                                        >
-                                            Cancelar
-                                        </button>
-                                        <button
-                                            onClick={saveMemberEdit}
-                                            className="flex-1 py-2.5 bg-electric-cyan/10 text-electric-cyan border border-electric-cyan/30 rounded-xl hover:bg-electric-cyan hover:text-midnight transition-all text-sm font-medium"
-                                        >
-                                            Guardar
-                                        </button>
-                                    </div>
-                                </motion.div>
+                    {/* Member Edit Modal — §9.4. Era un <div> sin role="dialog",
+                        sin trampa de foco y sin Escape. */}
+                    <Modal
+                        open={editingMember !== null}
+                        onClose={() => setEditingMember(null)}
+                        size="sm"
+                        title="Editar miembro"
+                        footer={
+                            <div className="flex w-full items-center justify-end gap-3">
+                                <Button variant="ghost" onClick={() => setEditingMember(null)}>
+                                    Cancelar
+                                </Button>
+                                <Button variant="primary" onClick={saveMemberEdit}>
+                                    Guardar cambios
+                                </Button>
                             </div>
-                        )}
-                    </AnimatePresence>
+                        }
+                    >
+                        <div className="space-y-4">
+                            <TextField
+                                label="Nombre"
+                                id="member-name"
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                                placeholder="Ej: Hernesto"
+                                hint="Se guarda en este navegador: sobrevive a la recarga, pero no viaja a tus otros dispositivos."
+                            />
+
+                            <div className="space-y-1.5">
+                                <label htmlFor="member-color" className="text-micro text-content-muted uppercase font-mono">Color</label>
+                                <div className="flex items-center gap-3">
+                                    <div
+                                        className="h-10 w-10 rounded-sm border-2 relative overflow-hidden"
+                                        style={{ borderColor: editColor, backgroundColor: `${editColor}20` }}
+                                    >
+                                        <input
+                                            id="member-color"
+                                            type="color"
+                                            value={editColor}
+                                            onChange={(e) => setEditColor(e.target.value)}
+                                            className="absolute inset-0 opacity-0 cursor-pointer"
+                                        />
+                                        <div className="h-full w-full flex items-center justify-center">
+                                            <div className="h-3 w-3 rounded-full" style={{ backgroundColor: editColor }} />
+                                        </div>
+                                    </div>
+                                    {/* §9.9: el estado activo de un chip no puede ser
+                                        sólo cromático — de ahí `aria-pressed`. */}
+                                    <div className="flex gap-2" role="group" aria-label="Colores sugeridos">
+                                        {[AGENT_HEX.CEO, AGENT_HEX.CTO, AGENT_HEX.CMO, AGENT_HEX.CFO, AGENT_HEX.custom].map(c => (
+                                            <button
+                                                key={c}
+                                                type="button"
+                                                onClick={() => setEditColor(c)}
+                                                aria-pressed={editColor === c}
+                                                aria-label={`Color ${c}`}
+                                                className={cn(
+                                                    "h-9 w-9 rounded-sm border-2 transition-all",
+                                                    editColor === c ? "scale-110 shadow-e2" : "border-transparent hover:scale-105"
+                                                )}
+                                                style={{ backgroundColor: `${c}30`, borderColor: editColor === c ? c : 'transparent' }}
+                                            >
+                                                <div className="h-full w-full flex items-center justify-center">
+                                                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: c }} />
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </Modal>
                 </div>
             </div>
         </div>

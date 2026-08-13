@@ -2,35 +2,95 @@
  * Sección Perfil: edita professional_profile, communication_style,
  * financial_preferences, ui_preferences.
  */
-import { useEffect, useState } from "react";
-import { Save, User, Briefcase, MessageSquare, Wallet, Palette } from "lucide-react";
+import { cloneElement, useEffect, useState } from "react";
+import { User, Briefcase, MessageSquare, Wallet, Palette } from "lucide-react";
 import { profileService, type UserProfile } from "@/services/api";
+
+/** Las claves del perfil cuyo valor es un objeto: las únicas parcheables. */
+type SeccionDePerfil = {
+  [K in keyof UserProfile]-?: NonNullable<UserProfile[K]> extends object
+    ? (NonNullable<UserProfile[K]> extends readonly unknown[] ? never : K)
+    : never;
+}[keyof UserProfile];
+
+type ToneDeComunicacion = NonNullable<UserProfile["communication_style"]>["tone"];
+type VerbosidadDeComunicacion = NonNullable<UserProfile["communication_style"]>["verbosity"];
+type NivelDeConfirmacion = NonNullable<UserProfile["ui_preferences"]>["tool_confirmation_level"];
+import { Field as FormField } from "@/components/ui/Field";
+import { fieldControlClass } from "@/components/ui/fieldStyles";
+import { InlineError, type FalloDeSeccion } from "@/components/ui/InlineError";
+import { aplicarDensidad, leerDensidad, type Densidad } from "@/lib/densidad";
+import { UnsavedGuardDialog } from "@/components/ui/UnsavedGuardDialog";
+import { BarraDeGuardado } from "@/components/ui/BarraDeGuardado";
+import { contarCambios } from "@/lib/cambiosSinGuardar";
+import { ConmutadorDeTema } from "@/components/ui/ConmutadorDeTema";
+import { adoptarTemaDelPerfil } from "@/lib/tema";
+import { EsqueletoDeFormulario } from "@/components/ui/Esqueleto";
 
 export function ProfileSettings() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Redactado donde se produce. Antes era `String(e)` y la pantalla de carga
+  // fallida se resolvía con un `<p>Error: TypeError: Failed to fetch</p>` y
+  // nada más: sin reintentar, sin volver, sin nada.
+  const [error, setError] = useState<FalloDeSeccion | null>(null);
+  /* 5.15 · D63 — la referencia es lo último que dijo el servidor. Este
+     formulario tiene diecinueve controles repartidos en cinco secciones, y
+     salir de la pestaña era perderlos todos sin una palabra. Se compara el
+     objeto entero serializado: los cambios son anidados (`ui_preferences`,
+     `professional_profile`…) y una lista de campos sueltos se queda corta en
+     cuanto alguien añade uno. */
+  const [guardado, setGuardado] = useState<string>("");
 
-  useEffect(() => {
+  const cargar = () => {
+    setLoading(true);
     profileService
       .getProfile()
-      .then((p) => setProfile(p))
-      .catch((e) => setError(String(e)))
+      .then((p) => {
+        setProfile(p);
+        setGuardado(JSON.stringify(p));
+        setError(null);
+        // 6.11: sólo si este aparato no tiene ya su propia elección — ver la
+        // regla de precedencia en `lib/tema.ts`.
+        adoptarTemaDelPerfil(p.ui_preferences?.theme);
+      })
+      .catch(() =>
+        setError({
+          title: "No se ha podido cargar tu perfil",
+          detail:
+            "Tus datos siguen guardados en tu cuenta: esto es un fallo al traerlos, no una pérdida.",
+          onRetry: cargar,
+        }),
+      )
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    cargar();
+    // Sólo al montar: `cargar` es la salida del propio aviso, no una dependencia.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const update = <K extends keyof UserProfile>(key: K, value: UserProfile[K]) => {
     setProfile((p) => (p ? { ...p, [key]: value } : p));
   };
 
-  const updateSection = <T extends keyof UserProfile>(
+  /**
+   * Parchea una sección del perfil sin apagar el comprobador de tipos.
+   *
+   * `(p[section] as any)` valía para cualquier clave, incluidas las que no
+   * son objetos (`email`, `display_name`): `updateSection('email', …)`
+   * compilaba y dejaba una cadena convertida en objeto. `SeccionDePerfil`
+   * restringe `T` a las claves cuyo valor SÍ es un objeto.
+   */
+  const updateSection = <T extends SeccionDePerfil>(
     section: T,
     patch: Partial<NonNullable<UserProfile[T]>>
   ) => {
     setProfile((p) =>
-      p ? { ...p, [section]: { ...((p[section] as any) || {}), ...patch } } : p
+      p ? { ...p, [section]: { ...(p[section] ?? {}), ...patch } } : p
     );
   };
 
@@ -48,21 +108,44 @@ export function ProfileSettings() {
         personal_kb_enabled: profile.personal_kb_enabled,
       });
       setProfile(updated);
+      setGuardado(JSON.stringify(updated));
       setSavedAt(Date.now());
-    } catch (e) {
-      setError(String(e));
+      setError(null);
+    } catch {
+      setError({
+        title: "No se han podido guardar los cambios de tu perfil",
+        detail:
+          "Todo lo que has escrito sigue en pantalla, sin perderse. Vuelve a guardar.",
+        onRetry: () => { void handleSave(); },
+        retryLabel: "Volver a guardar",
+      });
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return <p className="text-text-secondary">Cargando perfil...</p>;
-  if (error && !profile)
-    return <p className="text-red-400">Error: {error}</p>;
+  /* 6.5 — cuántos campos difieren de lo último que dijo el servidor. Se
+     compara contra `guardado`, que es la misma referencia que ya usaba el
+     diálogo de salida de D63: una sola verdad para «qué está sin guardar». */
+  const cambiosPendientes =
+    guardado === "" || !profile ? 0 : contarCambios(JSON.parse(guardado), profile);
+
+  /** Volver a lo último guardado. Sin confirmación: es reversible guardando. */
+  const descartar = () => {
+    if (guardado === "") return;
+    setProfile(JSON.parse(guardado) as UserProfile);
+  };
+
+  if (loading) return <EsqueletoDeFormulario etiqueta="Cargando tu perfil" filas={5} />;
+  if (error && !profile) return <InlineError {...error} />;
   if (!profile) return null;
 
   return (
     <div className="space-y-6">
+      <UnsavedGuardDialog
+        sucio={cambiosPendientes > 0}
+        objeto="tus ajustes de perfil"
+      />
       <Section icon={<User className="h-5 w-5 text-electric-cyan" />} title="Identidad">
         <Field label="Nombre público">
           <input
@@ -112,7 +195,7 @@ export function ProfileSettings() {
             }
           />
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Stage">
             <select
               className={inputCls}
@@ -147,16 +230,18 @@ export function ProfileSettings() {
       </Section>
 
       <Section
-        icon={<MessageSquare className="h-5 w-5 text-emerald-400" />}
+        icon={<MessageSquare className="h-5 w-5 text-success" />}
         title="Estilo de comunicación"
       >
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Tono">
             <select
               className={inputCls}
               value={profile.communication_style?.tone || "casual"}
               onChange={(e) =>
-                updateSection("communication_style", { tone: e.target.value as any })
+                updateSection("communication_style", {
+                  tone: e.target.value as ToneDeComunicacion,
+                })
               }
             >
               <option value="casual">Casual</option>
@@ -168,7 +253,9 @@ export function ProfileSettings() {
               className={inputCls}
               value={profile.communication_style?.verbosity || "concise"}
               onChange={(e) =>
-                updateSection("communication_style", { verbosity: e.target.value as any })
+                updateSection("communication_style", {
+                  verbosity: e.target.value as VerbosidadDeComunicacion,
+                })
               }
             >
               <option value="concise">Conciso</option>
@@ -189,8 +276,8 @@ export function ProfileSettings() {
         </Field>
       </Section>
 
-      <Section icon={<Wallet className="h-5 w-5 text-amber-400" />} title="Finanzas">
-        <div className="grid grid-cols-2 gap-3">
+      <Section icon={<Wallet className="h-5 w-5 text-warning" />} title="Finanzas">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Moneda base">
             <select
               className={inputCls}
@@ -222,21 +309,15 @@ export function ProfileSettings() {
         </div>
       </Section>
 
-      <Section icon={<Palette className="h-5 w-5 text-pink-400" />} title="Interfaz">
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Tema">
-            <select
-              className={inputCls}
-              value={profile.ui_preferences?.theme || "system"}
-              onChange={(e) =>
-                updateSection("ui_preferences", { theme: e.target.value as any })
-              }
-            >
-              <option value="system">Sistema</option>
-              <option value="dark">Oscuro</option>
-              <option value="light">Claro</option>
-            </select>
-          </Field>
+      <Section icon={<Palette className="h-5 w-5 text-accent" aria-hidden="true" />} title="Interfaz">
+        {/* 6.11 · D61 — el `<select>` de tema ofrecía «Claro» y «Sistema» y
+            ninguna de las dos hacía nada: el CSS del tema claro llevaba cinco
+            fases escrito y nadie ponía el atributo. Ahora es el conmutador de
+            tres estados, se aplica al elegir y se recuerda en este aparato; el
+            campo del perfil se sigue escribiendo para que una sesión en un
+            aparato nuevo herede la última elección de la cuenta. */}
+        <ConmutadorDeTema onElegir={(t) => updateSection("ui_preferences", { theme: t })} />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Idioma">
             <select
               className={inputCls}
@@ -250,13 +331,18 @@ export function ProfileSettings() {
             </select>
           </Field>
         </div>
+        {/* 5.7 · Q11 · §4.4 — la densidad. Es del DISPOSITIVO, no de la
+            cuenta, así que no viaja en `ui_preferences` ni se guarda con el
+            botón de abajo: se aplica al elegirla y ya está guardada. */}
+        <DensidadDeLaInterfaz />
+
         <Field label="Confirmación antes de ejecutar herramientas">
           <select
             className={inputCls}
             value={profile.ui_preferences?.tool_confirmation_level || "destructive_only"}
             onChange={(e) =>
               updateSection("ui_preferences", {
-                tool_confirmation_level: e.target.value as any,
+                tool_confirmation_level: e.target.value as NivelDeConfirmacion,
               })
             }
           >
@@ -267,36 +353,125 @@ export function ProfileSettings() {
         </Field>
       </Section>
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && <InlineError {...error} />}
 
-      <div className="flex items-center gap-3">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="flex items-center gap-2 px-4 py-2 bg-electric-cyan/10 text-electric-cyan rounded-xl hover:bg-electric-cyan hover:text-midnight transition-all font-medium disabled:opacity-50"
-        >
-          <Save className="h-4 w-4" />
-          {saving ? "Guardando..." : "Guardar cambios"}
-        </button>
-        {savedAt && !saving && (
-          <span className="text-xs text-emerald-400">Guardado ✓</span>
-        )}
-      </div>
+      {/* 6.5 · La barra va adherida al canto inferior: este formulario tiene
+          cinco secciones y diecinueve controles, y el botón de guardar vivía al
+          final de todas ellas. Quien cambiaba la moneda base tenía que bajar
+          hasta el fondo, y si se le olvidaba, el diálogo de salida le decía
+          «hay cambios» sin decirle cuántos. */}
+      <BarraDeGuardado
+        cambios={cambiosPendientes}
+        guardando={saving}
+        onGuardar={() => { void handleSave(); }}
+        onDescartar={descartar}
+        guardadoEn={savedAt}
+        objeto="tu perfil"
+      />
+
+      {/* §12.6: «el resultado de guardar» se anuncia. El check verde de al lado
+          no dice nada a un lector de pantalla, y el error tampoco: era un <p>
+          normal que aparece y se queda mudo. La región vive SIEMPRE en el DOM,
+          porque una que se monta con su contenido no la anuncian varios
+          lectores. */}
+      <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="live-save">
+        {saving
+          ? "Guardando los cambios del perfil…"
+          : error
+            ? `${error.title}. ${error.detail}`
+            : savedAt
+              ? "Cambios del perfil guardados."
+              : ""}
+      </p>
     </div>
   );
 }
 
-const inputCls =
-  "w-full bg-midnight/50 border border-surface-highlight rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-electric-cyan/50 transition-all";
+/**
+ * Conmutador de densidad (Q11 · §4.4).
+ *
+ * Dos radios de verdad dentro de un `<fieldset>` y no dos botones con
+ * `aria-pressed`: son opciones excluyentes de un mismo ajuste, y los radios
+ * traen de serie el recorrido con flechas y el anuncio «2 de 2» que un par de
+ * botones no da. La etiqueta del grupo es el `<legend>`.
+ *
+ * No hay botón de guardar: se aplica al elegir. Una preferencia visual que hay
+ * que confirmar aparte se queda sin confirmar la mitad de las veces, y el
+ * usuario cree que no funciona.
+ */
+const OPCIONES_DE_DENSIDAD: { valor: Densidad; etiqueta: string; detalle: string }[] = [
+  { valor: 'comfortable', etiqueta: 'Cómoda', detalle: 'Filas de 44px. Es la de partida.' },
+  { valor: 'compact', etiqueta: 'Compacta', detalle: 'Filas de 34px: más historial de un vistazo.' },
+];
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function DensidadDeLaInterfaz() {
+  const [densidad, setDensidad] = useState<Densidad>(() => leerDensidad());
+
+  const elegir = (valor: Densidad) => {
+    setDensidad(valor);
+    aplicarDensidad(valor);
+  };
+
   return (
-    <div>
-      <label className="text-[10px] uppercase font-mono text-text-secondary ml-1 block mb-1">
-        {label}
-      </label>
-      {children}
-    </div>
+    <fieldset className="space-y-2">
+      <legend className="text-xs font-medium text-content-muted">Densidad de la interfaz</legend>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {OPCIONES_DE_DENSIDAD.map((opcion) => (
+          <label
+            key={opcion.valor}
+            className={`grid cursor-pointer grid-cols-[auto_1fr] items-start gap-x-2 gap-y-0.5 rounded-sm border p-3 transition-colors duration-(--duration-tap) ${
+              densidad === opcion.valor
+                ? 'border-brass-600 bg-accent/12'
+                : 'border-stroke-hairline hover:border-stroke-control'
+            }`}
+          >
+            {/* El texto va DIRECTO bajo la etiqueta, sin envoltorio: anidarlo un
+                nivel más deja al `<label>` sin texto accesible para la regla de
+                jsx-a11y, y con ella para varios lectores. La composición la
+                hace la rejilla, no un `<span>` de más. */}
+            <input
+              type="radio"
+              name="densidad"
+              value={opcion.valor}
+              checked={densidad === opcion.valor}
+              onChange={() => elegir(opcion.valor)}
+              className="row-span-2 mt-0.5 accent-brass-500"
+            />
+            <span className="min-w-0 text-sm text-content-strong">{opcion.etiqueta}</span>
+            <span className="col-start-2 min-w-0 text-xs text-content-muted">{opcion.detalle}</span>
+          </label>
+        ))}
+      </div>
+      {/* §12.11/§12.16: en táctil la fila nunca baja de 44px, lo decida quien lo
+          decida. Se dice, porque si no el conmutador parece roto en el móvil. */}
+      <p className="text-xs text-content-quiet">
+        En pantallas táctiles las filas se mantienen a 44px, para que el dedo siga acertando.
+      </p>
+    </fieldset>
+  );
+}
+
+/**
+ * §9.2: los 9 `<select>` de esta página heredaban el desplegable del sistema
+ * operativo (a menudo blanco sobre blanco). El `[&>option]` lo arregla.
+ */
+const inputCls = fieldControlClass({
+  className: "[&>option]:bg-surface-1 [&>option]:text-content",
+});
+
+/**
+ * Envoltorio local, ahora sobre el `<Field>` canónico: clona el control para
+ * inyectarle el `id` y el `aria-describedby` que el `<label htmlFor>` necesita.
+ *
+ * Se conserva el envoltorio en vez de reescribir sus 19 sitios de uso porque el
+ * problema no era la forma, era que la etiqueta no apuntaba a nada. Con esto,
+ * los 19 controles de la página quedan etiquetados de golpe.
+ */
+function Field({ label, children }: { label: string; children: React.ReactElement }) {
+  return (
+    <FormField label={label}>
+      {(control) => cloneElement(children, control)}
+    </FormField>
   );
 }
 
@@ -312,12 +487,12 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="p-5 rounded-2xl bg-surface/30 border border-surface-highlight space-y-3">
-      <div className="flex items-center gap-3 text-text-primary font-semibold">
+    <section className="p-5 rounded-md bg-surface/30 border border-surface-highlight space-y-3">
+      <div className="flex items-center gap-3 text-content-strong font-semibold">
         {icon}
         <h3>{title}</h3>
       </div>
-      {hint && <p className="text-xs text-text-secondary">{hint}</p>}
+      {hint && <p className="text-xs text-content-muted">{hint}</p>}
       <div className="space-y-3">{children}</div>
     </section>
   );
