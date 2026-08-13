@@ -336,7 +336,14 @@ export function ProfileSettings() {
             botón de abajo: se aplica al elegirla y ya está guardada. */}
         <DensidadDeLaInterfaz />
 
-        <Field label="Confirmación antes de ejecutar herramientas">
+        {/* TC-004 — el ajuste no promete más de lo que cumple. El gate sólo lo
+            consultan las herramientas que salen de SPHERE; consultar el
+            calendario o listar tareas no pregunta con ningún nivel, así que un
+            «siempre preguntar» a secas describía un producto que no existe. */}
+        <Field
+          label="Confirmación antes de acciones con impacto externo"
+          hint="Se aplica a las herramientas que actúan fuera de SPHERE: calendario, WhatsApp, redes sociales, GitHub y Slack. Consultar información nunca pide confirmación."
+        >
           <select
             className={inputCls}
             value={profile.ui_preferences?.tool_confirmation_level || "destructive_only"}
@@ -346,8 +353,8 @@ export function ProfileSettings() {
               })
             }
           >
-            <option value="always">Siempre preguntar</option>
-            <option value="destructive_only">Solo acciones destructivas (recomendado)</option>
+            <option value="always">Preguntar en todas las de impacto externo</option>
+            <option value="destructive_only">Solo las destructivas (recomendado)</option>
             <option value="never">No preguntar</option>
           </select>
         </Field>
@@ -467,9 +474,17 @@ const inputCls = fieldControlClass({
  * problema no era la forma, era que la etiqueta no apuntaba a nada. Con esto,
  * los 19 controles de la página quedan etiquetados de golpe.
  */
-function Field({ label, children }: { label: string; children: React.ReactElement }) {
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactElement;
+}) {
   return (
-    <FormField label={label}>
+    <FormField label={label} hint={hint}>
       {(control) => cloneElement(children, control)}
     </FormField>
   );

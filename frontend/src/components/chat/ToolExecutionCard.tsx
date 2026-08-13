@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Wrench, ChevronDown, ChevronUp, Loader2, CheckCircle2, XCircle, RotateCcw, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChatStore } from '@/store/useChatStore';
+import { TOOL_LABELS } from './toolLabels';
 
 interface ToolExecutionCardProps {
     toolName: string;
@@ -13,34 +14,6 @@ interface ToolExecutionCardProps {
     resumen?: string;
 }
 
-const TOOL_LABELS: Record<string, string> = {
-    // Shared
-    calendar_list_events: 'Consultando calendario',
-    calendar_create_event: 'Creando evento',
-    calendar_update_event: 'Actualizando evento',
-    calendar_delete_event: 'Eliminando evento',
-    calendar_check_availability: 'Verificando disponibilidad',
-    whatsapp_send_message: 'Enviando WhatsApp',
-    whatsapp_send_notification: 'Enviando notificación',
-    whatsapp_read_messages: 'Leyendo mensajes',
-    // CEO
-    delegate_task: 'Delegando tarea',
-    check_task_status: 'Consultando estado de tarea',
-    list_active_tasks: 'Listando tareas activas',
-    // CFO
-    get_financial_news: 'Buscando noticias financieras',
-    get_stock_data: 'Consultando datos de bolsa',
-    get_market_analysis: 'Analizando mercado',
-    // CMO
-    post_to_linkedin: 'Publicando en LinkedIn',
-    post_to_instagram: 'Publicando en Instagram',
-    get_social_analytics: 'Consultando analytics',
-    schedule_post: 'Programando publicación',
-    // CTO
-    create_jules_task: 'Enviando tarea a Jules',
-    check_jules_status: 'Verificando estado de Jules',
-    review_jules_output: 'Revisando código de Jules',
-};
 
 /**
  * Cabecera de la tarjeta. Cuando hay resultado que desplegar es un <button> con

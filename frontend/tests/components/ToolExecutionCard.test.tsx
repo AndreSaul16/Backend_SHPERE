@@ -81,4 +81,20 @@ describe('ToolExecutionCard', () => {
         expect(screen.getByText(/Eliminando evento/)).toBeInTheDocument();
         expect(screen.queryByText(/calendar_delete_event/)).not.toBeInTheDocument();
     });
+
+    it('una herramienta OAuth que falla se nombra en cristiano, no por su identificador', () => {
+        // TRI-004: las 7 de GitHub/Slack/Notion no tenían etiqueta, así que la
+        // tarjeta caía al identificador crudo y el usuario leía
+        // «slack_post_message — falló».
+        render(
+            <ToolExecutionCard
+                toolName="slack_post_message"
+                status="failed"
+                error="Slack devolvió 401"
+            />,
+        );
+
+        expect(screen.queryByText(/slack_post_message/)).toBeNull();
+        expect(screen.getByText('Publicando en Slack — falló')).toBeInTheDocument();
+    });
 });

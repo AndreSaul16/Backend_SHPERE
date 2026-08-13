@@ -35,6 +35,30 @@ RETIRADAS = {
 # Un nombre de herramienta anunciado en un prompt: viñeta, snake_case, dos puntos.
 NOMBRE_EN_PROMPT = re.compile(r"^- ([a-z][a-z0-9_]{3,}):", re.MULTILINE)
 
+# El puente entre los dos lenguajes: un pytest que lee el fichero de etiquetas
+# del frontend. El coste es un regex acoplado al formato de un fichero de un
+# solo propósito; a cambio no hay paso de sincronización que nadie pueda
+# olvidar, que es exactamente cómo 7 herramientas OAuth se quedaron sin nombre.
+RUTA_ETIQUETAS = (
+    Path(__file__).resolve().parents[2]
+    / "frontend" / "src" / "components" / "chat" / "toolLabels.ts"
+)
+CLAVE_DE_ETIQUETA = re.compile(r"^\s*['\"]?(\w+)['\"]?\s*:", re.MULTILINE)
+
+
+def _etiquetas() -> set[str]:
+    """Las claves de `TOOL_LABELS`, leídas del fichero real.
+
+    Si el fichero no existe o no se extrae ni una clave, esto FALLA. Nunca
+    `pytest.skip`: un skip sería justo el «test que no puede fallar» que
+    TCAT-003 prohíbe — la comprobación desaparecería sin que nadie se entere.
+    """
+    if not RUTA_ETIQUETAS.exists():
+        raise FileNotFoundError("frontend/src/components/chat/toolLabels.ts")
+    claves = set(CLAVE_DE_ETIQUETA.findall(RUTA_ETIQUETAS.read_text(encoding="utf-8")))
+    assert claves, "toolLabels.ts: 0 claves extraídas"
+    return claves
+
 
 @pytest.fixture(scope="module")
 def catalogo() -> set[str]:
@@ -126,3 +150,18 @@ def test_las_herramientas_de_settings_existen_en_el_catalogo(catalogo):
 
     fantasmas = sorted(prometidas - catalogo)
     assert fantasmas == [], f"Settings ofrece herramientas no registradas: {fantasmas}"
+
+
+# ------------------ TCAT-003: ninguna herramienta ofrecida sin etiqueta
+
+
+def test_tcat_003_paridad_entre_catalogo_y_etiquetas(catalogo):
+    # Los dos sentidos en el mismo test, a propósito: si el fichero de
+    # etiquetas desaparece, el resultado tiene que ser exactamente `1 failed`.
+    etiquetas = _etiquetas()
+
+    sin_etiqueta = sorted(catalogo - etiquetas)
+    assert sin_etiqueta == [], f"en el catálogo pero sin etiqueta: {sin_etiqueta}"
+
+    sobran = sorted(etiquetas - catalogo)
+    assert sobran == [], f"etiquetadas pero no registradas: {sobran}"
