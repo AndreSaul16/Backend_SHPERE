@@ -52,7 +52,7 @@ def _missing_user_error(tool_name: str) -> str:
     """Error cuando la tool se ejecuta sin user_id en contexto."""
     return json.dumps(
         {
-            "error": "missing_user_context",
+            "error": "user_context_missing",
             "tool": tool_name,
             "hint": "Esta herramienta requiere un usuario autenticado.",
         },

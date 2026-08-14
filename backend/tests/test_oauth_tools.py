@@ -72,9 +72,21 @@ async def test_sin_token_devuelve_not_connected(monkeypatch):
 
 
 async def test_sin_usuario_devuelve_missing_context(monkeypatch):
+    """TER-001: el código es `user_context_missing`, el que exige ATI-004.
+
+    Esta aserción esperaba antes el deletreo invertido de las dos palabras, que
+    convivía con éste para el mismo concepto. Es un renombrado de contrato INTERNO,
+    no un cambio de conducta: ningún cliente distingue códigos hoy y el frontend no
+    contenía ninguno de los dos deletreos. Se unifica porque TER-003 escribe la lista
+    de códigos NO reintentables, y una lista que tiene que nombrar dos deletreos del
+    mismo concepto se pudre en el primer olvido.
+
+    (El deletreo antiguo no se escribe aquí a propósito: TER-001 exige que no exista
+    en `backend/`, y un grep no distingue un emisor de una nota al pie.)
+    """
     _current_user_id.set(None)
     result = json.loads(await oauth_tools._slack_list_channels())
-    assert result["error"] == "missing_user_context"
+    assert result["error"] == "user_context_missing"
 
 
 # --- Confirmación destructiva ---

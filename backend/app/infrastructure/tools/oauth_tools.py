@@ -31,7 +31,7 @@ from app.infrastructure.tools.registry import register_role_tool, register_share
 def _missing_user_error(tool_name: str) -> str:
     return json.dumps(
         {
-            "error": "missing_user_context",
+            "error": "user_context_missing",
             "tool": tool_name,
             "hint": "Esta herramienta requiere un usuario autenticado.",
         },
