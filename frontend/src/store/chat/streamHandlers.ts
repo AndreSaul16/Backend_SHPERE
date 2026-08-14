@@ -83,6 +83,8 @@ export function createStreamHandlers(ctx: StreamContext): StreamCallbacks {
                 type: TIPOS_DE_ARTEFACTO[data.artifact_type] || 'code',
                 language: data.language || undefined,
                 content: '',
+                // §8.8: el acta se abre con el renglón en blanco.
+                chunks: 0,
                 agentId: ctx.selectedAgentId || 'system',
                 createdAt: new Date(),
                 // El veredicto viaja CON el artefacto, no por un canal aparte:
@@ -105,7 +107,14 @@ export function createStreamHandlers(ctx: StreamContext): StreamCallbacks {
 
             set((state) => ({
                 artifacts: state.artifacts.map(a =>
-                    a.id === artifactId ? { ...a, content: a.content + content } : a
+                    a.id === artifactId
+                        // §8.8: se cuentan los trozos, no sólo se pegan. La
+                        // Pluma del Acta avanza con ESTE número y con nada
+                        // más; sin él, lo único que quedaría para dibujar
+                        // «se está escribiendo» sería un reloj, que es
+                        // justamente lo que §8.8 prohíbe.
+                        ? { ...a, content: a.content + content, chunks: (a.chunks ?? 0) + 1 }
+                        : a
                 )
             }));
         },

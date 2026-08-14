@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useChatStore } from '@/store/useChatStore';
 import { ActaSeal } from './ActaSeal';
+import { PlumaDelActa } from './PlumaDelActa';
 import { Pista } from '@/components/ui/Pista';
 import { useFirstTimeHint } from '@/hooks/useFirstTimeHint';
 
@@ -39,6 +40,17 @@ export function ActaHeader({ actaId, date }: ActaHeaderProps) {
     const currentSessionId = useChatStore((s) => s.currentSessionId);
     const messagesBySession = useChatStore((s) => s.messagesBySession);
     const streamingSessionIds = useChatStore((s) => s.streamingSessionIds);
+
+    /* §8.8 — los trozos que ha traído ESTE artefacto. Selector estrecho que
+       devuelve un número: lo que cambia con cada trozo es un entero, no un
+       objeto, así que la cabecera sólo se repinta cuando de verdad ha entrado
+       una pluma más de tinta. */
+    const chunks = useChatStore((s) => s.artifacts.find((a) => a.id === actaId)?.chunks ?? 0);
+    /* Y si sigue siendo el artefacto abierto de la sesión, es que se está
+       escribiendo ahora mismo. */
+    const escribiendose = useChatStore(
+        (s) => !!currentSessionId && s.streamingArtifactBySession[currentSessionId] === actaId,
+    );
 
     const recuento = useMemo(() => {
         const mensajes = currentSessionId ? messagesBySession[currentSessionId] ?? [] : [];
@@ -84,6 +96,12 @@ export function ActaHeader({ actaId, date }: ActaHeaderProps) {
                 <p className="text-micro font-sans uppercase text-content-quiet">
                     Acta de la junta
                 </p>
+                {/* §8.8 — el trazo de pluma bajo el título. Avanza con los
+                    trozos que llegan de verdad y, al cerrarse el artefacto, se
+                    completa en una regla llena. Ése es el encadenado que la
+                    sección pide —debate → escritura → constancia—: la regla se
+                    llena y el sello de la derecha cae sobre la misma cabecera. */}
+                <PlumaDelActa chunks={chunks} completa={!escribiendose} />
                 <p className="text-sm font-sans tabular-nums text-content-muted">
                     <time dateTime={date.toISOString().slice(0, 10)}>
                         {FECHA_LARGA.format(date)}

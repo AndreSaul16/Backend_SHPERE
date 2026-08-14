@@ -2,6 +2,7 @@ import { FileCode, Download, ExternalLink, FileText, Table, GitBranch, Gavel } f
 import { cn } from '@/lib/utils';
 import { useChatStore } from '@/store/useChatStore';
 import { getDownloadExtension, type ArtifactType } from '@/types/artifact';
+import { PlumaDelActa } from '@/components/artifacts/PlumaDelActa';
 
 interface ArtifactCardProps {
     content: string;
@@ -25,6 +26,13 @@ export function ArtifactCard({ content, language, artifactType, title: propsTitl
        dentro del transcript, y por token. */
     const artifacts = useChatStore((s) => s.artifacts);
     const setActiveArtifact = useChatStore((s) => s.setActiveArtifact);
+    /* §8.8 — ¿este documento se está escribiendo AHORA?
+       Se pregunta por el canal abierto de la sesión y no por un `isStreaming`
+       global: en el hilo puede haber tres artefactos de turnos anteriores y
+       ninguno de ellos se está escribiendo, aunque la sesión sí esté en curso. */
+    const escribiendose = useChatStore(
+        (s) => !!artifactId && Object.values(s.streamingArtifactBySession).includes(artifactId),
+    );
 
     // Find artifact by ID first (streaming case), then fallback to content match
     const existingArtifact = artifactId
@@ -102,6 +110,19 @@ export function ArtifactCard({ content, language, artifactType, title: propsTitl
                             <p className="text-xs font-mono text-content-strong truncate">
                                 {title}
                             </p>
+                            {/* §8.8 — el trazo de pluma bajo el título, y sólo
+                                mientras se está escribiendo de verdad. Cerrado
+                                el documento la línea desaparece de la tarjeta:
+                                aquí no cae ningún sello, el sello cae en la
+                                cabecera del acta, y una regla llena para
+                                siempre en el hilo sería un adorno. */}
+                            {escribiendose && (
+                                <PlumaDelActa
+                                    chunks={existingArtifact?.chunks ?? 0}
+                                    completa={false}
+                                    className="my-1"
+                                />
+                            )}
                             <div className="flex items-center gap-2">
                                 <p className="text-micro text-content-muted uppercase opacity-60">
                                     {language || artifactType || 'document'}

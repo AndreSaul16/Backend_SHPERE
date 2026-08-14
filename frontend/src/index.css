@@ -809,6 +809,35 @@
     animation: espera-transcript 1200ms var(--ease-settle) infinite;
   }
 
+  /* ── §8.8 La Pluma del Acta ───────────────────────────────────────────────
+     Una línea de 24×2px bajo el título cuyo trazo avanza con cada trozo de
+     artefacto que llega de verdad. Lo que se anima es un `scaleX` —compositor,
+     nada más— y la duración es la del gesto, porque cada trozo es un hecho
+     puntual y no un recorrido. Si dejan de llegar trozos la línea se para donde
+     esté: eso no es un fallo, es la verdad de lo que está pasando. */
+  .pluma-del-acta{
+    display: block;
+    inline-size: 24px;
+    block-size: 2px;
+    overflow: hidden;
+    border-radius: 9999px;
+    background: var(--stroke-hairline);
+  }
+  .pluma-trazo{
+    display: block;
+    block-size: 100%;
+    inline-size: 100%;
+    transform-origin: left center;
+    background: var(--accent);
+    transition: transform var(--duration-tap) var(--ease-mech);
+  }
+  /* §8.8 con movimiento reducido: «la línea salta de 0 a 1 sin interpolar».
+     La regla global de §7.6 ya deja la transición en 1ms; se apaga del todo
+     para que el salto sea salto y no un microrrecorrido. */
+  @media (prefers-reduced-motion: reduce){
+    .pluma-trazo{ transition: none; }
+  }
+
   /* ── §8.9 El Latido de la Actuación ───────────────────────────────────────
      Un anillo concéntrico que sale del glifo cuando una herramienta REAL
      arranca. Una sola vez: es un latido, no un pulso perpetuo. Los fotogramas

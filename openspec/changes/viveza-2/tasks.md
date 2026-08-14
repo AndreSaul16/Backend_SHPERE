@@ -19,9 +19,9 @@ Entrega: un solo tramo (lo fija el prompt del orquestador: 3-4 commits lógicos,
 
 ## Fase 3 · §8.8 Pluma del acta
 
-- [ ] 3.1 Contador de chunks reales en el almacén de artefactos
-- [ ] 3.2 RED/GREEN la regla avanza con chunks inyectados y NO con el paso del tiempo
-- [ ] 3.3 Al cerrar el artefacto la regla se completa y da paso al sello
+- [x] 3.1 Contador de chunks reales en el almacén de artefactos
+- [x] 3.2 RED/GREEN la regla avanza con chunks inyectados y NO con el paso del tiempo
+- [x] 3.3 Al cerrar el artefacto la regla se completa y da paso al sello
 
 ## Fase 4 · §8.7 Telégrafo de actuaciones
 

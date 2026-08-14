@@ -35,6 +35,17 @@ export interface Artifact {
     truncated?: boolean;
     truncatedReason?: TruncatedReason;
     contentStatus?: ContentStatus;
+
+    /**
+     * Cuántos trozos ha traído el stream para este artefacto.
+     *
+     * Es el motor de la Pluma del Acta (§8.8) y no se puede sustituir por la
+     * longitud del contenido: la pluma llena RENGLONES —una unidad de «se está
+     * escribiendo»— y no un porcentaje, porque nadie sabe cuánto falta. Un
+     * artefacto rescatado del historial no lo tiene, y es correcto: no se
+     * escribió delante de nadie, así que no hay nada que dibujar.
+     */
+    chunks?: number;
 }
 
 // Language extensions for download

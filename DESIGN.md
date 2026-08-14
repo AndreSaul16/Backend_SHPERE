@@ -706,6 +706,13 @@ Doce. Ninguno es un degradado, glass, partículas ni nodos flotando. Cada uno ti
 ### 8.8 La Pluma del Acta (el libro se escribe solo)
 **Qué es.** Mientras el acta se redacta (chunks de artefacto llegando), su tarjeta y su pestaña muestran que *alguien está escribiendo las actas*: un trazo de pluma — una línea de 24×2px bajo el título — que **avanza con cada chunk recibido** y se reinicia, como una línea manuscrita que llena renglones. Al cerrarse el artefacto, el trazo se completa en una regla llena y entonces cae el sello (§8.3). Encadena causa→efecto: debate → escritura → constancia.
 **Implementación.** Un `<span>` con `transform: scaleX(p)` donde `p` avanza en cada `onArtifactChunk` (`--duration-tap`, `--ease-mech`) y se reinicia al llegar a 1. Sin timers: si no llegan chunks, la pluma se detiene — que es la verdad.
+
+> **Enmienda (Viveza-2), al implementarlo.** Lo que faltaba por decir:
+>
+> 1. **Los trozos hay que CONTARLOS, y no los contaba nadie.** `onArtifactChunk` pegaba el texto al artefacto y ya está. El artefacto gana un campo `chunks` que ese mismo manejador incrementa; es el único motor de la pluma. No vale derivarlo de la longitud del contenido: la pluma llena **renglones** —una unidad de «se está escribiendo»— y no un porcentaje, porque el backend nunca dice cuánto falta. Una barra al 60% afirmaría «queda el 40%», que sería mentira; un renglón que se llena y vuelve a empezar afirma «esto se está escribiendo», que es verdad. Doce trozos por renglón.
+> 2. **Un artefacto del historial no tiene pluma, y está bien.** `chunks` es opcional: lo que se rescata de una sesión vieja no se escribió delante de nadie, así que no hay nada que dibujar.
+> 3. **Dónde está puesta.** En la cabecera del acta (`ActaHeader`), que es donde la secuencia se cierra: la regla se completa al cerrarse el artefacto y el sello (§8.3) cae sobre esa misma cabecera — debate → escritura → constancia, encadenado y a la vista. Y en la tarjeta del documento dentro del hilo (`ArtifactCard`), pero **sólo mientras se escribe**: cerrado el documento la línea se va, porque en el hilo no cae ningún sello y una regla llena para siempre sería un adorno. La pestaña del panel de artefactos queda pendiente.
+> 4. **La aritmética vive aparte del componente** (`artifacts/pluma.ts`), y no sólo por la regla de `react-refresh`: es la única pieza con cuenta del efecto y probarla sin DOM es lo que mantiene defendida la propiedad que de verdad se contrata — que el avance es función del número de trozos recibidos y **de nada más**.
 **Coste.** Un transform por chunk. Autoterminante. 0 en reposo.
 **Móvil.** Idéntico (es una línea de 24px).
 **Reduced-motion.** La línea salta de 0 a 1 sin interpolar; el estado «Redactando…» textual ya existe en la tarjeta.
