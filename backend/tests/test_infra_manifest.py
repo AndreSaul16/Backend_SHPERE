@@ -257,6 +257,95 @@ def test_sign_callback_firma_nonce():
     assert codigo.index("canon(payload)") > fin
 
 
+# ── NWD-004: del estado de la instancia responde un script ───────────
+
+SALUD = ROOT / "scripts" / "check-n8n-health.sh"
+WORKFLOWS = ROOT / "backend" / "infrastructure" / "n8n-workflows"
+
+
+def _run_salud(*args: str, entorno: dict | None = None) -> subprocess.CompletedProcess:
+    """Ejecuta el script sin configuración de n8n heredada del entorno."""
+    base = dict(os.environ)
+    base.pop(_env_name("backend", "BASE_URL"), None)
+    base.pop(_env_name("backend", "API_KEY"), None)
+    base.update(entorno or {})
+    return subprocess.run(
+        ["bash", str(SALUD), *args],
+        capture_output=True,
+        text=True,
+        cwd=str(ROOT),
+        env=base,
+    )
+
+
+def _nombres(salida: str) -> set[str]:
+    return {linea.strip() for linea in salida.splitlines() if linea.strip()}
+
+
+def test_health_sin_config_no_concluye():
+    """Ausencia de configuración NO es «la instancia no existe»."""
+    r = _run_salud()
+    assert r.returncode == 4, f"rc={r.returncode}\n{r.stdout}{r.stderr}"
+
+    salida = r.stdout + r.stderr
+    afirmaciones = [frase for frase in _values("doc_forbidden") if frase in salida]
+    assert afirmaciones == [], f"la salida afirma el estado de la instancia: {afirmaciones}"
+
+
+def test_conjunto_esperado_coincide():
+    """Dos parsers independientes sobre los mismos ficheros: si el del script se
+    rompe —o alguien escribe el número a mano—, divergen."""
+    import json
+
+    esperado = {
+        json.loads(f.read_text(encoding="utf-8"))["name"] for f in WORKFLOWS.glob("*.json")
+    }
+    assert len(esperado) >= 2, "el directorio de workflows no tiene ficheros que comparar"
+
+    r = _run_salud("--list-expected")
+    assert r.returncode == 0, f"rc={r.returncode}\n{r.stdout}{r.stderr}"
+    assert _nombres(r.stdout) == esperado
+
+
+def test_conjunto_sigue_al_directorio(tmp_path):
+    """Mata el recuento escrito a mano: con otro directorio, otro conjunto."""
+    import json
+
+    (tmp_path / "uno.json").write_text(
+        json.dumps({"name": "Inventado Uno", "nodes": []}), encoding="utf-8"
+    )
+    (tmp_path / "dos.json").write_text(
+        json.dumps({"name": "Inventado Dos", "nodes": []}), encoding="utf-8"
+    )
+
+    r = _run_salud("--list-expected", entorno={"N8N_WORKFLOWS_DIR": str(tmp_path)})
+
+    assert r.returncode == 0, f"rc={r.returncode}\n{r.stdout}{r.stderr}"
+    assert _nombres(r.stdout) == {"Inventado Uno", "Inventado Dos"}
+
+
+def test_health_no_filtra_la_api_key():
+    """Ni entera ni por fragmentos: un log con media clave sigue siendo una fuga."""
+    from uuid import uuid4
+
+    centinela = f"centinela{uuid4().hex}{uuid4().hex}"
+    r = _run_salud(
+        entorno={
+            _env_name("backend", "BASE_URL"): "http://127.0.0.1:1",
+            _env_name("backend", "API_KEY"): centinela,
+        }
+    )
+
+    assert r.returncode == 3, f"rc={r.returncode}\n{r.stdout}{r.stderr}"
+
+    salida = r.stdout + r.stderr
+    fragmentos = [
+        centinela[i : i + 8] for i in range(len(centinela) - 7) if centinela[i : i + 8] in salida
+    ]
+    assert fragmentos == [], f"el centinela aparece en la salida del script: {fragmentos}"
+    assert "set -x" not in SALUD.read_text(encoding="utf-8")
+
+
 # ── IN-003: el resultado del guard es asertable ───────────────────────
 
 
