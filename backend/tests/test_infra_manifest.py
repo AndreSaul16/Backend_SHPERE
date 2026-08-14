@@ -153,6 +153,61 @@ def test_manifiesto_es_el_unico_origen():
     assert hits == [], f"literales del manifiesto escritos a mano: {hits}"
 
 
+# ── IN-004: el entorno local arranca con HMAC ────────────────────────
+
+
+def _compose() -> dict:
+    import yaml
+
+    ruta = ROOT / "backend" / "docker-compose.yaml"
+    return yaml.safe_load(ruta.read_text(encoding="utf-8"))
+
+
+def _entorno(servicio: str) -> list[str]:
+    """Lista `environment` del servicio en su forma literal `NOMBRE=expresión`."""
+    servicios = _compose()["services"]
+    assert servicio in servicios, f"servicio ausente en el compose: {sorted(servicios)}"
+    declarado = servicios[servicio].get("environment") or []
+    if isinstance(declarado, dict):
+        return [f"{k}={v}" for k, v in declarado.items()]
+    return [str(e) for e in declarado]
+
+
+def _expresion(servicio: str, nombre: str) -> str | None:
+    for entrada in _entorno(servicio):
+        clave, _, valor = entrada.partition("=")
+        if clave == nombre:
+            return valor
+    return None
+
+
+def test_compose_declara_lo_obligatorio():
+    """Sin estas tres, los 18 workflows fallan en su primer nodo en local."""
+    entorno = _entorno("n8n")
+    faltan = []
+    for requerida in _values("compose_required", "n8n"):
+        nombre, _, valor_exigido = requerida.partition("=")
+        if valor_exigido:
+            if requerida not in entorno:
+                faltan.append(requerida)
+        elif not any(e.split("=", 1)[0] == nombre for e in entorno):
+            faltan.append(requerida)
+    assert faltan == [], f"faltan en el servicio n8n: {faltan}"
+
+
+def test_secreto_compartido_en_compose():
+    """La firma se verifica en los dos extremos: si los valores no resuelven al
+    mismo, el nodo Verify Signature rechaza todo lo que el backend envía."""
+    nombre = _env_name("backend", "WEBHOOK_SECRET")
+    en_backend = _expresion("backend", nombre)
+    assert en_backend is not None, f"el servicio backend no declara {nombre}"
+    en_n8n = _expresion("n8n", nombre)
+    assert en_n8n is not None, f"el servicio n8n no declara {nombre}"
+    assert en_n8n == en_backend, (
+        f"expresiones distintas: n8n={en_n8n!r} backend={en_backend!r}"
+    )
+
+
 # ── IN-003: el resultado del guard es asertable ───────────────────────
 
 

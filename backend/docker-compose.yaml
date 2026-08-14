@@ -51,6 +51,13 @@ services:
       - N8N_PORT=5678
       - N8N_PROTOCOL=http
       - WEBHOOK_URL=http://localhost:5678/
+      # Las tres sin las cuales el nodo `Verify Signature` lanza y los 18
+      # workflows fallan en su primer nodo (ver scripts/infra-manifest.conf).
+      # El secreto es el MISMO que recibe el backend: la firma se verifica en
+      # los dos extremos. Valor de desarrollo, nunca un secreto real.
+      - N8N_WEBHOOK_SECRET=${N8N_WEBHOOK_SECRET:-dev-local-secret}
+      - NODE_FUNCTION_ALLOW_BUILTIN=crypto
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
     volumes:
       - n8n_data:/home/node/.n8n
     healthcheck:
@@ -74,6 +81,9 @@ services:
       - MONGODB_URL=mongodb://sphere:sphere_password@mongodb:27017/sphere_db?authSource=admin
       - REDIS_URL=redis://redis:6379
       - N8N_BASE_URL=http://n8n:5678
+      # Misma expresión que el servicio n8n: si divergen, cada extremo firma con
+      # una clave distinta y toda llamada se rechaza por firma inválida.
+      - N8N_WEBHOOK_SECRET=${N8N_WEBHOOK_SECRET:-dev-local-secret}
       - ENVIRONMENT=development
     depends_on:
       mongodb:
