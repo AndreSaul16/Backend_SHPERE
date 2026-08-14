@@ -127,7 +127,12 @@ class TestEnsureWallet:
 
     @pytest.mark.asyncio
     async def test_ensure_wallet_with_none_wallet_reinitializes(self):
-        """CS-001: wallet=None → debe re-inicializarse con 30 créditos."""
+        """CS-001: wallet=None → debe re-inicializarse con 30 créditos.
+
+        Sobre un null se escribe el subdocumento `wallet` entero, no rutas con
+        punto: Mongo rechaza crear subcampos dentro de un null (WriteError code
+        28). El contrato observable no cambia — cambia la forma de la escritura.
+        """
         from app.core.auth import _ensure_wallet
 
         user_doc = {
@@ -146,7 +151,9 @@ class TestEnsureWallet:
         mock_collection.update_one.assert_called_once()
         call_args = mock_collection.update_one.call_args
         update_operation = call_args[0][1]
-        assert update_operation["$set"]["wallet.pro_messages_balance"] == 30
+        assert update_operation["$set"]["wallet"]["pro_messages_balance"] == 30
+        # Ninguna ruta con punto: eso es justo lo que Mongo rechazaría.
+        assert not any(k.startswith("wallet.") for k in update_operation["$set"])
         assert result["wallet"]["pro_messages_balance"] == 30
 
     @pytest.mark.asyncio
@@ -200,6 +207,97 @@ class TestEnsureWallet:
         assert update_operation["$set"]["wallet.pro_messages_balance"] == 30
         assert result["wallet"]["pro_messages_balance"] == 30
         assert result["wallet"]["topup_messages_balance"] == 0
+
+
+# ---------------------------------------------------------------------------
+# CS-001 / CS-002: _ensure_wallet contra Mongo real
+#
+# Los tests de arriba mockean la colección con AsyncMock: ven la llamada, no
+# lo que Mongo hace con ella. Y lo que Mongo hace con
+# `{"$set": {"wallet.pro_messages_balance": ...}}` sobre un documento con
+# `wallet: null` es rechazarla (WriteError, code 28): no se pueden crear
+# subcampos dentro de un null. Estos van contra Mongo de verdad.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+async def sembrar_usuario(async_client):
+    """Inserta usuarios de prueba en Mongo y los borra al terminar.
+
+    Depende de async_client porque es quien deja la conexión Motor montada en
+    el loop del test (mismo patrón que `sembrar` en test_admin.py).
+    """
+    from app.infrastructure.database import get_users_collection
+
+    creados: list[str] = []
+
+    async def _sembrar(uid: str, wallet) -> dict:
+        doc = {
+            "firebase_uid": uid,
+            "email": f"{uid}@test.com",
+            "email_verified": True,
+            "wallet": wallet,
+        }
+        await get_users_collection().delete_many({"firebase_uid": uid})
+        await get_users_collection().insert_one(dict(doc))
+        creados.append(uid)
+        return doc
+
+    yield _sembrar
+
+    for uid in creados:
+        await get_users_collection().delete_many({"firebase_uid": uid})
+
+
+async def _wallet_persistido(uid: str) -> dict:
+    from app.infrastructure.database import get_users_collection
+
+    doc = await get_users_collection().find_one({"firebase_uid": uid})
+    assert doc is not None, f"el usuario {uid} debería seguir existiendo"
+    return doc["wallet"]
+
+
+class TestEnsureWalletMongoReal:
+    """CS-001/CS-002 con escrituras reales: la reparación tiene que ser aceptada."""
+
+    @pytest.mark.asyncio
+    async def test_ensure_wallet_repara_wallet_null(self, sembrar_usuario):
+        """CS-001: wallet null → se repara y queda persistido, sin WriteError."""
+        from app.core.auth import _ensure_wallet
+
+        user_doc = await sembrar_usuario("u_ensure_null", None)
+
+        result = await _ensure_wallet("u_ensure_null", user_doc)
+
+        assert result["wallet"]["pro_messages_balance"] == 30
+        persistido = await _wallet_persistido("u_ensure_null")
+        assert persistido["pro_messages_balance"] == 30
+        assert persistido["topup_messages_balance"] == 0
+
+    @pytest.mark.asyncio
+    async def test_ensure_wallet_dict_incompleto_fusiona_sin_borrar(self, sembrar_usuario):
+        """CS-002: reparar un dict incompleto es una fusión, no un reemplazo.
+
+        Las cuatro claves de WalletInfo se reescriben; cualquier otra que el
+        documento ya tuviera sobrevive. Es la diferencia observable entre
+        escribir con rutas con punto y escribir el subdocumento entero, y por
+        eso el arreglo del caso null NO puede generalizarse a los dicts.
+        """
+        from app.core.auth import _ensure_wallet
+
+        user_doc = await sembrar_usuario(
+            "u_ensure_incompleto",
+            {"topup_messages_balance": 7, "creditos_promo_legacy": 12},
+        )
+
+        await _ensure_wallet("u_ensure_incompleto", user_doc)
+
+        persistido = await _wallet_persistido("u_ensure_incompleto")
+        assert persistido["pro_messages_balance"] == 30
+        # La reparación reescribe las claves del esquema...
+        assert persistido["topup_messages_balance"] == 0
+        # ...y no toca lo que no le corresponde.
+        assert persistido["creditos_promo_legacy"] == 12
 
 
 # ---------------------------------------------------------------------------

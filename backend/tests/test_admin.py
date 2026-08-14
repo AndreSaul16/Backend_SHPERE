@@ -192,14 +192,25 @@ async def test_repair_wallet_repara_wallet_vacio(async_client, como, sembrar):
     assert (await _wallet_en_mongo("u_wallet_vacio"))["pro_messages_balance"] == _CREDITOS_FREE
 
 
-async def test_repair_wallet_repara_wallet_sin_la_clave(async_client, como, sembrar):
-    """CS-003 (triangulación): un dict sin pro_messages_balance también es inválido.
+async def test_repair_wallet_repara_wallet_null(async_client, como, sembrar):
+    """CS-001/CS-003: wallet null → se repara igual que {}.
 
-    Falta a propósito el caso `wallet: null`: `_repair_wallet` no lo sabe
-    reparar (escribe con rutas con punto, y Mongo no crea subcampos dentro de
-    un null). Es un bug previo y ajeno a esta ruta — está anotado, no arreglado
-    aquí.
+    Mongo rechaza `$set` de rutas con punto sobre un `wallet: null` (WriteError
+    code 28: no se pueden crear subcampos dentro de un null), así que para esa
+    forma la reparación escribe el subdocumento `wallet` entero.
     """
+    como(_ADMIN_EMAIL)
+    await sembrar("u_wallet_null", None)
+
+    r = await async_client.post(_ruta("u_wallet_null"))
+
+    assert r.status_code == 200
+    assert r.json()["repaired"] is True
+    assert (await _wallet_en_mongo("u_wallet_null"))["pro_messages_balance"] == _CREDITOS_FREE
+
+
+async def test_repair_wallet_repara_wallet_sin_la_clave(async_client, como, sembrar):
+    """CS-003 (triangulación): un dict sin pro_messages_balance también es inválido."""
     como(_ADMIN_EMAIL)
     await sembrar("u_wallet_sin_clave", {"topup_messages_balance": 7})
 

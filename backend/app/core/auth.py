@@ -107,6 +107,25 @@ def _is_wallet_valid(wallet) -> bool:
     return isinstance(wallet, dict) and "pro_messages_balance" in wallet
 
 
+def _wallet_repair_set(current_wallet, new_wallet: dict) -> dict:
+    """Construye el `$set` que repara el wallet según la FORMA del actual.
+
+    Si el actual ya es un dict (aunque esté vacío o incompleto), se escribe con
+    rutas con punto: Mongo fusiona, así que las claves ajenas a la reparación
+    sobreviven (CS-002).
+
+    Si es cualquier otra cosa —`null`, ausente, o un tipo corrupto— Mongo no
+    puede crear subcampos dentro de ella y rechaza la escritura entera con
+    WriteError code 28 («Cannot create field '...' in element {wallet: null}»),
+    que en el login se traduce en un 500 para cualquier usuario legacy con el
+    wallet nulo. Para esas formas se escribe el subdocumento `wallet` completo,
+    que sí reemplaza el valor inválido.
+    """
+    if isinstance(current_wallet, dict):
+        return {f"wallet.{key}": value for key, value in new_wallet.items()}
+    return {"wallet": new_wallet}
+
+
 async def _ensure_wallet(uid: str, user_doc: dict) -> dict:
     """Lazy wallet init: usuarios legacy creados sin campo wallet.
     Respeta email_verified: si no está verificado, balance=0.
@@ -133,22 +152,17 @@ async def _ensure_wallet(uid: str, user_doc: dict) -> dict:
 
     users_col = get_users_collection()
     now = datetime.now(timezone.utc)
-    wallet_init = {
-        "wallet.pro_messages_balance": pro_messages,
-        "wallet.pro_messages_granted_this_period": pro_messages,
-        "wallet.last_period_reset": now,
-        "wallet.topup_messages_balance": 0,
-    }
-    await users_col.update_one(
-        {"firebase_uid": uid},
-        {"$set": wallet_init},
-    )
-    user_doc["wallet"] = {
+    new_wallet = {
         "pro_messages_balance": pro_messages,
         "pro_messages_granted_this_period": pro_messages,
         "last_period_reset": now,
         "topup_messages_balance": 0,
     }
+    await users_col.update_one(
+        {"firebase_uid": uid},
+        {"$set": _wallet_repair_set(wallet, new_wallet)},
+    )
+    user_doc["wallet"] = new_wallet
     logger.info(f"Wallet inicializado (lazy) para usuario legacy: {uid}")
     return user_doc
 
@@ -178,22 +192,17 @@ async def _repair_wallet(uid: str, user_doc: dict) -> dict:
 
     users_col = get_users_collection()
     now = datetime.now(timezone.utc)
-    wallet_init = {
-        "wallet.pro_messages_balance": pro_messages,
-        "wallet.pro_messages_granted_this_period": pro_messages,
-        "wallet.last_period_reset": now,
-        "wallet.topup_messages_balance": 0,
-    }
-    await users_col.update_one(
-        {"firebase_uid": uid},
-        {"$set": wallet_init},
-    )
-    user_doc["wallet"] = {
+    new_wallet = {
         "pro_messages_balance": pro_messages,
         "pro_messages_granted_this_period": pro_messages,
         "last_period_reset": now,
         "topup_messages_balance": 0,
     }
+    await users_col.update_one(
+        {"firebase_uid": uid},
+        {"$set": _wallet_repair_set(wallet, new_wallet)},
+    )
+    user_doc["wallet"] = new_wallet
     logger.info(f"Wallet reparado para usuario {uid}: {pro_messages} créditos free")
     return user_doc
 
