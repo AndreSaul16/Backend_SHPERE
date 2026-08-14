@@ -44,3 +44,56 @@ export const CURVA = {
 export function conMovimiento<T>(reducido: boolean | null, transicion: T) {
     return reducido ? SIN_MOVIMIENTO : transicion;
 }
+
+/** §7.4 — lo que separa a dos turnos que llegan juntos, en segundos. */
+export const STAGGER_TURNO = 0.04;
+
+/**
+ * §7.5 — cuántos turnos escalonan antes de que la tanda entre junta.
+ *
+ * «Máximo 8 filas con stagger (las siguientes entran juntas): una lista de 200
+ * filas no es un desfile». Sin tope, reabrir un debate largo costaría 8
+ * segundos de entradas encadenadas; con él, el último turno de cualquier tanda
+ * entra a los 320ms, dentro de la ventana de `--duration-scene`.
+ */
+export const TOPE_STAGGER = 8;
+
+/** El retraso de entrada del turno `indice` de una tanda, en segundos. */
+export function retrasoDeEntrada(indice: number): number {
+    return Math.min(indice, TOPE_STAGGER) * STAGGER_TURNO;
+}
+
+/** Lo que Framer necesita para la entrada de un turno. */
+interface EntradaDelTurno {
+    initial: { opacity: number; y?: number };
+    animate: { opacity: number; y?: number };
+    // La tupla exacta, no `number[]`: Framer tipa la bezier como
+    // `readonly [number, number, number, number]` y un array suelto no encaja.
+    transition: { duration: number; ease?: readonly [number, number, number, number]; delay?: number };
+}
+
+/**
+ * La entrada del Turno — §9.11, con los tokens de §7.2/§7.1 (Viveza-1).
+ *
+ * Lo que había en `MessageBubble` era `{ duration: 0.4, ease: "easeOut" }` y
+ * `{ opacity: 0, y: 10, scale: 0.97 }` escritos a pelo: 400ms son **2,5× el
+ * techo** de `--duration-pop`, `easeOut` no es ninguna de las cuatro curvas de
+ * §7.1, y el `scale` no lo firma nadie —hacía «botar» la burbuja al entrar—.
+ * §7.4 contrata exactamente `opacity 0→1` + `translateY 6px→0`.
+ *
+ * Vive aquí y no en el componente porque el escalonado es la única pieza con
+ * aritmética del sistema de movimiento, y probarla sin DOM ni framer es lo que
+ * mantiene el tope de 8 defendido de verdad.
+ */
+export function entradaDelTurno(reducido: boolean | null, indice: number): EntradaDelTurno {
+    // §7.6: con movimiento reducido el turno APARECE, no viaja — y sin esperar
+    // su hueco en la cola. La información no se pierde; se pierde el tiempo.
+    if (reducido) {
+        return { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: SIN_MOVIMIENTO };
+    }
+    return {
+        initial: { opacity: 0, y: 6 },
+        animate: { opacity: 1, y: 0 },
+        transition: { duration: DURACION.pop, ease: CURVA.settle, delay: retrasoDeEntrada(indice) },
+    };
+}

@@ -498,6 +498,17 @@ export const SPRING_PLATE  = { type: 'spring', stiffness: 220, damping: 26, mass
 export const SPRING_PANEL  = { type: 'spring', stiffness: 180, damping: 30, mass: 1 } as const;   // panel, sin rebote
 ```
 
+**Nota de equivalencia con Material 3 Expressive** *(documental — no cambia ningún comportamiento)*. La división que hace este sistema entre **muelles** y **duraciones** es la misma que M3 Expressive formaliza en dos familias de tokens:
+
+| Aquí | M3 Expressive | Para qué |
+|---|---|---|
+| `SPRING_NEEDLE` / `SPRING_PLATE` / `SPRING_PANEL` (§7.3) | *motion-spring* — tokens **spatial** | Lo que se MUEVE en el espacio: posición, tamaño, rotación. Un objeto con masa se posa; no interpola por reloj |
+| `--duration-*` + `--ease-*` (§7.1-7.2) | tokens **effects** | Lo que NO se mueve: color, opacidad, sombra, desenfoque |
+
+**La regla que se hereda de esa división, y que aquí es vinculante:** *color y opacidad **nunca** con muelle*. Un muelle sobrepasa su valor de destino, y sobrepasar una opacidad no significa nada (¿opacidad 1.08?) mientras que sobrepasar una posición sí — es lo que da la sensación de peso. Un color que rebota entre dos valores parece un fallo de repintado, no una transición. Los muelles son para lo espacial; lo demás va por duración y curva.
+
+M3 Expressive coincide además con §7.5 en que la reacción a un gesto directo debe ser **más rápida** que una transición autónoma (aquí `--duration-tap`, 90ms) y en que `prefers-reduced-motion` sustituye el recorrido por el estado final, no por la ausencia de información (§7.6).
+
 ### 7.4 Qué se anima y qué NO — presupuesto por superficie
 
 > **Nota de revisión (auditoría v3):** esta sección fue reescrita por la auditoría. La versión anterior imponía un techo global de 2 bucles simultáneos en toda la app; el brief del producto pide explícitamente motion abundante («animaciones, muchas»). El error no era la cantidad: era que el presupuesto fuese global. Una landing de propósito único con `animation-timeline: scroll()` (que corre fuera del hilo principal) aguanta motion maximalista sin coste; un transcript recibiendo tokens tiene el hilo principal ocupado y no perdona un salto. El presupuesto correcto es **por superficie**.
@@ -827,6 +838,12 @@ Con imagen: `--radius-sm`, `object-fit: cover`, **`onError` obligatorio** con fa
 ### 9.11 Burbuja de mensaje — el Turno
 
 Anatomía: nombre del director **en el margen** (§8.4), no dentro · cuerpo en Literata `base`/1.55, medida `60ch` (§4.2) · filete de identidad de 2px en `border-inline-start` · pie con hora (`--text-xs`, `ink-400`, **nunca `opacity-30`**), chip de voto y acciones.
+
+**Entrada del turno (normativo).** `opacity 0→1` + `translateY 6px→0`, a `--duration-pop` (160ms) con `--ease-settle`. **Nada más**: ni escala, ni rebote, ni desenfoque. Los turnos que llegan juntos escalonan **40ms**, con **tope de 8** — a partir del noveno la tanda entra junta (§7.5, la misma regla que la fila de lista), así que el último turno de cualquier tanda entra a los 320ms y no hay desfile. Con `prefers-reduced-motion` la entrada es un corte: opacidad sin desplazamiento y **sin escalonado** (§7.6).
+
+Es entrada, no bucle: **no consume presupuesto de la superficie 4** (§7.4) y no cambia el presupuesto de §7.7.
+
+> **Por qué se escribe aquí (Viveza-1).** El transcript entraba a `duration: 0.4` con `easeOut` — **2,5× el techo** de `--duration-pop` y una curva que §7.1 no tiene — más un `scale: 0.97` que nadie había firmado. Era la animación más frecuente de todo el producto (una por turno, cinco o seis por debate) y era la única que no usaba los tokens del sistema.
 
 | Estado | Tratamiento |
 |---|---|

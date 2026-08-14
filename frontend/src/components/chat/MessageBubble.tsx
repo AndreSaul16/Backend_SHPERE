@@ -12,6 +12,7 @@ import { VersionesDelTurno } from './VersionesDelTurno';
 import { ToolExecutionCard } from './ToolExecutionCard';
 import { AGENT_HEX, useChatStore } from '@/store/useChatStore';
 import { colorDeAgente, colorDeAgenteAlpha, rellenoDeIdentidad } from '@/lib/colorDeAgente';
+import { conMovimiento, entradaDelTurno, CURVA, DURACION } from '@/lib/motion';
 import { useUserAvatar } from '@/hooks/useUserAvatar';
 import { notify, reasonOf } from '@/lib/toastBus';
 import { AvatarImage } from '@/components/ui/AvatarImage';
@@ -80,6 +81,11 @@ interface MessageBubbleProps {
     sessionAvatar?: string | null;
     isTyping?: boolean;
     isLast?: boolean;
+    /**
+     * Posición del turno en la tanda que entra — §7.4, el escalonado de 40ms.
+     * Sin él (una burbuja suelta, un test) el turno entra sin esperar a nadie.
+     */
+    indice?: number;
     searchQuery?: string;
     isPinned?: boolean;
     rating?: 'up' | 'down' | null;
@@ -106,6 +112,7 @@ function ThinkingBlock({ thinking, isStreaming, hasContent, hexColor, label }: {
 }) {
     const [userToggled, setUserToggled] = useState(false);
     const [open, setOpen] = useState(false);
+    const reducido = useReducedMotion();
 
     const isThinkingNow = isStreaming && !hasContent;
     const hasThinking = !!(thinking && thinking.trim());
@@ -143,18 +150,26 @@ function ThinkingBlock({ thinking, isStreaming, hasContent, hexColor, label }: {
             </button>
             <AnimatePresence initial={false}>
                 {expanded && (
+                    /* §7.4 prohíbe animar el alto por su nombre: cada
+                       fotograma de un alto «auto» dispara layout de todo lo
+                       que hay debajo, y aquí «debajo» es el resto del debate.
+                       §7.5 firma el sustituto —la pista de la rejilla, de 0fr
+                       a 1fr—, que sí compone. El hijo lleva el recorte porque
+                       es la pista, y no la caja, la que se cierra. */
                     <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden"
+                        initial={{ gridTemplateRows: '0fr', opacity: 0 }}
+                        animate={{ gridTemplateRows: '1fr', opacity: 1 }}
+                        exit={{ gridTemplateRows: '0fr', opacity: 0 }}
+                        transition={conMovimiento(reducido, { duration: DURACION.reveal, ease: CURVA.settle })}
+                        className="grid"
                     >
-                        <div
-                            className="mt-1.5 pl-3 border-l-2 text-[12px] leading-relaxed text-content-muted italic whitespace-pre-wrap [overflow-wrap:break-word]"
-                            style={{ borderColor: `color-mix(in srgb, ${hexColor} 25%, transparent)` }}
-                        >
-                            {thinking}
+                        <div className="overflow-hidden">
+                            <div
+                                className="mt-1.5 pl-3 border-l-2 text-[12px] leading-relaxed text-content-muted italic whitespace-pre-wrap [overflow-wrap:break-word]"
+                                style={{ borderColor: `color-mix(in srgb, ${hexColor} 25%, transparent)` }}
+                            >
+                                {thinking}
+                            </div>
                         </div>
                     </motion.div>
                 )}
@@ -163,7 +178,7 @@ function ThinkingBlock({ thinking, isStreaming, hasContent, hexColor, label }: {
     );
 }
 
-function MessageBubbleInterno({ message, agent, agentColor, sessionAvatar, isTyping, isLast, isPinned, rating, onRegenerate, onPin, onRate, onDelete }: MessageBubbleProps) {
+function MessageBubbleInterno({ message, agent, agentColor, sessionAvatar, isTyping, isLast, indice = 0, isPinned, rating, onRegenerate, onPin, onRate, onDelete }: MessageBubbleProps) {
     const isUser = message.role === 'user';
     const isSystem = message.role === 'system';
     const userAvatar = useUserAvatar();
@@ -307,10 +322,18 @@ function MessageBubbleInterno({ message, agent, agentColor, sessionAvatar, isTyp
                 )}
 
                 {/* Bubble - IRON MAN HUD Morphing */}
+                {/* Viveza-1 · §9.11 — la entrada del turno, a los tokens del
+                    contrato. Traía 400ms con una curva «easeOut» y un escalado
+                    de 0.97: 2,5× el techo de `--duration-pop`, una curva que
+                    §7.1 no tiene, y un bote que nadie firmó. El escalonado de
+                    40ms con tope de 8 sale de `entradaDelTurno`, que es donde
+                    se puede probar la aritmética sin DOM.
+
+                    La transición NO se pisa aquí: `entradaDelTurno` es la
+                    única fuente, y hay una guardia de fuente que lo comprueba
+                    (tests/lib/entradaDelTurno.test.ts). */}
                 <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ duration: 0.4, ease: "easeOut" }}
+                    {...entradaDelTurno(reducido, indice)}
                     data-row
                     className={cn(
                         /* 3.7 · §9.11 el Turno.
@@ -614,6 +637,7 @@ export const MessageBubble = memo(MessageBubbleInterno, (antes, ahora) => (
     antes.sessionAvatar === ahora.sessionAvatar &&
     antes.isTyping === ahora.isTyping &&
     antes.isLast === ahora.isLast &&
+    antes.indice === ahora.indice &&
     antes.searchQuery === ahora.searchQuery &&
     antes.isPinned === ahora.isPinned &&
     antes.rating === ahora.rating &&

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Wrench, ChevronDown, ChevronUp, Loader2, CheckCircle2, XCircle, RotateCcw, HelpCircle, Link2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChatStore } from '@/store/useChatStore';
 import type { RemedioDeFallo } from '@/utils/parseMessageParts';
 import { TOOL_LABELS } from './toolLabels';
+import { conMovimiento, CURVA, DURACION } from '@/lib/motion';
 
 interface ToolExecutionCardProps {
     toolName: string;
@@ -104,6 +105,7 @@ export const ToolExecutionCard: React.FC<ToolExecutionCardProps> = ({
 }) => {
     const [expanded, setExpanded] = useState(false);
     const panelId = React.useId();
+    const reducido = useReducedMotion();
     const label = TOOL_LABELS[toolName] || toolName;
     const isFailed = status === 'failed';
     // Lista de NO reintentables, nunca al revés: lo que no está probado imposible
@@ -205,15 +207,21 @@ export const ToolExecutionCard: React.FC<ToolExecutionCardProps> = ({
             )}
             <AnimatePresence>
                 {expanded && result && (
+                    /* §7.4/§7.5 — la rejilla, no el alto: la tarjeta vive
+                       dentro del transcript y animar `height` arrastraría a
+                       todos los turnos de debajo en cada fotograma. */
                     <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
+                        initial={{ gridTemplateRows: '0fr', opacity: 0 }}
+                        animate={{ gridTemplateRows: '1fr', opacity: 1 }}
+                        exit={{ gridTemplateRows: '0fr', opacity: 0 }}
+                        transition={conMovimiento(reducido, { duration: DURACION.reveal, ease: CURVA.settle })}
+                        className="grid"
                     >
+                        <div className="overflow-hidden">
                         <pre id={panelId} className="mt-2 text-xs text-content-muted whitespace-pre-wrap break-words max-h-32 overflow-y-auto bg-midnight/60 rounded p-2">
                             {result}
                         </pre>
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>

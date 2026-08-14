@@ -27,6 +27,7 @@ import { StreamInterrupted } from "./StreamInterrupted";
 import { RegionBoundary } from "@/components/shared/RegionBoundary";
 import { useVentanaDeTurnos } from "@/hooks/useVentanaDeTurnos";
 import { citaLlana } from "@/utils/citaLlana";
+import { conMovimiento, CURVA, DURACION } from "@/lib/motion";
 import { comboDe, useAtajo } from "@/hooks/useShortcuts";
 import { DebateReplay } from "./DebateReplay";
 import { mensajesDeMuestra } from "@/lib/sampleBoard";
@@ -878,12 +879,17 @@ export function ChatPanel() {
             {/* Search Bar */}
             <AnimatePresence>
                 {isSearchOpen && (
+                    /* §7.4/§7.5 — la barra de búsqueda se abre con la rejilla,
+                       no con el alto: animar `height` aquí relayoutea el
+                       transcript entero en cada fotograma. */
                     <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="border-b border-stroke-hairline bg-surface-1 px-6 overflow-hidden"
+                        initial={{ gridTemplateRows: '0fr', opacity: 0 }}
+                        animate={{ gridTemplateRows: '1fr', opacity: 1 }}
+                        exit={{ gridTemplateRows: '0fr', opacity: 0 }}
+                        transition={conMovimiento(prefiereMenosMovimiento, { duration: DURACION.reveal, ease: CURVA.settle })}
+                        className="grid border-b border-stroke-hairline bg-surface-1 px-6"
                     >
+                        <div className="overflow-hidden">
                         <div className="flex items-center gap-3 py-3 max-w-4xl mx-auto">
                             <Search className="h-4 w-4 text-content-muted flex-shrink-0" aria-hidden="true" />
                             <input
@@ -904,6 +910,7 @@ export function ChatPanel() {
                             <button onClick={() => { setSearchQuery(''); setIsSearchOpen(false); }} className="p-1 hover:bg-stroke-hairline rounded-xs text-content-muted hover:text-content-strong">
                                 <X className="h-4 w-4" />
                             </button>
+                        </div>
                         </div>
                     </motion.div>
                 )}
@@ -1020,6 +1027,9 @@ export function ChatPanel() {
                                         sessionAvatar={sessionAvatar}
                                         isTyping={isTyping}
                                         isLast={idx === turnosVisibles.length - 1}
+                                        /* §7.4 — el escalonado de 40ms de la
+                                           tanda, con tope de 8 (§7.5). */
+                                        indice={idx}
                                         searchQuery={searchQuery || undefined}
                                         isPinned={pinnedMessages.includes(msg.id)}
                                         rating={ratings[msg.id] || null}

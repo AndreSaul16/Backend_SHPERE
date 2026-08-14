@@ -13,7 +13,8 @@ import {
     HardDrive,
     FilePlus,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { conMovimiento, CURVA, DURACION } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import { chatService, authHeaders } from '@/services/api';
 import { reasonOf, toast } from '@/lib/toastBus';
@@ -113,6 +114,7 @@ function StatusBadge({ status }: { status: AgentDocument['processing_status'] })
 export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBasePanelProps) {
     const [documents, setDocuments] = useState<AgentDocument[]>([]);
     const [uploading, setUploading] = useState<UploadingFile[]>([]);
+    const reducido = useReducedMotion();
     const [isLoading, setIsLoading] = useState(true);
     // `null` = sin fallo. Cadena (aunque vacía) = ha fallado, con o sin motivo.
     const [fetchError, setFetchError] = useState<string | null>(null);
@@ -411,13 +413,18 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                 {/* Uploading files */}
                 <AnimatePresence>
                     {uploading.map((item) => (
+                        // §7.4/§7.5 — la fila de subida entra con la rejilla,
+                        // no con el alto: son varias a la vez y cada fotograma
+                        // de `height` relayouteaba la lista entera de documentos.
                         <motion.div
                             key={item.id}
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="overflow-hidden"
+                            initial={{ opacity: 0, gridTemplateRows: '0fr' }}
+                            animate={{ opacity: 1, gridTemplateRows: '1fr' }}
+                            exit={{ opacity: 0, gridTemplateRows: '0fr' }}
+                            transition={conMovimiento(reducido, { duration: DURACION.reveal, ease: CURVA.settle })}
+                            className="grid"
                         >
+                            <div className="overflow-hidden">
                             <div className="p-4 rounded-md bg-stroke-highlight border border-electric-cyan/20">
                                 <div className="flex items-center gap-3 mb-3">
                                     <Upload className="h-4 w-4 text-electric-cyan animate-pulse shrink-0" />
@@ -441,6 +448,7 @@ export function KnowledgeBasePanel({ agentId, readOnly = false }: KnowledgeBaseP
                                         transition={{ ease: 'easeOut' }}
                                     />
                                 </div>
+                            </div>
                             </div>
                         </motion.div>
                     ))}
