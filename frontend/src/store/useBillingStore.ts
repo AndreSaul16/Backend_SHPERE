@@ -7,6 +7,28 @@ import { notify, reasonOf } from '../lib/toastBus';
 type PlanId = 'free';
 export type PaywallReason = '402' | 'upgrade_cta' | 'rag_full' | 'agents_full';
 
+/**
+ * Qué SKUs puede cobrar el backend AHORA MISMO, según `/billing/me`.
+ *
+ * `null` significa «el backend no lo ha dicho», que NO es lo mismo que la lista
+ * vacía. Backend y frontend se despliegan desde repos distintos, así que un
+ * frontend nuevo puede hablar un rato con un backend que aún no manda el campo;
+ * tratar esa ausencia como «nada es comprable» apagaría la tienda entera durante
+ * ese desfase, que es un fallo peor que el que esto viene a arreglar.
+ */
+export type CatalogoComprable = string[] | null;
+
+/**
+ * `stripe_configured` sólo mira `STRIPE_SECRET_KEY`, así que no dice nada de si
+ * un SKU concreto tiene un `STRIPE_PRICE_*` detrás. Con la clave puesta y los
+ * precios sin poner, la página ofrecía cinco compras y el backend contestaba
+ * 400 BILLING_INVALID_PLAN a las cinco. Función pura: la regla es un `if` con
+ * un matiz que hay que poder probar sin montar la página entera.
+ */
+export function skuComprable(sku: string, catalogo: CatalogoComprable): boolean {
+  return catalogo === null || catalogo.includes(sku);
+}
+
 interface BillingState {
   plan_id: PlanId;
   status: 'active' | 'past_due' | 'canceled';
@@ -20,6 +42,7 @@ interface BillingState {
   isLoading: boolean;
   error: string | null;
   stripe_configured: boolean;
+  purchasable_skus: CatalogoComprable;
 
   paywall: { open: boolean; reason: PaywallReason | null };
 
@@ -130,6 +153,7 @@ export const useBillingStore = create<BillingState>()(
       isLoading: false,
       error: null,
       stripe_configured: false,
+      purchasable_skus: null,
 
       paywall: { open: false, reason: null },
 
@@ -170,6 +194,9 @@ export const useBillingStore = create<BillingState>()(
                 rag_storage_bytes_used: data.rag_storage_bytes_used ?? 0,
                 custom_agents_count: data.custom_agents_count ?? 0,
                 stripe_configured: data.stripe_configured ?? false,
+                // `?? null` no valdría: hay que distinguir «no lo ha dicho» de
+                // «no hay nada comprable», y un backend viejo no manda el campo.
+                purchasable_skus: Array.isArray(data.purchasable_skus) ? data.purchasable_skus : null,
                 loaded: true,
                 isLoading: false,
                 error: null,
@@ -260,6 +287,7 @@ export const useBillingStore = create<BillingState>()(
           loaded: false,
           isLoading: false,
           error: null,
+          purchasable_skus: null,
           paywall: { open: false, reason: null },
         });
       },

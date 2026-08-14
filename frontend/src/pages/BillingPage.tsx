@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { CreditCard, Zap, Sparkles, ArrowLeft, HardDrive, FileText, RefreshCw, AlertTriangle, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useBillingStore } from '../store/useBillingStore';
+import { useBillingStore, skuComprable } from '../store/useBillingStore';
 import { Button } from '@/components/ui/Button';
 import { InlineError, type FalloDeSeccion } from '@/components/ui/InlineError';
 import { authHeaders, profileService, type StorageUsage } from '../services/api';
@@ -96,6 +96,21 @@ async function readErrorMessage(response: Response): Promise<string | undefined>
  */
 const ESPERA_MAXIMA_MS = 8000;
 
+/**
+ * QA-3 — lo que se dice de un SKU que el backend no puede cobrar.
+ *
+ * Los `STRIPE_PRICE_*` viven en el entorno con default `""` y nadie los valida
+ * al arranque, así que el catálogo se podía pintar entero comprable con cero
+ * precios configurados. El motivo va en TEXTO, no en un `title`: el botón está
+ * deshabilitado, y sobre un botón deshabilitado ningún navegador pinta el
+ * tooltip.
+ */
+const MOTIVO_SIN_PRECIO = 'Pago no disponible temporalmente';
+
+const AvisoSinPrecio: React.FC = () => (
+    <p className="mt-2 text-xs text-warning">{MOTIVO_SIN_PRECIO}</p>
+);
+
 /** Skeleton para el estado de carga del panel de facturación */
 const BillingSkeleton: React.FC = () => (
     <div data-testid="billing-loading" aria-busy="true" className="p-6 sm:p-8 w-full max-w-5xl mx-auto animate-pulse">
@@ -120,6 +135,7 @@ export const BillingPage: React.FC = () => {
         isLoading,
         error,
         stripe_configured,
+        purchasable_skus,
         refresh,
     } = useBillingStore();
 
@@ -489,7 +505,9 @@ export const BillingPage: React.FC = () => {
                             </span>
                         </label>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-12">
-                            {PACKS.map((pack) => (
+                            {PACKS.map((pack) => {
+                                const comprable = skuComprable(pack.id, purchasable_skus);
+                                return (
                                 <div
                                     key={pack.id}
                                     className={`glass-panel p-6 rounded-md border flex flex-col relative overflow-hidden ${
@@ -517,14 +535,16 @@ export const BillingPage: React.FC = () => {
                                         className="w-full"
                                         aria-label={`Comprar ${pack.name}`}
                                         onClick={() => handleCheckout(pack.id)}
-                                        disabled={!consentAccepted}
+                                        disabled={!consentAccepted || !comprable}
                                         loading={pendingPlan === pack.id}
                                         loadingLabel="Abriendo el pago"
                                     >
                                         Comprar
                                     </Button>
+                                    {!comprable && <AvisoSinPrecio />}
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
 
                         <h2 className="text-lg font-bold mb-2 text-content-strong flex items-center gap-2">
@@ -548,7 +568,9 @@ export const BillingPage: React.FC = () => {
                         )}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            {TOPUPS.map((t) => (
+                            {TOPUPS.map((t) => {
+                                const comprable = skuComprable(t.id, purchasable_skus);
+                                return (
                                 <div key={t.id} className="glass-panel p-6 rounded-md border border-surface-highlight flex items-center justify-between gap-4">
                                     <div>
                                         <h3 className="text-base font-bold text-content-strong">{t.name}</h3>
@@ -560,19 +582,22 @@ export const BillingPage: React.FC = () => {
                                         <p className="text-2xl font-bold mt-1 text-content-strong">{t.price}</p>
                                         <p className="text-xs text-content-muted mt-1">{t.blurb}</p>
                                     </div>
-                                    <Button
-                                        variant="primary"
-                                        className="shrink-0"
-                                        aria-label={`Comprar ${t.name}`}
-                                        onClick={() => handleCheckout(t.id)}
-                                        disabled={!consentAccepted}
-                                        loading={pendingPlan === t.id}
-                                        loadingLabel="Abriendo el pago"
-                                    >
-                                        Comprar
-                                    </Button>
+                                    <div className="shrink-0 text-right">
+                                        <Button
+                                            variant="primary"
+                                            aria-label={`Comprar ${t.name}`}
+                                            onClick={() => handleCheckout(t.id)}
+                                            disabled={!consentAccepted || !comprable}
+                                            loading={pendingPlan === t.id}
+                                            loadingLabel="Abriendo el pago"
+                                        >
+                                            Comprar
+                                        </Button>
+                                        {!comprable && <AvisoSinPrecio />}
+                                    </div>
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </>
                 )}

@@ -1,6 +1,7 @@
 import stripe
 
 from app.core.config import settings
+from app.core.plan_limits import PURCHASABLE_SKUS
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -18,6 +19,29 @@ def _price_map() -> dict[str, str]:
         "quick_meeting": settings.STRIPE_PRICE_QUICK_MEETING,
         "deep_dive": settings.STRIPE_PRICE_DEEP_DIVE,
     }
+
+
+def purchasable_skus() -> list[str]:
+    """SKUs del catálogo que HOY se pueden comprar de verdad.
+
+    Un SKU de `PURCHASABLE_SKUS` sólo es comprable si tiene un price ID de
+    Stripe detrás. Los `STRIPE_PRICE_*` vienen del entorno con default `""` y no
+    se validan al arranque, así que un despliegue puede tener `STRIPE_SECRET_KEY`
+    puesta —`stripe_configured` a True, catálogo entero pintado— y ningún precio
+    configurado: el clic se va entonces al `ValueError` de
+    `create_checkout_session` y sale un 400 BILLING_INVALID_PLAN. El producto
+    prometía cinco compras y no podía cumplir ninguna.
+
+    Sin `STRIPE_SECRET_KEY` no se promete nada aunque haya precios: `/checkout`
+    corta antes con un 503.
+
+    Función pura sobre la configuración, y el resultado va ordenado: es cuerpo de
+    respuesta HTTP, y un `set` daría un orden distinto en cada proceso.
+    """
+    if not settings.stripe_configured:
+        return []
+    prices = _price_map()
+    return sorted(sku for sku in PURCHASABLE_SKUS if (prices.get(sku) or "").strip())
 
 
 class StripeClient:

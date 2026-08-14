@@ -5,7 +5,7 @@ from app.core.auth import get_current_user
 from app.core.errors import ErrorCode, billing_error, app_error
 from app.core.plan_limits import validate_topup_tier, get_user_plan
 from app.core.config import settings
-from app.infrastructure.stripe_client import StripeClient
+from app.infrastructure.stripe_client import StripeClient, purchasable_skus
 from app.infrastructure.database import get_users_collection
 
 router = APIRouter()
@@ -104,4 +104,8 @@ async def get_billing_info(user: dict = Depends(get_current_user)):
         "rag_storage_bytes_used": limits.get("rag_storage_bytes_used", 0),
         "custom_agents_count": limits.get("custom_agents_count", 0),
         "stripe_configured": settings.stripe_configured,
+        # QA-3: `stripe_configured` sólo mira la clave secreta, así que no dice
+        # nada de si un SKU concreto tiene precio. Sin esto, la elegibilidad de
+        # compra sólo se descubría con un 400 después de pulsar.
+        "purchasable_skus": purchasable_skus(),
     }

@@ -252,3 +252,102 @@ describe('BillingPage — top-ups comprables (QA-3)', () => {
         expect(screen.getByRole('button', { name: 'Comprar Deep Dive' })).toBeEnabled();
     });
 });
+
+/**
+ * QA-3 — la elegibilidad de compra, dicha antes del clic y no después del 400.
+ *
+ * `stripe_configured` sólo mira `STRIPE_SECRET_KEY`. Con la clave puesta y los
+ * `STRIPE_PRICE_*` sin poner —que es literalmente el Railway de hoy— la página
+ * pintaba cinco compras y las cinco morían en un 400 BILLING_INVALID_PLAN. El
+ * backend ahora dice qué SKUs tienen precio detrás; la página deja de prometer
+ * lo que no puede cumplir.
+ */
+describe('BillingPage — sólo promete lo que el backend puede cobrar (QA-3)', () => {
+    const TODO_COMPRABLE = ['executive', 'director', 'boardroom', 'quick_meeting', 'deep_dive'];
+
+    beforeEach(() => {
+        useBillingStore.setState({
+            plan_id: 'free',
+            status: 'active',
+            pro_messages_balance: 5,
+            topup_messages_balance: 0,
+            current_period_end: null,
+            cancel_at_period_end: false,
+            loaded: true,
+            isLoading: false,
+            error: null,
+            stripe_configured: true,
+            purchasable_skus: TODO_COMPRABLE,
+            refresh: vi.fn().mockResolvedValue(undefined),
+        });
+        vi.clearAllMocks();
+    });
+
+    it('con consentimiento y SKU comprable, el clic pide el checkout de ESE SKU', async () => {
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: true,
+            json: () => Promise.resolve({ url: 'https://checkout.stripe.com/c/pay/test_quick' }),
+        });
+        global.fetch = fetchMock as any;
+
+        renderPage();
+        screen.getByRole('checkbox').click();
+        screen.getByRole('button', { name: 'Comprar Quick Meeting' }).click();
+
+        // La página también consulta el almacenamiento al montar, así que el
+        // checkout se busca por su ruta, no por el orden de las llamadas.
+        const checkout = () =>
+            fetchMock.mock.calls.find(([u]) => String(u).includes('/billing/checkout'));
+        await vi.waitFor(() => expect(checkout()).toBeDefined());
+        const [, init] = checkout()!;
+        expect(init.method).toBe('POST');
+        expect(JSON.parse(init.body)).toEqual({ plan_id: 'quick_meeting' });
+    });
+
+    it('un top-up sin price ID se dice deshabilitado y con su motivo a la vista', () => {
+        useBillingStore.setState({
+            purchasable_skus: ['executive', 'director', 'boardroom', 'quick_meeting'],
+        });
+
+        renderPage();
+        screen.getByRole('checkbox').click();
+
+        expect(screen.getByRole('button', { name: 'Comprar Deep Dive' })).toBeDisabled();
+        expect(screen.getByText('Pago no disponible temporalmente')).toBeInTheDocument();
+        // Triangulación: el que SÍ tiene precio detrás sigue comprándose.
+        expect(screen.getByRole('button', { name: 'Comprar Quick Meeting' })).toBeEnabled();
+    });
+
+    it('lo mismo vale para un pack: sin price ID no se promete la compra', () => {
+        useBillingStore.setState({ purchasable_skus: ['executive', 'quick_meeting', 'deep_dive'] });
+
+        renderPage();
+        screen.getByRole('checkbox').click();
+
+        expect(screen.getByRole('button', { name: 'Comprar Director Pack' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Comprar Boardroom Pack' })).toBeDisabled();
+        expect(screen.getAllByText('Pago no disponible temporalmente')).toHaveLength(2);
+        expect(screen.getByRole('button', { name: 'Comprar Executive Pack' })).toBeEnabled();
+    });
+
+    it('sin un solo price ID configurado, ninguna compra se ofrece', () => {
+        useBillingStore.setState({ purchasable_skus: [] });
+
+        renderPage();
+        screen.getByRole('checkbox').click();
+
+        screen.getAllByRole('button', { name: /comprar/i }).forEach((b) => expect(b).toBeDisabled());
+        expect(screen.getAllByText('Pago no disponible temporalmente')).toHaveLength(5);
+    });
+
+    it('un backend que no manda purchasable_skus no apaga la tienda', () => {
+        // Desfase de despliegue entre los dos repos: `null` es «no lo ha dicho».
+        useBillingStore.setState({ purchasable_skus: null });
+
+        renderPage();
+        screen.getByRole('checkbox').click();
+
+        screen.getAllByRole('button', { name: /comprar/i }).forEach((b) => expect(b).toBeEnabled());
+        expect(screen.queryByText('Pago no disponible temporalmente')).not.toBeInTheDocument();
+    });
+});

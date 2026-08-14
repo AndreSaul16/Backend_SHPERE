@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { useBillingStore } from '../../src/store/useBillingStore';
+import { useBillingStore, skuComprable } from '../../src/store/useBillingStore';
 import { __resetToastBus, subscribeToasts, type ToastRecord } from '../../src/lib/toastBus';
 
 // Mock firebase/auth so dynamic import in authHeaders() doesn't throw
@@ -235,6 +235,49 @@ describe('useBillingStore.refresh()', () => {
         expect(useBillingStore.getState().stripe_configured).toBe(false);
     });
 
+    // QA-3 · `stripe_configured` sólo mira la clave secreta de Stripe. Los
+    // `STRIPE_PRICE_*` van por SKU y nunca se validaban, así que la página
+    // pintaba cinco compras que el backend iba a rechazar con un 400.
+    it('guarda purchasable_skus de la respuesta de /billing/me', async () => {
+        (global.fetch as any).mockResolvedValue({
+            ok: true,
+            json: () =>
+                Promise.resolve({
+                    plan_id: 'free',
+                    pro_messages_balance: 5,
+                    topup_messages_balance: 0,
+                    stripe_configured: true,
+                    purchasable_skus: ['executive', 'quick_meeting'],
+                }),
+        });
+
+        await useBillingStore.getState().refresh();
+
+        expect(useBillingStore.getState().purchasable_skus).toEqual(['executive', 'quick_meeting']);
+    });
+
+    it('un backend que no manda purchasable_skus deja el catálogo en «no lo ha dicho»', async () => {
+        // Backend y frontend se despliegan desde repos distintos, así que el
+        // frontend nuevo puede hablar un rato con un backend viejo. Ahí `null`
+        // significa «no lo ha dicho», que NO es lo mismo que «nada es comprable»:
+        // una lista vacía apagaría la tienda entera durante ese desfase.
+        useBillingStore.setState({ purchasable_skus: ['executive'] });
+        (global.fetch as any).mockResolvedValue({
+            ok: true,
+            json: () =>
+                Promise.resolve({
+                    plan_id: 'free',
+                    pro_messages_balance: 5,
+                    topup_messages_balance: 0,
+                    stripe_configured: true,
+                }),
+        });
+
+        await useBillingStore.getState().refresh();
+
+        expect(useBillingStore.getState().purchasable_skus).toBeNull();
+    });
+
     it('retries on HTTP error responses (401) with backoff (BF-001 triangulation)', async () => {
         (global.fetch as any).mockResolvedValue({
             ok: false,
@@ -252,5 +295,31 @@ describe('useBillingStore.refresh()', () => {
         expect(global.fetch).toHaveBeenCalledTimes(4);
         expect(useBillingStore.getState().error).toBe('Error al cargar la información de facturación');
         expect(useBillingStore.getState().loaded).toBe(false);
+    });
+});
+
+/**
+ * QA-3 — `skuComprable`: la regla de lectura del catálogo, aparte y pura.
+ *
+ * Se saca a función porque el matiz que carga no es obvio y hay que poder
+ * probarlo sin montar una página: `null` es «el backend no lo ha dicho», no
+ * «nada es comprable». Confundir los dos apagaría la tienda entera durante
+ * cualquier desfase de despliegue entre los dos repos.
+ */
+describe('skuComprable', () => {
+    it('un SKU que el backend lista es comprable', () => {
+        expect(skuComprable('quick_meeting', ['executive', 'quick_meeting'])).toBe(true);
+    });
+
+    it('un SKU ausente de la lista no es comprable', () => {
+        expect(skuComprable('deep_dive', ['executive', 'quick_meeting'])).toBe(false);
+    });
+
+    it('con la lista vacía no se puede comprar nada', () => {
+        expect(skuComprable('quick_meeting', [])).toBe(false);
+    });
+
+    it('null es «no lo ha dicho» y no bloquea ninguna compra', () => {
+        expect(skuComprable('quick_meeting', null)).toBe(true);
     });
 });
