@@ -15,6 +15,7 @@ from tenacity import (
 )
 
 from app.core.logger import checkpoint_logger as logger
+from app.core.signing import N8NSecretMissing, require_secret
 
 
 def canonical_sign(payload: dict, secret: str) -> str:
@@ -25,11 +26,16 @@ def canonical_sign(payload: dict, secret: str) -> str:
     así que ambos lados firman/verifican la misma serialización reconstruible desde
     el objeto. Reutilizada por el cliente (envío) y por el webhook n8n→backend
     (verificación, F9) para que la firma sea idéntica en ambos sentidos.
+
+    Con secreto vacío lanza `N8NSecretMissing` en vez de devolver una firma con
+    clave vacía: esa firma la puede calcular cualquiera (el esquema es público),
+    así que emitirla o compararla es peor que no tener firma.
     """
+    clave = require_secret(secret)
     canonical = json.dumps(
         payload, separators=(",", ":"), sort_keys=True, ensure_ascii=False
     ).encode("utf-8")
-    return hmac.new(secret.encode(), canonical, hashlib.sha256).hexdigest()
+    return hmac.new(clave.encode(), canonical, hashlib.sha256).hexdigest()
 
 
 class N8NClient:
@@ -89,6 +95,24 @@ class N8NClient:
                 "error": True,
                 "service": "n8n",
                 "message": "N8NClient no inicializado.",
+            }
+
+        # Sin secreto no se construye la petición: n8n la rechazaría en su nodo
+        # Verify Signature, y firmar con clave vacía sería emitir una firma que
+        # cualquiera puede reproducir. Se comprueba ANTES del circuit breaker
+        # para no contabilizar como fallo del servicio lo que es configuración.
+        try:
+            require_secret(self.webhook_secret)
+        except N8NSecretMissing as e:
+            logger.error(f"Llamada a n8n cancelada ({webhook_path}): {e}")
+            return {
+                "error": True,
+                "service": "n8n",
+                "message": "Servicio de automatizaciones no disponible: sin configurar.",
+                "hint": (
+                    "Las automatizaciones no están configuradas en este entorno. "
+                    "Avisa al administrador; no es un problema de tus conexiones."
+                ),
             }
 
         # Verificar circuit breaker

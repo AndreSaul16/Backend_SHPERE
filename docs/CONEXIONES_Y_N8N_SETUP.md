@@ -27,7 +27,9 @@ El código ya está completo (registry de tools, cliente n8n, auto-deploy de wor
 | `FERNET_KEY` | Cifrado de credenciales de usuario | `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
 | `OAUTH_REDIRECT_BASE_URL` | Base del callback OAuth | `https://<tu-backend>.up.railway.app/api/v1/integrations` |
 
-> ⚠️ Sin `N8N_BASE_URL` los workflows no se despliegan y las tools fallan con error claro (no crashea). Sin `FERNET_KEY` el backend no arranca (lo viste en los tests). `N8N_WEBHOOK_SECRET` vacío hace que el state OAuth y las firmas sean falsificables — ponlo en producción.
+> ⚠️ Sin `N8N_BASE_URL` los workflows no se despliegan y las tools fallan con error claro (no crashea). Sin `FERNET_KEY` el backend no arranca (lo viste en los tests).
+>
+> Con el secreto compartido vacío la integración queda **apagada, no abierta**: el webhook rechaza toda firma (401), `/connect` responde 503 sin emitir ni guardar state, y el cliente no llega a llamar a n8n. **No es un CSRF de OAuth**: el callback consume el state con `find_one_and_delete` *antes* de mirar el HMAC (`app/presentation/api/v1/integrations.py`), así que un state forjado muere ahí. Lo que sí era real —y este cambio corrige— es que la firma del state se truncaba a 64 bits y que un mismo secreto firma dos cosas distintas (webhooks n8n y state OAuth); desacoplarlos queda pendiente.
 
 ---
 

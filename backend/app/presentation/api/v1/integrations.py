@@ -14,6 +14,7 @@ from fastapi.responses import RedirectResponse
 from app.core.auth import get_current_user
 from app.core.config import settings
 from app.core.credentials import credentials_service
+from app.core.signing import N8NSecretMissing, constant_time_equals, n8n_secret
 from app.domain.models.oauth_app import OAuthAppCreate
 from app.infrastructure.database import get_oauth_states_collection
 from app.core.logger import api_logger as logger
@@ -63,39 +64,47 @@ def _default_scopes(provider: str) -> list[str]:
     return [s for s in raw.split(",") if s]
 
 
+def _state_signature(user_id: str, nonce: str, timestamp: str) -> str:
+    """Firma del state: digest SHA-256 COMPLETO (64 hex).
+
+    Antes se truncaba a 16 caracteres (64 bits), un margen que ya no se considera
+    seguro y que además no aportaba nada: el state viaja por query string, donde
+    48 caracteres extra son irrelevantes.
+    """
+    return hmac.new(
+        n8n_secret().encode(),
+        f"{user_id}:{nonce}:{timestamp}".encode(),
+        hashlib.sha256,
+    ).hexdigest()
+
+
 def _generate_state(user_id: str) -> str:
-    """Genera un state CSRF firmado con HMAC + user_id."""
+    """Genera un state CSRF firmado con HMAC + user_id.
+
+    Lanza `N8NSecretMissing` si no hay secreto configurado: firmar con clave vacía
+    sería emitir material firmado que cualquiera puede reproducir (NWI-001). El
+    llamador lo traduce a 503 y no persiste nada.
+    """
     nonce = secrets.token_urlsafe(32)
     timestamp = str(int(time.time()))
-    payload = f"{user_id}:{nonce}:{timestamp}"
-    signature = hmac.new(
-        settings.N8N_WEBHOOK_SECRET.encode(),
-        payload.encode(),
-        hashlib.sha256,
-    ).hexdigest()[:16]
-    return f"{nonce}:{timestamp}:{signature}"
+    return f"{nonce}:{timestamp}:{_state_signature(user_id, nonce, timestamp)}"
 
 
 def _verify_state(state: str, user_id: str) -> bool:
-    """Verifica que el state no fue manipulado."""
+    """Verifica que el state no fue manipulado. Nunca lanza: sólo True/False."""
     try:
         parts = state.split(":")
         if len(parts) != 3:
             return False
         nonce, timestamp, received_sig = parts
-        payload = f"{user_id}:{nonce}:{timestamp}"
-        expected_sig = hmac.new(
-            settings.N8N_WEBHOOK_SECRET.encode(),
-            payload.encode(),
-            hashlib.sha256,
-        ).hexdigest()[:16]
+        expected_sig = _state_signature(user_id, nonce, timestamp)
         # Verificar firma + expiración (10 min)
-        if not hmac.compare_digest(received_sig, expected_sig):
+        if not constant_time_equals(received_sig, expected_sig):
             return False
         if int(time.time()) - int(timestamp) > 600:
             return False
         return True
-    except (ValueError, IndexError):
+    except (ValueError, IndexError, N8NSecretMissing):
         return False
 
 
@@ -127,7 +136,17 @@ async def connect_provider(
             ),
         )
 
-    state = _generate_state(user_id)
+    # Sin secreto no se emite state ni se persiste nada: la integración está
+    # apagada, no «abierta». El log distingue la causa (configuración) del
+    # rechazo por firma inválida; la respuesta al usuario no la revela.
+    try:
+        state = _generate_state(user_id)
+    except N8NSecretMissing as e:
+        logger.error(f"OAuth {provider} no disponible para {user_id}: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail="Integraciones OAuth no disponibles: falta configuración del servidor.",
+        )
 
     # Guardar state en DB para verificación en callback
     states_col = get_oauth_states_collection()

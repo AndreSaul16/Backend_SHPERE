@@ -2,6 +2,10 @@
 
 La firma usa la misma forma canónica que n8n_client._sign / canonical_sign.
 """
+import hashlib
+import hmac
+import json
+
 import pytest
 
 from app.core.config import settings
@@ -58,6 +62,13 @@ def test_firma_con_secreto_distinto_falla():
 def test_secreto_vacio_rechaza_todo(monkeypatch):
     # Sin secreto configurado, una firma calculada con clave vacía (forjable
     # porque el esquema es público) NO debe aceptarse.
+    #
+    # La firma se calcula a mano y no con canonical_sign: desde NWI-001 el
+    # producto se niega a firmar con clave vacía, pero un atacante no — y es
+    # justo esa firma la que el verificador tiene que rechazar.
     monkeypatch.setattr(settings, "N8N_WEBHOOK_SECRET", "")
-    forged = canonical_sign(PAYLOAD, "")
+    canonical = json.dumps(
+        PAYLOAD, separators=(",", ":"), sort_keys=True, ensure_ascii=False
+    ).encode("utf-8")
+    forged = hmac.new(b"", canonical, hashlib.sha256).hexdigest()
     assert verify_n8n_signature(PAYLOAD, forged) is False

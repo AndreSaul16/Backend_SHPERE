@@ -1,4 +1,3 @@
-import hmac
 import json
 from datetime import datetime, timezone
 
@@ -10,6 +9,7 @@ from pymongo.errors import DuplicateKeyError
 from app.core.config import settings
 from app.core.logger import api_logger as logger
 from app.core.plan_limits import validate_topup_tier, get_user_plan
+from app.core.signing import N8NSecretMissing, constant_time_equals, n8n_secret
 from app.infrastructure.database import db
 from app.infrastructure.tools.n8n_client import canonical_sign
 
@@ -409,20 +409,19 @@ def verify_n8n_signature(payload: dict, signature: str | None) -> bool:
     """
     if not signature:
         return False
-    secret = (settings.N8N_WEBHOOK_SECRET or "").strip()
-    if not secret:
+    try:
+        secret = n8n_secret()
+    except N8NSecretMissing as e:
         # Sin secreto configurado la firma se calcularía con clave vacía y sería
         # trivialmente falsificable (el esquema canónico es público). Rechazar
-        # todo en vez de aceptar firmas forjables.
-        logger.warning("Webhook n8n rechazado: N8N_WEBHOOK_SECRET no configurado")
+        # todo en vez de aceptar firmas forjables. El texto nombra la variable
+        # (viene de la excepción) para que la causa sea distinguible en los logs.
+        logger.warning(f"Webhook n8n rechazado: {e}")
         return False
     expected = canonical_sign(payload, secret)
-    # compare_digest lanza TypeError si el str tiene caracteres no-ASCII; un
-    # header manipulado no debe provocar un 500, solo un rechazo.
-    try:
-        return hmac.compare_digest(expected, signature)
-    except TypeError:
-        return False
+    # La comparación vive en core/signing: nunca lanza (un header con caracteres
+    # no ASCII es un rechazo, no un 500).
+    return constant_time_equals(expected, signature)
 
 
 async def _notify_schedule_post_result(payload: dict) -> None:

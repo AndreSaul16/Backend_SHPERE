@@ -56,7 +56,16 @@ async def test_delete_unregistered_returns_404(authed_client_a, _cleanup_oauth_a
     assert r.status_code == 404
 
 
-async def test_connect_requires_registered_app(authed_client_a, _cleanup_oauth_apps):
+async def test_connect_requires_registered_app(
+    authed_client_a, _cleanup_oauth_apps, monkeypatch
+):
+    # El state se firma con el secreto compartido: sin él, `/connect` responde
+    # 503 y no persiste nada (NWI-001). Aquí interesa la otra condición —tener
+    # app registrada—, así que el secreto se configura explícitamente.
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "N8N_WEBHOOK_SECRET", "s3cr3t-para-el-state")
+
     # Sin app -> 400
     r = await authed_client_a.get(f"{BASE}/{PROVIDER}/connect")
     assert r.status_code == 400
