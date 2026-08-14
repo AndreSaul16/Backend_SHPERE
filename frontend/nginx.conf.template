@@ -16,6 +16,29 @@ server {
     sub_filter '__VITE_API_URL__' '${VITE_API_URL}';
     sub_filter_once off;
 
+    # Security headers
+    #
+    # OJO al tocar esto: `add_header` NO se hereda en un `location` que declare
+    # su propio `add_header`. nginx REEMPLAZA el juego entero, no lo fusiona.
+    # Por eso las cuatro están REPETIDAS más abajo en cada location que declara
+    # alguna cabecera. Si se añade una aquí y no allí, el documento se servirá
+    # sin ella y nadie se enterará.
+    #
+    # Lo vigila frontend/tests/lib/cabecerasDeSeguridad.test.ts, que además
+    # comprueba que este fichero y nginx.conf no se separen.
+    #
+    # COOP `same-origin-allow-popups` y no `same-origin`: la página ABRE popups
+    # de acceso (Google, GitHub, Microsoft) y necesita conservar la relación
+    # `opener` con ellos. Con `same-origin` el SDK de Firebase lee
+    # `window.closed` antes de tiempo y rechaza con `auth/popup-closed-by-user`
+    # aunque el acceso vaya bien. Tampoco `unsafe-none`, que es no aislarse.
+    #
+    # Sólo texto literal: `envsubst` corre sobre esta plantilla en el arranque.
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Cross-Origin-Opener-Policy "same-origin-allow-popups" always;
+
     # SPA fallback — all routes serve index.html
     location / {
         try_files $uri $uri/ /index.html;
@@ -25,12 +48,26 @@ server {
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
+        # Repetidas: este `add_header` anula las del server (ver arriba).
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Cross-Origin-Opener-Policy "same-origin-allow-popups" always;
     }
 
     # No cache for index.html (always fresh)
     location = /index.html {
         expires -1;
         add_header Cache-Control "no-store, no-cache, must-revalidate";
+        # Repetidas: este `add_header` anula las del server (ver arriba). Y este
+        # es EL bloque que importa: el `try_files` de arriba hace redirección
+        # interna a /index.html, así que cualquier ruta del SPA sirve su
+        # documento por aquí. Sin estas cuatro líneas, la aplicación entera se
+        # servía sin ninguna cabecera de seguridad.
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Cross-Origin-Opener-Policy "same-origin-allow-popups" always;
     }
 
     # Backend API proxy — reenvía /api/v1/ al backend Railway service
@@ -45,10 +82,4 @@ server {
         proxy_read_timeout 120s;
         proxy_buffering off;
     }
-
-    # Security headers
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-Frame-Options "DENY" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    add_header Cross-Origin-Opener-Policy "unsafe-none" always;
 }
