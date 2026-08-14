@@ -120,13 +120,22 @@ function ThinkingBlock({ thinking, isStreaming, hasContent, hexColor, label }: {
     if (!hasThinking) {
         if (isThinkingNow) {
             return (
+                /* §7.4 — la espera del turno, y UN solo bucle para ella.
+                   Aquí había cinco: tres puntos, cada uno un `motion.span` con
+                   `repeat: Infinity` y su propio muelle de JS, más el glifo con
+                   `animate-pulse`, más el cursor de abajo corriendo a la vez.
+                   El techo de esta superficie es 1, y no por gusto: el hilo
+                   principal está recibiendo tokens y en el móvil de referencia
+                   va a la mitad de velocidad.
+
+                   Los tres puntos siguen ahí —se ven igual— pero los anima un
+                   único elemento con una opacidad de CSS, que es compositor y
+                   no cuesta un muelle por punto. */
                 <div className="flex items-center gap-2 mb-2 text-xs text-content-muted italic">
-                    <Brain className="h-3 w-3 animate-pulse" style={{ color: hexColor }} />
+                    <Brain className="h-3 w-3" style={{ color: hexColor }} aria-hidden="true" />
                     <span>{label || 'Pensando'}</span>
-                    <span className="inline-flex gap-0.5">
-                        <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.2 }}>.</motion.span>
-                        <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.2, delay: 0.2 }}>.</motion.span>
-                        <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.2, delay: 0.4 }}>.</motion.span>
+                    <span data-testid="espera-transcript" className="espera-transcript" aria-hidden="true">
+                        ...
                     </span>
                 </div>
             );
@@ -200,6 +209,11 @@ function MessageBubbleInterno({ message, agent, agentColor, sessionAvatar, isTyp
      * la memoización manual sigue siendo necesaria y no es ruido.
      */
     const partes = useMemo(() => parseMessageParts(message.content), [message.content]);
+
+    /* §7.4 — quién lleva la espera. Mientras el turno no ha dicho nada la
+       lleva el bloque de «Pensando»; en cuanto dice algo, el cursor. Un solo
+       sitio decide, para que los dos no puedan encenderse a la vez. */
+    const hayContenido = !!message.content.trim();
 
     /**
      * D36 — una copia que falla lo dice.
@@ -419,7 +433,7 @@ function MessageBubbleInterno({ message, agent, agentColor, sessionAvatar, isTyp
                         <ThinkingBlock
                             thinking={message.thinking}
                             isStreaming={!!isTyping && !!isLast}
-                            hasContent={!!message.content.trim()}
+                            hasContent={hayContenido}
                             hexColor={colorIdentidad}
                             label={thinkingLabel}
                         />
@@ -485,9 +499,17 @@ function MessageBubbleInterno({ message, agent, agentColor, sessionAvatar, isTyp
                                 />
                             );
                         })}
-                        {/* Cursor Fantasma */}
-                        {isTyping && isLast && !isUser && (
+                        {/* Cursor Fantasma — el bucle contratado de la
+                            superficie 4 (§7.4: «1 / 1 (cursor de bloque)»).
+                            Pide contenido a propósito: mientras el turno no ha
+                            dicho nada, la espera la lleva el bloque de arriba, y
+                            los dos a la vez serían dos bucles donde cabe uno.
+                            Además un cursor parpadeando al lado de la nada no
+                            dice «está escribiendo», dice «se ha quedado
+                            colgado». Se toman el relevo, no se acompañan. */}
+                        {isTyping && isLast && !isUser && hayContenido && (
                             <motion.span
+                                data-testid="fantasma-del-turno"
                                 animate={reducido ? { opacity: 1 } : { opacity: [1, 0] }}
                                 transition={reducido ? { duration: 0 } : { repeat: Infinity, duration: 0.8 }}
                                 className="inline-block w-1.5 h-4 ml-1 align-middle"

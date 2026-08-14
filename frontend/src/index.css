@@ -793,6 +793,59 @@
     }
   }
 
+  /* ── §7.4 · La espera del transcript ──────────────────────────────────────
+     UN elemento y UN bucle para decir «se está esperando». Los tres puntos se
+     ven igual que antes; lo que cambia es que antes eran tres animaciones de
+     JS con su muelle cada una (más el glifo pulsando, más el indicador global
+     con otras tres) sobre la superficie de techo 1 de §7.4. Una opacidad de
+     CSS la mueve el compositor y no toca el hilo que está recibiendo tokens.
+
+     Con movimiento reducido la regla global de §7.6 lo deja quieto y visible:
+     los puntos siguen ahí, que es la información. */
+  @keyframes espera-transcript{ 0%,100%{ opacity:.35 } 50%{ opacity:1 } }
+  .espera-transcript{
+    display: inline-block;
+    letter-spacing: 0.15em;
+    animation: espera-transcript 1200ms var(--ease-settle) infinite;
+  }
+
+  /* ── §8.9 El Latido de la Actuación ───────────────────────────────────────
+     Un anillo concéntrico que sale del glifo cuando una herramienta REAL
+     arranca. Una sola vez: es un latido, no un pulso perpetuo. Los fotogramas
+     clave se escriben aquí y no en @theme porque Tailwind v4 sólo emite los de
+     @theme cuando alguien usa su utilidad de animación, y esta animación la
+     gobierna un estilo en línea (el número de iteraciones es el contrato de
+     §8.9 y tiene que estar a la vista, no escondido en un nombre de clase). */
+  @keyframes latido-actuacion{ from{ transform: scale(1); opacity: .6 } to{ transform: scale(1.8); opacity: 0 } }
+
+  .latido-glifo{ position: relative; display: inline-flex; flex: none; }
+  .latido-actuacion{
+    position: absolute;
+    inset: -3px;
+    border: 1px solid var(--accent);
+    border-radius: 9999px;
+  }
+
+  /* §9.2 — la barra indeterminada de 2px. Corre mientras hay vuelo y muere con
+     él; el componente sólo la monta con la herramienta en curso. */
+  .barra-en-vuelo{
+    display: block;
+    margin-block-start: 0.5rem;
+    block-size: 2px;
+    overflow: hidden;
+    border-radius: 9999px;
+    background: var(--stroke-hairline);
+  }
+
+  /* §8.9 con movimiento reducido: «sin anillo; la barra queda estática al 50%
+     con aria-busy y el estado textual porta la información». Lleva !important
+     porque el anillo declara su animación en el estilo en línea del elemento,
+     y una regla de hoja sin él no puede desactivarla. */
+  @media (prefers-reduced-motion: reduce){
+    .latido-actuacion{ animation-name: none !important; opacity: 0 !important; }
+    .barra-en-vuelo > span{ animation-name: none; transform: scaleX(.5); }
+  }
+
   /* ── §8.12 Las Cifras que Asientan ────────────────────────────────────────
      El odómetro de contaduría. Cada dígito que cambia es una máscara de un em
      de alto con dos hijos apilados; lo que se anima es el `transform` de la

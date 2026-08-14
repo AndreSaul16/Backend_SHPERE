@@ -57,7 +57,32 @@ function Header({
     const contenido = (
         <>
             {status === 'running' ? (
-                <Loader2 className="h-3.5 w-3.5 text-accent animate-spin" aria-hidden="true" />
+                /* §8.9 — «un latido, no un pulso perpetuo».
+                   Aquí había un `Loader2` girando en bucle infinito mientras
+                   durase la ejecución: un bucle más en la superficie con el
+                   presupuesto más estrecho de todo el sistema (§7.4, tabla,
+                   fila 4), y encima uno que no dice nada que la barra
+                   indeterminada de abajo no diga mejor. Ahora el glifo está
+                   quieto y lo que se mueve es el anillo, UNA vez, al arrancar.
+
+                   La animación va en estilo en línea y no en una clase porque
+                   el número de iteraciones ES el contrato de esta sección —«un
+                   latido»— y una clase no lo declara: lo esconde. */
+                <span className="latido-glifo">
+                    <Loader2 className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
+                    <span
+                        data-testid="latido-actuacion"
+                        className="latido-actuacion"
+                        aria-hidden="true"
+                        style={{
+                            animationName: 'latido-actuacion',
+                            animationDuration: '600ms',
+                            animationTimingFunction: 'var(--ease-settle)',
+                            animationIterationCount: 1,
+                            animationFillMode: 'both',
+                        }}
+                    />
+                </span>
             ) : isFailed ? (
                 <XCircle className="h-3.5 w-3.5 text-dissent" aria-hidden="true" />
             ) : isAwaiting ? (
@@ -132,6 +157,12 @@ export const ToolExecutionCard: React.FC<ToolExecutionCardProps> = ({
         <motion.div
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
+            data-testid="tarjeta-de-utensilio"
+            /* §8.9 — mientras hay vuelo se dice que lo hay, y no sólo se
+               enseña: quien no ve la barra tiene que saber que algo está
+               ocurriendo. `undefined` y no `false` para que el atributo no
+               exista cuando ya no hay nada en vuelo. */
+            aria-busy={status === 'running' ? true : undefined}
             className={cn(
                 'my-2 rounded-lg border px-3 py-2 text-xs',
                 isFailed
@@ -155,6 +186,16 @@ export const ToolExecutionCard: React.FC<ToolExecutionCardProps> = ({
                 isAwaiting={isAwaiting}
                 status={status}
             />
+            {/* §8.9 · §9.2 — la barra indeterminada de 2px, y sólo mientras la
+                ejecución está EN VUELO. Es el único bucle que esta tarjeta se
+                permite y es honesto: hay un proceso real corriendo al otro
+                lado, y muere con él. Un indeterminado sobre algo que ya
+                terminó sería a la vez una mentira y un bucle sin dueño. */}
+            {status === 'running' && (
+                <span data-testid="barra-en-vuelo" className="barra-en-vuelo" aria-hidden="true">
+                    <span className="block h-full w-full bg-accent animate-indeterminate" />
+                </span>
+            )}
             {/* Sin botón: quien confirma es el usuario respondiéndole al agente,
                 no un clic que reenvía la herramienta. */}
             {isAwaiting && resumen && (

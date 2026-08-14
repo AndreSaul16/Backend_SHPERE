@@ -529,7 +529,7 @@ M3 Expressive coincide además con §7.5 en que la reacción a un gesto directo 
 | 1 | Landing / marketing | **4 / 6** | Maximalista en AMBOS: scroll-driven en hero y secciones, réplica de junta real (§8.6), registro vivo. En móvil el maximalismo se sostiene por técnica, no por recorte: sólo compositor (`animation-timeline`, transform/opacity), cero blur animado, capas acotadas | Propósito único, sin datos en juego; `animation-timeline: scroll()/view()` corre fuera del hilo principal. Es el escaparate |
 | 2 | Login / registro / verificación | **2 / 3** | Generosa: entradas escalonadas, grano + lámpara, sello de bienvenida | No hay estado que proteger del jank; primera impresión |
 | 3 | Shell (sidebar, cabeceras, navegación) | **1 / 2** | Media: transiciones de navegación (§8.10), focus vivos, contadores que asientan (§8.12) | Siempre visible: debe sentirse sólido, no nervioso |
-| 4 | **Transcript en streaming** | **1 / 1** (cursor de bloque) + el pulso de 4px de «está hablando» | Mínima. **El texto en streaming JAMÁS se anima token a token.** La entrada del turno sí (una vez); los filamentos de §8.11 son por-evento y van con throttle | El hilo principal está saturado recibiendo tokens — y en el móvil de referencia ese hilo es la mitad de rápido |
+| 4 | **Transcript en streaming** | **1 / 1** (espera **o** cursor de bloque, nunca los dos) + 1 por herramienta en vuelo (§8.9) + el pulso de 4px de «está hablando» | Mínima. **El texto en streaming JAMÁS se anima token a token.** La entrada del turno sí (una vez); los filamentos de §8.11 son por-evento y van con throttle | El hilo principal está saturado recibiendo tokens — y en el móvil de referencia ese hilo es la mitad de rápido |
 | 5 | Transcript en reposo (debate cerrado) | **2 / 3** | Generosa: replay (§8.6/Q7), agujas re-asentándose al hacer scroll (`view()`), reveals | El hilo está libre; es el momento de lucirse |
 | 6 | Acta / documento | **1 / 2** | Al servicio de la lectura: sello, pluma (§8.8), progreso de casillas. Nada parpadea junto al texto | La lectura manda (P1) |
 | 7 | Settings / admin | **1 / 1** | Baja: feedback de guardado, skeletons, transiciones de sección | Son herramientas; la velocidad percibida es la feature |
@@ -542,6 +542,31 @@ M3 Expressive coincide además con §7.5 en que la reacción a un gesto directo 
 - Los cuatro bucles heredados siguen prohibidos tal cual: `AuroraBackground` ×3 + `glow-pulse` + el `conic-gradient` de 6s por acta (`ArtifactCard.tsx:78-87`) no vuelven — eran bucles *decorativos*; los bucles de este presupuesto son *semánticos* (§8.6-8.9) o de espera real.
 
 **Regla de honestidad del motion:** un bucle sólo se permite si representa un proceso real en curso (streaming, ejecución de herramienta, réplica de una sesión real) o si vive en una superficie de marketing. Un bucle que decora sin significar nada se rechaza en revisión, por bonito que sea.
+
+> **Nota de auditoría (Viveza-2) — el recuento real de la superficie 4, contado y corregido.** La fila 4 llevaba un techo de 1 desde la auditoría v3 y **nadie lo había contado nunca contra el código**. Al implementar §8.9 se contó. El peor caso era éste: junta en curso, el último turno todavía sin decir nada, una herramienta en vuelo.
+>
+> | Origen | Dónde | Bucles |
+> |---|---|---|
+> | Los tres puntos de «Pensando…» del turno | `MessageBubble` — 3 × `motion.span` con `repeat: Infinity`, un muelle de JS cada uno | 3 |
+> | El glifo del bloque de pensamiento | `MessageBubble` — `animate-pulse` | 1 |
+> | El Cursor Fantasma | `MessageBubble` — `repeat: Infinity` | 1 |
+> | Los tres puntos del «está escribiendo» global | `ChatPanel` — 3 × `motion.span` con `repeat: Infinity` | 3 |
+> | El giro de la tarjeta de utensilio | `ToolExecutionCard` — `animate-spin` | 1 por herramienta en vuelo |
+> | | **Total contra un techo de 1** | **9** con una herramienta, **12** con cuatro |
+>
+> Los cinco primeros corrían **a la vez**: el turno mudo enseñaba sus tres puntos y su glifo pulsando, el indicador global enseñaba otros tres, y el cursor parpadeaba junto a la nada. Cuatro fuentes distintas diciendo lo mismo, nueve veces por fotograma, sobre el hilo que está recibiendo tokens.
+>
+> **Lo consolidado:**
+>
+> 1. **Un solo indicador de espera por tanda, y un solo elemento para él.** Los tres puntos se siguen viendo, pero los mueve una opacidad de CSS sobre un único nodo (compositor, no muelle de JS). Y el indicador global de `ChatPanel` sólo cubre el hueco anterior a que exista la burbuja que contesta: en cuanto existe, la espera la lleva ella. Uno u otro, nunca los dos.
+> 2. **La espera y el cursor se toman el relevo.** El cursor pide contenido: mientras el turno no ha dicho nada la espera es suya, y en cuanto dice algo el cursor toma el sitio. Además de presupuesto es honestidad — un cursor parpadeando al lado de la nada no dice «está escribiendo», dice «se ha quedado colgado».
+> 3. **El giro perpetuo de la tarjeta de utensilio desaparece.** Lo sustituye lo que §8.9 contrata: un latido de una sola iteración al arrancar, y la barra indeterminada sólo mientras hay vuelo.
+>
+> **Después:** **1** bucle sin herramientas (la espera **o** el cursor) y **1 + N** con N herramientas en vuelo. El latido de §8.9 es de una iteración y no cuenta; la pluma (§8.8), el telégrafo (§8.7) y el odómetro (§8.12) son por evento y valen 0 en reposo.
+>
+> **Y por eso la celda de la fila 4 cambia.** El «1 / 1» de antes no contemplaba la barra indeterminada de §8.9, que la propia §8.9 declara como bucle honesto que consume presupuesto de su superficie: el contrato se contradecía consigo mismo. Queda escrito lo que de verdad se permite: la espera **o** el cursor (uno), más uno por herramienta realmente en vuelo, que muere con ella. Fuera de eso, cero.
+>
+> **Lo que queda sin tocar, y por qué:** el clip de adjunto del compositor pulsa mientras se sube un fichero (`ChatPanel`) — es un bucle, es honesto, es uno, y sólo existe durante una subida real. Los cuatro `animate-spin` de `ActaActions` viven en la superficie 6 (acta) y son estados de carga de botón, excluyentes entre sí por construcción.
 
 ### 7.5 Micro-interacciones concretas
 
@@ -687,7 +712,13 @@ Doce. Ninguno es un degradado, glass, partículas ni nodos flotando. Cada uno ti
 
 ### 8.9 El Latido de la Actuación
 **Qué es.** Cuando una herramienta real arranca (`onToolStart`), su tarjeta (`ToolExecutionCard`) emite **un** anillo concéntrico desde el glifo — un latido, no un pulso perpetuo — y mientras la ejecución está en vuelo corre la barra indeterminada de 2px (`--ease-mech`) que ya define §9.2: un bucle honesto, porque hay un proceso real en curso, y consume el presupuesto de bucle de su superficie. Al resolverse: check con `scale .8→1` (éxito) o filete oxblood (error), y el anillo no vuelve.
-**Implementación.** El anillo es un `::after` con `border: 1px solid var(--accent)` animado `scale 1→1.8` + `opacity .6→0`, 600 ms, `--ease-settle`, `animation-iteration-count: 1`. La barra indeterminada es la de §9.2 reutilizada.
+**Implementación.** El anillo es un elemento con `border: 1px solid var(--accent)` animado `scale 1→1.8` + `opacity .6→0`, 600 ms, `--ease-settle`, `animation-iteration-count: 1`. La barra indeterminada es la de §9.2 reutilizada.
+
+> **Enmienda (Viveza-2), al implementarlo.** Tres cosas que la redacción anterior no decía y ahora sí:
+>
+> 1. **El anillo es un elemento, no un `::after`, y su animación va en estilo en línea.** El número de iteraciones ES el contrato de esta sección —«un latido, no un pulso perpetuo»— y tiene que estar donde se pueda leer y verificar. Un nombre de clase no declara cuántas veces corre nada; un `animation-iteration-count: 1` en el elemento sí, y hay un test que lo exige. Los fotogramas clave se escriben a mano en `@layer components` y no en `@theme`, porque Tailwind v4 sólo emite los de `@theme` cuando alguien usa su utilidad de animación — el `--animate-pulse-ring` que declaraba §7.2 llevaba desde la auditoría v3 sin emitir ni un byte de CSS, precisamente por eso.
+> 2. **Lo que el latido sustituye.** La tarjeta tenía un glifo girando en bucle infinito (`animate-spin`) mientras durase la ejecución. Eso era un pulso perpetuo, o sea justo lo que esta sección dice no querer, y encima un bucle más en la superficie de presupuesto más estrecho del sistema. Ahora el glifo está quieto: lo que se mueve es el anillo, una vez, al arrancar; y el hecho de que siga habiendo vuelo lo dice la barra.
+> 3. **El vuelo también se dice, no sólo se enseña.** La tarjeta lleva `aria-busy` mientras la herramienta está en curso. Quien no ve la barra tiene derecho a saber que algo está ocurriendo.
 **Coste.** Un transform+opacity por arranque real; la barra es 1 bucle mientras dura la ejecución y muere con ella.
 **Móvil.** Idéntico.
 **Reduced-motion.** Sin anillo; la barra queda estática al 50% con `aria-busy="true"` y el estado textual («Ejecutando…») porta la información.

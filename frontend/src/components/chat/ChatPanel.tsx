@@ -317,6 +317,16 @@ export function ChatPanel() {
         ? `${speakingAgent.name.split(' ')[0]} está escribiendo`
         : 'Procesando respuesta…';
 
+    /* §7.4 — ¿la espera ya la lleva la última burbuja?
+       En cuanto existe la burbuja del turno que contesta, es ella la que dice
+       que se está esperando: su bloque de «Pensando» mientras no ha dicho nada
+       y su cursor en cuanto dice algo. El indicador global de abajo sólo cubre
+       el hueco anterior, cuando la última cosa del hilo todavía es la pregunta
+       del usuario. Uno u otro, nunca los dos: el techo de bucles de esta
+       superficie es 1. */
+    const esperaEnLaBurbuja =
+        !!lastMessage && lastMessage.role !== 'user' && lastMessage.role !== 'system';
+
     // §12.6: el turno llega en streaming, o sea cambia SIN interacción, y hoy no
     // se anuncia. Se anuncia un RESUMEN a cadencia de 1s —quién habla y cuánto
     // lleva dicho—, nunca el token: un `aria-live` que cambia con cada token
@@ -1050,19 +1060,27 @@ export function ChatPanel() {
                                 );
                             })}
 
+                            {/* §7.4 — UN indicador de espera por tanda.
+                                Este es el del hueco: el que cubre desde que se
+                                manda la pregunta hasta que existe la burbuja
+                                que la contesta. En cuanto esa burbuja existe,
+                                ella lleva la espera (su bloque de «Pensando» o
+                                su cursor) y este se aparta. Antes corrían los
+                                dos a la vez con tres puntos de `framer` cada
+                                uno: seis bucles simultáneos en la superficie
+                                cuyo techo es 1.
+
+                                Los tres puntos siguen viéndose; los mueve un
+                                único elemento con opacidad de CSS. */}
                             <AnimatePresence>
-                                {isTyping && (
+                                {isTyping && !esperaEnLaBurbuja && (
                                     <motion.div
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         exit={{ opacity: 0 }}
                                         className="flex items-center gap-3 text-content-muted text-micro uppercase ml-14"
                                     >
-                                        <div className="flex gap-1">
-                                            <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.5 }} className="h-1 w-1 rounded-full bg-accent" />
-                                            <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.5, delay: 0.2 }} className="h-1 w-1 rounded-full bg-accent" />
-                                            <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.5, delay: 0.4 }} className="h-1 w-1 rounded-full bg-accent" />
-                                        </div>
+                                        <span className="espera-transcript text-accent" aria-hidden="true">...</span>
                                         <span aria-hidden="true">{typingLabel}</span>
                                     </motion.div>
                                 )}

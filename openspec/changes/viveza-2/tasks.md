@@ -12,10 +12,10 @@ Entrega: un solo tramo (lo fija el prompt del orquestador: 3-4 commits lógicos,
 
 ## Fase 2 · §8.9 Latido de actuación + auditoría de bucles (§7.4)
 
-- [ ] 2.1 RED/GREEN latido one-shot al arrancar la herramienta en `ToolExecutionCard`
-- [ ] 2.2 Barra indeterminada sólo mientras la herramienta está en vuelo
-- [ ] 2.3 Auditoría de bucles de la superficie del chat y consolidación
-- [ ] 2.4 Nota del cálculo en DESIGN §7.4
+- [x] 2.1 RED/GREEN latido one-shot al arrancar la herramienta en `ToolExecutionCard`
+- [x] 2.2 Barra indeterminada sólo mientras la herramienta está en vuelo
+- [x] 2.3 Auditoría de bucles de la superficie del chat y consolidación
+- [x] 2.4 Nota del cálculo en DESIGN §7.4
 
 ## Fase 3 · §8.8 Pluma del acta
 
