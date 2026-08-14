@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wrench, ChevronDown, ChevronUp, Loader2, CheckCircle2, XCircle, RotateCcw, HelpCircle } from 'lucide-react';
+import { Wrench, ChevronDown, ChevronUp, Loader2, CheckCircle2, XCircle, RotateCcw, HelpCircle, Link2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChatStore } from '@/store/useChatStore';
+import type { RemedioDeFallo } from '@/utils/parseMessageParts';
 import { TOOL_LABELS } from './toolLabels';
 
 interface ToolExecutionCardProps {
@@ -12,7 +14,15 @@ interface ToolExecutionCardProps {
     error?: string;
     /** Qué se hará si el usuario confirma. Solo en `awaiting_confirmation`. */
     resumen?: string;
+    /**
+     * Qué puede hacer el usuario ante el fallo. Lo decide el backend; aquí sólo se
+     * obedece. Ausente = `retry`, que es la conducta de siempre.
+     */
+    remedio?: RemedioDeFallo;
 }
+
+/** Dónde se conectan las credenciales. Un solo destino: Ajustes → Conexiones. */
+const RUTA_DE_CONEXIONES = '/settings/integrations';
 
 
 /**
@@ -87,11 +97,16 @@ export const ToolExecutionCard: React.FC<ToolExecutionCardProps> = ({
     result,
     error,
     resumen,
+    remedio,
 }) => {
     const [expanded, setExpanded] = useState(false);
     const panelId = React.useId();
     const label = TOOL_LABELS[toolName] || toolName;
     const isFailed = status === 'failed';
+    // Lista de NO reintentables, nunca al revés: lo que no está probado imposible
+    // conserva el botón. Un remedio ausente o desconocido cae aquí a propósito.
+    const ofreceReintento = remedio !== 'connect' && remedio !== 'none';
+    const ofreceConexion = remedio === 'connect';
     const isAwaiting = status === 'awaiting_confirmation';
     const isStreaming = useChatStore(
         (s) => s.currentSessionId !== null && s.streamingSessionIds.includes(s.currentSessionId)
@@ -146,15 +161,30 @@ export const ToolExecutionCard: React.FC<ToolExecutionCardProps> = ({
                             {error}
                         </p>
                     )}
-                    <button
-                        onClick={handleRetry}
-                        disabled={isStreaming}
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-oxblood-500/30 text-danger hover:bg-oxblood-500/10 transition-colors text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
-                        title={isStreaming ? 'Espera a que termine la respuesta actual' : 'Pedir al agente que reintente'}
-                    >
-                        <RotateCcw className="h-3 w-3" />
-                        Reintentar
-                    </button>
+    {/* Pulsar «Reintentar» manda un mensaje nuevo al agente y GASTA UN CRÉDITO.
+                        Ante una credencial que falta no puede funcionar jamás, así que ahí el
+                        botón no se deshabilita ni se esconde: no existe. */}
+                    {ofreceReintento && (
+                        <button
+                            onClick={handleRetry}
+                            disabled={isStreaming}
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-oxblood-500/30 text-danger hover:bg-oxblood-500/10 transition-colors text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={isStreaming ? 'Espera a que termine la respuesta actual' : 'Pedir al agente que reintente'}
+                        >
+                            <RotateCcw className="h-3 w-3" />
+                            Reintentar
+                        </button>
+                    )}
+                    {ofreceConexion && (
+                        <Link
+                            to={RUTA_DE_CONEXIONES}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-oxblood-500/30 text-danger hover:bg-oxblood-500/10 transition-colors text-sm font-medium"
+                            title="Conectar el servicio en Ajustes"
+                        >
+                            <Link2 className="h-3 w-3" />
+                            Ir a Ajustes → Conexiones
+                        </Link>
+                    )}
                 </div>
             )}
             <AnimatePresence>

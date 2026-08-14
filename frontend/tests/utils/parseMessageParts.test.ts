@@ -47,9 +47,49 @@ describe('parseMessageParts', () => {
     });
 
     it('un error también sustituye a la tarjeta en curso', () => {
-        const partes = parseMessageParts('[TOOL_START:calendario]\n[TOOL_ERROR:calendario:sin permiso]');
+        // El marcador de fallo lleva TRES campos desde TER-005: nombre, remedio y
+        // mensaje. El escritor (`streamHandlers`) los emite siempre, así que la
+        // forma de dos campos ya no puede producirse.
+        const partes = parseMessageParts('[TOOL_START:calendario]\n[TOOL_ERROR:calendario:retry:sin permiso]');
         expect(partes).toEqual([
-            { tipo: 'utensilio', nombre: 'calendario', estado: 'failed', error: 'sin permiso' },
+            { tipo: 'utensilio', nombre: 'calendario', estado: 'failed', error: 'sin permiso', remedio: 'retry' },
+        ]);
+    });
+
+    it('TER-005: el fallo llega con su remedio, y el remedio va antes del mensaje', () => {
+        const partes = parseMessageParts('[TOOL_ERROR:whatsapp_send_message:connect:Falta la credencial]');
+        const pieza = partes[0];
+
+        expect(pieza.tipo).toBe('utensilio');
+        if (pieza.tipo !== 'utensilio') return;
+        expect(pieza.remedio).toBe('connect');
+        expect(pieza.error).toBe('Falta la credencial');
+        expect(pieza.estado).toBe('failed');
+    });
+
+    it('TER-005: un mensaje con dos puntos no rompe el parseo', () => {
+        // Éste es el test que justifica la POSICIÓN del campo. El saneado del
+        // escritor sólo quita `]`, `\n` y `\r`: los `:` del mensaje sobreviven, así
+        // que sólo el último grupo del patrón puede ser el permisivo.
+        const partes = parseMessageParts('[TOOL_ERROR:x:connect:Error HTTP 500: sin respuesta]');
+        const pieza = partes[0];
+
+        expect(pieza.tipo).toBe('utensilio');
+        if (pieza.tipo !== 'utensilio') return;
+        expect(pieza.remedio).toBe('connect');
+        expect(pieza.error).toBe('Error HTTP 500: sin respuesta');
+    });
+
+    it('TER-005: el remedio no se contagia a los otros marcadores', () => {
+        // Renumerar los grupos del regex es el error fácil de este cambio: si
+        // TOOL_CONFIRM se queda leyendo los grupos viejos, deja de casar.
+        const partes = parseMessageParts(
+            '[TOOL_ERROR:a:none:falló]\n[TOOL_CONFIRM:b:Borrar el evento]\n[TOOL_RESULT:c:3 huecos]',
+        );
+        expect(partes).toEqual([
+            { tipo: 'utensilio', nombre: 'a', estado: 'failed', error: 'falló', remedio: 'none' },
+            { tipo: 'utensilio', nombre: 'b', estado: 'awaiting_confirmation', resumen: 'Borrar el evento' },
+            { tipo: 'utensilio', nombre: 'c', estado: 'completed', resultado: '3 huecos' },
         ]);
     });
 

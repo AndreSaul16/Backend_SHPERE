@@ -6,10 +6,17 @@
  * (parece rota, y el botón gasta crédito reintentando una pregunta). Y en
  * ningún estado debe verse el identificador técnico de la herramienta.
  */
-import { render, screen } from '@testing-library/react';
+import { render as renderSinRouter, screen } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ToolExecutionCard } from '../../src/components/chat/ToolExecutionCard';
 import { useChatStore } from '../../src/store/useChatStore';
+
+// Con remedio `connect` la tarjeta enlaza a Ajustes → Conexiones, y un <Link> necesita
+// router. El resto de casos no lo necesita, pero envolver siempre evita que el próximo
+// enlace rompa media suite por un motivo que no es el que se está probando.
+const render = (ui: ReactElement) => renderSinRouter(<MemoryRouter>{ui}</MemoryRouter>);
 
 describe('ToolExecutionCard', () => {
     beforeEach(() => {
@@ -96,5 +103,77 @@ describe('ToolExecutionCard', () => {
 
         expect(screen.queryByText(/slack_post_message/)).toBeNull();
         expect(screen.getByText('Publicando en Slack — falló')).toBeInTheDocument();
+    });
+
+    // --- TER-004: ningún «Reintentar» sobre lo que no puede funcionar ---
+    //
+    // Pulsar «Reintentar» envía un mensaje nuevo al agente y GASTA UN CRÉDITO. Ante una
+    // credencial que falta, reintentar no puede funcionar jamás: el botón no se
+    // deshabilita ni se esconde, no existe.
+
+    it('TER-004: con remedio `connect` no hay «Reintentar», hay enlace a Conexiones', () => {
+        render(
+            <ToolExecutionCard
+                toolName="whatsapp_send_message"
+                status="failed"
+                error="Conecta WhatsApp para poder enviar mensajes."
+                remedio="connect"
+            />,
+        );
+
+        expect(screen.queryByRole('button', { name: /Reintentar/ })).toBeNull();
+        const enlace = screen.getByRole('link', { name: /Conexiones/ });
+        expect(enlace).toHaveAttribute('href', '/settings/integrations');
+        // Sigue siendo un fallo: la acción no ocurrió.
+        expect(screen.getByText('Enviando WhatsApp — falló')).toBeInTheDocument();
+        expect(screen.getByText('Conecta WhatsApp para poder enviar mensajes.')).toBeInTheDocument();
+    });
+
+    it('TER-004: con remedio `none` no hay ni botón ni enlace, sólo el mensaje', () => {
+        render(
+            <ToolExecutionCard
+                toolName="whatsapp_send_message"
+                status="failed"
+                error="Ese contacto no está en tu lista. Añádelo en Ajustes → Contactos."
+                remedio="none"
+            />,
+        );
+
+        expect(screen.queryByRole('button', { name: /Reintentar/ })).toBeNull();
+        expect(screen.queryByRole('link')).toBeNull();
+        expect(screen.getByText('Enviando WhatsApp — falló')).toBeInTheDocument();
+        expect(
+            screen.getByText('Ese contacto no está en tu lista. Añádelo en Ajustes → Contactos.'),
+        ).toBeInTheDocument();
+    });
+
+    it('TER-004: con remedio `retry` el botón sigue exactamente como hoy', () => {
+        // Esta prueba DEBE estar en verde desde antes del cambio: es la red que impide
+        // que el remedio se lleve por delante el caso bueno.
+        render(
+            <ToolExecutionCard
+                toolName="calendar_delete_event"
+                status="failed"
+                error="Google no respondió"
+                remedio="retry"
+            />,
+        );
+
+        expect(screen.getByRole('button', { name: /Reintentar/ })).toBeInTheDocument();
+        expect(screen.queryByRole('link')).toBeNull();
+    });
+
+    it('TER-004: durante el streaming el «Reintentar» de un fallo reintentable sigue deshabilitado', () => {
+        useChatStore.setState({ currentSessionId: 's1', streamingSessionIds: ['s1'] });
+        render(
+            <ToolExecutionCard
+                toolName="calendar_delete_event"
+                status="failed"
+                error="Google no respondió"
+                remedio="retry"
+            />,
+        );
+
+        expect(screen.getByRole('button', { name: /Reintentar/ })).toBeDisabled();
     });
 });

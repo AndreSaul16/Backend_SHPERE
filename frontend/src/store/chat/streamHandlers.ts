@@ -143,7 +143,12 @@ export function createStreamHandlers(ctx: StreamContext): StreamCallbacks {
         onToolError: (data) => {
             // El placeholder se parsea con regex: sanear ']' y saltos de línea
             const safeError = data.error.replace(/[\]\n\r]/g, ' ').substring(0, 200);
-            anadirALaActiva(`\n[TOOL_ERROR:${data.tool_name}:${safeError}]\n`);
+            // El remedio va EN MEDIO, antes del mensaje: el saneado de arriba no toca los
+            // `:`, así que sólo el último campo del patrón puede ser el permisivo.
+            // El `?? 'retry'` no es defensivo por gusto: hace que la arity la garantice el
+            // ESCRITOR y no la red. Si el evento llegara sin remedio, el marcador sigue
+            // teniendo tres campos y la tarjeta se comporta como hoy.
+            anadirALaActiva(`\n[TOOL_ERROR:${data.tool_name}:${data.remedy ?? 'retry'}:${safeError}]\n`);
         },
 
         onToolConfirmation: (data) => {

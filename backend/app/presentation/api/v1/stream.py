@@ -43,8 +43,42 @@ CONFIRMATION_REQUIRED = "confirmation_required"
 
 ToolOutcome = Literal["result", "error", "confirmation"]
 
+# Vocabulario cerrado de remedios: la tarjeta tiene exactamente tres afordancias.
+ToolRemedy = Literal["retry", "connect", "none"]
 
-def _classify_tool_output(raw_output: str) -> tuple[ToolOutcome, str]:
+# Por defecto se reintenta: lo desconocido conserva la conducta de hoy y sólo lo
+# probadamente imposible pierde el botón.
+DEFAULT_REMEDY: ToolRemedy = "retry"
+
+# El remedio sólo tiene sentido dentro del estado «fallo». En éxito y en confirmación no
+# aplica, y decir "retry" ahí sería afirmar algo falso sobre algo que no falló.
+NO_REMEDY = ""
+
+# Códigos que NO se pueden reintentar. Es deliberadamente una lista de NO reintentables y
+# no al revés: el campo `error` no siempre contiene un código —hay tools que meten ahí una
+# frase humana—, así que con la lista invertida cualquier código nuevo perdería el botón
+# sin que nadie lo hubiera decidido.
+_SUFIJOS_DE_CONEXION = ("_not_configured", "_not_connected")
+_CODIGOS_SIN_ACCION = frozenset({"contact_not_authorized", "user_context_missing"})
+
+
+def _remedio_para(error) -> ToolRemedy:
+    """Qué puede hacer el usuario ante este fallo.
+
+    `connect`: falta una credencial o un OAuth — reintentar no puede funcionar jamás,
+    pero conectar sí. `none`: hay que editar una whitelist o rehacer la sesión, y el
+    propio `hint` ya dice dónde. `retry`: todo lo demás.
+    """
+    if not isinstance(error, str):
+        return DEFAULT_REMEDY
+    if error in _CODIGOS_SIN_ACCION:
+        return "none"
+    if error.endswith(_SUFIJOS_DE_CONEXION):
+        return "connect"
+    return DEFAULT_REMEDY
+
+
+def _classify_tool_output(raw_output: str) -> tuple[ToolOutcome, str, str]:
     """Clasifica el resultado de una tool en uno y solo uno de tres estados.
 
     Éxito, fallo o pendiente de confirmación. Es el ÚNICO punto de decisión:
@@ -56,22 +90,26 @@ def _classify_tool_output(raw_output: str) -> tuple[ToolOutcome, str]:
     ausentes. `confirmation_required` no es ni una cosa ni la otra: es una
     pregunta al usuario, y ni la ✗ roja ni el ✓ verde la describen.
 
-    Devuelve `(estado, texto)`, donde el texto es el mensaje de fallo o el
-    resumen de la acción pendiente, y queda vacío en caso de éxito.
+    Devuelve `(estado, texto, remedio)`, donde el texto es el mensaje de fallo o el
+    resumen de la acción pendiente, y queda vacío en caso de éxito. El remedio es lo
+    que el usuario puede hacer al respecto y sólo se calcula para los fallos: se decide
+    AQUÍ, con el código del error en la mano, porque éste es el único punto de
+    clasificación (TRI-001) y porque el mensaje que ve el usuario es copy en castellano,
+    no un dato sobre el que se pueda decidir nada.
     """
     if not raw_output or '"error"' not in raw_output:
-        return "result", ""
+        return "result", "", NO_REMEDY
     try:
         # El output puede venir envuelto (ToolMessage repr); intentar el JSON directo
         parsed = json.loads(raw_output)
     except (json.JSONDecodeError, TypeError):
-        return "result", ""
+        return "result", "", NO_REMEDY
     if not isinstance(parsed, dict):
-        return "result", ""
+        return "result", "", NO_REMEDY
 
     error = parsed.get("error")
     if not error:
-        return "result", ""
+        return "result", "", NO_REMEDY
 
     if error == CONFIRMATION_REQUIRED:
         resumen = (
@@ -79,12 +117,12 @@ def _classify_tool_output(raw_output: str) -> tuple[ToolOutcome, str]:
             or parsed.get("hint")
             or "Acción pendiente de tu confirmación."
         )
-        return "confirmation", str(resumen)
+        return "confirmation", str(resumen), NO_REMEDY
 
     mensaje = parsed.get("message") or parsed.get("hint")
     if not mensaje:
         mensaje = "La herramienta falló." if error is True else error
-    return "error", str(mensaje)
+    return "error", str(mensaje), _remedio_para(error)
 
 
 async def _safe_refund(credit_manager, charge_ctx, user_id: str, reason: str) -> None:
@@ -420,10 +458,10 @@ async def generate_chat_events(
                 if not isinstance(raw_output, str):
                     raw_output = getattr(raw_output, "content", None) or str(raw_output)
                 tool_output = raw_output[:500]
-                estado, texto = _classify_tool_output(raw_output)
+                estado, texto, remedio = _classify_tool_output(raw_output)
                 if estado == "error":
                     logger.warning(f"⚠️ Tool error: {tool_name}: {texto[:200]}")
-                    yield f"data: {json.dumps({'type': 'tool_error', 'tool_name': tool_name, 'error': texto[:300]})}\n\n"
+                    yield f"data: {json.dumps({'type': 'tool_error', 'tool_name': tool_name, 'error': texto[:300], 'remedy': remedio})}\n\n"
                 elif estado == "confirmation":
                     logger.info(f"⏸️ Tool pendiente de confirmación: {tool_name}")
                     yield f"data: {json.dumps({'type': 'tool_confirmation', 'tool_name': tool_name, 'summary': texto[:300]})}\n\n"
@@ -435,7 +473,8 @@ async def generate_chat_events(
                 tool_name = event.get("name", "unknown_tool")
                 exc = event.get("data", {}).get("error")
                 logger.warning(f"⚠️ Tool raised: {tool_name}: {exc}")
-                yield f"data: {json.dumps({'type': 'tool_error', 'tool_name': tool_name, 'error': str(exc)[:300]})}\n\n"
+                # Excepción cruda: no hay código que clasificar, así que cae al defecto.
+                yield f"data: {json.dumps({'type': 'tool_error', 'tool_name': tool_name, 'error': str(exc)[:300], 'remedy': DEFAULT_REMEDY})}\n\n"
 
             # --- C. STREAMING DE TOKENS ---
             if kind == "on_chat_model_stream":

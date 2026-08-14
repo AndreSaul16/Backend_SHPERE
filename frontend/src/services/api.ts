@@ -5,6 +5,8 @@ import type {
 } from '@/types/api';
 import type { VisualConfig } from '@/types';
 import type { ContentStatus, TruncatedReason, TypeStatus } from '@/types/artifact';
+// El vocabulario del remedio se define UNA vez, junto al parser que lo consume.
+import type { RemedioDeFallo } from '@/utils/parseMessageParts';
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
@@ -86,7 +88,13 @@ export interface StreamCallbacks {
     // TOOL EXECUTION: 2-event protocol for tool visibility
     onToolStart?: (data: { tool_name: string; args: Record<string, ValorJson> }) => void;
     onToolResult?: (data: { tool_name: string; result: string }) => void;
-    onToolError?: (data: { tool_name: string; error: string }) => void;
+    /**
+     * `remedy` lo decide el backend (`_classify_tool_output`), que es el único punto de
+     * clasificación. El cliente NO deriva la reintentabilidad del texto del mensaje ni
+     * mantiene su propia lista de códigos de error: el mensaje es copy en castellano.
+     * Opcional en el tipo porque el escritor del marcador aplica `retry` por omisión.
+     */
+    onToolError?: (data: { tool_name: string; error: string; remedy?: RemedioDeFallo }) => void;
     // Tercer estado: la herramienta no falló, está esperando un sí del usuario.
     onToolConfirmation?: (data: { tool_name: string; summary: string }) => void;
     onDone?: () => void;
@@ -259,6 +267,7 @@ export const chatService = {
                             callbacks.onToolError?.({
                                 tool_name: data.tool_name || 'unknown',
                                 error: data.error || 'La herramienta falló.',
+                                remedy: data.remedy || 'retry',
                             });
                         } else if (data.type === 'tool_confirmation') {
                             callbacks.onToolConfirmation?.({

@@ -442,6 +442,7 @@ function MessageBubbleInterno({ message, agent, agentColor, sessionAvatar, isTyp
                                     result={parte.resultado}
                                     error={parte.error}
                                     resumen={parte.resumen}
+                                    remedio={parte.remedio}
                                 />
                             );
                         })}

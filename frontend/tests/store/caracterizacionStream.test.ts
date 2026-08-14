@@ -370,11 +370,32 @@ describe('artefactos y utensilios en streaming', () => {
 
     it('el error de utensilio se sanea: sin `]` ni saltos de línea, y cortado a 200', async () => {
         abrirSesion('cto-1');
-        await enviar((cb) => cb.onToolError?.({ tool_name: 'buscar', error: 'a]b\nc\rd' + 'z'.repeat(300) }));
+        await enviar((cb) => cb.onToolError?.({ tool_name: 'buscar', error: 'a]b\nc\rd' + 'z'.repeat(300), remedy: 'retry' }));
 
         const texto = mensajes()[1].content;
-        expect(texto).toContain('[TOOL_ERROR:buscar:a b c d');
+        expect(texto).toContain('[TOOL_ERROR:buscar:retry:a b c d');
         expect(texto.match(/\]/g)).toHaveLength(1);
+    });
+
+    it('TER-005: el marcador de fallo lleva el remedio que decidió el backend', async () => {
+        abrirSesion('cto-1');
+        await enviar((cb) => cb.onToolError?.({
+            tool_name: 'whatsapp_send_message',
+            error: 'Falta la credencial',
+            remedy: 'connect',
+        }));
+
+        expect(mensajes()[1].content).toContain('[TOOL_ERROR:whatsapp_send_message:connect:Falta la credencial]');
+    });
+
+    it('TER-005: sin remedio en el evento, el escritor pone `retry` y la arity se conserva', async () => {
+        // La arity la garantiza el ESCRITOR, no la red: si el evento SSE llegara sin
+        // `remedy`, el marcador sigue teniendo tres campos y la tarjeta se comporta
+        // como hoy. Un marcador de dos campos ya no lo parsea nadie.
+        abrirSesion('cto-1');
+        await enviar((cb) => cb.onToolError?.({ tool_name: 'buscar', error: 'se cayó' }));
+
+        expect(mensajes()[1].content).toContain('[TOOL_ERROR:buscar:retry:se cayó]');
     });
 
     it('la petición de confirmación deja su propio marcador, saneado igual que el error', async () => {

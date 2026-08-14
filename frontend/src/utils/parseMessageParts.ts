@@ -24,6 +24,13 @@
  * contrato interno de la app, no algo que venga del modelo.
  */
 
+/**
+ * Qué puede hacer el usuario ante un fallo de herramienta. Vocabulario CERRADO de tres
+ * valores porque la tarjeta tiene tres afordancias, y lo decide el backend: el cliente
+ * no mantiene una lista de códigos de error ajenos ni deduce nada del texto del mensaje.
+ */
+export type RemedioDeFallo = 'retry' | 'connect' | 'none';
+
 /** Una pieza del turno, ya decidida. */
 export type ParteDelTurno =
     | { tipo: 'texto'; texto: string }
@@ -36,6 +43,8 @@ export type ParteDelTurno =
         resultado?: string;
         /** Motivo, si falló. */
         error?: string;
+        /** Qué se puede hacer al respecto, si falló. Lo decide el backend. */
+        remedio?: RemedioDeFallo;
         /** Qué se hará si el usuario confirma. Solo en `awaiting_confirmation`. */
         resumen?: string;
     };
@@ -52,7 +61,7 @@ export type ParteDelTurno =
  * pide permiso no ha terminado ni ha fallado, así que necesita marcador propio.
  */
 const MARCADORES =
-    /\[ARTIFACT:([^:]+):([^\]]+)\]|\[TOOL_START:([^\]]+)\]|\[TOOL_RESULT:([^:]+):([^\]]*)\]|\[TOOL_ERROR:([^:]+):([^\]]*)\]|\[TOOL_CONFIRM:([^:]+):([^\]]*)\]/g;
+    /\[ARTIFACT:([^:]+):([^\]]+)\]|\[TOOL_START:([^\]]+)\]|\[TOOL_RESULT:([^:]+):([^\]]*)\]|\[TOOL_ERROR:([^:]+):([^:]+):([^\]]*)\]|\[TOOL_CONFIRM:([^:]+):([^\]]*)\]/g;
 
 /**
  * Parte el contenido de un turno en piezas.
@@ -69,6 +78,16 @@ const MARCADORES =
  *    no cambiar lo que se ve: el caso normal que la dispara es un turno sin
  *    ningún marcador.
  */
+/**
+ * El remedio del marcador, sin inventarse valores fuera del vocabulario.
+ *
+ * Lo desconocido cae a `retry`, que es la conducta de hoy: sólo lo probadamente
+ * imposible pierde el botón, y nunca por un fallo de transporte.
+ */
+function remedioDelMarcador(valor: string | undefined): RemedioDeFallo {
+    return valor === 'connect' || valor === 'none' ? valor : 'retry';
+}
+
 export function parseMessageParts(content: string): ParteDelTurno[] {
     const partes: ParteDelTurno[] = [];
     let desde = 0;
@@ -104,15 +123,16 @@ export function parseMessageParts(content: string): ParteDelTurno[] {
             if (i >= 0) partes[i] = pieza; else partes.push(pieza);
         } else if (m[6]) {
             const pieza: ParteDelTurno = {
-                tipo: 'utensilio', nombre: m[6], estado: 'failed', error: m[7] || '',
+                tipo: 'utensilio', nombre: m[6], estado: 'failed', error: m[8] || '',
+                remedio: remedioDelMarcador(m[7]),
             };
             const i = enCurso(m[6]);
             if (i >= 0) partes[i] = pieza; else partes.push(pieza);
-        } else if (m[8]) {
+        } else if (m[9]) {
             const pieza: ParteDelTurno = {
-                tipo: 'utensilio', nombre: m[8], estado: 'awaiting_confirmation', resumen: m[9] || '',
+                tipo: 'utensilio', nombre: m[9], estado: 'awaiting_confirmation', resumen: m[10] || '',
             };
-            const i = enCurso(m[8]);
+            const i = enCurso(m[9]);
             if (i >= 0) partes[i] = pieza; else partes.push(pieza);
         }
 

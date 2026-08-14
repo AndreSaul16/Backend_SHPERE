@@ -89,4 +89,28 @@ describe('citaLlana', () => {
     it('una cadena vacía no revienta', () => {
         expect(citaLlana('')).toBe('');
     });
+
+    it('TER-005: el marcador de fallo de TRES campos tampoco se cuela en la cita', () => {
+        // `MARCADORES` es indiferente a la arity (`[^\]]*` se traga los campos que
+        // haya), así que este cambio NO debería tocarlo. Se COMPRUEBA en vez de
+        // suponerse: éste es el sitio exacto por el que un marcador se colaría crudo
+        // en las citas del Palco.
+        const conMarcador = 'La junta decide avanzar.\n[TOOL_ERROR:whatsapp_send_message:connect:Falta la credencial]\nY sigue.';
+        const cita = citaLlana(conMarcador);
+
+        expect(cita).not.toContain('TOOL_ERROR');
+        expect(cita).not.toContain('connect');
+        expect(cita).not.toContain('[');
+        expect(cita).toContain('La junta decide avanzar.');
+        expect(cita).toContain('Y sigue.');
+    });
+
+    it('TER-005: un mensaje con dos puntos dentro del marcador tampoco se escapa', () => {
+        const cita = citaLlana('Antes [TOOL_ERROR:x:connect:Error HTTP 500: sin respuesta] después');
+
+        expect(cita).not.toContain('TOOL_ERROR');
+        expect(cita).not.toContain('Error HTTP 500');
+        expect(cita).toContain('Antes');
+        expect(cita).toContain('después');
+    });
 });
