@@ -492,26 +492,7 @@ async def test_service_credential(
     try:
         import httpx
 
-        if service == "google_calendar":
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.get(
-                    "https://www.googleapis.com/calendar/v3/users/me/calendarList",
-                    params={"maxResults": 1},
-                    headers={"Authorization": f"Bearer {cred['key']}"},
-                )
-                if resp.status_code == 200:
-                    return {
-                        "service": service,
-                        "success": True,
-                        "message": "Conexión exitosa con Google Calendar",
-                    }
-                return {
-                    "service": service,
-                    "success": False,
-                    "message": f"Error HTTP {resp.status_code}",
-                }
-
-        elif service == "linkedin":
+        if service == "linkedin":
             async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.get(
                     "https://api.linkedin.com/v2/me",
@@ -569,19 +550,6 @@ async def test_service_credential(
                     "success": False,
                     "message": f"Error HTTP {resp.status_code}",
                 }
-
-        elif service == "jules":
-            # Jules no expone endpoint de verificación: ser honestos en vez de
-            # devolver un check verde que sugiere una validación que no ocurrió.
-            return {
-                "service": service,
-                "success": True,
-                "verified": False,
-                "message": (
-                    "API key almacenada. Jules no ofrece verificación previa: "
-                    "se validará en el primer uso real."
-                ),
-            }
 
         elif service == "instagram":
             # Validar contra la MISMA API que usa el workflow de publicación
