@@ -13,8 +13,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from app.core.auth import get_current_user, _is_wallet_valid, _repair_wallet
-from app.core.config import settings
+from app.core.auth import get_current_user, es_admin, _is_wallet_valid, _repair_wallet
 from app.core.logger import api_logger as logger
 from app.infrastructure.database import get_users_collection, db
 
@@ -27,14 +26,11 @@ router = APIRouter()
 async def require_admin(user: dict = Depends(get_current_user)) -> dict:
     """Deja pasar solo a los emails configurados en ADMIN_EMAILS. 403 si no.
 
-    Exige email verificado: el claim `email` de Firebase se rellena aunque el
-    correo no esté verificado, así que sin este check un atacante podría
-    registrar el email de un admin (sin verificarlo) y colarse en el panel.
+    Esta sigue siendo LA guarda de los endpoints /admin: que GET /me también
+    diga `is_admin` no autoriza nada, sólo evita que el frontend tenga que
+    sondear. El predicado se comparte (`es_admin`) para que no puedan divergir.
     """
-    email = (user.get("email") or "").strip().lower()
-    if not email or email not in settings.admin_emails_list:
-        raise HTTPException(status_code=403, detail="Sin acceso")
-    if user.get("email_verified") is not True:
+    if not es_admin(user):
         raise HTTPException(status_code=403, detail="Sin acceso")
     return user
 

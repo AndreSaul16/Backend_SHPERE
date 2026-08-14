@@ -35,6 +35,56 @@ async def test_get_me_with_valid_token(authed_client_a):
     assert data["email"] == "usera@test.com"
 
 
+# --- QA-4: is_admin en el perfil ---
+#
+# El frontend preguntaba «¿soy admin?» sondeando GET /admin/users y contando el
+# 403 como un «no». Como la sonda no se cacheaba y el shell se remonta al
+# navegar, eso eran ~11 peticiones fallidas por sesión pintando la consola de
+# rojo a todo usuario normal. El dato ya lo sabe el backend: se dice en /me y se
+# acabó la sonda. El predicado es el MISMO que usa require_admin (`es_admin`),
+# no una copia — ver tests/test_admin.py.
+
+
+@pytest.mark.asyncio
+async def test_get_me_dice_is_admin_falso_a_un_usuario_normal(authed_client_a, monkeypatch):
+    """El campo viaja SIEMPRE: sin él el frontend no puede dejar de sondear."""
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "ADMIN_EMAILS", "otro@sphere.es")
+    resp = await authed_client_a.get("/api/v1/me")
+    assert resp.status_code == 200
+    assert resp.json()["is_admin"] is False
+
+
+@pytest.mark.asyncio
+async def test_get_me_dice_is_admin_cierto_a_un_admin_verificado(authed_client_a, monkeypatch):
+    from app.core.config import settings
+    from tests.conftest import PROFILE_A
+
+    monkeypatch.setattr(settings, "ADMIN_EMAILS", "usera@test.com")
+    monkeypatch.setitem(PROFILE_A, "email_verified", True)
+    resp = await authed_client_a.get("/api/v1/me")
+    assert resp.status_code == 200
+    assert resp.json()["is_admin"] is True
+
+
+@pytest.mark.asyncio
+async def test_get_me_no_da_is_admin_sin_email_verificado(authed_client_a, monkeypatch):
+    """Estar en ADMIN_EMAILS no basta, igual que en require_admin.
+
+    Sin este check el frontend pintaría el enlace del panel a quien la guarda
+    del backend va a rechazar con un 403.
+    """
+    from app.core.config import settings
+    from tests.conftest import PROFILE_A
+
+    monkeypatch.setattr(settings, "ADMIN_EMAILS", "usera@test.com")
+    monkeypatch.setitem(PROFILE_A, "email_verified", False)
+    resp = await authed_client_a.get("/api/v1/me")
+    assert resp.status_code == 200
+    assert resp.json()["is_admin"] is False
+
+
 @pytest.mark.asyncio
 async def test_patch_me_updates_profile(authed_client_a):
     """PATCH /me actualiza el perfil del usuario."""

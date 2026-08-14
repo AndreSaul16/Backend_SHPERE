@@ -9,6 +9,7 @@ import { useChatStore } from '../store/useChatStore';
 import { useBillingStore } from '../store/useBillingStore';
 import { useBoardSettingsStore } from '../store/useBoardSettingsStore';
 import { clearAgentIdentityOverrides } from './agentIdentityOverrides';
+import { olvidarSiEsAdmin } from '../hooks/useEsAdmin';
 
 export function clearUserStores(): void {
   try {
@@ -31,4 +32,8 @@ export function clearUserStores(): void {
   // Los nombres y colores que el usuario anterior dio a los directores (D28)
   // tampoco son del siguiente.
   clearAgentIdentityOverrides();
+  // Ni su panel de administración: la respuesta está cacheada a nivel de módulo
+  // para no repetir la consulta en cada remontaje del shell (QA-4), y esa caché
+  // sobreviviría al cambio de cuenta.
+  olvidarSiEsAdmin();
 }

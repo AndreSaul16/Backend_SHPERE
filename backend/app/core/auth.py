@@ -367,6 +367,30 @@ async def _auto_provision_user(firebase_claims: dict) -> dict:
     return user or new_user
 
 
+def es_admin(user: dict) -> bool:
+    """¿Esta cuenta tiene acceso al panel de administración?
+
+    El ÚNICO sitio donde se decide. Lo consumen los dos lados que tienen que
+    contestar lo mismo y que antes podían divergir:
+
+    - `require_admin` (presentation/api/v1/admin.py), la guarda que corta los
+      endpoints /admin con un 403.
+    - el campo `is_admin` de GET /me, que es de donde el frontend saca si
+      pinta el enlace del panel.
+
+    Si estos dos se separan, o enseñamos un panel que luego responde 403, o le
+    escondemos el panel a un administrador de verdad.
+
+    Exige email verificado: el claim `email` de Firebase se rellena aunque el
+    correo no esté verificado, así que sin este check un atacante podría
+    registrar el email de un admin (sin verificarlo) y colarse en el panel.
+    """
+    email = (user.get("email") or "").strip().lower()
+    if not email or email not in settings.admin_emails_list:
+        return False
+    return user.get("email_verified") is True
+
+
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
 ) -> dict:

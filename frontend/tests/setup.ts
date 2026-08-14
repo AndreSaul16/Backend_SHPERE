@@ -1,8 +1,9 @@
 import '@testing-library/jest-dom';
-import { beforeAll, afterEach, afterAll, vi } from 'vitest';
+import { beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import { MotionGlobalConfig } from 'framer-motion';
 import { setupServer } from 'msw/node';
 import { handlers } from './mocks/handlers';
+import { olvidarSiEsAdmin } from '../src/hooks/useEsAdmin';
 
 // Framer Motion sin animación en los tests.
 //
@@ -23,6 +24,12 @@ beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 
 // Resetear handlers después de cada test para evitar interferencias
 afterEach(() => server.resetHandlers());
+
+// «¿Soy admin?» se responde UNA vez por sesión y se cachea a nivel de módulo
+// (QA-4): es lo que evita las ~11 peticiones por remontaje del shell. Esa caché
+// no la limpia `vi.clearAllMocks()`, así que sin esto el primer test de cada
+// fichero le dictaría la respuesta a todos los siguientes.
+beforeEach(() => olvidarSiEsAdmin());
 
 // Limpiar después de todos los tests
 afterAll(() => server.close());

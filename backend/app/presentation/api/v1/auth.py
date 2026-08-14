@@ -9,7 +9,7 @@ from typing import Optional, List
 from datetime import datetime, timezone
 import pymongo
 
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user, es_admin
 from app.infrastructure.database import (
     get_users_collection,
     get_user_agent_overrides_collection,
@@ -23,10 +23,24 @@ router = APIRouter()
 # --- /me endpoints ---
 
 
+def _perfil(documento: dict, autenticado: dict) -> UserResponse:
+    """Serializa el perfil añadiendo `is_admin`.
+
+    `is_admin` se calcula con `es_admin` sobre la identidad AUTENTICADA; no se
+    lee del documento. Si saliera de Mongo, bastaría con escribir el campo a
+    mano para repartirse un panel de administración.
+
+    `documento` y `autenticado` sólo se separan en el PATCH, donde hay que
+    serializar el documento recién actualizado pero decidir el acceso sobre
+    quien viene en el token.
+    """
+    return UserResponse(**{**documento, "is_admin": es_admin(autenticado)})
+
+
 @router.get("/me", response_model=UserResponse)
 async def get_my_profile(user: dict = Depends(get_current_user)):
     """Devuelve el perfil completo del usuario autenticado."""
-    return UserResponse(**user)
+    return _perfil(user, user)
 
 
 @router.patch("/me", response_model=UserResponse)
@@ -66,7 +80,7 @@ async def update_my_profile(
         update_data["personal_kb_enabled"] = updates.personal_kb_enabled
 
     if not update_data:
-        return UserResponse(**user)
+        return _perfil(user, user)
 
     result = await users_col.find_one_and_update(
         {"firebase_uid": user["firebase_uid"]},
@@ -79,7 +93,7 @@ async def update_my_profile(
 
     result.pop("_id", None)
     logger.info(f"Perfil actualizado para usuario: {user['firebase_uid']}")
-    return UserResponse(**result)
+    return _perfil(result, user)
 
 
 @router.post("/me/onboarding/complete")

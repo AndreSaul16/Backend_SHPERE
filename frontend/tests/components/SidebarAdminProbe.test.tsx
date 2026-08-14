@@ -46,6 +46,15 @@ vi.mock('framer-motion', () => {
 });
 
 const ADMIN_USERS = 'http://localhost:8000/api/v1/admin/users';
+const ME = 'http://localhost:8000/api/v1/me';
+
+/** Un perfil de GET /me; `is_admin` se decide en cada caso. */
+const perfil = (extra: Record<string, unknown> = {}) => ({
+    firebase_uid: 'u1',
+    email: 'a@b.es',
+    display_name: 'Ana',
+    ...extra,
+});
 
 describe('F1 — la sonda de administración no abre el paywall', () => {
     beforeEach(() => {
@@ -87,6 +96,54 @@ describe('F1 — la sonda de administración no abre el paywall', () => {
 
         expect(await screen.findByRole('link', { name: 'Admin' })).toBeInTheDocument();
         expect(useBillingStore.getState().paywall.open).toBe(false);
+    });
+
+    /**
+     * QA-4 — el arreglo de raíz: si el perfil ya trae `is_admin`, la sonda no
+     * llega a existir. Es lo que borra los ~11 `403` de la consola, porque el
+     * shell se remonta al navegar y antes cada remontaje sondeaba de nuevo.
+     */
+    it('con is_admin en el perfil el enlace sale sin sondear /admin/users', async () => {
+        let sondeado = false;
+        server.use(
+            http.get(ME, () => HttpResponse.json(perfil({ is_admin: true }))),
+            http.get(ADMIN_USERS, () => {
+                sondeado = true;
+                return HttpResponse.json([]);
+            }),
+        );
+
+        render(<MemoryRouter><Sidebar /></MemoryRouter>);
+
+        expect(await screen.findByRole('link', { name: 'Admin' })).toBeInTheDocument();
+        expect(sondeado).toBe(false);
+        expect(useBillingStore.getState().paywall.open).toBe(false);
+    });
+
+    it('y con is_admin false tampoco se sondea: ni enlace ni 403', async () => {
+        let sondeado = false;
+        let perfilPedido = false;
+        server.use(
+            http.get(ME, () => {
+                perfilPedido = true;
+                return HttpResponse.json(perfil({ is_admin: false }));
+            }),
+            http.get(ADMIN_USERS, () => {
+                sondeado = true;
+                return HttpResponse.json([]);
+            }),
+        );
+
+        render(<MemoryRouter><Sidebar /></MemoryRouter>);
+
+        // Se espera a que el perfil esté contestado y a que la cadena de
+        // promesas termine: sin esto el test pasaría por llegar antes que la
+        // sonda, no por que la sonda ya no exista.
+        await waitFor(() => expect(perfilPedido).toBe(true));
+        await new Promise((r) => setTimeout(r, 20));
+
+        expect(sondeado).toBe(false);
+        expect(screen.queryByRole('link', { name: 'Admin' })).not.toBeInTheDocument();
     });
 
     it('adminService.isAdmin() devuelve false ante un 403 sin efectos globales', async () => {

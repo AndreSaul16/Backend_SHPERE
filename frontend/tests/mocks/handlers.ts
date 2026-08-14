@@ -56,6 +56,26 @@ export const handlers = [
         return HttpResponse.json({ detail: 'Sin acceso' }, { status: 403 });
     }),
 
+    // El perfil, de donde sale `is_admin` (QA-4).
+    //
+    // Este doble NO trae el campo A PROPÓSITO: representa al backend anterior a
+    // que se desplegara, que es la ventana real durante el despliegue —los dos
+    // repos van por separado— y el único caso en que `useEsAdmin` sigue cayendo
+    // a la sonda legada de `/admin/users`. Así los tests que deciden la
+    // administración por esa sonda siguen valiendo tal y como están escritos, y
+    // el camino de reserva se queda cubierto de verdad.
+    //
+    // Quien quiera probar el camino nuevo sobreescribe este handler con
+    // `is_admin` y comprueba que `/admin/users` no se pide.
+    http.get('http://localhost:8000/api/v1/me', () => {
+        return HttpResponse.json({
+            firebase_uid: 'u1',
+            email: 'a@b.es',
+            display_name: 'Ana',
+            onboarding_completed: true,
+        });
+    }),
+
     // Default: sin juntas programadas (F3). Los tests las sobreescriben con server.use.
     http.get('http://localhost:8000/api/v1/me/scheduled-boards', () => {
         return HttpResponse.json([]);

@@ -84,6 +84,11 @@ class UserResponse(BaseModel):
     subscription: SubscriptionInfo = SubscriptionInfo()
     wallet: WalletInfo = WalletInfo()
     limits: UserLimits = UserLimits()
+    # ¿Panel de administración? Lo calcula el endpoint con `es_admin`; NO sale
+    # del documento de Mongo (nadie es admin por tener un campo puesto a mano).
+    # Por defecto False: quien construya un UserResponse sin decidirlo no
+    # reparte accesos por olvido.
+    is_admin: bool = False
 
 
 class UserUpdateRequest(BaseModel):

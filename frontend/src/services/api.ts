@@ -631,6 +631,16 @@ export interface UserProfile {
     personal_kb_enabled?: boolean;
     feature_flags?: string[];
     connected_providers?: string[];
+    /**
+     * ¿Panel de administración? Lo calcula el backend con el mismo predicado
+     * que la guarda `require_admin`, así que no puede divergir de ella.
+     *
+     * Opcional a propósito: los dos repos se despliegan por separado y hay una
+     * ventana en la que el backend todavía no lo manda. `undefined` significa
+     * «este backend aún no lo sabe» —no «no eres admin»—, y por eso
+     * `useEsAdmin` distingue los dos casos.
+     */
+    is_admin?: boolean;
 }
 
 export interface Integration {

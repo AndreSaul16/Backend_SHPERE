@@ -12,8 +12,69 @@ import pytest
 from fastapi import HTTPException
 
 from app.presentation.api.v1.admin import require_admin, aggregate_credit_metrics
+from app.core.auth import es_admin
 from app.core.config import settings
 from app.infrastructure.database import get_users_collection
+
+
+# --- QA-4: el predicado admin es UNO solo ---
+#
+# `require_admin` (la guarda de los endpoints /admin) y el campo `is_admin` que
+# GET /me le da al frontend tienen que contestar EXACTAMENTE lo mismo. Si
+# divergen sale uno de estos dos defectos, los dos malos:
+#
+#   - /me dice «sí» y la guarda dice «no» → pintamos el enlace del panel a
+#     alguien que al entrar se come un 403.
+#   - /me dice «no» y la guarda dice «sí» → a un administrador de verdad le
+#     escondemos su propio panel.
+#
+# Por eso el predicado vive en UN sitio (`es_admin`) y los dos lo consumen.
+# La tabla de casos se comparte entre el test del predicado y el de la guarda:
+# así no se puede añadir un caso a uno y olvidarlo en el otro.
+
+CASOS_DE_ADMIN = [
+    # (email, email_verified, ADMIN_EMAILS, es_admin?, por qué)
+    ("admin@sphere.es", True, "admin@sphere.es", True, "en la lista y verificado"),
+    ("Admin@Sphere.ES", True, "admin@sphere.es", True, "el correo no distingue mayúsculas"),
+    ("  admin@sphere.es  ", True, "admin@sphere.es", True, "los espacios de sobra no cuentan"),
+    ("boss@sphere.es", True, "boss@sphere.es, admin@sphere.es", True, "lista de varios"),
+    ("admin@sphere.es", False, "admin@sphere.es", False, "en la lista pero sin verificar"),
+    ("admin@sphere.es", None, "admin@sphere.es", False, "el claim no es True"),
+    ("admin@sphere.es", "true", "admin@sphere.es", False, "la cadena 'true' no es True"),
+    ("otro@x.com", True, "admin@sphere.es", False, "fuera de la lista"),
+    (None, True, "admin@sphere.es", False, "sin correo"),
+    ("", True, "admin@sphere.es", False, "correo vacío"),
+    ("admin@sphere.es", True, "", False, "lista vacía: no hay admins"),
+]
+
+
+@pytest.mark.parametrize("email, verificado, lista, esperado, motivo", CASOS_DE_ADMIN)
+def test_es_admin(monkeypatch, email, verificado, lista, esperado, motivo):
+    """El predicado, a solas: sin FastAPI, sin Mongo, sin HTTP."""
+    monkeypatch.setattr(settings, "ADMIN_EMAILS", lista)
+    user = {"firebase_uid": "u1", "email": email, "email_verified": verificado}
+    assert es_admin(user) is esperado, motivo
+
+
+def test_es_admin_sin_claim_de_verificacion(monkeypatch):
+    """Falta la clave entera (documento antiguo): no basta con estar en la lista."""
+    monkeypatch.setattr(settings, "ADMIN_EMAILS", "admin@sphere.es")
+    assert es_admin({"firebase_uid": "u1", "email": "admin@sphere.es"}) is False
+
+
+@pytest.mark.parametrize("email, verificado, lista, esperado, motivo", CASOS_DE_ADMIN)
+async def test_require_admin_no_puede_divergir_de_es_admin(
+    monkeypatch, email, verificado, lista, esperado, motivo
+):
+    """La guarda deja pasar exactamente a quien `es_admin` dice que sí."""
+    monkeypatch.setattr(settings, "ADMIN_EMAILS", lista)
+    user = {"firebase_uid": "u1", "email": email, "email_verified": verificado}
+    if esperado:
+        assert await require_admin(user=user) is user, motivo
+    else:
+        with pytest.raises(HTTPException) as exc:
+            await require_admin(user=user)
+        assert exc.value.status_code == 403, motivo
 
 
 # --- F4: require_admin ---
