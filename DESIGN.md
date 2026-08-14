@@ -218,7 +218,26 @@ Oscuro: `L=0.72, C=0.135`. Claro: lightness ajustada individualmente al mínimo 
 
 Nexus pasa de `#00C1B3` a `#00BFB0`: prácticamente idéntico. Los demás se aclaran dentro de su tono. La identidad se reconoce; el contraste se arregla.
 
-**Relleno de identidad.** Un agente puede teñir un fondo a **12% de alpha sobre `baize-900`** — p.ej. Nexus da `#0B2C24` (1.21:1 vs el fondo: perceptible, no ruidoso) y `ink-100` sobre él sigue en **12.80:1**. Por encima del 12% el transcript se convierte en un arcoíris.
+**Relleno de identidad — NORMATIVO.** *(Era «un agente **puede** teñir un fondo»: opcional, y por eso nunca se cobró. El ciclo Viveza-1 lo hace obligatorio — ver la nota al final del párrafo.)*
+
+El turno de un director **lleva** su relleno de identidad. La receta es exacta, y el porcentaje es **techo y suelo a la vez** (no «hasta»):
+
+```css
+/* oscuro */  background-color: color-mix(in oklab, var(--agent-<rol>) 12%, var(--baize-900));
+/* claro  */  background-color: color-mix(in oklab, var(--agent-<rol>) 10%, var(--paper-100));
+```
+
+- **12% en oscuro**: Nexus da `#0B2C24` (1.21:1 vs el fondo: perceptible, no ruidoso) y `ink-100` sobre él sigue en **12.80:1**. Por encima del 12% el transcript se convierte en un arcoíris; por debajo no se distingue de `--surface-2` y volvemos al punto de partida.
+- **10% en claro**: los tokens claros son mucho más oscuros que los de paño (`L≈0.52-0.57` frente a `0.72`), así que al 12% sobre `paper-100` el tinte pasa de identificar a manchar.
+- **`oklab`, no `srgb`**: es una mezcla de dos colores opacos y en oklab el mismo porcentaje se percibe igual en los seis tonos.
+- El suelo y la proporción son **variables de tema** (`--relleno-identidad-base`, `--relleno-identidad-pct`), no valores escritos en el componente: el navegador re-resuelve el relleno al conmutar de tema, igual que ya hace con el filete.
+- El relleno deriva de la **misma fuente de color que el filete y el nombre** (`colorDeAgente`). Un color de sesión elegido por el usuario y un agente a medida heredan el tinte sin una segunda tabla que se desincronice.
+
+**P5 se mantiene: el relleno es un canal ADICIONAL, nunca el único.** El filete de identidad de 2px en `border-inline-start` y el nombre del director en versalitas coloreadas siguen siendo obligatorios (§9.11). Quien no distingue el tinte sigue teniendo dos señales.
+
+**Es fondo estático.** No se anima, no entra en el presupuesto de bucles de §7.4 y no cuesta nada en §7.7: se pinta y se queda.
+
+> **Por qué dejó de ser opcional (Viveza-1).** Medido en el DOM: las burbujas de agente compartían todas `bg-ai-bubble` (= `--surface-2`, plano), así que la identidad vivía en un filete de 2px más el nombre — y la placa del director va `hidden sm:flex`, o sea que **en móvil el filete era la señal entera**. Mientras tanto la burbuja del usuario sí venía teñida (`bg-user-bubble/12`): el único con color propio era quien pregunta, y los seis directores compartían superficie. La asimetría no estaba decidida, estaba heredada.
 
 ### 2.9 Filetes y trazos
 
@@ -811,7 +830,7 @@ Anatomía: nombre del director **en el margen** (§8.4), no dentro · cuerpo en 
 
 | Estado | Tratamiento |
 |---|---|
-| default (agente) | e2, relleno `baize-850`, filete de identidad a 2px |
+| default (agente) | **relleno de identidad de §2.8** (12% del color del rol sobre `baize-900` en oscuro, 10% sobre `paper-100` en claro), filete de identidad a 2px y nombre en versalitas coloreadas. Los tres canales a la vez: P5 |
 | default (usuario) | relleno `agent-user` a 12%, filete de identidad `agent-user` |
 | streaming | cursor de bloque de 2×18px en el color del agente, `opacity` 1↔0 a 800ms. **El texto no se anima** |
 | razonando | bloque de razonamiento abierto, texto en Literata itálica `ink-400`, con `role="status"` |

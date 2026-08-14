@@ -11,7 +11,7 @@ import { ArtifactCard } from './ArtifactCard';
 import { VersionesDelTurno } from './VersionesDelTurno';
 import { ToolExecutionCard } from './ToolExecutionCard';
 import { AGENT_HEX, useChatStore } from '@/store/useChatStore';
-import { colorDeAgente, colorDeAgenteAlpha } from '@/lib/colorDeAgente';
+import { colorDeAgente, colorDeAgenteAlpha, rellenoDeIdentidad } from '@/lib/colorDeAgente';
 import { useUserAvatar } from '@/hooks/useUserAvatar';
 import { notify, reasonOf } from '@/lib/toastBus';
 import { AvatarImage } from '@/components/ui/AvatarImage';
@@ -339,15 +339,31 @@ function MessageBubbleInterno({ message, agent, agentColor, sessionAvatar, isTyp
                         "[overflow-wrap:break-word]",
                         isUser
                             ? "bg-user-bubble/12 text-content"
-                            : "bg-ai-bubble text-content-strong"
+                            : "text-content-strong"
                     )}
                     /* El filete fino sigue siendo el del sistema; el del canto
                        lleva la identidad. El de la burbuja de usuario era
                        un hex de ocho dígitos escrito a pelo — el cian de la paleta
-                       anterior, no el `--agent-user` de §2.8. */
+                       anterior, no el `--agent-user` de §2.8.
+
+                       Viveza-1 · §2.8 — y el RELLENO también lleva identidad.
+                       Antes todas las burbujas de agente eran `bg-ai-bubble`
+                       (`--surface-2`, plano) mientras la del usuario sí venía
+                       teñida: seis directores compartiendo superficie y el
+                       único con color propio era quien pregunta. El relleno
+                       sale de `colorIdentidad`, la MISMA fuente que el filete y
+                       el nombre, así que overrides de sesión y agentes a medida
+                       lo heredan sin una segunda tabla de colores.
+
+                       Es fondo ESTÁTICO: no entra en el presupuesto de §7.4
+                       porque no se anima nada: se pinta y se queda. */
                     style={isUser
                         ? { borderColor: colorDeAgenteAlpha('user', AGENT_HEX.user, 21), borderInlineEndColor: colorDeAgente('user', AGENT_HEX.user) }
-                        : { borderColor: colorDeAgenteAlpha(rolIdentidad, activeHexColor, 21), borderInlineStartColor: colorIdentidad }
+                        : {
+                            borderColor: colorDeAgenteAlpha(rolIdentidad, activeHexColor, 21),
+                            borderInlineStartColor: colorIdentidad,
+                            backgroundColor: rellenoDeIdentidad(rolIdentidad, activeHexColor),
+                        }
                     }
                 >
                     {!isUser && (

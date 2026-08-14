@@ -129,6 +129,16 @@
   --agent-cfo:oklch(0.72 0.135 265); --agent-cmo:oklch(0.72 0.135 345);
   --agent-devil:oklch(0.72 0.135 18); --agent-user:oklch(0.72 0.135 232);
 
+  /* §2.8 «Relleno de identidad» — el suelo y la proporción del tinte del turno.
+     Viven aquí, y no en el componente, porque son lo ÚNICO que cambia entre
+     paño y papel: `rellenoDeIdentidad()` produce una sola expresión y el
+     navegador la re-resuelve al conmutar el tema, igual que ya hace con el
+     filete. 12% es techo y suelo a la vez: es el valor medido en §2.8 (Nexus
+     da #0B2C24, 1.21:1 vs el fondo, con ink-100 encima a 12.80:1) y por encima
+     el transcript se vuelve un arcoíris. */
+  --relleno-identidad-pct:12%;
+  --relleno-identidad-base:var(--baize-900);
+
   --shadow-e2:0 8px 24px -8px rgb(0 0 0 / .50);
   --shadow-e3:0 16px 40px -12px rgb(0 0 0 / .60);
   --shadow-e4:0 32px 80px -20px rgb(0 0 0 / .70);
@@ -168,6 +178,14 @@
   --agent-ceo:oklch(0.565 0.19 300); --agent-cto:oklch(0.515 0.13 185);
   --agent-cfo:oklch(0.555 0.19 265); --agent-cmo:oklch(0.570 0.19 345);
   --agent-devil:oklch(0.570 0.19 18); --agent-user:oklch(0.535 0.13 232);
+
+  /* §2.8 — el mismo mecanismo sobre papel. 10% y no 12%: los tokens claros son
+     mucho más oscuros que los de paño (L≈0.52-0.57 frente a 0.72), así que al
+     12% sobre `paper-100` el tinte pasa de identificar a manchar. El suelo es
+     `paper-100` porque es el fondo de página del tema claro, igual que
+     `baize-900` lo es del oscuro. */
+  --relleno-identidad-pct:10%;
+  --relleno-identidad-base:var(--paper-100);
 
   --shadow-e2:0 2px 6px -2px rgb(26 35 30 / .10);
   --shadow-e3:0 8px 20px -6px rgb(26 35 30 / .14);
@@ -614,6 +632,10 @@
     --stroke-control: color-mix(in oklab, var(--graphite-900) 50%, transparent);
     --success: oklch(0.50 0.14 150); --warning: oklch(0.52 0.19 75);
     --danger: oklch(0.535 0.19 25);  --info: oklch(0.505 0.12 232);
+    /* Y el suelo del relleno de identidad (§2.8), por el mismo motivo: un
+       turno citado dentro de la hoja se tiñe contra papel, no contra paño. */
+    --relleno-identidad-pct: 10%;
+    --relleno-identidad-base: var(--paper-100);
 
     color: var(--content);
   }

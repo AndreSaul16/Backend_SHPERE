@@ -48,3 +48,32 @@ export function colorDeAgente(rol: string | undefined, hex: string): string {
 export function colorDeAgenteAlpha(rol: string | undefined, hex: string, pct: number): string {
     return `color-mix(in srgb, ${colorDeAgente(rol, hex)} ${pct}%, transparent)`;
 }
+
+/**
+ * El RELLENO de identidad de §2.8 — Viveza-1.
+ *
+ * §2.8 firma la receta desde el principio («un agente puede teñir un fondo a
+ * 12% de alpha sobre `baize-900`… e `ink-100` encima sigue en 12.80:1»), pero
+ * el transcript nunca la cobró: las burbujas de agente compartían todas
+ * `bg-ai-bubble` (= `--surface-2`, plano) y la identidad quedaba en el filete
+ * de 2px más el nombre. En móvil, donde la placa va `hidden sm:flex`, ese
+ * filete era la señal ENTERA.
+ *
+ * Dos decisiones que parecen detalles y no lo son:
+ *
+ *  - **Deriva de `colorDeAgente`**, no de una segunda tabla. Es lo que hace que
+ *    un override de sesión y un agente a medida hereden el tinte sin tocar
+ *    nada: el relleno y el filete no pueden discrepar porque leen lo mismo.
+ *  - **El suelo y la proporción los pone el TEMA** (`--relleno-identidad-base`
+ *    y `--relleno-identidad-pct` en `index.css`), no esta función. Escribir
+ *    aquí «12% sobre baize-900» habría teñido el tema claro contra el paño
+ *    oscuro. Con las variables, el navegador re-resuelve el relleno al conmutar
+ *    de tema igual que ya hace con el filete.
+ *
+ * `oklab` y no `srgb` (que es lo que usa `colorDeAgenteAlpha` para las
+ * transparencias): es una mezcla de dos colores opacos, y en oklab el 12% se
+ * percibe como 12% en los seis tonos por igual. Es la receta literal de §2.8.
+ */
+export function rellenoDeIdentidad(rol: string | undefined, hex: string): string {
+    return `color-mix(in oklab, ${colorDeAgente(rol, hex)} var(--relleno-identidad-pct), var(--relleno-identidad-base))`;
+}
