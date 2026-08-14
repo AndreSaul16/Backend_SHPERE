@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CreditCard, Zap, Sparkles, ArrowLeft, Loader2, HardDrive, FileText, RefreshCw, AlertTriangle, ExternalLink } from 'lucide-react';
+import { CreditCard, Zap, Sparkles, ArrowLeft, HardDrive, FileText, RefreshCw, AlertTriangle, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useBillingStore } from '../store/useBillingStore';
 import { Button } from '@/components/ui/Button';
@@ -32,6 +32,28 @@ function formatBytes(bytes: number): string {
         i++;
     }
     return `${value.toFixed(value < 10 ? 1 : 0)} ${units[i]}`;
+}
+
+/** `id` de la casilla de consentimiento UE. Es el destino del aviso de los top-ups. */
+const ID_CASILLA_CONSENTIMIENTO = 'billing-consent';
+
+/**
+ * QA-3 — llevar a quien lee el aviso hasta la casilla que lo desbloquea.
+ *
+ * La casilla vive en la sección de packs, unas cincuenta líneas de página más
+ * arriba, y la sección de top-ups no la mencionaba: sus botones nacían
+ * deshabilitados y el único motivo estaba en un `title`, que un botón
+ * deshabilitado no muestra en ningún navegador. Enfocar además de desplazar no
+ * es adorno: quien navega por teclado necesita el foco ahí, no la vista ahí.
+ *
+ * `scrollIntoView` se llama con encadenamiento opcional porque jsdom no lo
+ * implementa, y perder el foco por eso sería cambiar comportamiento real para
+ * complacer al entorno de test.
+ */
+function irALaCasillaDeConsentimiento(): void {
+    const casilla = document.getElementById(ID_CASILLA_CONSENTIMIENTO);
+    casilla?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+    casilla?.focus();
 }
 
 function barColor(pct: number): string {
@@ -450,9 +472,9 @@ export const BillingPage: React.FC = () => {
                         </p>
 
                         {/* Consentimiento UE: ejecución inmediata + renuncia al desistimiento */}
-                        <label htmlFor="billing-consent" className="flex items-start gap-3 mb-6 p-4 glass-panel rounded-md border border-surface-highlight cursor-pointer select-none">
+                        <label htmlFor={ID_CASILLA_CONSENTIMIENTO} className="flex items-start gap-3 mb-6 p-4 glass-panel rounded-md border border-surface-highlight cursor-pointer select-none scroll-mt-20">
                             <input
-                                id="billing-consent"
+                                id={ID_CASILLA_CONSENTIMIENTO}
                                 type="checkbox"
                                 checked={consentAccepted}
                                 onChange={(e) => setConsentAccepted(e.target.checked)}
@@ -483,19 +505,24 @@ export const BillingPage: React.FC = () => {
                                     <p className="text-sm text-electric-cyan font-medium mb-2">{pack.credits}</p>
                                     <p className="text-3xl font-bold mb-3 text-content-strong">{pack.price}</p>
                                     <p className="text-content-muted text-sm mb-8 flex-1">{pack.blurb}</p>
-                                    <button
+                                    {/* QA-3 · §9.1: el CTA es el botón del sistema
+                                        en latón, no dos juegos de clases del shim
+                                        legado (`bg-luxury-purple`,
+                                        `bg-electric-cyan/10`) que §2.3 retiró. El
+                                        distintivo de «popular» lo llevan la placa
+                                        y el filete de la tarjeta, no el botón: la
+                                        acción primaria tiene UN solo aspecto. */}
+                                    <Button
+                                        variant="primary"
+                                        className="w-full"
+                                        aria-label={`Comprar ${pack.name}`}
                                         onClick={() => handleCheckout(pack.id)}
-                                        disabled={pendingPlan === pack.id || !consentAccepted}
-                                        title={!consentAccepted ? 'Acepta las condiciones de compra para continuar' : undefined}
-                                        className={`w-full py-2.5 rounded-xl transition-all font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                                            pack.popular
-                                                ? 'bg-luxury-purple text-content-strong hover:bg-luxury-purple/80'
-                                                : 'bg-electric-cyan/10 text-electric-cyan border border-electric-cyan/30 hover:bg-electric-cyan hover:text-midnight'
-                                        }`}
+                                        disabled={!consentAccepted}
+                                        loading={pendingPlan === pack.id}
+                                        loadingLabel="Abriendo el pago"
                                     >
-                                        {pendingPlan === pack.id && <Loader2 className="h-4 w-4 animate-spin" />}
                                         Comprar
-                                    </button>
+                                    </Button>
                                 </div>
                             ))}
                         </div>
@@ -504,24 +531,46 @@ export const BillingPage: React.FC = () => {
                             <Sparkles className="h-4 w-4 text-electric-cyan" />
                             Top-ups rápidos
                         </h2>
-                        <p className="text-sm text-content-muted mb-6">Recargas pequeñas para cuando solo necesitas un empujón.</p>
+                        <p className="text-sm text-content-muted mb-4">Recargas pequeñas para cuando solo necesitas un empujón.</p>
+
+                        {/* QA-3 · el motivo por el que estos botones nacen
+                            deshabilitados, dicho aquí y en texto. La casilla que
+                            los desbloquea está en la sección de packs, fuera de
+                            la vista, y el `title` que lo explicaba no lo pinta
+                            ningún navegador en un botón deshabilitado. */}
+                        {!consentAccepted && (
+                            <p className="mb-6 text-sm text-warning">
+                                Marca las condiciones de compra para activar estos botones.{' '}
+                                <Button variant="link" onClick={irALaCasillaDeConsentimiento}>
+                                    Ir a la casilla
+                                </Button>
+                            </p>
+                        )}
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             {TOPUPS.map((t) => (
                                 <div key={t.id} className="glass-panel p-6 rounded-md border border-surface-highlight flex items-center justify-between gap-4">
                                     <div>
                                         <h3 className="text-base font-bold text-content-strong">{t.name}</h3>
                                         <p className="text-sm text-electric-cyan font-medium">{t.credits}</p>
+                                        {/* QA-3 · el precio, en su propio elemento
+                                            como en los packs. Era la etiqueta del
+                                            botón: un precio no es una acción, y
+                                            nadie deduce de «€7,99» que eso se pulsa. */}
+                                        <p className="text-2xl font-bold mt-1 text-content-strong">{t.price}</p>
                                         <p className="text-xs text-content-muted mt-1">{t.blurb}</p>
                                     </div>
-                                    <button
+                                    <Button
+                                        variant="primary"
+                                        className="shrink-0"
+                                        aria-label={`Comprar ${t.name}`}
                                         onClick={() => handleCheckout(t.id)}
-                                        disabled={pendingPlan === t.id || !consentAccepted}
-                                        title={!consentAccepted ? 'Acepta las condiciones de compra para continuar' : undefined}
-                                        className="shrink-0 px-4 py-2.5 bg-surface-highlight hover:bg-surface-highlight/70 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-sm font-bold flex items-center gap-2 text-content-strong transition-colors"
+                                        disabled={!consentAccepted}
+                                        loading={pendingPlan === t.id}
+                                        loadingLabel="Abriendo el pago"
                                     >
-                                        {pendingPlan === t.id && <Loader2 className="h-4 w-4 animate-spin" />}
-                                        {t.price}
-                                    </button>
+                                        Comprar
+                                    </Button>
                                 </div>
                             ))}
                         </div>

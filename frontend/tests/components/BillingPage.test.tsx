@@ -126,7 +126,11 @@ describe('BillingPage - Loading / Error / Stripe States (Task 2.3)', () => {
 
         renderPage();
 
+        // QA-3 · el recuento pasó de 3 a 5: los dos top-ups rápidos llevaban el
+        // PRECIO como etiqueta del botón, así que este selector —el mismo de
+        // siempre— sólo veía los 3 packs y dejó el defecto pasar entero.
         const buyButtons = screen.getAllByRole('button', { name: /comprar/i });
+        expect(buyButtons).toHaveLength(5);
         buyButtons.forEach((b) => expect(b).toBeDisabled());
 
         screen.getByRole('checkbox').click();
@@ -152,6 +156,8 @@ describe('BillingPage - Loading / Error / Stripe States (Task 2.3)', () => {
         renderPage();
 
         // Aceptar el consentimiento UE y comprar el primer pack.
+        // QA-3 · los packs siguen pintándose antes que los top-ups, así que el
+        // índice 0 sigue siendo el Executive Pack aunque ahora haya 5 botones.
         screen.getByRole('checkbox').click();
         const buyButtons = screen.getAllByRole('button', { name: /comprar/i });
         buyButtons[0].click();
@@ -168,5 +174,81 @@ describe('BillingPage - Loading / Error / Stripe States (Task 2.3)', () => {
         expect(screen.queryByText(/Internal Server Error/)).not.toBeInTheDocument();
         // Y se puede apartar: un cobro que no ha salido no bloquea la pantalla.
         expect(screen.getByRole('button', { name: /Cerrar aviso/ })).toBeInTheDocument();
+    });
+});
+
+/**
+ * QA-3 — los top-ups rápidos no parecían comprables.
+ *
+ * Tres cosas a la vez, y ninguna se veía desde los tests viejos porque los dos
+ * selectores de esta suite buscaban `/comprar/i`, que sólo casaba con los packs:
+ *
+ * 1. La etiqueta del CTA era EL PRECIO («€7,99»), no un verbo. Un precio no es
+ *    una acción: nadie sabe que eso se pulsa.
+ * 2. El botón no tenía borde y su relleno era `surface-highlight` sobre una
+ *    `.glass-panel`; en tema claro los dos tokens resuelven a `--paper-50`, o
+ *    sea contraste 0 contra el fondo de su propia tarjeta (WCAG 1.4.11 pide 3:1).
+ * 3. Nacía deshabilitado por el consentimiento UE, cuya casilla vive 50 líneas
+ *    más arriba, en la sección de packs, y el motivo sólo estaba en un `title`
+ *    —que los botones deshabilitados no muestran.
+ */
+describe('BillingPage — top-ups comprables (QA-3)', () => {
+    beforeEach(() => {
+        useBillingStore.setState({
+            plan_id: 'free',
+            status: 'active',
+            pro_messages_balance: 5,
+            topup_messages_balance: 0,
+            current_period_end: null,
+            cancel_at_period_end: false,
+            loaded: true,
+            isLoading: false,
+            error: null,
+            stripe_configured: true,
+            refresh: vi.fn().mockResolvedValue(undefined),
+        });
+        vi.clearAllMocks();
+    });
+
+    it('cada top-up tiene un CTA con verbo, y el precio deja de ser la etiqueta del botón', () => {
+        renderPage();
+
+        // 3 packs + 2 top-ups. El nombre del producto va en el nombre accesible
+        // para que cinco botones «Comprar» no suenen iguales en un lector.
+        expect(screen.getAllByRole('button', { name: /comprar/i })).toHaveLength(5);
+        expect(screen.getByRole('button', { name: 'Comprar Quick Meeting' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Comprar Deep Dive' })).toBeInTheDocument();
+
+        // El precio sigue estando —es dato, no adorno— pero fuera del control:
+        // en su propio elemento, como en los packs.
+        expect(screen.getByText('€7,99').closest('button')).toBeNull();
+        expect(screen.getByText('€14,99').closest('button')).toBeNull();
+        expect(screen.queryByRole('button', { name: '€7,99' })).not.toBeInTheDocument();
+    });
+
+    it('sin consentimiento, la sección de top-ups dice POR QUÉ no se puede comprar', () => {
+        renderPage();
+
+        expect(screen.getByRole('button', { name: 'Comprar Quick Meeting' })).toBeDisabled();
+        // El motivo, en texto visible dentro de la propia sección. Antes vivía
+        // en un `title`, que en un botón deshabilitado no lo lee nadie.
+        expect(screen.getByText(/marca las condiciones de compra/i)).toBeInTheDocument();
+    });
+
+    it('el enlace del aviso lleva el foco a la casilla de consentimiento', () => {
+        renderPage();
+
+        screen.getByRole('button', { name: /ir a la casilla/i }).click();
+
+        expect(screen.getByRole('checkbox')).toHaveFocus();
+    });
+
+    it('con el consentimiento marcado, el aviso desaparece y los top-ups se activan', () => {
+        renderPage();
+
+        screen.getByRole('checkbox').click();
+
+        expect(screen.queryByText(/marca las condiciones de compra/i)).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Comprar Deep Dive' })).toBeEnabled();
     });
 });
