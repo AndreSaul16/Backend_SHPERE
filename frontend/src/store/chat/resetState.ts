@@ -36,6 +36,9 @@ export const createResetSlice = (set: ChatSet): ResetSlice => ({
         sessionsByAgent: {},
         activeArtifactId: null,
         streamingArtifactBySession: {},
+        // §8.7: lo que un agente hizo en el mundo por cuenta de un usuario no
+        // se le enseña al siguiente que abra el navegador.
+        registroDeActuaciones: [],
         boardSession: null,
         errorStates: { ...ERRORES_EN_BLANCO },
     }),

@@ -166,6 +166,36 @@ export interface ErrorsSlice {
     clearError: (context: ErrorContext) => void;
 }
 
+/** En qué punto está una actuación en el mundo. §8.7. */
+export type EstadoDeActuacion = 'en-curso' | 'hecha' | 'fallida';
+
+/** Una actuación real de un agente en el mundo — §8.7. */
+export interface Actuacion {
+    id: string;
+    /** El nombre técnico de la herramienta; la etiqueta legible la pone la UI. */
+    herramienta: string;
+    estado: EstadoDeActuacion;
+    hora: Date;
+}
+
+/**
+ * El Registro de Actuaciones (§8.7).
+ *
+ * Existe porque el estado de las herramientas no tenía dónde vivir: se
+ * serializaba como marcadores de texto dentro del contenido del mensaje
+ * (`[TOOL_START:…]`) y se volvía a parsear con un regex en cada render. Eso
+ * sirve para pintar una tarjeta DENTRO de su turno, pero no para un registro
+ * que cruza los turnos de la sesión entera, que es lo que §8.7 pide.
+ *
+ * Sus únicos escritores son `onToolStart`, `onToolResult` y `onToolError`.
+ * Nunca un timer: si no hay actuaciones, el registro está vacío y no pasa nada,
+ * que es la verdad.
+ */
+export interface RegistroSlice {
+    registroDeActuaciones: Actuacion[];
+    anotarActuacion: (herramienta: string, estado: EstadoDeActuacion) => void;
+}
+
 /** El borrado al cambiar de cuenta (A6). Cruza todos los slices. */
 export interface ResetSlice {
     resetState: () => void;
@@ -177,6 +207,7 @@ export type ChatState =
     & MessagesSlice
     & ArtifactsSlice
     & BoardSlice
+    & RegistroSlice
     & UiSlice
     & ErrorsSlice
     & ResetSlice;

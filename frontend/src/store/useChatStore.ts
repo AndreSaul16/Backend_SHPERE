@@ -33,6 +33,7 @@ import { createArtifactsSlice } from './chat/artifactsSlice';
 import { createBoardSlice } from './chat/boardSlice';
 import { createErrorsSlice } from './chat/errorsSlice';
 import { createMessagesSlice } from './chat/messagesSlice';
+import { createRegistroSlice } from './chat/registroSlice';
 import { createResetSlice } from './chat/resetState';
 import { createSessionsSlice } from './chat/sessionsSlice';
 import { createUiSlice } from './chat/uiSlice';
@@ -45,6 +46,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     ...createMessagesSlice(set, get),
     ...createBoardSlice(),
     ...createArtifactsSlice(set, get),
+    ...createRegistroSlice(set),
     ...createUiSlice(set),
     ...createResetSlice(set),
 }));

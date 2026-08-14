@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useChatStore } from '@/store/useChatStore';
 import { DocumentoDelArtefacto } from './DocumentoDelArtefacto';
 import { ArtifactExpanded } from './ArtifactExpanded';
+import { RegistroActuaciones } from './RegistroActuaciones';
 import { cn } from '@/lib/utils';
 import type { ArtifactType } from '@/types/artifact';
 import { EstadoVacio } from '@/components/ui/EstadoVacio';
@@ -118,6 +119,18 @@ export function ArtifactPanel() {
                     </button>
                 </div>
             </div>
+
+            {/* §8.7 El Registro de Actuaciones — el telégrafo, en la cabecera
+                del panel de artefactos, que es donde la sección lo pide.
+                Va como franja propia bajo la cabecera y no dentro de ella
+                porque la cabecera tiene alto fijo y el registro es una línea
+                más; y va ENCIMA de la tira de pestañas porque lo que registra
+                —lo que los agentes han hecho en el mundo— no pertenece a
+                ningún documento en concreto, sino a la sesión.
+
+                Cuando no ha pasado nada la franja no ocupa nada: el componente
+                deja la región viva vacía y no monta ninguna entrada. */}
+            <RegistroActuaciones className="px-6 border-b border-stroke-hairline bg-surface-1 empty:hidden" />
 
             {/* Content Area */}
             <div className="flex-1 flex flex-col min-h-0">

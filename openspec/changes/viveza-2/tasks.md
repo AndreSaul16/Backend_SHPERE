@@ -25,10 +25,10 @@ Entrega: un solo tramo (lo fija el prompt del orquestador: 3-4 commits lógicos,
 
 ## Fase 4 · §8.7 Telégrafo de actuaciones
 
-- [ ] 4.1 Registro de actuaciones en el almacén, escrito por onToolStart/Result/Error
-- [ ] 4.2 RED/GREEN `RegistroActuaciones.tsx`: role=log, aria-live=polite, entradas por handler real
-- [ ] 4.3 RED/GREEN en reposo no renderiza animación
-- [ ] 4.4 Montarlo en la cabecera del panel de artefactos
+- [x] 4.1 Registro de actuaciones en el almacén, escrito por onToolStart/Result/Error
+- [x] 4.2 RED/GREEN `RegistroActuaciones.tsx`: role=log, aria-live=polite, entradas por handler real
+- [x] 4.3 RED/GREEN en reposo no renderiza animación
+- [x] 4.4 Montarlo en la cabecera del panel de artefactos
 
 ## Fase 5 · Mutaciones
 

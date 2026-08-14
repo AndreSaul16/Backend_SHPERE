@@ -809,6 +809,38 @@
     animation: espera-transcript 1200ms var(--ease-settle) infinite;
   }
 
+  /* ── §8.7 El Registro de Actuaciones ──────────────────────────────────────
+     El telégrafo, en su versión de una línea (que §8.7 declara caso base). La
+     entrada nueva llega desde el canto de fin y se asienta: un transform y una
+     opacidad, UNA vez. Entre telegrama y telegrama no corre nada, y sin
+     actuaciones el componente no monta ni el elemento.
+
+     `translateX` positivo en vez de un valor fijo hacia la izquierda para que
+     en un idioma de derecha a izquierda la entrada siga llegando por el canto
+     que corresponde: el elemento entra desde el final de la línea, sea cual
+     sea. */
+  @keyframes entrada-de-registro{
+    from{ transform: translateX(24px); opacity: 0 }
+    to{ transform: translateX(0); opacity: 1 }
+  }
+  .registro-actuaciones{ display: block; min-inline-size: 0; }
+  .actuacion-entrante{
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-inline-size: 0;
+    padding-inline-start: 0.5rem;
+    border-inline-start: 2px solid var(--accent);
+    font-size: var(--text-micro);
+    color: var(--content-muted);
+  }
+  .actuacion-fallida{ border-inline-start-color: var(--oxblood-500); }
+  /* §8.7 con movimiento reducido: «las entradas aparecen sin deslizamiento; el
+     aria-live ya porta la información». */
+  @media (prefers-reduced-motion: reduce){
+    .actuacion-entrante{ animation-name: none !important; }
+  }
+
   /* ── §8.8 La Pluma del Acta ───────────────────────────────────────────────
      Una línea de 24×2px bajo el título cuyo trazo avanza con cada trozo de
      artefacto que llega de verdad. Lo que se anima es un `scaleX` —compositor,

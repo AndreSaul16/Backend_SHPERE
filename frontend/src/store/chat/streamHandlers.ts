@@ -140,13 +140,20 @@ export function createStreamHandlers(ctx: StreamContext): StreamCallbacks {
             }));
         },
 
+        /* §8.7 — cada actuación real se asienta también en el Registro.
+           Va junto al marcador y no en su lugar: el marcador pinta la tarjeta
+           DENTRO de su turno, y el registro es de la sesión entera (cruza los
+           turnos, y es lo que se lee en la cabecera del panel de artefactos).
+           Son dos vistas del mismo hecho, no dos hechos. */
         onToolStart: (data) => {
             anadirALaActiva(`\n[TOOL_START:${data.tool_name}]\n`);
+            get().anotarActuacion(data.tool_name, 'en-curso');
         },
 
         onToolResult: (data) => {
             const truncated = data.result.substring(0, 300);
             anadirALaActiva(`\n[TOOL_RESULT:${data.tool_name}:${truncated}]\n`);
+            get().anotarActuacion(data.tool_name, 'hecha');
         },
 
         onToolError: (data) => {
@@ -158,6 +165,7 @@ export function createStreamHandlers(ctx: StreamContext): StreamCallbacks {
             // ESCRITOR y no la red. Si el evento llegara sin remedio, el marcador sigue
             // teniendo tres campos y la tarjeta se comporta como hoy.
             anadirALaActiva(`\n[TOOL_ERROR:${data.tool_name}:${data.remedy ?? 'retry'}:${safeError}]\n`);
+            get().anotarActuacion(data.tool_name, 'fallida');
         },
 
         onToolConfirmation: (data) => {
