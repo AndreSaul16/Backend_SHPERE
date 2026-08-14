@@ -31,6 +31,14 @@ def _unauthorized_contact_error(
     """
     Genera un error estructurado que el LLM puede interpretar y pedir al usuario
     añadir el contacto a su whitelist antes de reintentar.
+
+    El remedio que se dicta tiene que existir tal cual en la UI: la pantalla se
+    llama «Ajustes → Contactos» y vive en /settings/contacts. Decía «Settings →
+    Contacts», que es un sitio al que el usuario no puede ir porque no existe.
+
+    El valor buscado va literal en el texto —no sólo en el campo `contact`—
+    para que el agente lo repita al usuario: sin él, «ese contacto» obliga a
+    adivinar cuál de los destinatarios falló.
     """
     return json.dumps(
         {
@@ -40,8 +48,8 @@ def _unauthorized_contact_error(
             "reason": reason,
             "hint": (
                 f"El contacto '{contact}' no está autorizado para '{tool_name}'. "
-                "Pide al usuario que lo añada en Settings → Contacts con el permiso "
-                f"'{tool_name}' antes de reintentar."
+                f"Dile al usuario que lo añada en Ajustes → Contactos —tal cual: "
+                f"'{contact}'— con el permiso '{tool_name}' antes de reintentar."
             ),
         },
         ensure_ascii=False,

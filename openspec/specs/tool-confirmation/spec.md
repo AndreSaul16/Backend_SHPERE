@@ -14,6 +14,7 @@ Garantiza que las acciones con impacto externo se confirman antes de ejecutarse:
 | TC-001 | Una herramienta con gate MUST exponer `confirmed: bool = False` en su `args_schema`, MUST devolver `{"error": "confirmation_required", ...}` con resumen legible y MUST NOT producir efecto externo alguno; reinvocada con `confirmed=True` MUST ejecutarse | 3 |
 | TC-002 | Para cada nombre de `DESTRUCTIVE_TOOLS`, la herramienta registrada MUST aceptar `confirmed` y MUST consultar la preferencia antes de actuar; ninguna MAY quedar declarada destructiva sin gate, y el test MUST recorrer `DESTRUCTIVE_TOOLS` como fuente de verdad | 2 |
 | TC-003 | `always` MUST exigir confirmación en toda herramienta que consulte el gate, `destructive_only` MUST exigirla solo en `DESTRUCTIVE_TOOLS`, `never` MUST NOT exigirla en ninguna; ninguna preferencia MAY saltarse la whitelist de contactos y `confirmed=True` MUST NOT desactivarla | 3 |
+| TC-005 | La autorización del destinatario MUST decidirse ANTES de pedir confirmación: si no está autorizado el gate MUST devolver `contact_not_authorized` y MUST NOT pedir confirmación; la comprobación dentro de la tool MUST conservarse | 4 |
 | TC-004 | El copy de `tool_confirmation_level` MUST nombrar el alcance real —las 9 destructivas, no las 23 del catálogo— y MUST NOT afirmar que se pregunta antes de «todas» las herramientas | 1 |
 
 ### TC-001: El gate es conversacional y no ejecuta en la primera llamada
@@ -58,6 +59,42 @@ Garantiza que las acciones con impacto externo se confirman antes de ejecutarse:
 - **Mutación**: GIVEN la comprobación de whitelist pasa a ejecutarse solo cuando `confirmed` es `False`
   WHEN se ejecuta la suite
   THEN el escenario anterior MUST fallar
+
+### TC-005: No se pide permiso para algo que no se puede hacer
+
+El gate **MUST** decidir la autorización del destinatario **antes** de pedir confirmación. Si el
+destinatario no está en la whitelist, **MUST** devolver el mismo error `contact_not_authorized` que
+devolvería la herramienta y **MUST NOT** pedir confirmación en ningún caso.
+
+Lo observado en QA: el agente pidió permiso para mandar un WhatsApp a un contacto que la whitelist
+iba a rechazar de todas formas. El usuario confirmó —gastando su turno— y sólo entonces se enteró de
+que la acción era imposible. Preguntar antes de saber si la acción puede ocurrir enseña una acción
+que no va a ocurrir.
+
+El mapa de destinatarios (`TOOL_RECIPIENT_ARGS`) **MUST** contener **sólo** herramientas que ya
+comprueban la whitelist dentro de su implementación: el gate **adelanta** una comprobación
+existente y **MUST NOT** inventarle autorización a ninguna herramienta que hoy no la haga. La
+comprobación dentro de la herramienta **MUST** conservarse como defensa en profundidad: por los
+caminos que no piden confirmación (`never`, o ya confirmado) es la única que actúa.
+
+- GIVEN `tool_confirmation_level == "destructive_only"` y un destinatario fuera de la whitelist
+  WHEN el agente invoca `whatsapp_send_message(to=X)` sin `confirmed`
+  THEN la salida contiene `"error": "contact_not_authorized"` y el valor `X` buscado
+  AND no contiene `confirmation_required`
+  AND no se ha llamado a n8n
+
+- GIVEN el mismo nivel y un destinatario **sí** autorizado
+  WHEN el agente invoca `whatsapp_send_message(to=X)` sin `confirmed`
+  THEN se pide confirmación igual que siempre
+  AND no se ha llamado a n8n
+
+- GIVEN una destructiva sin destinatario (`calendar_delete_event`), que no consulta la whitelist
+  WHEN se invoca sin `confirmed`
+  THEN se pide confirmación y no se consulta autorización alguna
+
+- **Mutación**: GIVEN el gate vuelve a evaluar la confirmación antes que la autorización
+  WHEN se ejecuta la suite
+  THEN el primer escenario **MUST** fallar por recibir `confirmation_required`
 
 ### TC-004: El ajuste no promete más de lo que cumple
 

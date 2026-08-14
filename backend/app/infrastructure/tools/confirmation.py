@@ -19,12 +19,18 @@ Tampoco se toca `dynamic_tool_node`: si el corte ocurriera allí no habría
 `on_tool_start`/`on_tool_end`, y el usuario no vería la tarjeta que tiene que
 confirmar.
 """
-from typing import Callable
+from typing import Callable, Optional
 
 from langchain_core.tools import BaseTool, StructuredTool
 from pydantic import Field, create_model
 
-from app.core.tool_context import DESTRUCTIVE_TOOLS, requires_confirmation
+from app.core import contacts_service
+from app.core.logger import checkpoint_logger as logger
+from app.core.tool_context import (
+    DESTRUCTIVE_TOOLS,
+    get_current_user_id,
+    requires_confirmation,
+)
 
 import json
 
@@ -89,6 +95,72 @@ def _resumen(tool_name: str, argumentos: dict) -> str:
     return f"Ejecutar una acción con impacto externo — {detalle}"
 
 
+# ── Autorización antes que confirmación ────────────────────────────────────
+#
+# Herramientas que YA comprueban la whitelist DENTRO de su implementación, con
+# el argumento por donde entra el destinatario y el tipo con el que lo
+# consultan. Es un espejo de `shared_tools.py`, no una fuente nueva: este mapa
+# ADELANTA una comprobación que ya existe y NO se la inventa a ninguna tool que
+# hoy no la haga. Añadir aquí una tool sin comprobación propia sería inventarle
+# una autorización que nadie decidió.
+TOOL_RECIPIENT_ARGS: dict[str, tuple[str, Optional[str]]] = {
+    "calendar_create_event": ("attendees", "email"),
+    "whatsapp_send_message": ("to", "phone"),
+    "whatsapp_send_notification": ("group", None),
+}
+
+
+async def _error_si_el_destinatario_no_esta_autorizado(
+    tool_name: str, argumentos: dict
+) -> Optional[str]:
+    """El mismo error que daría la tool, decidido ANTES de preguntar nada.
+
+    Devuelve `None` cuando no hay nada que objetar —tool sin destinatario,
+    argumento ausente, o contacto autorizado— y el gate sigue su curso.
+    """
+    entrada = TOOL_RECIPIENT_ARGS.get(tool_name)
+    if entrada is None:
+        return None
+
+    argumento, contact_type = entrada
+    destinatarios = argumentos.get(argumento)
+    if not destinatarios:
+        return None
+    if isinstance(destinatarios, str):
+        destinatarios = [destinatarios]
+
+    # El user_id viaja por contextvar, no por los argumentos: el esquema de la
+    # tool es visible al LLM y el tenant no se le enseña ni se le deja elegir.
+    user_id = get_current_user_id()
+    if not user_id:
+        # Sin usuario no se puede decidir nada. La tool tiene su propia
+        # respuesta para este caso (`user_context_missing`) y se la deja dar.
+        return None
+
+    for destinatario in destinatarios:
+        if await contacts_service.is_authorized(
+            user_id, tool_name, destinatario, contact_type
+        ):
+            continue
+
+        logger.warning(
+            f"Blocked {tool_name} por contacto no autorizado (antes de "
+            f"confirmar): {destinatario} (user={user_id})"
+        )
+        # Import diferido a propósito: `shared_tools` importa el registry y el
+        # registry importa este módulo, así que a nivel de módulo sería un
+        # ciclo. En tiempo de llamada todo está cargado. El error se toma de
+        # allí para que haya UNA sola redacción del fallo, no dos que se
+        # desincronizan.
+        from app.infrastructure.tools.shared_tools import (
+            _unauthorized_contact_error,
+        )
+
+        return _unauthorized_contact_error(tool_name, destinatario)
+
+    return None
+
+
 def apply_confirmation_gate(tool: BaseTool) -> BaseTool:
     """Devuelve la tool con gate si es destructiva y aún no lo tiene.
 
@@ -129,6 +201,21 @@ def apply_confirmation_gate(tool: BaseTool) -> BaseTool:
         # negocio no sabe nada de este parámetro y no debe recibirlo.
         confirmado = kwargs.pop("confirmed", False)
         if requires_confirmation(nombre) and not confirmado:
+            # La autorización se decide ANTES de pedir permiso. Preguntar por
+            # algo que la whitelist va a rechazar de todas formas le gasta el
+            # turno al usuario y le enseña una acción que no va a ocurrir: eso
+            # es lo que vio el QA. Si el destinatario no está autorizado se
+            # devuelve el error de la whitelist y no se pregunta jamás.
+            #
+            # La comprobación DENTRO de la tool se queda: esto adelanta la
+            # respuesta, no la sustituye, y por los caminos que no piden
+            # confirmación (`never`, o ya confirmado) la única que actúa es
+            # aquélla.
+            no_autorizado = await _error_si_el_destinatario_no_esta_autorizado(
+                nombre, kwargs
+            )
+            if no_autorizado is not None:
+                return no_autorizado
             return _confirmation_required_error(nombre, _resumen(nombre, kwargs))
         return await original(**kwargs)
 

@@ -13,6 +13,7 @@ from typing import Literal, get_args, get_origin
 
 import pytest
 
+import app.core.contacts_service as contacts_service
 import app.infrastructure.tools.oauth_tools as oauth_tools
 import app.infrastructure.tools.shared_tools as shared_tools
 from app.core.tool_context import (
@@ -120,6 +121,10 @@ def _sin_dependencias_externas(monkeypatch):
 
     monkeypatch.setattr(shared_tools, "inject_credentials_into_payload", _creds)
     monkeypatch.setattr(shared_tools, "is_authorized", _autorizado)
+    # La whitelist se consulta en DOS sitios y hay que resolver los dos en
+    # memoria: dentro de la tool (la línea de arriba) y en el gate, que la mira
+    # ANTES de preguntar para no pedir permiso sobre algo que no se puede hacer.
+    monkeypatch.setattr(contacts_service, "is_authorized", _autorizado)
     monkeypatch.setattr(oauth_tools.credentials_service, "get_token", _token)
 
 
@@ -204,6 +209,79 @@ async def test_tc_003b_confirmar_no_abre_la_whitelist(n8n_espia, monkeypatch):
     salida = await tool.ainvoke({"to": "+34600999888", "message": "hola", "confirmed": True})
 
     assert "contact_not_authorized" in salida
+    assert n8n_espia == []
+
+
+# ------------------------- QA-1: no se pide permiso para algo que no se puede hacer
+
+
+async def test_qa1_el_destinatario_no_autorizado_no_llega_a_preguntarse(
+    n8n_espia, monkeypatch
+):
+    """Autorización ANTES que confirmación.
+
+    Lo que vio el QA: el agente pidió permiso para mandar un WhatsApp a un
+    contacto que la whitelist iba a rechazar de todas formas. El usuario dijo
+    que sí —gastando su turno— y sólo entonces se enteró de que no se podía.
+    Preguntar antes de saber si la acción es posible es hacerle perder el
+    tiempo, y encima enseña una acción que nunca va a ocurrir.
+    """
+    async def _no_autorizado(*args, **kwargs):
+        return False
+
+    monkeypatch.setattr(contacts_service, "is_authorized", _no_autorizado)
+    _current_confirmation_level.set("destructive_only")
+    tool = _catalogo()["whatsapp_send_message"]
+
+    salida = json.loads(
+        await tool.ainvoke({"to": "Ruben Lima", "message": "llego tarde"})
+    )
+
+    assert salida["error"] == "contact_not_authorized"
+    # El valor exacto que se buscó, para que el agente pueda citarlo al usuario.
+    assert salida["contact"] == "Ruben Lima"
+    assert n8n_espia == []
+
+    # Y el remedio que se le dicta al agente tiene que existir en la UI real:
+    # la pantalla se llama «Ajustes → Contactos», no «Settings → Contacts».
+    assert "Ajustes → Contactos" in salida["hint"]
+    assert "Settings" not in salida["hint"]
+    # El valor buscado va también en el texto: el agente lo repite tal cual y
+    # el usuario sabe exactamente qué dar de alta.
+    assert "Ruben Lima" in salida["hint"]
+
+
+async def test_qa1_el_destinatario_autorizado_sigue_pidiendo_confirmacion(n8n_espia):
+    """La otra cara: el fail-fast NO se come el gate de confirmación.
+
+    Con el contacto en la whitelist, la conducta es la de siempre —se pregunta—
+    y sigue sin tocarse n8n. Red que impide «arreglar» el orden desactivando la
+    confirmación.
+    """
+    _current_confirmation_level.set("destructive_only")
+    tool = _catalogo()["whatsapp_send_message"]
+
+    salida = json.loads(
+        await tool.ainvoke({"to": "+34612345678", "message": "llego tarde"})
+    )
+
+    assert salida["error"] == "confirmation_required"
+    assert "+34612345678" in salida["action_summary"]
+    assert n8n_espia == []
+
+
+async def test_qa1_una_destructiva_sin_destinatario_no_consulta_la_whitelist(n8n_espia):
+    """El fail-fast sólo mira las tools que YA comprueban autorización.
+
+    `calendar_delete_event` no tiene destinatario ni la comprueba hoy, así que
+    el gate no puede inventarle una: sigue pidiendo confirmación y nada más.
+    """
+    _current_confirmation_level.set("destructive_only")
+    tool = _catalogo()["calendar_delete_event"]
+
+    salida = json.loads(await tool.ainvoke({"event_id": "evt_42"}))
+
+    assert salida["error"] == "confirmation_required"
     assert n8n_espia == []
 
 
