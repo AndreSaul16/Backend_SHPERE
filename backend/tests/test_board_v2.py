@@ -672,3 +672,107 @@ async def test_junta_reducida_reembolsa_una_sola_vez():
     assert plan["cost"] == 3
     assert cm.apartial_refund.await_count == 1
     assert cm.apartial_refund.await_args.args[1] == 2
+
+
+# ---------------------------------------------------------------------------
+# QA-2 (C): los nodos internos de decisión no escriben en el transcript
+# ---------------------------------------------------------------------------
+
+
+def _evento_token(node: str, texto: str):
+    """Un `on_chat_model_stream` como los que emite LangGraph, con su nodo.
+
+    `metadata.langgraph_node` es el único dato que dice QUIÉN emite el token:
+    `stream.py` ya lo leía, pero sólo para etiquetar el rol que habla.
+    """
+    return {
+        "event": "on_chat_model_stream",
+        "data": {"chunk": SimpleNamespace(content=texto)},
+        "metadata": {"langgraph_node": node},
+    }
+
+
+async def _drenar_stream_normal(events):
+    """Como `_drenar_stream`, pero por el grafo del modo NORMAL (sin junta)."""
+    import app.presentation.api.v1.stream as stream_module
+
+    fake = _FakeOrchestrator(events, {})
+
+    payloads = []
+    with patch.object(stream_module, "orchestrator_app", fake):
+        async for chunk in stream_module.generate_chat_events(
+            query="¿Cuánto cuesta migrar a Postgres?",
+            session_id="s_test",
+            user_id="u_test",
+            target_role="CTO",
+            board_mode=False,
+        ):
+            raw = chunk.removeprefix("data: ").strip()
+            if raw and raw != "[DONE]":
+                payloads.append(json.loads(raw))
+    return payloads
+
+
+async def test_triage_no_escribe_en_el_transcript():
+    """QA-2 (C). El nodo `triage` responde un JSON en una línea POR DISEÑO
+    (`TRIAGE_PROMPT`: «Responde ÚNICAMENTE con un JSON válido en una línea»), y
+    `llm_router` streamea. `stream.py` leía `langgraph_node` sólo para etiquetar
+    el rol, nunca para descartar, así que ese JSON salía como tokens y el
+    frontend lo pintaba en una burbuja del debate.
+
+    El dato útil del triaje ya viaja estructurado por su propio canal
+    (`board_plan`): en el transcript era fuga pura.
+    """
+    events = [
+        _evento_token("triage", '{"participants": ["CTO", "CFO"], '),
+        _evento_token("triage", '"reason": "pricing y viabilidad"}'),
+    ]
+
+    payloads = await _drenar_stream(events, {})
+
+    assert [p for p in payloads if p["type"] == "token"] == []
+    # Ni por el canal del token ni por ningún otro: el buffer se vuelca al
+    # cerrar el stream y sin el guard también acabaría en el chat.
+    assert not any("participants" in json.dumps(p) for p in payloads)
+
+
+async def test_router_no_escribe_su_decision_en_el_transcript():
+    """QA-2 (C), triangulación. El mismo agujero en el modo normal: el nodo
+    `router` decide a qué director va la consulta y fuga su decisión ("CTO")
+    como si fuera la respuesta del agente."""
+    events = [_evento_token("router", "CTO")]
+
+    payloads = await _drenar_stream_normal(events)
+
+    assert [p for p in payloads if p["type"] == "token"] == []
+
+
+async def test_un_nodo_normal_sigue_streameando_sus_tokens():
+    """QA-2 (C), CONTROL. El guard es una lista cerrada de nodos de decisión, y
+    tiene que serlo: un filtro del tipo «si el nodo no tiene rol de junta,
+    descartar» dejaría mudo el modo normal entero, porque `expert_agent`
+    tampoco tiene rol de junta. Este test es lo que impide esa sobre-corrección.
+    """
+    events = [
+        _evento_token("expert_agent", "Migrar a Postgres "),
+        _evento_token("expert_agent", "cuesta unas tres semanas."),
+    ]
+
+    payloads = await _drenar_stream_normal(events)
+
+    assert [p["content"] for p in payloads if p["type"] == "token"] == [
+        "Migrar a Postgres ",
+        "cuesta unas tres semanas.",
+    ]
+
+
+async def test_un_director_sigue_streameando_con_su_rol():
+    """QA-2 (C), CONTROL en junta. Los nodos que SÍ hablan al usuario siguen
+    emitiendo, y con su rol: el guard no puede tocar el debate."""
+    events = [_evento_token("cto_analysis", "Técnicamente es viable en Q3.")]
+
+    payloads = await _drenar_stream(events, {})
+
+    tokens = [p for p in payloads if p["type"] == "token"]
+    assert [t["content"] for t in tokens] == ["Técnicamente es viable en Q3."]
+    assert tokens[0]["role"] == "CTO"

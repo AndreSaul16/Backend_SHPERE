@@ -39,6 +39,24 @@ from app.core.logger import stream_logger as logger
 router = APIRouter()
 
 
+# Nodos internos de decisión: deciden a QUIÉN le toca hablar, no hablan al
+# usuario. Su respuesta es un dato para el grafo —el JSON de una línea del
+# triaje (`board_v2.TRIAGE_PROMPT`) o el rol que elige el router— pero el LLM
+# que la produce streamea igual que cualquier otro, así que salía por
+# `on_chat_model_stream` como tokens y el frontend la pintaba en una burbuja
+# del debate. Lo que de esa decisión le importa al usuario ya viaja
+# estructurado por su propio canal (`board_plan`): en el transcript es fuga.
+#
+# Es una LISTA CERRADA a propósito. La alternativa tentadora —«si el nodo no
+# tiene rol de junta, descartar»— dejaría mudo el modo normal entero, porque
+# `expert_agent` y `general_chat` tampoco tienen rol de junta.
+#
+# Los nombres son literalmente los de `add_node(...)`: "triage" en
+# `board_v2.py` (además su entry point) y "router" en `orchestrator.py`. Ese
+# "router" es el NODO del grafo, sin relación con el `APIRouter` de arriba.
+NODOS_SIN_TRANSCRIPT = frozenset({"triage", "router"})
+
+
 CONFIRMATION_REQUIRED = "confirmation_required"
 
 ToolOutcome = Literal["result", "error", "confirmation"]
@@ -489,12 +507,22 @@ async def generate_chat_events(
                 if chunk is None:
                     continue
 
+                # Quién emite este token concreto. `langgraph_node` ya se leía
+                # aquí, pero sólo para ETIQUETAR el rol; nunca para descartar.
+                nodo_emisor = (event.get("metadata") or {}).get("langgraph_node")
+
+                # Un nodo interno de decisión no escribe en el chat. Se descarta
+                # el chunk ENTERO —contenido y razonamiento— y antes de tocar
+                # `buffer`, que se vuelca al cerrar el stream: dejarlo entrar
+                # ahí sería la misma fuga por la puerta de atrás.
+                if nodo_emisor in NODOS_SIN_TRANSCRIPT:
+                    continue
+
                 # En board mode (esp. V2 con nodos en paralelo) el rol que habla se
                 # deriva del nodo LangGraph que emite este token concreto. Así los
                 # tokens de cto/cfo/cmo que llegan intercalados se etiquetan bien.
                 if board_mode:
-                    node_now = (event.get("metadata") or {}).get("langgraph_node")
-                    role_now = _node_role(node_now) if node_now else None
+                    role_now = _node_role(nodo_emisor) if nodo_emisor else None
                     if role_now:
                         current_board_agent = role_now
 
