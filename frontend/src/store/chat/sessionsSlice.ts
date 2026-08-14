@@ -11,7 +11,7 @@ import { NetworkError, SessionError } from '../../lib/errors';
 import { notify } from '../../lib/toastBus';
 import type { ChatSession, Message } from '../../types';
 import type { SesionAPI } from '../../types/api';
-import { createGreeting } from './agentCatalog';
+import { createGreeting, getGroupMembers } from './agentCatalog';
 import { conError } from './errorsSlice';
 import { mapSessionHistory } from './historyMapper';
 import { GROUP_CHAT_ID, identidadDeSesion } from './sessionIdentity';
@@ -142,7 +142,16 @@ export const createSessionsSlice = (set: ChatSet, get: ChatGet): SessionsSlice =
                 } : undefined,
                 // user_id se obtiene del JWT en el backend
                 type: isGroup ? 'group' : 'direct',
-                members: isGroup ? allAgents.map(a => a.id) : [targetId]
+                // QA-2 (B) — una junta la componen los cuatro directores.
+                //
+                // Era `allAgents.map(a => a.id)`: metía a los agentes a medida
+                // del usuario Y a 'group-chat' como miembro de sí mismo. El
+                // backend guarda `members` tal cual, así que era un dato falso
+                // persistido. Sale de `coreAgents` —la definición real del
+                // reparto— filtrado por el MISMO `getGroupMembers` que pinta la
+                // lista de miembros, para que lo que se guarda y lo que se ve
+                // no puedan volver a divergir.
+                members: isGroup ? getGroupMembers(get().coreAgents).map(a => a.id) : [targetId]
             });
             const sesion = aSesionDelFrontend(newSession);
             const sessionId = sesion.session_id;

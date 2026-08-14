@@ -170,4 +170,22 @@ export const createGreeting = (agentId: string, agents: Agent[]): Message => {
 };
 
 // Helpers
-export const getGroupMembers = (agents: Agent[]) => agents.filter(a => a.id !== 'group-chat');
+/**
+ * Quién compone la junta: los cuatro directores, y nadie más — QA-2 (B).
+ *
+ * Es lo que se PINTA como junta (la lista de «Miembros del Grupo» de
+ * Configuración y el recuento «N Expertos Activos» de la cabecera del chat
+ * salen de aquí, no de `session.members`) y desde QA-2 también lo que se
+ * GUARDA como `members` al crear una sesión de grupo.
+ *
+ * Fuera se quedan dos cosas. 'group-chat', que es la sala y no un director:
+ * figuraba como miembro de sí mismo. Y los agentes a medida
+ * (`role: 'specialist'`), que no tienen asiento en el debate — el grafo de
+ * board v2 tiene clavados CTO/CFO/CMO (`backend/app/application/board_v2.py`)
+ * y su triaje sólo admite esos tres, así que contarlos como miembros prometía
+ * una deliberación que no ocurre. Cablear `members` al grafo es roadmap
+ * (`docs/BOARD_FRONTERA_Y_QA_2026-06-11.md`); hasta entonces esta lista dice
+ * la verdad en vez de adelantarla.
+ */
+export const getGroupMembers = (agents: Agent[]) =>
+    agents.filter(a => a.id !== 'group-chat' && a.role !== 'specialist');

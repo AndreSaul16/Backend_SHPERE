@@ -96,6 +96,35 @@ describe('catálogo de agentes', () => {
         expect(miembros.map((a) => a.id)).toEqual(['ceo-1', 'cto-1', 'cmo-1', 'cfo-1']);
     });
 
+    /**
+     * QA-2 (B) — la junta la componen los cuatro directores, nadie más.
+     *
+     * `getGroupMembers` es lo que se PINTA como junta: la lista de «Miembros
+     * del Grupo» de Configuración y el recuento «N Expertos Activos» de la
+     * cabecera del chat salen de aquí, no de `session.members`. Con el catálogo
+     * completo (core + a medida) contaba también a los specialists del usuario,
+     * así que la cabecera prometía expertos que jamás deliberan: el grafo del
+     * debate tiene clavados CTO/CFO/CMO (`board_v2.py:40`, y el triaje sólo
+     * admite esos) y un agente a medida no tiene asiento en la mesa.
+     */
+    it('`getGroupMembers` deja fuera también a los agentes a medida', () => {
+        const aMedida = {
+            id: 'uuid-experto',
+            name: 'Auditor de Precios',
+            role: 'specialist',
+            avatar: 'A',
+            description: 'Agente a medida del usuario.',
+            color: 'bg-surface',
+            hexColor: AGENT_HEX.custom,
+            isOnline: true,
+        };
+        const catalogo = [...useChatStore.getState().coreAgents, aMedida as never];
+
+        const miembros = getGroupMembers(catalogo);
+
+        expect(miembros.map((a) => a.id)).toEqual(['ceo-1', 'cto-1', 'cmo-1', 'cfo-1']);
+    });
+
     it('`getBoardAgentByRole` resuelve DEVIL fuera de la lista, y el resto por rol', () => {
         const agentes = useChatStore.getState().coreAgents;
         expect(getBoardAgentByRole(agentes, 'DEVIL')).toBe(BOARD_DEVIL_AGENT);
@@ -180,8 +209,54 @@ describe('ciclo de vida de sesiones', () => {
                 base_agent_id: 'system',
                 agent_ref_type: 'core',
                 type: 'group',
-                // Se mandan TODOS los ids, incluida la propia junta.
-                members: ['group-chat', 'ceo-1', 'cto-1', 'cmo-1', 'cfo-1'],
+                // QA-2 (B) — ÚNICA expectativa de caracterización que se
+                // actualiza en este lote, y por decisión de producto.
+                //
+                // Decía «Se mandan TODOS los ids, incluida la propia junta» y
+                // era literal: `allAgents.map(a => a.id)` metía a los agentes a
+                // medida del usuario Y a 'group-chat' como miembro de sí mismo.
+                // Ninguna de las dos cosas es una junta: el grafo del debate
+                // tiene clavados CTO/CFO/CMO (`board_v2.py:40`) y 'group-chat'
+                // es el canal, no un director. La membresía viaja al backend y
+                // se guarda tal cual, así que era un dato falso persistido.
+                members: ['ceo-1', 'cto-1', 'cmo-1', 'cfo-1'],
+            }),
+        );
+    });
+
+    /**
+     * QA-2 (B), triangulación — con el catálogo «sucio» de verdad.
+     *
+     * El caso de arriba corre con la tienda de fábrica, donde lo único que
+     * sobraba era 'group-chat'. Éste añade un agente a medida, que es como
+     * está la tienda de cualquier usuario que se haya creado uno: la junta
+     * tiene que seguir siendo los cuatro directores.
+     */
+    it('`createNewSession` de junta no arrastra a los agentes a medida', async () => {
+        (chatService.createSession as never as ReturnType<typeof vi.fn>).mockResolvedValue(
+            sesion({ session_id: 's-con-experto' }),
+        );
+        useChatStore.setState({
+            customAgents: [
+                {
+                    id: 'uuid-experto',
+                    name: 'Auditor de Precios',
+                    role: 'specialist',
+                    avatar: 'A',
+                    description: 'Agente a medida del usuario.',
+                    color: 'bg-surface',
+                    hexColor: AGENT_HEX.custom,
+                    isOnline: true,
+                } as never,
+            ],
+        });
+
+        await useChatStore.getState().createNewSession();
+
+        expect(chatService.createSession).toHaveBeenCalledWith(
+            expect.objectContaining({
+                type: 'group',
+                members: ['ceo-1', 'cto-1', 'cmo-1', 'cfo-1'],
             }),
         );
     });
