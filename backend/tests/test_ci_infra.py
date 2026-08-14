@@ -273,47 +273,19 @@ def test_requirements_txt_has_header_comment():
     )
 
 
-# ── T-003: n8n persistence + HEALTHCHECK ──────────────────────────────
+# ── Helper compartido de Dockerfiles ──────────────────────────────────
+#
+# Los tres tests de T-003 que vivían aquí (VOLUME y HEALTHCHECK del Dockerfile
+# de n8n de la raíz, y [deploy.volume] del railway.toml de la raíz) se retiraron
+# junto con esos ficheros: codificaban como invariante justo la instrucción que
+# Railway no soporta y que garantiza un build fallido. Las invariantes de raíz
+# vivas están en tests/test_infra_manifest.py, derivadas del manifiesto.
 
 
 def read_dockerfile(path: Path) -> list[str]:
     """Read a Dockerfile, return non-empty, non-comment lines."""
     with open(path) as f:
         return [line.strip() for line in f if line.strip() and not line.strip().startswith("#")]
-
-
-def test_dockerfile_n8n_has_volume():
-    """IN-001: Dockerfile.n8n declares VOLUME /home/node/.n8n."""
-    path = ROOT / "Dockerfile.n8n"
-    lines = read_dockerfile(path)
-    volume_lines = [l for l in lines if l.upper().startswith("VOLUME ")]
-    assert len(volume_lines) >= 1, "Missing VOLUME directive in Dockerfile.n8n"
-    assert any("/home/node/.n8n" in vl for vl in volume_lines), (
-        f"VOLUME must point to /home/node/.n8n, got: {volume_lines}"
-    )
-
-
-def test_dockerfile_n8n_has_healthcheck():
-    """IN-003: Dockerfile.n8n includes HEALTHCHECK targeting /healthz."""
-    path = ROOT / "Dockerfile.n8n"
-    lines = read_dockerfile(path)
-    health_lines = [l for l in lines if l.upper().startswith("HEALTHCHECK ")]
-    assert len(health_lines) >= 1, "Missing HEALTHCHECK in Dockerfile.n8n"
-    combined = " ".join(health_lines)
-    assert "5678" in combined or "healthz" in combined, (
-        f"HEALTHCHECK must target port 5678/healthz, got: {health_lines}"
-    )
-    assert "interval" in combined.lower()
-    assert "retries" in combined.lower()
-
-
-def test_railway_toml_has_volume_mount():
-    """IN-001: root railway.toml declares deploy.volume for n8n persistence."""
-    path = ROOT / "railway.toml"
-    with open(path) as f:
-        content = f.read()
-    assert "[deploy.volume]" in content, "Missing [deploy.volume] section in railway.toml"
-    assert "mountPath" in content, "Missing mountPath in [deploy.volume]"
 
 
 # ── T-004: Frontend startCommand ──────────────────────────────────────
