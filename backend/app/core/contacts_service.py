@@ -47,28 +47,56 @@ async def is_authorized(
     """
     Verifica si un contacto está autorizado para un tool específico.
     
+    El lector tiene que hablar el MISMO idioma que el escritor (`add_contact`),
+    y no lo hacía: guardaba `value` pasado por `normalize_contact` y
+    `display_name` verbatim, mientras que aquí se buscaba `.lower().strip()`
+    contra los dos campos. Mongo compara byte a byte, así que un contacto dado
+    de alta como «Ruben Lima» era invisible para el agente —que lo llama justo
+    por su nombre— y un teléfono tecleado con espacios no encontraba su E.164.
+
+    De ahí las dos ramas, cada una con la comparación que le corresponde:
+
+    - `value`: normalizado con la misma función que lo escribió.
+    - `display_name`: literal, ignorando mayúsculas. Es un nombre propio escrito
+      por una persona; exigir el caso exacto es exigir que el LLM lo adivine.
+
+    `type` sólo restringe la rama `value`. Un nombre no tiene tipo, así que
+    filtrarlo también descartaría todo match por nombre —las tools pasan
+    `contact_type="phone"`—, que es la mitad del fallo original.
+
     Args:
         user_id: ID del usuario
         tool_name: Nombre del tool (ej: "whatsapp_send_message")
-        contact_value: Valor del contacto (email, phone, channel)
-        contact_type: Tipo de contacto (opcional, se filtra por)
+        contact_value: Valor del contacto (email, phone, channel) o su nombre
+        contact_type: Tipo de contacto (opcional; sólo filtra la rama `value`)
     """
     col = get_contacts_collection()
-    normalized = contact_value.lower().strip()
+    crudo = contact_value.strip()
 
-    # Buscar tanto por value (teléfono/email) como por display_name (nombre).
-    # Los agentes LLM suelen pasar nombres ("Ruben Lima"), no números — si solo
-    # buscamos por value, el contacto aparece como no autorizado aunque exista.
+    if contact_type:
+        valores = [normalize_contact(contact_type, crudo)]
+    else:
+        # Sin tipo declarado no se sabe qué normalización aplicó el escritor.
+        # Se prueban las dos formas que puede haber guardado: el valor tal cual
+        # (tipos «otros», que sólo hacen strip) y en minúsculas (email).
+        valores = sorted({crudo, crudo.lower()})
+
+    rama_valor: dict = {"value": {"$in": valores}}
+    if contact_type:
+        rama_valor["type"] = contact_type
+
+    # `re.escape` NO es opcional: sin él, «Ana (Madre)» casaría con «Ana Madre»
+    # —un contacto que el usuario nunca autorizó— y un nombre con `[` o `*`
+    # reventaría la consulta con una regex inválida.
+    rama_nombre = {
+        "display_name": {"$regex": f"^{re.escape(crudo)}$", "$options": "i"}
+    }
+
     query = {
         "user_id": user_id,
-        "$or": [
-            {"value": normalized},
-            {"display_name": normalized},
-        ],
+        "$or": [rama_valor, rama_nombre],
         "authorized_for": tool_name,
     }
-    if contact_type:
-        query["type"] = contact_type
 
     contact = await col.find_one(query)
     return contact is not None
