@@ -227,6 +227,36 @@ def test_deadline_declarado():
         datetime.fromisoformat(valor)  # no debe lanzar
 
 
+# ── NWI-004: el workflow firma lo que el backend verifica ────────────
+
+
+def _codigo_del_nodo(fichero: str, nodo: str) -> str:
+    import json
+
+    ruta = ROOT / "backend" / "infrastructure" / "n8n-workflows" / fichero
+    workflow = json.loads(ruta.read_text(encoding="utf-8"))
+    codigos = [
+        n["parameters"]["jsCode"] for n in workflow["nodes"] if n.get("name") == nodo
+    ]
+    assert len(codigos) == 1, f"nodo {nodo!r} ausente o duplicado en {fichero}"
+    return codigos[0]
+
+
+def test_sign_callback_firma_nonce():
+    """`timestamp` y `nonce` van DENTRO del payload: si fueran hermanos suyos, la
+    firma no los cubriría y podrían manipularse sin invalidarla."""
+    codigo = _codigo_del_nodo("schedule-post.json", "Sign Callback")
+
+    inicio = codigo.index("const payload = {")
+    fin = codigo.index("};", inicio)
+    bloque = codigo[inicio:fin]
+
+    faltan = [campo for campo in ("timestamp", "nonce") if f"{campo}:" not in bloque]
+    assert faltan == [], f"{faltan} no aparecen en el payload de Sign Callback"
+    # La firma se calcula después del payload, así que lo cubre entero.
+    assert codigo.index("canon(payload)") > fin
+
+
 # ── IN-003: el resultado del guard es asertable ───────────────────────
 
 
