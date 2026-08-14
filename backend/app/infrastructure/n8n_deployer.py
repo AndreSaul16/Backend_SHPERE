@@ -310,33 +310,3 @@ async def deploy_all_workflows():
     finally:
         await deployer.close()
 
-
-async def ensure_workflow(webhook_path: str) -> bool:
-    """
-    Verifica que un workflow existe para un webhook path específico.
-    Útil para verificar antes de hacer una llamada.
-    """
-    if not settings.N8N_BASE_URL:
-        return False
-
-    deployer = N8NDeployer(
-        base_url=settings.N8N_BASE_URL,
-        api_key=getattr(settings, "N8N_API_KEY", None),
-    )
-
-    try:
-        workflows = await deployer.list_workflows()
-        # Buscar workflow que maneje este webhook path
-        for wf in workflows:
-            if wf.get("active", False):
-                # Verificar nodos webhook
-                for node in wf.get("nodes", []):
-                    if node.get("type") == "n8n-nodes-base.webhook":
-                        path = node.get("parameters", {}).get("path", "")
-                        if path == webhook_path:
-                            return True
-        return False
-    except Exception:
-        return False
-    finally:
-        await deployer.close()
