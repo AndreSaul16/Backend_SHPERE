@@ -91,3 +91,100 @@ async def test_firma_valida_con_secreto_es_200(async_client, monkeypatch, espia_
     assert r.json() == {"status": "ok"}
     assert len(espia_notificacion) == 1
     assert espia_notificacion[0]["platform"] == "linkedin"
+
+
+# ── NWI-003: contrato observable del endpoint público ────────────────
+
+
+@pytest.fixture
+def con_secreto(monkeypatch):
+    monkeypatch.setattr(settings, "N8N_WEBHOOK_SECRET", SECRET)
+    return SECRET
+
+
+async def test_body_no_parseable_es_400(async_client, con_secreto, espia_notificacion):
+    r = await async_client.post(
+        RUTA,
+        content=b"{esto no es json",
+        headers={"X-Webhook-Signature": _firma_cruda(PAYLOAD, SECRET)},
+    )
+    assert r.status_code == 400
+    assert espia_notificacion == []
+
+
+async def test_body_que_no_es_dict_es_400(async_client, con_secreto, espia_notificacion):
+    """JSON válido pero que no parsea a objeto: `[]` no tiene `type` ni `user_id`."""
+    r = await async_client.post(
+        RUTA,
+        content=b"[]",
+        headers={"X-Webhook-Signature": _firma_cruda(PAYLOAD, SECRET)},
+    )
+    assert r.status_code == 400
+    assert espia_notificacion == []
+
+
+async def test_firma_ausente_es_401(async_client, con_secreto, espia_notificacion):
+    r = await _post(async_client, PAYLOAD, None)
+    assert r.status_code == 401
+    assert espia_notificacion == []
+
+
+async def test_firma_invalida_es_401(async_client, con_secreto, espia_notificacion):
+    r = await _post(async_client, PAYLOAD, "deadbeef" * 8)
+    assert r.status_code == 401
+    assert espia_notificacion == []
+
+
+async def test_tipo_desconocido_es_200_sin_efecto(async_client, con_secreto, espia_notificacion):
+    payload = {**PAYLOAD, "type": "tipo_que_no_existe"}
+    r = await _post(async_client, payload, _firma_cruda(payload, SECRET))
+    assert r.status_code == 200
+    assert espia_notificacion == [], "un tipo desconocido no dispara ninguna notificación"
+
+
+@pytest.fixture
+def espias_de_salida(monkeypatch):
+    """Espía las DOS salidas de `_notify_schedule_post_result`: lectura de
+    credenciales y llamada saliente a n8n."""
+    inyecciones: list[tuple] = []
+    llamadas: list[str] = []
+
+    async def _inyectar(base, providers):
+        inyecciones.append((base, providers))
+        return base, {"whatsapp": {"access_token": "t0k", "notify_to": "+34600000000"}}
+
+    class _ClienteFalso:
+        async def call_webhook(self, path, payload, user_credentials=None):
+            llamadas.append(path)
+            return {"ok": True}
+
+    monkeypatch.setattr(
+        "app.infrastructure.tools.credential_injector.inject_credentials_into_payload",
+        _inyectar,
+    )
+    monkeypatch.setattr("app.infrastructure.tools.n8n_client._client", _ClienteFalso())
+    return inyecciones, llamadas
+
+
+async def test_user_id_no_string_no_llega_a_mongo(async_client, con_secreto, espias_de_salida):
+    """`{"$ne": null}` acabaría en una query Mongo como operador."""
+    inyecciones, llamadas = espias_de_salida
+    payload = {**PAYLOAD, "user_id": {"$ne": None}}
+
+    r = await _post(async_client, payload, _firma_cruda(payload, SECRET))
+
+    assert r.status_code == 200
+    assert inyecciones == [], "se leyeron credenciales con un user_id no string"
+    assert llamadas == [], "se llamó a n8n con un user_id no string"
+
+
+async def test_user_id_string_si_procesa(async_client, con_secreto, espias_de_salida):
+    """Triangulación: con `user_id` legítimo el camino SÍ se recorre entero —
+    si no, el test anterior pasaría por vacío."""
+    inyecciones, llamadas = espias_de_salida
+
+    r = await _post(async_client, PAYLOAD, _firma_cruda(PAYLOAD, SECRET))
+
+    assert r.status_code == 200
+    assert len(inyecciones) == 1
+    assert llamadas == ["shared/whatsapp-notify"]
