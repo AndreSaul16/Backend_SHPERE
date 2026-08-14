@@ -266,15 +266,22 @@ export function ChatSettingsPage() {
         if (guardado) navigate(-1);
     };
 
-    const handleColorChange = async (newHex: string, themeName?: string) => {
+    /**
+     * QA-2 (A) — sólo se llama desde un chat 1-a-1.
+     *
+     * Tenía una segunda rama que en junta escribía `theme` en vez de
+     * `bubble_color`. Ese `theme` no lo leía nadie en todo el frontend y el
+     * `color` que escribía tampoco llegaba al transcript de una junta, donde
+     * `ChatPanel:1019` pinta con el `hexColor` del director que habla. Con la
+     * paleta retirada de la junta, la rama se ha ido con ella.
+     */
+    const handleColorChange = async (newHex: string) => {
         if (!currentSessionId) return;
 
         const visual_config: VisualConfig = {
             ...currentSession?.visual_config,
             color: newHex, // el color primario siempre, por coherencia
-            ...(isGroupChat
-                ? { theme: themeName || 'Manual' }
-                : { bubble_color: newHex }),
+            bubble_color: newHex,
         };
         const updates = { visual_config };
 
@@ -414,62 +421,29 @@ export function ChatSettingsPage() {
                         </p>
                     </section>
 
-                    {/* Color Settings Section */}
-                    <section className={panelClass({ className: 'space-y-4 sm:space-y-6' })}>
-                        <div className="flex items-center gap-2">
-                            <Zap className="h-4 w-4 text-electric-cyan" />
-                            <h2 className="text-content-muted text-xs sm:text-sm uppercase tracking-widest font-mono">
-                                {isGroupChat ? 'Paleta de Grupo' : 'Frecuencia del Experto (Color)'}
-                            </h2>
-                        </div>
-
-                        {isGroupChat ? (
-                            /* Presets for Group Chat */
-                            <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 sm:gap-4">
-                                {[
-                                    { name: 'Latón', hex: AGENT_HEX.custom },
-                                    { name: 'Nexus', hex: AGENT_HEX.CTO },
-                                    { name: 'Ledger', hex: AGENT_HEX.CFO },
-                                    { name: 'Oberon', hex: AGENT_HEX.CEO },
-                                    { name: 'Vortex', hex: AGENT_HEX.CMO },
-                                ].map((c) => (
-                                    <button
-                                        key={c.hex}
-                                        onClick={() => handleColorChange(c.hex, c.name)}
-                                        className={cn(
-                                            "group relative flex flex-col items-center gap-2 transition-all",
-                                            sessionColor === c.hex ? "scale-110" : "opacity-60 hover:opacity-100"
-                                        )}
-                                    >
-                                        <div
-                                            className={cn(
-                                                "h-8 w-8 sm:h-10 sm:w-10 rounded-xl border-2 transition-all duration-300",
-                                                activeAgent.hexColor === c.hex ? "shadow-lg" : "border-transparent"
-                                            )}
-                                            style={{
-                                                backgroundColor: `${c.hex}20`,
-                                                borderColor: sessionColor === c.hex ? c.hex : 'transparent',
-                                                boxShadow: sessionColor === c.hex ? `0 0 15px ${c.hex}40` : 'none'
-                                            }}
-                                        >
-                                            <div className="h-full w-full flex items-center justify-center">
-                                                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: c.hex }} />
-                                            </div>
-                                        </div>
-                                        <span className="text-micro font-mono uppercase opacity-50">{c.name}</span>
-
-                                        {sessionColor === c.hex && (
-                                            <motion.div
-                                                layoutId="activeColor"
-                                                className="absolute -inset-1 border border-current rounded-xl opacity-20"
-                                                style={{ color: c.hex }}
-                                            />
-                                        )}
-                                    </button>
-                                ))}
+                    {/* Color Settings Section — QA-2 (A): sólo en 1-a-1.
+                        En una junta esta sección era código muerto con ayuda
+                        mentirosa: escribía `visual_config.color/theme` de la
+                        sesión y NADIE los leía, porque `ChatPanel:1019` pinta
+                        cada burbuja del debate con el `hexColor` del director
+                        que habla (`agentColor={isGroupChat ? msgAgent?.hexColor
+                        : effectiveBubbleColor}`) — decisión deliberada de
+                        F5 · §2.8: sin ella los cinco directores salían del
+                        mismo latón y el debate se leía sin saber quién dice
+                        qué. Los cinco presets no cambiaban un píxel mientras la
+                        ayuda prometía «los colores de burbujas de todos los
+                        miembros». En una junta el color por miembro se edita
+                        donde de verdad vive: la sección «Miembros del Grupo».
+                        En 1-a-1 la paleta SÍ manda y por eso se queda. */}
+                    {!isGroupChat && (
+                        <section className={panelClass({ className: 'space-y-4 sm:space-y-6' })}>
+                            <div className="flex items-center gap-2">
+                                <Zap className="h-4 w-4 text-electric-cyan" />
+                                <h2 className="text-content-muted text-xs sm:text-sm uppercase tracking-widest font-mono">
+                                    Frecuencia del Experto (Color)
+                                </h2>
                             </div>
-                        ) : (
-                            /* Color Picker for Individual Agents */
+
                             <div className="flex flex-col items-center gap-6 py-4">
                                 <div className="relative group/picker">
                                     <div
@@ -480,7 +454,7 @@ export function ChatSettingsPage() {
                                             backgroundColor: `${sessionColor}10`
                                         }}
                                     >
-                                                                                <input
+                                        <input
                                             id="session-color"
                                             aria-label="Color de la sesión"
                                             type="color"
@@ -503,14 +477,17 @@ export function ChatSettingsPage() {
                                     Haz clic en el icono para abrir la rueda de colores y sintonizar la firma espectral del experto.
                                 </p>
                             </div>
-                        )}
 
-                        <p className="text-xs text-content-quiet leading-relaxed text-center">
-                            {isGroupChat
-                                ? "La paleta define los colores de burbujas de todos los miembros."
-                                : "Personaliza el color de los mensajes de este agente."}
-                        </p>
-                    </section>
+                            {/* §11 «di lo que hace»: el color de sesión tiñe las
+                                burbujas del AGENTE en ESTA conversación. Las del
+                                usuario van con `AGENT_HEX.user` fijo
+                                (`MessageBubble:349`) y el ajuste no viaja a otros
+                                chats del mismo director. */}
+                            <p className="text-xs text-content-quiet leading-relaxed text-center">
+                                Personaliza el color de las burbujas de este agente en esta conversación.
+                            </p>
+                        </section>
+                    )}
 
                     {/* Board Meeting Toggle - Only for Group Chats */}
                     {isGroupChat && (

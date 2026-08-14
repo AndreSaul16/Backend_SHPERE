@@ -12,10 +12,13 @@
  * sesión → segundo render. Con el bug presente, el segundo render lanza.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { http, HttpResponse } from 'msw';
 import { render, screen, act, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { server } from '../setup';
 import { ChatSettingsPage } from '../../src/pages/ChatSettingsPage';
 import { useChatStore } from '../../src/store/useChatStore';
+import { useBoardSettingsStore } from '../../src/store/useBoardSettingsStore';
 import { __resetToastBus, subscribeToasts, type ToastRecord } from '../../src/lib/toastBus';
 import type { ChatSession } from '../../src/types';
 
@@ -202,6 +205,111 @@ describe('ChatSettingsPage — avisos de guardado (1.13)', () => {
         // `<ToastProvider>` sustituye el anterior en vez de apilarlos, así que
         // en pantalla sólo hay uno. §9.5.
         expect(new Set(seen.map((t) => t.dedupeKey))).toEqual(new Set(['session-color']));
+    });
+});
+
+/**
+ * QA-2 (A) — la «Paleta de Grupo» era código muerto y su ayuda mentía.
+ *
+ * En una junta la paleta escribía `visual_config.color/theme` de la sesión…
+ * y nadie los leía: `ChatPanel:1019` pinta cada burbuja con el `hexColor` del
+ * DIRECTOR que habla (`agentColor={isGroupChat ? msgAgent?.hexColor : …}`),
+ * decisión deliberada de F5 · §2.8 para que el debate se lea sabiendo quién
+ * dice qué. Así que los cinco presets no cambiaban un solo píxel del
+ * transcript mientras la ayuda afirmaba «La paleta define los colores de
+ * burbujas de todos los miembros» — una promesa falsa sobre un control muerto.
+ *
+ * El dueño real del color por miembro es la sección «Miembros del Grupo»
+ * (`renameAgent`/`updateAgentColor`), que se queda. En un chat 1-a-1 la paleta
+ * SÍ manda —ahí `effectiveBubbleColor` gana en `MessageBubble`— y por eso
+ * sobrevive, con la ayuda corregida a lo que hace de verdad.
+ *
+ * NO se implementa «aplicar el color a todos los miembros»: chocaría con la
+ * identidad de color por director que §2.8 ya firma.
+ */
+describe('ChatSettingsPage — la paleta sólo manda en 1-a-1 (QA-2 A)', () => {
+    const URL_AJUSTES = 'http://localhost:8000/api/v1/me/board-settings';
+
+    /** La junta necesita su ajuste de debate; sin handler, MSW hace fallar el test. */
+    const servidorDeJunta = () =>
+        server.use(
+            http.get(URL_AJUSTES, () =>
+                HttpResponse.json({
+                    board_meeting_enabled: false,
+                    board_iterations: 1,
+                    board_devils_advocate: false,
+                }),
+            ),
+        );
+
+    beforeEach(() => {
+        useBoardSettingsStore.getState().reset();
+    });
+
+    afterEach(() => {
+        useBoardSettingsStore.getState().reset();
+        useChatStore.setState({
+            sessions: [],
+            currentSessionId: null,
+            selectedAgentId: 'group-chat',
+        });
+    });
+
+    it('en una junta no se ofrece ninguna paleta: el color lo manda cada director', async () => {
+        servidorDeJunta();
+        const session = makeSession({
+            session_id: 'session-junta',
+            title: 'Junta Directiva',
+            base_agent_id: 'group-chat',
+            type: 'group',
+        });
+        useChatStore.setState({
+            sessions: [session],
+            currentSessionId: session.session_id,
+            selectedAgentId: 'group-chat',
+        });
+
+        renderPage();
+        // La sección de junta ya montada: sin esperarla, la ausencia de la
+        // paleta sería cierta por render incompleto y no por el cambio.
+        await waitFor(() => expect(screen.getByTestId('board-toggle-chat')).toBeInTheDocument());
+
+        // Se va la sección entera: título, presets y la ayuda que mentía.
+        expect(screen.queryByText('Paleta de Grupo')).not.toBeInTheDocument();
+        expect(
+            screen.queryByText('La paleta define los colores de burbujas de todos los miembros.'),
+        ).not.toBeInTheDocument();
+        expect(screen.queryByText('Latón')).not.toBeInTheDocument();
+
+        // Y lo que SÍ decide el color en una junta sigue en su sitio.
+        expect(screen.getByText('Miembros del Grupo')).toBeInTheDocument();
+        for (const director of ['Oberon', 'Nexus', 'Vortex', 'Ledger']) {
+            expect(screen.getByText(director)).toBeInTheDocument();
+        }
+    });
+
+    it('en un chat 1-a-1 la paleta se queda y su ayuda dice lo que hace de verdad', () => {
+        const session = makeSession();
+        useChatStore.setState({
+            sessions: [session],
+            currentSessionId: session.session_id,
+            selectedAgentId: 'cto-1',
+        });
+
+        renderPage();
+
+        expect(screen.getByText('Frecuencia del Experto (Color)')).toBeInTheDocument();
+        expect(screen.getByLabelText('Color de la sesión')).toBeInTheDocument();
+        // El color de sesión tiñe las burbujas del AGENTE en ESTA conversación:
+        // las del usuario van con `AGENT_HEX.user` fijo (`MessageBubble:349`) y
+        // el ajuste no viaja a otros chats del mismo director.
+        expect(
+            screen.getByText(
+                'Personaliza el color de las burbujas de este agente en esta conversación.',
+            ),
+        ).toBeInTheDocument();
+        // Sin junta no hay miembros que personalizar.
+        expect(screen.queryByText('Miembros del Grupo')).not.toBeInTheDocument();
     });
 });
 
