@@ -2,7 +2,6 @@
 Distributed lock por thread_id usando Redis.
 Previene que dos requests concurrentes procesen el mismo chat simultáneamente.
 """
-import asyncio
 from typing import Optional
 
 from app.infrastructure.redis_client import get_redis

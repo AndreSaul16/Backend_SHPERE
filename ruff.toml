@@ -1,0 +1,38 @@
+# Configuración de Ruff para el backend de SPHERE.
+#
+# El conjunto por defecto de la herramienta NO es una configuración: el mismo comando
+# sobre el mismo árbol devuelve 45 hallazgos con ruff 0.8.6 y 622 con ruff 0.16.3.
+# Sin este fichero, lo que comprueba el CI depende del día, no del código.
+# La versión vive en un solo sitio del repositorio: backend/requirements-dev.txt.
+
+target-version = "py311"
+line-length = 120
+
+[lint]
+# Se seleccionan REGLAS, no familias: "S" o "SIM" enteras traen hallazgos que nadie
+# ha medido, y el objetivo es un cero honesto, no un cero grande.
+# Criterio de admisión: la regla entra si violarla puede producir un resultado
+# observable equivocado, o si arreglarla es mecánico y de riesgo ~0.
+select = [
+  "E4", "E7", "E9",        # imports fuera de sitio, nombres ambiguos, errores de sintaxis
+  "F",                     # imports y variables muertos, f-strings sin placeholder
+  "S110",                  # except/pass silencioso: un fallo que nadie registra
+  "DTZ",                   # datetime sin zona horaria
+  "RUF010", "RUF012", "RUF013", "RUF100",
+  "PIE790", "TRY201", "SIM103", "SIM117", "UP037",
+]
+
+# Ausencias deliberadas, con el recuento medido sobre este árbol y su motivo.
+# Están aquí y no en un acta que nadie abre: quien añada o quite una regla necesita
+# saber qué se decidió y por qué.
+#   B008   (63)  - `Depends()` en el valor por defecto es el idioma OBLIGATORIO de
+#                  FastAPI. Falso positivo puro: un lint que marca el framework es
+#                  ruido con autoridad. Por eso no se selecciona "B" entera.
+#   B904   (33)  - `raise ... from`: mejora la traza, no el resultado. 33 handlers.
+#   UP     (312) - Optional[X] -> X | None y equivalentes: codemod de todo el
+#                  backend, cero efecto en ejecución. Se salva UP037, que es 1 y
+#                  es mecánico.
+#   I001   (75)  - lo arregla UN `ruff check --fix`, pero toca 75 ficheros. Primer
+#                  candidato en cuanto el árbol esté quieto tras el merge.
+#   BLE001 (95)  - cada `except Exception` exige decidir a qué se estrecha. Es un
+#                  change propio, no una tarea suelta.

@@ -4,7 +4,6 @@ Carga las credenciales cifradas de MongoDB, las descifra, y las prepara
 para inyección en los webhooks de n8n.
 """
 
-from typing import Optional
 from app.core.credentials import credentials_service
 from app.core.tool_context import get_current_user_id
 from app.core.logger import checkpoint_logger as logger

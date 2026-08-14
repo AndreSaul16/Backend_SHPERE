@@ -101,9 +101,8 @@ def _verify_state(state: str, user_id: str) -> bool:
         # Verificar firma + expiración (10 min)
         if not constant_time_equals(received_sig, expected_sig):
             return False
-        if int(time.time()) - int(timestamp) > 600:
-            return False
-        return True
+        # Expiración: el state caduca a los 10 minutos de firmarse.
+        return int(time.time()) - int(timestamp) <= 600
     except (ValueError, IndexError, N8NSecretMissing):
         return False
 

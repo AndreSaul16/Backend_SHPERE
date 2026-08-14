@@ -7,7 +7,6 @@ from typing import Dict
 
 from app.infrastructure.database import db
 from app.core.config import settings
-from app.core.logger import api_logger as logger
 
 router = APIRouter()
 

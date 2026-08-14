@@ -7,7 +7,6 @@ from app.infrastructure.database import get_custom_agents_collection, get_user_a
 from app.application.orchestrator import DEFAULT_CORE_PROMPTS, CORE_ROLES
 from app.core.user_context import build_user_context_block
 from app.core.llm_models import DEEPSEEK_REASONING, normalize_model
-from app.core.logger import api_logger as logger
 
 
 class ResolvedAgent:

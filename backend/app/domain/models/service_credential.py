@@ -6,7 +6,7 @@ Se inyectan en los payloads de n8n para que los workflows las usen.
 
 from pydantic import BaseModel, Field
 from typing import Optional, Literal
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 
@@ -19,8 +19,8 @@ class ServiceCredential(BaseModel):
     credential_type: Literal["api_key", "oauth_token", "service_account"] = "api_key"
     key_enc: bytes  # Cifrado con Fernet
     metadata: dict = {}  # Calendar ID, Phone Number ID, etc. (no sensible)
-    created_at: datetime = Field(default_factory=lambda: datetime.now())
-    updated_at: datetime = Field(default_factory=lambda: datetime.now())
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     revoked_at: Optional[datetime] = None
 
 

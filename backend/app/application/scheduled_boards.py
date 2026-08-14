@@ -18,7 +18,6 @@ from app.core.logger import api_logger as logger
 from app.core.tool_context import set_current_user_id
 
 # Coste de un board meeting (créditos). Reexportado para no acoplar al import path.
-from app.application.credit_manager import BOARD_MEETING_COST
 
 CADENCE_DAILY = "daily"
 CADENCE_WEEKLY = "weekly"

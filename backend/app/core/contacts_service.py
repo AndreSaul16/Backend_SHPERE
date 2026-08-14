@@ -8,7 +8,6 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from app.infrastructure.database import get_contacts_collection
-from app.core.logger import api_logger as logger
 
 
 # Normalización de contactos

@@ -125,7 +125,7 @@ async def _post_to_linkedin(
             if len(content) > 120
             else f"Publicar en LinkedIn: '{content}'"
         )
-        logger.info(f"post_to_linkedin bloqueado por confirmación requerida")
+        logger.info("post_to_linkedin bloqueado por confirmación requerida")
         return _confirmation_required_error("post_to_linkedin", summary)
 
     payload = {"content": content, "image_url": image_url}
@@ -154,7 +154,7 @@ async def _post_to_instagram(
             if len(content) > 120
             else f"Publicar en Instagram ({post_type}): '{content}'"
         )
-        logger.info(f"post_to_instagram bloqueado por confirmación requerida")
+        logger.info("post_to_instagram bloqueado por confirmación requerida")
         return _confirmation_required_error("post_to_instagram", summary)
 
     payload = {"content": content, "image_url": image_url, "type": post_type}

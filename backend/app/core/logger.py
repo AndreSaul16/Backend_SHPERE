@@ -5,7 +5,7 @@ Proporciona logs con colores, timestamps y contexto automático.
 import logging
 import sys
 from datetime import datetime
-from typing import Optional
+from typing import ClassVar
 
 # Intentar importar colorama para Windows
 try:
@@ -24,7 +24,7 @@ except ImportError:
 class ColoredFormatter(logging.Formatter):
     """Formatter con colores para diferentes niveles de log."""
     
-    LEVEL_COLORS = {
+    LEVEL_COLORS: ClassVar[dict[int, str]] = {
         logging.DEBUG: Fore.CYAN,
         logging.INFO: Fore.GREEN,
         logging.WARNING: Fore.YELLOW,
@@ -32,7 +32,7 @@ class ColoredFormatter(logging.Formatter):
         logging.CRITICAL: Fore.MAGENTA + Style.BRIGHT,
     }
     
-    LEVEL_ICONS = {
+    LEVEL_ICONS: ClassVar[dict[int, str]] = {
         logging.DEBUG: "🔍",
         logging.INFO: "✅",
         logging.WARNING: "⚠️",
@@ -42,7 +42,7 @@ class ColoredFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         # Timestamp ISO8601
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]  # noqa: DTZ005  # hora local a propósito: es el reloj del operador que lee la consola, no un instante que se almacene ni se compare
         
         # Color y icono según nivel
         color = self.LEVEL_COLORS.get(record.levelno, "")

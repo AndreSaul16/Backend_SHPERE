@@ -38,7 +38,7 @@ def _make_cache_key(query: str, model: str) -> str:
 
 
 def _retrieve_context_sync(
-    query: str, role: str, user_id: str = None, limit: int = 3
+    query: str, role: str, user_id: str | None = None, limit: int = 3
 ) -> str:
     """
     Versión síncrona interna con aislamiento multi-tenant.
@@ -62,8 +62,9 @@ def _retrieve_context_sync(
                 cached = _redis_client.get(cache_key)
                 if cached:
                     query_vector = json.loads(cached)
-        except Exception:
-            pass
+        except Exception as exc:
+            # Best-effort declarado: un miss de caché no es un incidente, se vectoriza abajo.
+            logger.debug(f"No se pudo leer la caché de embeddings: {exc}")
 
         # 2. Si no hay cache hit, vectorizar con OpenAI
         if query_vector is None:
@@ -80,8 +81,9 @@ def _retrieve_context_sync(
 
                 if _redis_client and isinstance(_redis_client, redis_sync_lib.Redis):
                     _redis_client.setex(cache_key, 86400, json.dumps(query_vector))
-            except Exception:
-                pass
+            except Exception as exc:
+                # Best-effort declarado: no poder cachear no degrada la respuesta, sólo su coste.
+                logger.debug(f"No se pudo escribir la caché de embeddings: {exc}")
 
         # 2. Pipeline de búsqueda con filtro multi-tenant
         # CRÍTICO: filtrar por user_id + agent_target
@@ -154,7 +156,7 @@ def _retrieve_context_sync(
 
 
 async def retrieve_context(
-    query: str, role: str, user_id: str = None, limit: int = 3
+    query: str, role: str, user_id: str | None = None, limit: int = 3
 ) -> str:
     """
     Versión async: ejecuta la búsqueda síncrona en un thread del executor.

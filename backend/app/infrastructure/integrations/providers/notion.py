@@ -47,4 +47,3 @@ async def exchange_code(
 
 async def revoke(token: str, client_id: str = "", client_secret: str = ""):
     """Notion no tiene endpoint de revocación pública."""
-    pass

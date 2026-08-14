@@ -5,7 +5,7 @@ Estados: closed → open → half_open → closed
 """
 from datetime import datetime, timezone, timedelta
 from enum import Enum
-from typing import Optional, Callable, Any
+from typing import Callable, Any
 
 from app.infrastructure.redis_client import get_redis
 from app.core.logger import api_logger as logger
@@ -72,8 +72,10 @@ class CircuitBreaker:
             )
             # TTL para auto-cleanup si el circuito queda huérfano
             await redis_client.expire(self._key, self.recovery_timeout * 10)
-        except Exception:
-            pass
+        except Exception as exc:
+            # No cambia el flujo: la excepción se sigue tragando. Pero sin este aviso el
+            # breaker degrada a «siempre cerrado» y nadie se entera.
+            logger.warning(f"Circuit {self.name}: no se pudo persistir el estado en Redis: {exc}")
 
     async def can_execute(self) -> bool:
         """Verifica si un request puede ejecutarse."""
@@ -94,14 +96,17 @@ class CircuitBreaker:
                             await self._set_state(CircuitState.HALF_OPEN, failures)
                             logger.info(f"Circuit {self.name}: OPEN → HALF_OPEN (probando)")
                             return True
-                except Exception:
-                    pass
+                except Exception as exc:
+                    # No cambia el flujo: se conserva el `return False` de abajo. Sin este
+                    # aviso el circuito no pasa nunca a HALF_OPEN, o sea no se recupera.
+                    logger.warning(
+                        f"Circuit {self.name}: no se pudo evaluar la recuperación "
+                        f"(updated_at ilegible): {exc}"
+                    )
             return False
 
-        if state == CircuitState.HALF_OPEN:
-            return True  # Permitir un request de prueba
-
-        return False
+        # HALF_OPEN permite un request de prueba; cualquier otro estado, no
+        return state == CircuitState.HALF_OPEN
 
     async def record_success(self):
         """Registra un request exitoso."""
@@ -159,11 +164,10 @@ class CircuitBreaker:
 
             return result
 
-        except Exception as e:
+        except Exception:
             await self.record_failure()
             raise
 
 
 class CircuitOpenError(Exception):
     """Se lanza cuando el circuit breaker está abierto."""
-    pass

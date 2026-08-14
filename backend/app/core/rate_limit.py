@@ -20,6 +20,8 @@ from collections import OrderedDict
 from pyrate_limiter import BucketFactory, Duration, InMemoryBucket, Limiter, Rate, RateItem
 from pyrate_limiter.abstracts.bucket import AbstractBucket
 
+from app.core.logger import api_logger as logger
+
 
 class _PerIdentityBucketFactory(BucketFactory):
     """Un InMemoryBucket por identidad, con LRU acotado y Leaker compartido."""
@@ -27,7 +29,7 @@ class _PerIdentityBucketFactory(BucketFactory):
     def __init__(self, rates: list[Rate], max_identities: int = 10_000):
         self._rates = rates
         self._max = max_identities
-        self._buckets: "OrderedDict[str, AbstractBucket]" = OrderedDict()
+        self._buckets: OrderedDict[str, AbstractBucket] = OrderedDict()
         self._buckets_lock = threading.Lock()
 
     def _bucket_for(self, name: str) -> AbstractBucket:
@@ -50,8 +52,10 @@ class _PerIdentityBucketFactory(BucketFactory):
         if leaker is not None and hasattr(leaker, "deregister"):
             try:
                 leaker.deregister(bucket)
-            except Exception:
-                pass
+            except Exception as exc:
+                # Best-effort: si el Leaker no suelta el bucket sólo se retiene memoria.
+                # Molesto, no visible; por eso debug y no warning.
+                logger.debug(f"No se pudo dar de baja el bucket en el Leaker: {exc}")
 
     def wrap_item(self, name: str, weight: int = 1) -> RateItem:
         return RateItem(name, self._bucket_for(name).now(), weight=weight)

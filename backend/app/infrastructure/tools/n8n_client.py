@@ -81,7 +81,7 @@ class N8NClient:
         webhook_path: str,
         payload: dict,
         timeout: float = 30.0,
-        user_credentials: dict = None,
+        user_credentials: dict | None = None,
     ) -> dict:
         """
         POST a un webhook de n8n con retry + circuit breaker.
@@ -165,7 +165,7 @@ class N8NClient:
         webhook_path: str,
         payload: dict,
         timeout: float,
-        user_credentials: dict = None,
+        user_credentials: dict | None = None,
     ) -> dict:
         """Llamada HTTP con retry automático."""
         url = f"/webhook/{webhook_path}"

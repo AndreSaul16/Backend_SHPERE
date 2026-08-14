@@ -1,0 +1,13 @@
+# Herramientas de desarrollo del backend SPHERE.
+# NO se instalan en la imagen de producción: no lleva linter.
+#
+# Este fichero es el ÚNICO sitio del repositorio donde vive la versión de ruff.
+# El job `lint` de .github/workflows/ci.yml instala de aquí, así que el desarrollador
+# que haga `pip install -r backend/requirements-dev.txt` comprueba exactamente lo mismo
+# que el CI. Dos literales de versión se desincronizan en silencio; por eso hay uno.
+#
+# El pin es exacto a propósito: el conjunto de reglas por defecto de ruff cambia entre
+# versiones (45 hallazgos con 0.8.6, 622 con 0.16.3 sobre el mismo árbol). Con el job
+# bloqueando, un rango dejaría entrar reglas que nadie eligió.
+
+ruff==0.16.3

@@ -189,7 +189,7 @@ async def store_document_vectors(
     filename: str,
     chunks: List[DocumentChunk],
     embeddings: List[List[float]],
-    user_id: str = None,
+    user_id: str | None = None,
 ) -> int:
     """Guarda chunks embebidos en knowledge_base con agent_target + user_id."""
     from app.infrastructure.database import db
@@ -225,7 +225,7 @@ async def process_document(
     file_id: str,
     filename: str,
     file_bytes: bytes,
-    user_id: str = None,
+    user_id: str | None = None,
 ) -> dict:
     """Pipeline completo: parse → chunk → embed → store. Multi-tenant."""
     try:
@@ -282,8 +282,10 @@ async def process_document(
                 {"_id": ObjectId(file_id)},
                 {"$set": {"metadata.processing_status": "failed"}}
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            # No cambia el flujo: se sigue devolviendo status "failed". Pero sin este aviso
+            # el documento se queda «procesando» para siempre en la UI del usuario.
+            logger.warning(f"No se pudo marcar el documento {file_id} como fallido: {exc}")
 
         return {"status": "failed", "error": str(e)}
 

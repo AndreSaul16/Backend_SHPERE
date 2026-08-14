@@ -479,7 +479,7 @@ async def generate_chat_events(
                         artifact_buffer += content
 
                         if "</sphere_artifact>" in artifact_buffer:
-                            logger.debug(f"🔒 Cierre de artefacto detectado")
+                            logger.debug("🔒 Cierre de artefacto detectado")
                             artifact_content, chat_residue = artifact_buffer.split(
                                 "</sphere_artifact>", 1
                             )
@@ -955,11 +955,11 @@ async def chat_stream_endpoint(
                     "X-Accel-Buffering": "no",
                 },
             )
-        except Exception as inner_e:
+        except Exception:
             # Falla ANTES de crear el StreamingResponse: liberar lock y reembolsar.
             await lock.release()
             await _safe_refund(credit_manager, charge_ctx, user_id, "stream_setup_failed")
-            raise inner_e
+            raise
 
     except HTTPException:
         raise

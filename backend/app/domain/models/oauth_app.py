@@ -10,7 +10,7 @@ su app en el provider. Los scopes son fijos por provider (no los elige el usuari
 
 from pydantic import BaseModel, Field
 from typing import Optional, Literal
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 
@@ -26,8 +26,8 @@ class OAuthApp(BaseModel):
     client_id: str  # No secreto; se guarda en claro para poder mostrarlo
     client_secret_enc: bytes  # Cifrado con Fernet
     scopes: list[str] = []  # Fijos por provider (informativo)
-    created_at: datetime = Field(default_factory=lambda: datetime.now())
-    updated_at: datetime = Field(default_factory=lambda: datetime.now())
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     revoked_at: Optional[datetime] = None
 
 

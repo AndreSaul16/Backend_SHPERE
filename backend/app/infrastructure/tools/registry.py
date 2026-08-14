@@ -69,9 +69,15 @@ def load_all_tools():
     Importa todos los módulos de tools para activar sus registros.
     Llamar una vez al inicio de la aplicación.
     """
-    import app.infrastructure.tools.shared_tools   # noqa: F401
-    import app.infrastructure.tools.ceo_tools      # noqa: F401
-    import app.infrastructure.tools.cfo_tools      # noqa: F401
-    import app.infrastructure.tools.cmo_tools      # noqa: F401
-    import app.infrastructure.tools.cto_tools      # noqa: F401
+    # Los seis imports son POR EFECTO SECUNDARIO: cada módulo se registra al importarse.
+    # Ninguno se puede borrar. Sólo el último necesita `noqa`: ruff considera usados los
+    # cinco anteriores porque el binding `app` se redefine, y marca sin usar el que queda
+    # vivo. Si un día `--fix` borra ese noqa y alguien «arregla» el F401 quitando el import,
+    # las 7 herramientas OAuth desaparecen del catálogo sin que falle nada más que
+    # test_tool_catalog.py (TCAT-001, recuento 23). Ese test es la única señal que existe.
+    import app.infrastructure.tools.shared_tools
+    import app.infrastructure.tools.ceo_tools
+    import app.infrastructure.tools.cfo_tools
+    import app.infrastructure.tools.cmo_tools
+    import app.infrastructure.tools.cto_tools
     import app.infrastructure.tools.oauth_tools    # noqa: F401

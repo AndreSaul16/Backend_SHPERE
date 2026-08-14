@@ -18,7 +18,6 @@ from pymongo import ReturnDocument
 
 class InsufficientCreditsError(Exception):
     """Lanzada cuando no hay saldo suficiente en plan ni top-up."""
-    pass
 
 
 class ChargeContext(BaseModel):

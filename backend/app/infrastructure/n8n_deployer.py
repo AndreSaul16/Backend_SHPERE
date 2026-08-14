@@ -53,8 +53,8 @@ def _workflow_differs(remote: dict, local: dict) -> bool:
     fuerza un update idempotente — aceptable)."""
     for field in ("nodes", "connections", "settings"):
         r = json.dumps(remote.get(field) or ([] if field == "nodes" else {}), sort_keys=True)
-        l = json.dumps(local.get(field) or ([] if field == "nodes" else {}), sort_keys=True)
-        if r != l:
+        loc = json.dumps(local.get(field) or ([] if field == "nodes" else {}), sort_keys=True)
+        if r != loc:
             return True
     return False
 

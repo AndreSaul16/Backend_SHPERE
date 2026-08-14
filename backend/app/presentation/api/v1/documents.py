@@ -17,7 +17,6 @@ from app.application.document_processor import (
     ALLOWED_EXTENSIONS, MAX_FILE_SIZE_MB, MAX_FILES_PER_AGENT,
     process_document, delete_document_vectors
 )
-from app.core.config import settings
 from app.core.logger import api_logger as logger
 from app.core.plan_limits import get_plan_id, get_rag_quota_bytes
 

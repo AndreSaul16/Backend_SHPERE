@@ -10,12 +10,13 @@ from langchain_core.messages import HumanMessage
 from dotenv import load_dotenv
 
 from app.core.logger import checkpoint_logger as logger
+# `llm_models` es un módulo de constantes: no importa nada ni lee el entorno, así que no
+# necesita ir después de load_dotenv(). Estaba abajo por costumbre, no por dependencia.
+from app.core.llm_models import DEEPSEEK_FAST
 
 # Cargar entorno
 env_path = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(dotenv_path=env_path)
-
-from app.core.llm_models import DEEPSEEK_FAST
 
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")

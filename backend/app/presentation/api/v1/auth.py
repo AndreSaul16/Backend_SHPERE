@@ -646,7 +646,7 @@ async def test_service_credential(
 
     except Exception as e:
         logger.error(f"Error testing {service} credential: {e}")
-        return {"service": service, "success": False, "message": f"Error: {str(e)}"}
+        return {"service": service, "success": False, "message": f"Error: {e!s}"}
 
 
 # --- Board Meeting Settings ---

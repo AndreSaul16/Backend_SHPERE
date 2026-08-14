@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException, Depends, Header
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime, timezone
+from enum import Enum
 import re
 import secrets
 import uuid
@@ -15,11 +16,7 @@ from app.infrastructure.database import get_sessions_collection, get_custom_agen
 from app.core.auth import get_current_user
 from app.core.tenant import (
     scoped_find,
-    scoped_insert,
-    scoped_update,
-    scoped_delete,
     require_owner,
-    scoped_find_paginated,
 )
 from app.core.logger import api_logger as logger
 
@@ -27,9 +24,6 @@ from app.core.logger import api_logger as logger
 CORE_AGENT_IDS = {"CEO", "CTO", "CFO", "CMO", "system", "group-chat"}
 
 router = APIRouter()
-
-
-from enum import Enum
 
 
 class SessionType(str, Enum):
@@ -189,18 +183,20 @@ async def _atomic_create_session_with_idem(
     async_client = sphere_db.client
     if async_client is not None:
         try:
-            async with await async_client.start_session() as mongo_session:
-                async with mongo_session.start_transaction():
-                    await sessions_collection.insert_one(
-                        new_session, session=mongo_session
+            async with (
+                await async_client.start_session() as mongo_session,
+                mongo_session.start_transaction(),
+            ):
+                await sessions_collection.insert_one(
+                    new_session, session=mongo_session
+                )
+                if idem_doc is not None:
+                    await idem_col.update_one(
+                        {"user_id": user_id, "idempotency_key": idempotency_key},
+                        {"$set": idem_doc},
+                        upsert=True,
+                        session=mongo_session,
                     )
-                    if idem_doc is not None:
-                        await idem_col.update_one(
-                            {"user_id": user_id, "idempotency_key": idempotency_key},
-                            {"$set": idem_doc},
-                            upsert=True,
-                            session=mongo_session,
-                        )
             return
         except OperationFailure as e:
             # Transactions not supported → caer a fallback

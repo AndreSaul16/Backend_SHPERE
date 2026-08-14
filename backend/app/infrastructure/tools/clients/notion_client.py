@@ -2,7 +2,6 @@
 Cliente atómico para Notion API.
 """
 import httpx
-from app.core.logger import checkpoint_logger as logger
 
 NOTION_API = "https://api.notion.com/v1"
 

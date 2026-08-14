@@ -10,7 +10,7 @@ Configuración de conexión a MongoDB con Arquitectura Dual.
 import os
 import certifi
 import asyncio
-from typing import Optional
+from typing import ClassVar, Optional
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
@@ -38,8 +38,9 @@ class Database:
     db_name: str = DB_NAME
     _connected: bool = False
 
-    # Configuración compartida
-    _client_kwargs = {
+    # Configuración compartida a nivel de clase: `__init__` la actualiza con TLS y ese
+    # estado se comparte a propósito entre instancias (todas hablan con el mismo Atlas).
+    _client_kwargs: ClassVar[dict[str, object]] = {
         "serverSelectionTimeoutMS": 30000,
         "connectTimeoutMS": 30000,
     }
@@ -182,7 +183,7 @@ class Database:
                 logger.warning("Health check: cliente no inicializado")
 
         except Exception as e:
-            result["status"] = f"error 🔴: {str(e)}"
+            result["status"] = f"error 🔴: {e!s}"
             logger.error(f"Health check falló: {e}")
 
         return result

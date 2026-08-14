@@ -6,7 +6,7 @@ Verifica ID tokens de Firebase y crea el documento User si no existe.
 import json
 import firebase_admin
 from firebase_admin import auth as firebase_auth, credentials
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from app.core.config import settings

@@ -132,7 +132,7 @@ def _strip_vote_line(content: str) -> str:
     """
     if not content:
         return content
-    lineas = [l for l in content.splitlines() if not _VOTE_MARKER_RE.search(l)]
+    lineas = [linea for linea in content.splitlines() if not _VOTE_MARKER_RE.search(linea)]
     return "\n".join(lineas).rstrip()
 
 
@@ -460,8 +460,10 @@ def _medir_narracion(role: str, msgs: list) -> None:
         fugas = narracion_sospechosa(getattr(msgs[0], "content", "") or "", role)
         if fugas:
             logger.info(f"Board V2: narración sospechosa de {role} → {fugas}")
-    except Exception:
-        pass
+    except Exception as exc:
+        # No cambia el flujo: la medición sigue sin poder tumbar la junta. El nivel es
+        # debug porque el best-effort está declarado en el docstring de arriba.
+        logger.debug(f"Board V2: no se pudo medir la narración de {role}: {exc}")
 
 
 def board_v2_node_factory(role: str, phase: str):

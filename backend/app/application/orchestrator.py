@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import TypedDict, Literal, List, Optional, Annotated, Any
+from typing import TypedDict, List, Optional, Annotated, Any
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import (
     SystemMessage,
@@ -24,13 +24,15 @@ from langgraph.checkpoint.mongodb import MongoDBSaver
 # Tool Registry
 from app.infrastructure.tools.registry import get_tools_for_role
 
+# `llm_models` es un módulo de constantes: no importa nada ni lee el entorno, así que no
+# necesita ir después de load_dotenv(). Estaba abajo por costumbre, no por dependencia.
+from app.core.llm_models import DEEPSEEK_REASONING, DEEPSEEK_FAST, normalize_model, pricing_for
+
 # Cargar Entorno (ruta absoluta desde este archivo)
 env_path = Path(__file__).resolve().parents[3] / ".env"
 load_dotenv(dotenv_path=env_path)
 
 # --- CONFIG DEEPSEEK ---
-from app.core.llm_models import DEEPSEEK_REASONING, DEEPSEEK_FAST, normalize_model, pricing_for
-
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
 
@@ -313,7 +315,7 @@ def render_identity(prompt: str, *, with_tools: bool) -> str:
 
     # Un marcador suelto (par mal formado) tampoco puede llegar al modelo: se
     # cae del texto igual. Que el par esté bien formado lo vigila su test.
-    lineas = [l for l in lineas if l.strip() not in (TOOLS_OPEN, TOOLS_CLOSE)]
+    lineas = [linea for linea in lineas if linea.strip() not in (TOOLS_OPEN, TOOLS_CLOSE)]
     return "\n".join(lineas).rstrip()
 
 
@@ -575,14 +577,14 @@ async def agent_node(state: AgentState):
     # 9. Llamada al experto
     try:
         response = await llm.ainvoke(final_messages)
-    except Exception as e:
+    except Exception:
         # Solo refund si agent_node hizo el charge (no already_charged desde stream.py).
         if not already_charged and user_id and charge_ctx and cm is not None:
             try:
                 await cm.arefund(charge_ctx, reason="inference_failed")
             except Exception as refund_error:
                 logger.error(f"Error refunding credits: {refund_error}")
-        raise e
+        raise
 
     # 10. Ajustar créditos post-inferencia (penalización por >4k tokens)
     # Solo si agent_node hizo el charge (no already_charged desde stream.py).
@@ -842,7 +844,7 @@ async def board_classifier_node(state: AgentState):
     max_iterations = 1
     regenerate = state.get("board_regenerate", False)
     logger.info(
-        f"Board meeting: forzando 1 iteración"
+        "Board meeting: forzando 1 iteración"
         + (" (regeneración — preservando agents_done)" if regenerate else "")
     )
 
@@ -880,7 +882,6 @@ def board_agent_node_factory(role: str):
         # Regeneración: si este rol ya tiene mensajes en el historial del
         # checkpoint, saltarlo. El router naturalmente avanza al siguiente.
         if state.get("board_regenerate"):
-            messages = state.get("messages", [])
             # Detectar si este rol ya tiene al menos un AIMessage en el historial.
             # En board mode, cada agente produce un AIMessage; si ya hay uno de
             # este rol (CEO/CTO/CFO/CMO), no lo regeneramos.

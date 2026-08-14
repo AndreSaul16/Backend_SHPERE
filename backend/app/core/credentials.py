@@ -320,7 +320,7 @@ class CredentialsService:
         service: str,
         api_key: str,
         credential_type: str = "api_key",
-        metadata: dict = None,
+        metadata: dict | None = None,
     ):
         """
         Cifra y almacena una credencial de servicio para un usuario.

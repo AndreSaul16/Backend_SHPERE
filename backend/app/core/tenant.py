@@ -6,7 +6,6 @@ pueda filtrar datos de otro usuario.
 
 from typing import Optional
 from motor.motor_asyncio import AsyncIOMotorCollection
-from pymongo.cursor import Cursor as SyncCursor
 from motor.motor_asyncio import AsyncIOMotorCursor
 from fastapi import HTTPException
 

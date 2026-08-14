@@ -2,7 +2,6 @@
 Cliente atómico para Slack API.
 """
 import httpx
-from app.core.logger import checkpoint_logger as logger
 
 
 async def post_message(access_token: str, channel: str, text: str) -> dict:

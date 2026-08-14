@@ -4,7 +4,7 @@ Schema rico que habilita personalización de agentes, preferencias de UI,
 y contexto profesional que se inyecta en system prompts.
 """
 from pydantic import BaseModel, Field
-from typing import Optional, List, Literal, Dict, Any
+from typing import Optional, List, Literal
 from datetime import datetime
 
 
