@@ -13,6 +13,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut as firebaseSignOut,
   sendEmailVerification,
   sendPasswordResetEmail,
@@ -23,7 +25,13 @@ import {
 import { auth, googleProvider, githubProvider, microsoftProvider } from "@/lib/firebase";
 import { initAnalytics, identify, capture, resetAnalytics, ANALYTICS_EVENTS } from "@/lib/analytics";
 import { toast } from "@/lib/toastBus";
-import { AuthContext, type AuthUser } from "./auth";
+import { AuthContext, type AuthUser, type SocialProvider } from "./auth";
+
+const PROVEEDORES = {
+  google: googleProvider,
+  github: githubProvider,
+  microsoft: microsoftProvider,
+};
 
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -56,6 +64,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribe();
+  }, []);
+
+  // Cerrar el ciclo de la redirección (QA-4).
+  //
+  // Quien entra por `signInWithRedirect` vuelve a la aplicación con el
+  // resultado colgando de Firebase; si nadie lo recoge, el ciclo se queda a
+  // medias. Se hace UNA vez al montar. Quien pinta la sesión sigue siendo
+  // `onAuthStateChanged`: esto sólo consume el resultado pendiente.
+  //
+  // Si falla, se traga: es la carga normal de todo el mundo —donde no hay
+  // ninguna redirección de la que volver— y no puede tumbar el arranque.
+  useEffect(() => {
+    void getRedirectResult(auth).catch(() => { /* nadie volvía de ningún sitio */ });
   }, []);
 
   // Refrescar token cada 55 minutos (los tokens de Firebase expiran en 60 min)
@@ -147,6 +168,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signInWithPopup(auth, microsoftProvider);
   }, []);
 
+  const continuarConRedireccion = useCallback(async (provider: SocialProvider) => {
+    await signInWithRedirect(auth, PROVEEDORES[provider]);
+  }, []);
+
   const signOut = useCallback(async () => {
     await firebaseSignOut(auth);
     setUser(null);
@@ -168,6 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInWithGoogle,
         signInWithGithub,
         signInWithMicrosoft,
+        continuarConRedireccion,
         signOut,
         resendVerification,
         reloadUser,

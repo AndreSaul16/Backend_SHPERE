@@ -11,7 +11,7 @@ import { PasswordField, TextField } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { buttonClass } from "@/components/ui/buttonStyles";
 import { codigoDeFirebase, esCodigoDeFirebase } from "@/lib/erroresDeFirebase";
-import { AuthAlert, AuthShell, SocialButtons, type SocialProvider } from "@/components/auth/AuthShell";
+import { AuthShell, AuthSocialAlert, SocialButtons, type SocialProvider } from "@/components/auth/AuthShell";
 import { destinoDeRegreso } from "@/lib/rutaDeRegreso";
 
 export function LoginPage() {
@@ -19,8 +19,17 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  /* QA-4 · el proveedor al que se puede reintentar por redirección, o `null`.
+     Sólo se rellena ante `auth/popup-closed-by-user`. */
+  const [redirigible, setRedirigible] = useState<SocialProvider | null>(null);
 
-  const { signInWithEmail, signInWithGoogle, signInWithGithub, signInWithMicrosoft } = useAuth();
+  const {
+    signInWithEmail,
+    signInWithGoogle,
+    signInWithGithub,
+    signInWithMicrosoft,
+    continuarConRedireccion,
+  } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -32,6 +41,7 @@ export function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setRedirigible(null);
     setLoading(true);
 
     try {
@@ -56,6 +66,7 @@ export function LoginPage() {
 
   const handleSocialLogin = async (provider: SocialProvider) => {
     setError(null);
+    setRedirigible(null);
     setLoading(true);
     try {
       if (provider === "google") {
@@ -68,7 +79,13 @@ export function LoginPage() {
       navigate(destino, { replace: true });
     } catch (err: unknown) {
       if (esCodigoDeFirebase(err, "auth/popup-closed-by-user")) {
+        /* QA-4 · a veces es verdad y a veces es la COOP, que hace al SDK leer
+           `window.closed` antes de tiempo con el acceso yendo bien. No se
+           puede distinguir desde aquí, así que se OFRECE la redirección en vez
+           de dispararla: si el usuario cerró el popup a propósito, llevárselo
+           a Google sin permiso sería hostil. */
         setError("Ventana cerrada. Inténtalo de nuevo.");
+        setRedirigible(provider);
       } else {
         setError("Error con el acceso social. Inténtalo de nuevo.");
       }
@@ -90,7 +107,14 @@ export function LoginPage() {
         </>
       }
     >
-      {error && <AuthAlert>{error}</AuthAlert>}
+      {error && (
+        <AuthSocialAlert
+          mensaje={error}
+          proveedorRedirigible={redirigible}
+          onContinuar={(provider) => void continuarConRedireccion(provider)}
+          disabled={loading}
+        />
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
         <TextField

@@ -37,6 +37,8 @@
 import type { ReactNode } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { buttonClass } from '@/components/ui/buttonStyles';
+import type { SocialProvider } from '@/contexts/auth';
 
 export interface AuthShellProps {
     /** Frase bajo el wordmark. Opcional: `/verify-email` no la necesita. */
@@ -105,6 +107,48 @@ export function AuthAlert({ children }: { children: ReactNode }) {
     );
 }
 
+/**
+ * El aviso del acceso social, con la salida por redirección cuando la hay
+ * (QA-4). Lo comparten `/login` y `/register`, que tenían el mismo bloque.
+ *
+ * `proveedorRedirigible` es `null` en todos los demás fallos —y en los del
+ * formulario de correo—, y entonces esto es exactamente un `AuthAlert`.
+ *
+ * El botón va DENTRO del aviso, pegado al motivo: la salida se ofrece donde se
+ * descubre el problema, no en el pie (mismo criterio que el enlace de
+ * «¿Has olvidado tu contraseña?», D26).
+ */
+export function AuthSocialAlert({
+    mensaje,
+    proveedorRedirigible,
+    onContinuar,
+    disabled,
+}: {
+    mensaje: ReactNode;
+    proveedorRedirigible: SocialProvider | null;
+    onContinuar: (provider: SocialProvider) => void;
+    disabled?: boolean;
+}) {
+    return (
+        <AuthAlert>
+            {mensaje}
+            {proveedorRedirigible !== null && (
+                <>
+                    {' '}
+                    <button
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => onContinuar(proveedorRedirigible)}
+                        className={buttonClass({ variant: 'link' })}
+                    >
+                        Continuar con redirección
+                    </button>
+                </>
+            )}
+        </AuthAlert>
+    );
+}
+
 /** Aviso de confirmación (verde). Mismo sitio y misma forma que `AuthAlert`. */
 export function AuthNotice({ children }: { children: ReactNode }) {
     return (
@@ -117,7 +161,12 @@ export function AuthNotice({ children }: { children: ReactNode }) {
     );
 }
 
-export type SocialProvider = 'google' | 'github' | 'microsoft';
+/**
+ * El tipo vive en `contexts/auth` —el contexto también necesita nombrar los
+ * proveedores, para `continuarConRedireccion`— y se reexporta aquí para que
+ * los sitios que ya lo importaban de `AuthShell` sigan igual.
+ */
+export type { SocialProvider };
 
 const SOCIAL_LABELS: Record<SocialProvider, string> = {
     google: 'Google',

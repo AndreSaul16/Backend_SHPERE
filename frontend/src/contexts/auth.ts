@@ -20,6 +20,16 @@ export interface AuthUser {
   providerId: string; // 'password' | 'google.com' | 'github.com'
 }
 
+/**
+ * Los tres proveedores de acceso social.
+ *
+ * Vive aquí y no en `AuthShell` —que es quien pinta los botones— porque el
+ * contexto también necesita nombrarlos: `continuarConRedireccion` recibe uno.
+ * `AuthShell` lo reexporta, así que los sitios que ya lo importaban de allí
+ * siguen igual.
+ */
+export type SocialProvider = 'google' | 'github' | 'microsoft';
+
 export interface AuthContextType {
   user: AuthUser | null;
   idToken: string | null;
@@ -29,6 +39,16 @@ export interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   signInWithGithub: () => Promise<void>;
   signInWithMicrosoft: () => Promise<void>;
+  /**
+   * El acceso social por REDIRECCIÓN, en vez de por popup (QA-4).
+   *
+   * Es la salida que se OFRECE cuando el popup dice
+   * `auth/popup-closed-by-user` —a veces de verdad, a veces porque la COOP le
+   * hizo leer `window.closed` antes de tiempo—. No se llama sola: cerrar el
+   * popup a propósito es «he cambiado de idea», y llevarse la página a Google
+   * sin permiso sería hostil. La pulsa el usuario.
+   */
+  continuarConRedireccion: (provider: SocialProvider) => Promise<void>;
   signOut: () => Promise<void>;
   resendVerification: () => Promise<void>;
   reloadUser: () => Promise<boolean>; // devuelve emailVerified tras refrescar

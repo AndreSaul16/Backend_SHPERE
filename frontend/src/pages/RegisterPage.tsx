@@ -11,7 +11,7 @@ import { PasswordField, TextField } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { buttonClass } from "@/components/ui/buttonStyles";
 import { codigoDeFirebase, esCodigoDeFirebase } from "@/lib/erroresDeFirebase";
-import { AuthAlert, AuthShell, SocialButtons, type SocialProvider } from "@/components/auth/AuthShell";
+import { AuthShell, AuthSocialAlert, SocialButtons, type SocialProvider } from "@/components/auth/AuthShell";
 
 export function RegisterPage() {
   const [email, setEmail] = useState("");
@@ -34,12 +34,23 @@ export function RegisterPage() {
       ? "Las dos contraseñas no coinciden."
       : undefined;
 
-  const { signUpWithEmail, signInWithGoogle, signInWithGithub, signInWithMicrosoft } = useAuth();
+  /* QA-4 · el proveedor al que se puede reintentar por redirección, o `null`.
+     Sólo se rellena ante `auth/popup-closed-by-user`. */
+  const [redirigible, setRedirigible] = useState<SocialProvider | null>(null);
+
+  const {
+    signUpWithEmail,
+    signInWithGoogle,
+    signInWithGithub,
+    signInWithMicrosoft,
+    continuarConRedireccion,
+  } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setRedirigible(null);
 
     if (password !== confirmPassword) {
       setError("Las contraseñas no coinciden.");
@@ -74,6 +85,7 @@ export function RegisterPage() {
 
   const handleSocialSignUp = async (provider: SocialProvider) => {
     setError(null);
+    setRedirigible(null);
     setLoading(true);
     try {
       if (provider === "google") {
@@ -86,7 +98,10 @@ export function RegisterPage() {
       navigate("/");
     } catch (err: unknown) {
       if (esCodigoDeFirebase(err, "auth/popup-closed-by-user")) {
+        /* QA-4 · mismo criterio que en `/login`: se ofrece la redirección, no
+           se dispara. Ver LoginPage.handleSocialLogin. */
         setError("Ventana cerrada. Inténtalo de nuevo.");
+        setRedirigible(provider);
       } else {
         setError("Error con el registro social. Inténtalo de nuevo.");
       }
@@ -108,7 +123,14 @@ export function RegisterPage() {
         </>
       }
     >
-      {error && <AuthAlert>{error}</AuthAlert>}
+      {error && (
+        <AuthSocialAlert
+          mensaje={error}
+          proveedorRedirigible={redirigible}
+          onContinuar={(provider) => void continuarConRedireccion(provider)}
+          disabled={loading}
+        />
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
         <TextField
