@@ -58,19 +58,38 @@ servicio **backend**:
 ```
 STRIPE_SECRET_KEY=sk_live_...           # o sk_test_ para pruebas
 STRIPE_WEBHOOK_SECRET=whsec_...         # del endpoint de webhook en Stripe
-STRIPE_PRICE_STARTER=price_...
-STRIPE_PRICE_PREMIUM=price_...
-STRIPE_PRICE_TOPUP_FREE=price_...
-STRIPE_PRICE_TOPUP_STARTER=price_...
-STRIPE_PRICE_TOPUP_PREMIUM_1K=price_...
-STRIPE_PRICE_TOPUP_PREMIUM_2K=price_...
-STRIPE_PRICE_TOPUP_PREMIUM_10K=price_...
+
+# Packs de recarga (compra puntual, los créditos no caducan)
+STRIPE_PRICE_EXECUTIVE=price_...        # Executive Pack — 150 créditos — 39 €
+STRIPE_PRICE_DIRECTOR=price_...         # Director Pack — 500 créditos — 139 €
+STRIPE_PRICE_BOARDROOM=price_...        # Boardroom Pack — 2.000 créditos — 550 €
+
+# Top-ups rápidos
+STRIPE_PRICE_QUICK_MEETING=price_...    # Quick Meeting — 25 créditos — 7,99 €
+STRIPE_PRICE_DEEP_DIVE=price_...        # Deep Dive — 50 créditos — 14,99 €
+
 FRONTEND_URL=https://frontendsphere-production.up.railway.app
 ```
 
-⚠️ Si `STRIPE_SECRET_KEY` está seteada pero falta algún `STRIPE_PRICE_*`, ese botón
-concreto dará error `BILLING_INVALID_PLAN`. Crea los precios en el dashboard de Stripe
-y pega los `price_...` IDs.
+Son **cinco** precios y son exactamente estos cinco. Los lee `app/core/config.py`, los
+mapea a SKU `app/infrastructure/stripe_client.py:_price_map()` y `PURCHASABLE_SKUS`
+(`app/core/plan_limits.py`) es la lista de lo comprable. Si una variable no sale en
+`config.py`, el backend no la lee: ponerla en Railway no hace nada.
+
+> Esta sección listaba siete variables de la taxonomía anterior al pivote a mono-plan
+> —`STRIPE_PRICE_STARTER`, `_PREMIUM`, `_TOPUP_FREE`, `_TOPUP_STARTER`,
+> `_TOPUP_PREMIUM_1K/2K/10K`— que `config.py` ya no lee. Quien configurase desde aquí
+> ponía siete variables inertes y cero de las cinco reales. Están retiradas.
+
+Para crearlos sin tocar el dashboard: `python backend/scripts/stripe_bootstrap.py`
+crea los productos y precios (es idempotente, deduplica por `lookup_key`) e imprime
+las cinco líneas `STRIPE_PRICE_*=price_...` listas para pegar.
+
+⚠️ Si `STRIPE_SECRET_KEY` está seteada pero falta algún `STRIPE_PRICE_*`, ese SKU
+concreto **ya no se ofrece**: `GET /billing/me` lo deja fuera de `purchasable_skus` y su
+tarjeta sale deshabilitada con «Pago no disponible temporalmente». Antes se ofrecía
+igual y el clic moría en un `BILLING_INVALID_PLAN`. En cuanto pegues el precio que
+falta, esa tarjeta se activa sola: no hay que desplegar nada.
 
 Webhook de Stripe: apunta a `https://backendshpere-production.up.railway.app/api/v1/webhooks/stripe`.
 
