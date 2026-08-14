@@ -40,11 +40,29 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-/** Ancho máximo por tamaño (§9.4): sm 420px, md 560px, lg 760px. */
+/**
+ * Medida por tamaño (§9.4): sm 420px, md 560px, lg 760px, `full` el Atril.
+ *
+ * El alto viaja aquí junto al ancho y no en la base a propósito: `full` es el
+ * único tamaño que NO quiere el techo de 85dvh, y dos techos de altura
+ * compitiendo en la misma cadena de clases se resuelven por orden de generación
+ * del CSS, que no es una regla que se pueda leer en este fichero.
+ *
+ * (Y nada de nombrar utilidades con comodín en este comentario: el guard de
+ * clases muertas escanea también los literales entre acentos graves, y un
+ * `max-h-` con asterisco se le cuenta como clase que Tailwind no emite.)
+ *
+ * `full` no escribe `calc(100dvh - 48px)` ni `min(1200px, calc(100vw - 48px))`
+ * aunque esa sea su medida: el contenedor de arriba ya lleva `sm:p-6`, o sea
+ * los 48px, así que `sm:h-full` sobre un padre de alto definido y `w-full` con
+ * techo de 1200px dan exactamente eso. Restar a mano lo que el padding ya
+ * restó es duplicar la constante en dos sitios que se separarían.
+ */
 const SIZE_CLASS = {
-    sm: 'sm:max-w-[420px]',
-    md: 'sm:max-w-[560px]',
-    lg: 'sm:max-w-[760px]',
+    sm: 'max-h-[85dvh] sm:max-w-[420px]',
+    md: 'max-h-[85dvh] sm:max-w-[560px]',
+    lg: 'max-h-[85dvh] sm:max-w-[760px]',
+    full: 'max-h-dvh sm:h-full sm:max-w-[1200px]',
 } as const;
 
 export type ModalSize = keyof typeof SIZE_CLASS;
@@ -237,6 +255,7 @@ export function Modal({
                         tabIndex={-1}
                         role="dialog"
                         aria-modal="true"
+                        data-size={size}
                         aria-labelledby={titleId}
                         aria-describedby={description ? descId : undefined}
                         initial={{ opacity: 0, scale: 0.98, y: 8 }}
@@ -244,7 +263,7 @@ export function Modal({
                         exit={{ opacity: 0, scale: 0.98, y: 8 }}
                         transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
                         className={cn(
-                            'relative z-10 flex max-h-[85dvh] w-full flex-col overflow-hidden',
+                            'relative z-10 flex w-full flex-col overflow-hidden',
                             'rounded-t-lg sm:rounded-lg',
                             'border border-stroke-control bg-surface-3 shadow-e4',
                             SIZE_CLASS[size],
