@@ -76,41 +76,39 @@ Webhook de Stripe: apunta a `https://backendshpere-production.up.railway.app/api
 
 ---
 
-## n8n (tools/automatización) — desplegar como 3er servicio en Railway
+## n8n (tools/automatización) — 3er servicio en Railway
 
 Los agentes ejecutan herramientas (calendario, WhatsApp, LinkedIn, etc.) vía webhooks
 de n8n. El código está completo (`app/infrastructure/tools/n8n_client.py`,
 `app/infrastructure/n8n_deployer.py`, 18 workflows en `backend/infrastructure/n8n-workflows/`).
-Falta **desplegar el servidor n8n** y conectarlo.
+Lo que queda es **configuración**, y sólo se puede hacer desde el dashboard de Railway.
+
+### ¿En qué estado está la instancia?
+
+Este documento no lo afirma: lo responde el script, que sólo lee.
+
+```bash
+bash scripts/check-n8n-health.sh                 # 0 sana · 3 no sana · 4 no determinable
+bash scripts/check-n8n-health.sh --list-expected # workflows esperados, sin usar la red
+```
 
 ### Pasos en Railway
 
-1. **Nuevo servicio** en el proyecto SPHERE → "Deploy from Dockerfile" usando
-   `Dockerfile.n8n` (ya existe en la raíz del repo) **o** imagen `n8nio/n8n:latest`.
-2. **Volumen**: monta `/home/node/.n8n` (persiste workflows + SQLite). Ya está en
-   `railway.toml`.
-3. **Env vars del servicio n8n**:
-   ```
-   N8N_HOST=<tu-n8n>.up.railway.app
-   N8N_PROTOCOL=https
-   N8N_PORT=5678
-   N8N_WEBHOOK_URL=https://<tu-n8n>.up.railway.app/
-   DB_TYPE=sqlite
-   N8N_ENCRYPTION_KEY=<genera uno aleatorio de 32+ chars>
-   ```
-4. Abre la UI de n8n (la URL pública), crea el usuario admin, y en **Settings → API**
-   genera una API key.
-5. **Conecta el backend** — en el servicio backend añade:
-   ```
-   N8N_BASE_URL=https://<tu-n8n>.up.railway.app
-   N8N_WEBHOOK_SECRET=<mismo secreto que pongas en los workflows>   # genera: python -c "import secrets; print(secrets.token_urlsafe(32))"
-   N8N_API_KEY=<la API key generada en el paso 4>
-   ```
-6. Al arrancar, el backend auto-despliega los 18 workflows vía el deployer
-   (necesita `N8N_API_KEY`). Si no, impórtalos a mano desde `backend/infrastructure/n8n-workflows/`.
+1. **Nuevo servicio** desde la **imagen oficial** `n8nio/n8n`. No se construye desde el
+   repositorio: la raíz del monorepo no puede llevar configuración ni Dockerfiles (los dos
+   repos reciben el árbol completo), y `bash scripts/check-monorepo-invariants.sh` lo verifica.
+2. **Volumen**: monta un Railway Volume en `/home/node/.n8n`.
+3. **Variables del servicio n8n y del backend**: la lista exacta, con el propósito de cada una,
+   está en **[`CONEXIONES_Y_N8N_SETUP.md`](CONEXIONES_Y_N8N_SETUP.md)** (§2 y §3), derivada de
+   [`scripts/infra-manifest.conf`](../scripts/infra-manifest.conf). No se repite aquí a propósito:
+   una segunda copia es exactamente como las dos listas llegaron a contradecirse.
+4. Abre la UI de n8n, crea el usuario admin y en **Settings → API** genera una API key para el
+   backend.
+5. Al arrancar, el backend auto-despliega los 18 workflows. Si no, impórtalos a mano desde
+   `backend/infrastructure/n8n-workflows/`.
 
-Sin `N8N_BASE_URL`/`N8N_API_KEY`: la app funciona, pero las **tools de los agentes
-fallan en silencio** (devuelven error dict). El chat normal y el board meeting sí funcionan.
+Sin la configuración del backend: la app funciona, pero las **tools de los agentes fallan en
+silencio** (devuelven error dict). El chat normal y el board meeting sí funcionan.
 
 ---
 

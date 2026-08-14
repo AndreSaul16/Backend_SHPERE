@@ -28,12 +28,14 @@ Runtime logs (deploy `5c2f768a`): `Error: EACCES: permission denied, open
   config file al correr como root.
 
 Redeploy n8n → `python scripts/railway-doctor.py n8n` debe pasar a SUCCESS y la UI
-(https://n8n-production-16d81.up.railway.app) debe cargar.
+(la URL pública del servicio) debe cargar. Si responde y con qué workflows lo dice
+`bash scripts/check-n8n-health.sh`, no este documento.
 
 **Fallback si Railway ignora `RAILWAY_RUN_UID` en servicios por imagen:** migrar a
-Postgres — añadir servicio Postgres de Railway, `DB_TYPE=postgresdb` +
-`DB_POSTGRESDB_HOST/PORT/DATABASE/USER/PASSWORD`, y eliminar el Volume (la clave de
-cifrado ya está en `N8N_ENCRYPTION_KEY`, no se pierde nada).
+Postgres — añadir servicio Postgres de Railway, cambiar el motor de persistencia a
+`postgresdb` con `DB_POSTGRESDB_HOST/PORT/DATABASE/USER/PASSWORD`, y eliminar el
+Volume (la clave de cifrado del servicio no se pierde). Los nombres exactos de las
+variables están en [`CONEXIONES_Y_N8N_SETUP.md`](CONEXIONES_Y_N8N_SETUP.md).
 
 ### A2. Conexión backend ↔ n8n
 Settings en `config.py:23-25`: `N8N_BASE_URL` (default `http://n8n:5678`),

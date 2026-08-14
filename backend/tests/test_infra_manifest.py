@@ -346,6 +346,79 @@ def test_health_no_filtra_la_api_key():
     assert "set -x" not in SALUD.read_text(encoding="utf-8")
 
 
+# ── IN-005: documentos decidibles, no afirmativos ────────────────────
+
+DOCS = ROOT / "docs"
+CANONICO = DOCS / "CONEXIONES_Y_N8N_SETUP.md"
+CITAN_EL_SCRIPT = ("DEPLOY_CHECKLIST.md", "DEPLOYMENT_RUNBOOK.md")
+
+
+def _documentos() -> list[Path]:
+    """Alcance explícito: sólo `docs/*.md`.
+
+    Fuera quedan `openspec/**` (las specs nombran a propósito la variable que no
+    existe, para prohibirla) y la raíz del repo, que lleva ficheros sin seguir.
+    """
+    return sorted(DOCS.glob("*.md"))
+
+
+def _nombres_en_bloque(texto: str, marca: str) -> set[str]:
+    """Nombres entre `backticks` dentro de un bloque delimitado del documento."""
+    import re
+
+    abre, cierra = f"<!-- {marca} -->", f"<!-- /{marca} -->"
+    assert abre in texto and cierra in texto, f"falta el bloque delimitado {marca!r}"
+    bloque = texto[texto.index(abre) : texto.index(cierra)]
+    return set(re.findall(r"`([A-Z][A-Z0-9_]+)`", bloque))
+
+
+def test_documentos_decidibles():
+    """Ningún documento afirma el estado de la instancia ni nombra variables
+    inexistentes; y los dos documentos oficiales remiten al script."""
+    prohibidas = _values("doc_forbidden") + _values("env_forbidden")
+    assert prohibidas, "el manifiesto no declara ninguna frase prohibida"
+
+    documentos = _documentos()
+    assert len(documentos) >= 3, f"el barrido sólo vio {documentos}"
+
+    hits = []
+    for doc in documentos:
+        for numero, linea in enumerate(doc.read_text(encoding="utf-8").splitlines(), 1):
+            for frase in prohibidas:
+                if frase in linea:
+                    hits.append(f"{doc.name}:{numero} {frase}")
+    assert hits == [], f"frases prohibidas: {hits}"
+
+    sin_cita = [
+        nombre
+        for nombre in CITAN_EL_SCRIPT
+        if SALUD.name not in (DOCS / nombre).read_text(encoding="utf-8")
+    ]
+    assert sin_cita == [], f"documentos que no remiten al script: {sin_cita}"
+
+
+def test_lista_de_variables_en_un_solo_sitio():
+    """La lista que el dueño debe configurar vive en el manifiesto; el documento
+    canónico la explica; el resto enlaza."""
+    nombres = {v.split("=", 1)[0] for v in _values("env_required", "n8n")}
+
+    en_el_doc = _nombres_en_bloque(CANONICO.read_text(encoding="utf-8"), "manifiesto:n8n")
+    assert en_el_doc == nombres, (
+        f"el documento canónico no refleja el manifiesto: "
+        f"sobran {sorted(en_el_doc - nombres)}, faltan {sorted(nombres - en_el_doc)}"
+    )
+
+    infractores = []
+    for doc in _documentos():
+        if doc == CANONICO:
+            continue
+        texto = doc.read_text(encoding="utf-8")
+        presentes = sorted(n for n in nombres if n in texto)
+        if len(presentes) >= 2:
+            infractores.append(f"{doc.name} {presentes}")
+    assert infractores == [], f"documentos que declaran la lista por su cuenta: {infractores}"
+
+
 # ── IN-003: el resultado del guard es asertable ───────────────────────
 
 

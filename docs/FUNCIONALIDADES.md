@@ -315,5 +315,6 @@ Nueve funcionalidades nuevas (F1–F9). Backend en `app/presentation/api/v1/` y
   llama de vuelta tras publicar (nodo Sign Callback + Notify Backend) con `user_id`.
 
 Configuración externa requerida: `ADMIN_EMAILS` (backend), `VITE_POSTHOG_KEY`
-(frontend, opcional), `SPHERE_BACKEND_URL` en n8n (callback F9), `N8N_WEBHOOK_SECRET`
-(ya existente, necesario para F9).
+(frontend, opcional) y las variables de n8n —callback y secreto compartido— que lista
+[`CONEXIONES_Y_N8N_SETUP.md`](CONEXIONES_Y_N8N_SETUP.md). La lista no se repite aquí: vive en un
+único sitio y un test lo comprueba.

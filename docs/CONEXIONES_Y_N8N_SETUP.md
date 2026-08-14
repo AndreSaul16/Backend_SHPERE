@@ -19,13 +19,30 @@ El código ya está completo (registry de tools, cliente n8n, auto-deploy de wor
 
 ## 2. Variables de entorno (Railway — servicio backend)
 
-| Variable | Para qué | Valor |
-|---|---|---|
-| `N8N_BASE_URL` | URL del n8n al que el backend despliega y llama webhooks | URL del servicio n8n (ej. `https://n8n-production-xxxx.up.railway.app` o `http://n8n:5678` si es servicio interno) |
-| `N8N_API_KEY` | API key del n8n (para crear/activar workflows) | JWT de n8n (Settings → API en n8n). Ya tienes uno en `.env` |
-| `N8N_WEBHOOK_SECRET` | Firma HMAC de los webhooks + firma del state OAuth | Secreto fuerte (genera uno y ponlo IGUAL en backend y, si añades verificación, en los workflows) |
-| `FERNET_KEY` | Cifrado de credenciales de usuario | `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
-| `OAUTH_REDIRECT_BASE_URL` | Base del callback OAuth | `https://<tu-backend>.up.railway.app/api/v1/integrations` |
+> **Este documento es la única explicación de la lista.** Los *nombres* viven en
+> [`scripts/infra-manifest.conf`](../scripts/infra-manifest.conf), que es lo que leen el guard de
+> invariantes y la suite de backend. Si añades una variable, añádela allí: un test comprueba que
+> esta tabla y el manifiesto coinciden, y que ningún otro documento declara la lista por su cuenta.
+
+<!-- manifiesto:backend -->
+
+| Variable | Para qué |
+|---|---|
+| `N8N_BASE_URL` | URL del n8n al que el backend despliega workflows y llama webhooks |
+| `N8N_API_KEY` | API key de n8n para crear y activar workflows (Settings → API en la UI de n8n) |
+| `N8N_WEBHOOK_SECRET` | El mismo secreto que el servicio n8n; sin él la integración queda apagada |
+
+<!-- /manifiesto:backend -->
+
+Además, no específicas de n8n: `FERNET_KEY` (cifrado de credenciales de usuario;
+`python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`) y
+`OAUTH_REDIRECT_BASE_URL` (base del callback OAuth, `https://<tu-backend>/api/v1/integrations`).
+
+Genera el secreto compartido **una vez** y ponlo idéntico en los dos servicios:
+
+```
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
 
 > ⚠️ Sin `N8N_BASE_URL` los workflows no se despliegan y las tools fallan con error claro (no crashea). Sin `FERNET_KEY` el backend no arranca (lo viste en los tests).
 >
@@ -35,20 +52,74 @@ El código ya está completo (registry de tools, cliente n8n, auto-deploy de wor
 
 ## 3. Instancia n8n
 
-1. Despliega n8n (Railway tiene template, o usa tu instancia). Debe ser **alcanzable desde el backend** por `N8N_BASE_URL`.
-2. Activa la API pública de n8n y copia la API key → `N8N_API_KEY`.
-3. Reinicia el backend: en el log verás `📦 Deployando 18 workflows a n8n...` y `✅ Deploy de n8n completado`. El usuario nunca toca n8n.
+El servicio n8n usa la **imagen oficial** `n8nio/n8n` configurada por servicio en el dashboard de
+Railway. No se construye desde el repositorio: un `Dockerfile` en la raíz afectaría también al
+build del frontend, y el que existía declaraba una instrucción que Railway no soporta y que aborta
+el build. La persistencia se logra con un **Railway Volume montado en `/home/node/.n8n`** más la
+variable de carpeta de usuario, nunca con esa instrucción.
 
-**Variables OBLIGATORIAS en el servicio n8n (Railway):**
+1. Crea el servicio desde la imagen y monta el volumen.
+2. Configura las variables de la tabla de abajo.
+3. Abre la UI, crea el usuario admin y en **Settings → API** genera la API key → va al backend.
+4. Reinicia el backend: en el log verás `📦 Deployando 18 workflows a n8n...`. El usuario nunca
+   toca n8n.
 
-| Variable | Por qué |
+**Variables del servicio n8n (Railway).** El dueño las configura a mano; ninguna se puede poner
+desde el repositorio:
+
+<!-- manifiesto:n8n -->
+
+| Variable | Para qué |
 |---|---|
-| `N8N_USER_FOLDER=/home/node` | ⚠️ **Sin esto se pierde TODO en cada redeploy.** Con `RAILWAY_RUN_UID=0` n8n corre como root y guarda la DB en `/root/.n8n`, fuera del volumen (montado en `/home/node/.n8n`). Incidente real: 2026-06-12, un redeploy borró workflows + API key. |
-| `NODE_FUNCTION_ALLOW_BUILTIN=crypto` | El nodo `Verify Signature` usa `require('crypto')` para la verificación HMAC. |
-| `N8N_BLOCK_ENV_ACCESS_IN_NODE=false` | n8n ≥2.x bloquea `$env` en nodos Code por defecto; el nodo de verificación lee `$env.N8N_WEBHOOK_SECRET`. |
-| `N8N_WEBHOOK_SECRET` | Mismo valor que en el backend (la firma se verifica dentro de cada workflow). |
+| `N8N_HOST` | Host público del servicio n8n |
+| `N8N_PORT` | Puerto en el que escucha n8n (`5678`) |
+| `N8N_PROTOCOL` | Esquema de las URLs que n8n genera (`https` en Railway) |
+| `WEBHOOK_URL` | URL pública de n8n **con barra final**; éste es el nombre correcto de la variable |
+| `N8N_USER_FOLDER` | `/home/node`. ⚠️ **Sin ella se pierde TODO en cada redeploy**: n8n corre como root y guardaría la base en `/root/.n8n`, fuera del volumen. Incidente real del 2026-06-12: un redeploy borró workflows y API key |
+| `N8N_ENCRYPTION_KEY` | Cifra las credenciales que n8n guarda; si cambia, dejan de descifrarse (32+ caracteres aleatorios) |
+| `DB_TYPE` | Motor de persistencia de n8n (`sqlite` sobre el volumen montado) |
+| `SPHERE_BACKEND_URL` | URL pública del backend a la que los workflows devuelven el callback firmado |
+| `NODE_FUNCTION_ALLOW_BUILTIN` | `crypto`. El nodo `Verify Signature` lo necesita para el HMAC |
+| `N8N_BLOCK_ENV_ACCESS_IN_NODE` | `false`. n8n bloquea el acceso al entorno en nodos Code y el nodo de verificación lee el secreto de ahí |
+| `N8N_WEBHOOK_SECRET` | El mismo secreto que el backend; firma y verifica los webhooks en ambos sentidos |
 
-> Recomendado: **pinear la imagen** a una versión concreta (ej. `n8nio/n8n:2.25.7`) en vez de `latest` — un redeploy con `latest` puede saltar de major version sin avisar.
+<!-- /manifiesto:n8n -->
+
+> **Además, del incidente de permisos del volumen** (2026-06-08): el servicio n8n necesita también
+> las dos variables que documenta el post-mortem de [`DEPLOYMENT_RUNBOOK.md`](DEPLOYMENT_RUNBOOK.md)
+> (Modo C: `CRASHED` por `EACCES` al escribir en el volumen). No se declaran en el manifiesto porque
+> no son un requisito de los workflows sino el arreglo de ese incidente, y su explicación —con el
+> síntoma y el diagnóstico— vive allí.
+
+> Las dos últimas del bloque de verificación (`NODE_FUNCTION_ALLOW_BUILTIN` y el acceso al entorno)
+> son obligatorias para que el HMAC funcione **y** son exactamente las que harían peligroso permitir
+> que un workflow lo escriba un LLM: podría leer el entorno y exfiltrar el secreto. Por eso el
+> deployer no se expone a los agentes, y un test lo impide.
+
+> Recomendado: **pinear la imagen** a una versión concreta (ej. `n8nio/n8n:2.25.7`) en vez de
+> `latest` — un redeploy con `latest` puede saltar de major version sin avisar.
+
+### ¿Está viva la instancia? Lo dice el script, no este documento
+
+```bash
+bash scripts/check-n8n-health.sh                 # 0 sana · 3 no sana · 4 no determinable
+bash scripts/check-n8n-health.sh --list-expected # los workflows esperados, sin usar la red
+```
+
+`4` significa «faltan `N8N_BASE_URL` o `N8N_API_KEY` en tu entorno», **no** «la instancia no
+existe». Ningún documento del repositorio afirma el estado de la instancia: se pregunta al script.
+
+### Cuándo cerrar la gracia del nonce
+
+El webhook de n8n acepta todavía callbacks **sin** `nonce` (`N8N_REQUIRE_NONCE=false`), porque las
+ejecuciones ya en vuelo siguen firmando con el nodo antiguo y `Wait Until Scheduled` puede tardar
+días. Condición escrita para cerrarla:
+
+1. `check-n8n-health.sh` reporta `SPHERE - Schedule Post` **activo** con el JSON nuevo, **y**
+2. ha pasado el horizonte máximo de programación de los posts que estaban en vuelo.
+
+Entonces: pon `N8N_REQUIRE_NONCE=true` en el backend. Si además fijas `N8N_NONCE_GRACE_DEADLINE`
+(fecha ISO), el arranque emitirá un `CRITICAL` mientras la gracia siga abierta pasada esa fecha.
 
 ---
 

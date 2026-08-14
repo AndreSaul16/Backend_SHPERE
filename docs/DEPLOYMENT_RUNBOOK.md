@@ -53,7 +53,11 @@ fuente de la mayoría de incidencias (ver §3).
 URLs de producción:
 - Backend:  https://backendshpere-production.up.railway.app
 - Frontend: https://frontendsphere-production.up.railway.app
-- n8n:      https://n8n-production-16d81.up.railway.app
+- n8n:      no se afirma aquí. La URL vive en la variable del servicio backend
+  (ver [`CONEXIONES_Y_N8N_SETUP.md`](CONEXIONES_Y_N8N_SETUP.md)) y de su estado responde
+  `bash scripts/check-n8n-health.sh` (0 sana · 3 no sana · 4 no determinable). Este documento
+  y `DEPLOY_CHECKLIST.md` llegaron a afirmar cosas opuestas sobre esa instancia; por eso ya no
+  la afirma ninguno.
 
 ---
 
