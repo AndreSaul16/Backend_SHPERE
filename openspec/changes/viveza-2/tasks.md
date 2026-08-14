@@ -32,6 +32,14 @@ Entrega: un solo tramo (lo fija el prompt del orquestador: 3-4 commits lógicos,
 
 ## Fase 5 · Mutaciones
 
-- [ ] 5.1 m1 pluma movida por setInterval → test de la pluma en rojo
-- [ ] 5.2 m2 latido con iteración infinita → test del latido en rojo
-- [ ] 5.3 m3 odómetro ignora reduced-motion → test del odómetro en rojo
+- [x] 5.1 m1 pluma movida por setInterval → test de la pluma en rojo
+- [x] 5.2 m2 latido con iteración infinita → test del latido en rojo
+- [x] 5.3 m3 odómetro ignora reduced-motion → test del odómetro en rojo
+
+## Resultado
+
+- Recuento: 1081 passed / 124 files → **1101 passed / 129 files** (+20 tests, +5 ficheros).
+- Gates: `tsc -b --noEmit` limpio · clases muertas 0 · eslint sin errores nuevos
+  (los 2 de `BandaDeVeredicto.tsx` son anteriores al baseline, verificado con stash).
+- Backend intacto: `git diff a8619dc..HEAD -- backend/` vacío.
+- Mutaciones: m1 (+m1b), m2 y m3 matan sus tests y quedan revertidas.
