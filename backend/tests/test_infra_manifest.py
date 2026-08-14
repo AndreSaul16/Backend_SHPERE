@@ -208,6 +208,25 @@ def test_secreto_compartido_en_compose():
     )
 
 
+# ── NWI-004: la caducidad de la gracia vive en el manifiesto ─────────
+
+
+def test_deadline_declarado():
+    """El ajuste existe y, si trae valor, es una fecha ISO.
+
+    El test NO afirma ninguna fecha concreta: la fija el dueño cuando se cumpla
+    la condición de retirada escrita en el documento canónico.
+    """
+    from datetime import datetime
+
+    ajustes = [v for v in _values("setting") if v.split("=", 1)[0].endswith("GRACE_DEADLINE")]
+    assert len(ajustes) == 1, f"falta el ajuste de caducidad de la gracia: {_values('setting')}"
+
+    _, _, valor = ajustes[0].partition("=")
+    if valor and not valor.startswith("<"):
+        datetime.fromisoformat(valor)  # no debe lanzar
+
+
 # ── IN-003: el resultado del guard es asertable ───────────────────────
 
 

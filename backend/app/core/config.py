@@ -28,6 +28,26 @@ class Settings(BaseSettings):
     N8N_WEBHOOK_SECRET: str = ""
     N8N_API_KEY: str = ""  # API key para gestionar workflows (X-N8N-API-KEY)
 
+    # Replay protection del webhook n8n→backend (NWI-004).
+    #
+    # N8N_REQUIRE_NONCE arranca en False A PROPÓSITO: exigir el nonce antes de
+    # redesplegar los workflows rompería los callbacks, y `Wait Until Scheduled`
+    # puede tardar días, así que habrá ejecuciones en vuelo firmando con el
+    # `Sign Callback` viejo mucho después del redeploy. Orden obligatorio:
+    # backend tolerante → redesplegar los JSON → poner esta variable a True.
+    #
+    # La gracia NO es indefinida: N8N_NONCE_GRACE_DEADLINE (ISO) es la fecha tras
+    # la cual el arranque emite un CRITICAL si sigue activa. Se entrega vacía —
+    # la fija el dueño cuando se cumpla la condición escrita en
+    # docs/CONEXIONES_Y_N8N_SETUP.md— y vacía no rompe nada.
+    #
+    # 300 s es una HIPÓTESIS no verificada: n8n y el backend son dos contenedores
+    # distintos de Railway y no hay NTP comprobado entre ellos. El dueño puede
+    # estrecharla tras observar el primer callback real.
+    N8N_REQUIRE_NONCE: bool = False
+    N8N_NONCE_WINDOW_SECONDS: int = 300
+    N8N_NONCE_GRACE_DEADLINE: str = ""
+
     # Firebase Auth
     FIREBASE_CREDENTIALS_PATH: str = ""
     FIREBASE_CREDENTIALS_JSON: str = ""  # Contenido del JSON (Railway-friendly)

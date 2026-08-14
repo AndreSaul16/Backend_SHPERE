@@ -424,6 +424,39 @@ def verify_n8n_signature(payload: dict, signature: str | None) -> bool:
     return constant_time_equals(expected, signature)
 
 
+def _dentro_de_ventana(timestamp) -> bool:
+    """True si `timestamp` (epoch en segundos) cae dentro de la ventana aceptada.
+
+    La ventana mide el tramo n8n→backend: el `timestamp` lo genera `Sign Callback`
+    tras publicar, no el `Wait` que puede haber esperado días.
+    """
+    try:
+        emitido = int(timestamp)
+    except (TypeError, ValueError):
+        return False
+    ahora = int(datetime.now(timezone.utc).timestamp())
+    return abs(ahora - emitido) <= settings.N8N_NONCE_WINDOW_SECONDS
+
+
+def _nonce_ya_visto(nonce: str) -> bool:
+    """Reclama el nonce y dice si ya estaba reclamado (dedupe antirreplay).
+
+    En Mongo y no en Redis a propósito: `get_redis()` devuelve None cuando Redis
+    no está disponible y el control desaparecería en silencio. Mongo es
+    dependencia dura (sin MONGODB_URL el backend no arranca). El patrón es el
+    mismo que usa el webhook de Stripe con `event_id` en este mismo fichero: el
+    `_id` único hace de lock natural.
+    """
+    nonces_col = db.get_sync_client()[settings.DB_NAME]["n8n_webhook_nonces"]
+    existente = nonces_col.find_one_and_update(
+        {"_id": nonce},
+        {"$setOnInsert": {"created_at": datetime.now(timezone.utc)}},
+        upsert=True,
+        return_document=ReturnDocument.BEFORE,
+    )
+    return existente is not None
+
+
 async def _notify_schedule_post_result(payload: dict) -> None:
     """Notifica por WhatsApp el resultado de una publicación programada (best-effort).
 
@@ -490,6 +523,24 @@ async def n8n_webhook(request: Request):
     if not verify_n8n_signature(payload, signature):
         logger.warning("Webhook n8n rechazado: firma inválida o ausente")
         raise HTTPException(status_code=401, detail="Firma inválida")
+
+    # Replay protection (NWI-004). Una firma válida se puede reenviar tal cual:
+    # sin esto, quien capture un callback puede repetir la notificación al usuario
+    # tantas veces como quiera.
+    nonce = payload.get("nonce")
+    if not isinstance(nonce, str) or not nonce:
+        if settings.N8N_REQUIRE_NONCE:
+            logger.warning("Webhook n8n rechazado: falta nonce y la gracia está cerrada")
+            raise HTTPException(status_code=401, detail="Falta nonce")
+        # Gracia: workflows aún sin redesplegar (ver N8N_REQUIRE_NONCE).
+        logger.info("Webhook n8n sin nonce aceptado por la gracia de redespliegue")
+    else:
+        if not _dentro_de_ventana(payload.get("timestamp")):
+            logger.warning("Webhook n8n rechazado: timestamp fuera de la ventana aceptada")
+            raise HTTPException(status_code=401, detail="Payload fuera de ventana")
+        if _nonce_ya_visto(nonce):
+            logger.info(f"Webhook n8n duplicado (nonce ya procesado): {nonce[:12]}…")
+            return {"status": "already processed"}
 
     event_type = payload.get("type")
     logger.info(f"Webhook n8n recibido: type={event_type} user={payload.get('user_id')}")

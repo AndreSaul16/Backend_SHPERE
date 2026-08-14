@@ -7,6 +7,9 @@ cero tests.
 import hashlib
 import hmac
 import json
+import logging
+import time
+from uuid import uuid4
 
 import pytest
 
@@ -188,3 +191,135 @@ async def test_user_id_string_si_procesa(async_client, con_secreto, espias_de_sa
     assert r.status_code == 200
     assert len(inyecciones) == 1
     assert llamadas == ["shared/whatsapp-notify"]
+
+
+# ── NWI-004: replay protection con gracia caducable ──────────────────
+
+
+def _con_nonce(**extra) -> dict:
+    """Payload firmable con `timestamp` y `nonce`, como el Sign Callback nuevo."""
+    return {
+        **PAYLOAD,
+        "timestamp": int(time.time()),
+        "nonce": uuid4().hex,
+        **extra,
+    }
+
+
+async def test_reenvio_no_notifica_dos_veces(async_client, con_secreto, espia_notificacion):
+    payload = _con_nonce()
+    firma = _firma_cruda(payload, SECRET)
+
+    primera = await _post(async_client, payload, firma)
+    segunda = await _post(async_client, payload, firma)
+
+    assert primera.status_code == 200
+    assert segunda.status_code == 200
+    # Lo que está en juego es un segundo mensaje de WhatsApp al usuario.
+    assert len(espia_notificacion) == 1
+    assert segunda.json() == {"status": "already processed"}
+
+
+async def test_nonce_distinto_si_notifica(async_client, con_secreto, espia_notificacion):
+    """Triangulación: el dedupe no bloquea callbacks legítimos distintos."""
+    for _ in range(2):
+        payload = _con_nonce()
+        r = await _post(async_client, payload, _firma_cruda(payload, SECRET))
+        assert r.status_code == 200
+
+    assert len(espia_notificacion) == 2
+
+
+async def test_fuera_de_ventana_se_rechaza(async_client, con_secreto, espia_notificacion):
+    payload = _con_nonce(timestamp=int(time.time()) - 3600)
+
+    r = await _post(async_client, payload, _firma_cruda(payload, SECRET))
+
+    assert r.status_code == 401
+    assert espia_notificacion == []
+
+
+async def test_gracia_conmuta(async_client, con_secreto, espia_notificacion, monkeypatch):
+    """Sin `nonce` (workflow viejo aún en vuelo): la gracia decide."""
+    payload = dict(PAYLOAD)  # sin timestamp ni nonce
+    firma = _firma_cruda(payload, SECRET)
+
+    monkeypatch.setattr(settings, "N8N_REQUIRE_NONCE", False)
+    con_gracia = await _post(async_client, payload, firma)
+
+    monkeypatch.setattr(settings, "N8N_REQUIRE_NONCE", True)
+    sin_gracia = await _post(async_client, payload, firma)
+
+    assert con_gracia.status_code == 200
+    assert sin_gracia.status_code == 401
+    assert len(espia_notificacion) == 1
+
+
+def test_la_gracia_es_el_default():
+    """Exigir el nonce antes de redesplegar los workflows los rompería, y
+    `Wait Until Scheduled` puede tardar días: el default tolerante es deliberado."""
+    assert settings.N8N_REQUIRE_NONCE is False
+
+
+# ── NWI-004: la gracia caduca, y la caducidad es ejecutable ──────────
+
+
+def _produccion(monkeypatch):
+    """Entorno mínimo para que la validación de arranque llegue hasta el final.
+
+    El logger de la casa lleva `propagate = False`, así que sin reactivarlo
+    `caplog` no vería ni un registro (patrón ya usado en la suite).
+    """
+    import main
+
+    monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+    monkeypatch.setattr(settings, "FERNET_KEY", "clave-de-test")
+    monkeypatch.setattr(settings, "FIREBASE_CREDENTIALS_JSON", "{}")
+    monkeypatch.setattr(main.logger, "propagate", True)
+
+
+def _criticos(caplog) -> list[str]:
+    return [r.getMessage() for r in caplog.records if r.levelno >= logging.CRITICAL]
+
+
+def test_deadline_vencido_avisa(monkeypatch, caplog):
+    """La fecha se INYECTA: este test no caduca por calendario."""
+    import main
+
+    _produccion(monkeypatch)
+    monkeypatch.setattr(settings, "N8N_REQUIRE_NONCE", False)
+    monkeypatch.setattr(settings, "N8N_NONCE_GRACE_DEADLINE", "2020-01-01T00:00:00+00:00")
+
+    with caplog.at_level(logging.CRITICAL, logger="sphere.api"):
+        main._validate_env_vars()
+
+    assert any("N8N_REQUIRE_NONCE" in m for m in _criticos(caplog)), (
+        "no se emitió CRITICAL con el deadline vencido"
+    )
+
+
+def test_deadline_futuro_no_avisa(monkeypatch, caplog):
+    import main
+
+    _produccion(monkeypatch)
+    monkeypatch.setattr(settings, "N8N_REQUIRE_NONCE", False)
+    monkeypatch.setattr(settings, "N8N_NONCE_GRACE_DEADLINE", "2999-01-01T00:00:00+00:00")
+
+    with caplog.at_level(logging.CRITICAL, logger="sphere.api"):
+        main._validate_env_vars()
+
+    assert not any("N8N_REQUIRE_NONCE" in m for m in _criticos(caplog))
+
+
+def test_deadline_vacio_no_avisa(monkeypatch, caplog):
+    """Se entrega vacía a propósito: la fecha la fija el dueño y nada se rompe."""
+    import main
+
+    _produccion(monkeypatch)
+    monkeypatch.setattr(settings, "N8N_REQUIRE_NONCE", False)
+    monkeypatch.setattr(settings, "N8N_NONCE_GRACE_DEADLINE", "")
+
+    with caplog.at_level(logging.CRITICAL, logger="sphere.api"):
+        main._validate_env_vars()
+
+    assert not any("N8N_REQUIRE_NONCE" in m for m in _criticos(caplog))

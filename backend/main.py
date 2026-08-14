@@ -6,6 +6,7 @@ Orquestador multi-tenant de agentes IA para startups.
 import asyncio
 import hashlib
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -42,6 +43,37 @@ async def user_or_ip_identifier(request: Request) -> str:
         return "user:" + hashlib.sha256(token.encode()).hexdigest()[:16]
     client_host = request.client.host if request.client else "unknown"
     return "ip:" + client_host
+
+
+def _warn_if_nonce_grace_expired():
+    """CRITICAL si la gracia del nonce sigue activa después de su fecha límite.
+
+    Sin fecha configurada no hay aviso: se entrega vacía a propósito, porque la
+    condición de retirada (workflows redesplegados + horizonte máximo de posts
+    programados en vuelo) sólo la puede comprobar el dueño.
+    """
+    if not settings.is_production or settings.N8N_REQUIRE_NONCE:
+        return
+    limite = (settings.N8N_NONCE_GRACE_DEADLINE or "").strip()
+    if not limite:
+        return
+    try:
+        fecha = datetime.fromisoformat(limite)
+    except ValueError:
+        logger.critical(
+            f"N8N_NONCE_GRACE_DEADLINE no es una fecha ISO válida: {limite!r}. "
+            "La caducidad de la gracia del nonce no se puede comprobar."
+        )
+        return
+    if fecha.tzinfo is None:
+        fecha = fecha.replace(tzinfo=timezone.utc)
+    if fecha < datetime.now(timezone.utc):
+        logger.critical(
+            f"La gracia del nonce venció el {limite} y N8N_REQUIRE_NONCE sigue en "
+            "False: el webhook de n8n acepta payloads sin nonce, es decir sin "
+            "protección contra reenvío. Redespliega los workflows y pon "
+            "N8N_REQUIRE_NONCE=true."
+        )
 
 
 def _validate_env_vars():
@@ -94,6 +126,12 @@ def _validate_env_vars():
             "n8n no protegen nada (secreto vacío = firma falsificable). Si usas "
             "integraciones n8n, configura N8N_WEBHOOK_SECRET en Railway YA."
         )
+
+    # Caducidad de la gracia del nonce (NWI-004). La gracia es el default para no
+    # romper los callbacks de los workflows aún sin redesplegar, pero no puede ser
+    # indefinida: pasada la fecha que fije el dueño, esto lo dice en voz alta.
+    # No es bloqueante, mismo precedente que el CRITICAL de arriba.
+    _warn_if_nonce_grace_expired()
 
     missing_prod = [k for k, v in prod_critical.items() if not v]
     # Firebase: vale FIREBASE_CREDENTIALS_JSON (Railway) o FIREBASE_CREDENTIALS_PATH (archivo).
@@ -178,6 +216,16 @@ async def _ensure_indexes():
     await states_col.create_index(
         [("created_at", ASCENDING)], expireAfterSeconds=600, background=True
     )  # 10 min TTL
+
+    # Nonces del webhook n8n (dedupe antirreplay, NWI-004). TTL amplio respecto a
+    # la ventana: el documento debe sobrevivir a cualquier reintento legítimo, y
+    # una vez fuera de ventana el propio timestamp ya rechaza el reenvío.
+    nonces_col = db.get_async_db()["n8n_webhook_nonces"]
+    await nonces_col.create_index(
+        [("created_at", ASCENDING)],
+        expireAfterSeconds=max(settings.N8N_NONCE_WINDOW_SECONDS * 12, 3600),
+        background=True,
+    )
 
     # Contacts whitelist
     contacts_col = get_contacts_collection()
