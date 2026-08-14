@@ -13,7 +13,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user, _is_wallet_valid, _repair_wallet
 from app.core.config import settings
 from app.core.logger import api_logger as logger
 from app.infrastructure.database import get_users_collection, db
@@ -141,6 +141,48 @@ async def adjust_user_credits(
         f"ADMIN adjust: {admin.get('email')} ajustó {body.delta} a {uid} ({body.reason})"
     )
     return {"uid": uid, "delta": body.delta, "topup_messages_balance": balance_after}
+
+
+@router.post("/users/{uid}/repair-wallet")
+async def repair_user_wallet(
+    uid: str,
+    admin: dict = Depends(require_admin),
+):
+    """Repara el wallet de un usuario existente si es inválido (CS-003).
+
+    Delega en `_repair_wallet` (core.auth), la MISMA lógica que usa el lazy init
+    de `_ensure_wallet`: un wallet es inválido si es `null`, `{}` o no trae la
+    clave `pro_messages_balance`. Aquí solo se decide, antes de llamar, si hacía
+    falta reparar — para poder decírselo al admin.
+
+    Idempotente: un wallet válido NO se sobreescribe (CS-002).
+    """
+    users_col = get_users_collection()
+    user_doc = await users_col.find_one({"firebase_uid": uid})
+    if not user_doc:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    hacia_falta = not _is_wallet_valid(user_doc.get("wallet"))
+    user_doc = await _repair_wallet(uid, user_doc)
+    wallet = user_doc.get("wallet") or {}
+
+    if hacia_falta:
+        logger.info(
+            f"ADMIN repair-wallet: {admin.get('email')} reparó el wallet de {uid} "
+            f"({wallet.get('pro_messages_balance', 0)} créditos)"
+        )
+    return {
+        "uid": uid,
+        "repaired": hacia_falta,
+        "wallet": {
+            "pro_messages_balance": wallet.get("pro_messages_balance", 0),
+            "topup_messages_balance": wallet.get("topup_messages_balance", 0),
+        },
+        "message": (
+            "Wallet reparado" if hacia_falta
+            else "El wallet ya era válido; no se ha modificado"
+        ),
+    }
 
 
 @router.get("/transactions")

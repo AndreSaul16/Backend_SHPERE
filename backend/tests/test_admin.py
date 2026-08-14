@@ -1,7 +1,10 @@
 """Tests del panel admin (F4: require_admin) y métricas (F5: agregación).
 
-Sin Mongo real: require_admin se prueba con el user dict; la agregación con
-una lista de transacciones materializada.
+require_admin se prueba con el user dict y la agregación con una lista de
+transacciones materializada, ambos sin Mongo. El endpoint de reparación de
+wallet (CS-003) sí usa Mongo: es una ruta HTTP que persiste, y probarla contra
+la función suelta no demostraría que la ruta existe — que es justo lo que
+faltaba.
 """
 from datetime import datetime, timezone
 
@@ -10,6 +13,7 @@ from fastapi import HTTPException
 
 from app.presentation.api.v1.admin import require_admin, aggregate_credit_metrics
 from app.core.config import settings
+from app.infrastructure.database import get_users_collection
 
 
 # --- F4: require_admin ---
@@ -103,3 +107,143 @@ def test_aggregate_vacio():
     m = aggregate_credit_metrics([], days=30)
     assert m["totals"]["credits_consumed"] == 0
     assert m["by_day"] == []
+
+
+# --- CS-003: POST /admin/users/{uid}/repair-wallet ---
+
+_ADMIN_EMAIL = "admin@sphere.es"
+# Créditos que otorga el plan free (settings.plan_messages_map["free"]).
+_CREDITOS_FREE = 30
+
+
+def _ruta(uid: str) -> str:
+    return f"/api/v1/admin/users/{uid}/repair-wallet"
+
+
+def _identidad(email: str) -> dict:
+    """Documento de usuario tal y como lo devuelve get_current_user."""
+    return {"firebase_uid": f"uid_{email}", "email": email, "email_verified": True}
+
+
+@pytest.fixture
+def como(monkeypatch):
+    """Suplanta la identidad autenticada dejando `require_admin` intacto.
+
+    Se sobreescribe get_current_user, no require_admin: la guarda de admin es
+    parte de lo que se prueba, así que tiene que ejecutarse de verdad.
+    """
+    from main import app
+    from app.core.auth import get_current_user
+
+    monkeypatch.setattr(settings, "ADMIN_EMAILS", _ADMIN_EMAIL)
+
+    def _usar(email: str):
+        async def _override():
+            return _identidad(email)
+
+        app.dependency_overrides[get_current_user] = _override
+
+    yield _usar
+    app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.fixture
+async def sembrar(async_client):
+    """Inserta usuarios de prueba en Mongo y los borra al terminar.
+
+    Depende de async_client porque es quien deja la conexión Motor montada en
+    el loop del test.
+    """
+    creados: list[str] = []
+
+    async def _sembrar(uid: str, wallet) -> None:
+        await get_users_collection().delete_many({"firebase_uid": uid})
+        await get_users_collection().insert_one({
+            "firebase_uid": uid,
+            "email": f"{uid}@test.com",
+            "wallet": wallet,
+        })
+        creados.append(uid)
+
+    yield _sembrar
+
+    for uid in creados:
+        await get_users_collection().delete_many({"firebase_uid": uid})
+
+
+async def _wallet_en_mongo(uid: str) -> dict:
+    doc = await get_users_collection().find_one({"firebase_uid": uid})
+    assert doc is not None, f"el usuario {uid} debería seguir existiendo"
+    return doc["wallet"]
+
+
+async def test_repair_wallet_repara_wallet_vacio(async_client, como, sembrar):
+    """CS-003: wallet {} → se repara, se persiste y se devuelve reparado."""
+    como(_ADMIN_EMAIL)
+    await sembrar("u_wallet_vacio", {})
+
+    r = await async_client.post(_ruta("u_wallet_vacio"))
+
+    assert r.status_code == 200
+    body = r.json()
+    assert body["repaired"] is True
+    assert body["wallet"]["pro_messages_balance"] == _CREDITOS_FREE
+    # Persistido en Mongo, no solo en la respuesta.
+    assert (await _wallet_en_mongo("u_wallet_vacio"))["pro_messages_balance"] == _CREDITOS_FREE
+
+
+async def test_repair_wallet_repara_wallet_sin_la_clave(async_client, como, sembrar):
+    """CS-003 (triangulación): un dict sin pro_messages_balance también es inválido.
+
+    Falta a propósito el caso `wallet: null`: `_repair_wallet` no lo sabe
+    reparar (escribe con rutas con punto, y Mongo no crea subcampos dentro de
+    un null). Es un bug previo y ajeno a esta ruta — está anotado, no arreglado
+    aquí.
+    """
+    como(_ADMIN_EMAIL)
+    await sembrar("u_wallet_sin_clave", {"topup_messages_balance": 7})
+
+    r = await async_client.post(_ruta("u_wallet_sin_clave"))
+
+    assert r.status_code == 200
+    assert r.json()["repaired"] is True
+    assert (await _wallet_en_mongo("u_wallet_sin_clave"))["pro_messages_balance"] == _CREDITOS_FREE
+
+
+async def test_repair_wallet_no_toca_wallet_valido(async_client, como, sembrar):
+    """CS-002: un wallet válido no se sobreescribe; la respuesta lo dice."""
+    valido = {"pro_messages_balance": 3, "topup_messages_balance": 0}
+    como(_ADMIN_EMAIL)
+    await sembrar("u_wallet_valido", dict(valido))
+
+    r = await async_client.post(_ruta("u_wallet_valido"))
+
+    assert r.status_code == 200
+    body = r.json()
+    assert body["repaired"] is False
+    assert body["wallet"]["pro_messages_balance"] == 3
+    # Intacto en Mongo: ni el saldo cambia ni aparecen claves nuevas.
+    assert await _wallet_en_mongo("u_wallet_valido") == valido
+
+
+async def test_repair_wallet_usuario_inexistente(async_client, como):
+    """Mismo 404 que la ruta hermana POST /users/{uid}/adjust."""
+    como(_ADMIN_EMAIL)
+
+    r = await async_client.post(_ruta("u_que_no_existe"))
+
+    assert r.status_code == 404
+    assert r.json()["detail"] == "Usuario no encontrado"
+
+
+async def test_repair_wallet_rechaza_no_admin(async_client, como, sembrar):
+    """Mismo 403 que las rutas hermanas, y sin llegar a escribir."""
+    como("pepe@test.com")
+    await sembrar("u_objetivo_no_admin", {})
+
+    r = await async_client.post(_ruta("u_objetivo_no_admin"))
+
+    assert r.status_code == 403
+    assert r.json()["detail"] == "Sin acceso"
+    # La guarda corta antes de cualquier escritura.
+    assert await _wallet_en_mongo("u_objetivo_no_admin") == {}
