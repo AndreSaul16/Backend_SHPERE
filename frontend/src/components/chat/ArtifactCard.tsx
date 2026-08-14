@@ -117,14 +117,25 @@ export function ArtifactCard({ content, language, artifactType, title: propsTitl
                     <div className="flex items-center gap-2 flex-shrink-0">
                         <button
                             onClick={handleView}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-highlight hover:bg-electric-cyan/10 text-content-muted hover:text-electric-cyan rounded-lg text-sm font-medium transition-colors border border-transparent hover:border-electric-cyan/20"
+                            /* §2.3 — la acción primaria de la tarjeta es de
+                               LATÓN. Traía los hovers del shim heredado
+                               (`electric-cyan`), que §2.3 retiró: en `index.css`
+                               ese alias ya apunta a `--accent`, o sea que el
+                               color salía bien por accidente y el nombre
+                               mentía. Ahora lo dice el token que toca. */
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-highlight hover:bg-accent/10 text-content-muted hover:text-accent rounded-lg text-sm font-medium transition-colors border border-transparent hover:border-accent/20"
                         >
                             <ExternalLink className="h-3 w-3" />
                             {isActa ? 'Ver acta' : 'Ver Código'}
                         </button>
                         <button
                             onClick={handleDownload}
-                            className="p-1.5 bg-surface-highlight hover:bg-luxury-purple/10 text-content-muted hover:text-luxury-purple rounded-lg transition-colors border border-transparent hover:border-luxury-purple/20"
+                            /* Descargar es la acción SECUNDARIA y no compite
+                               con la primaria por el latón: el patrón de
+                               acción de fila de §9.11 —filete del sistema y
+                               tinta fuerte al apuntar—. `luxury-purple` era el
+                               otro alias del shim que §2.3 retiró. */
+                            className="p-1.5 bg-surface-highlight hover:bg-stroke-hairline text-content-muted hover:text-content-strong rounded-lg transition-colors border border-transparent hover:border-stroke-edge"
                             title="Descargar"
                         >
                             <Download className="h-3.5 w-3.5" />

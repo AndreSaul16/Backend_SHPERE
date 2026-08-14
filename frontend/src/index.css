@@ -416,6 +416,34 @@
       transition-duration:1ms !important; scroll-behavior:auto !important;
     }
   }
+
+  /* ═══ §8.10 · El Cambio de Sala ═══════════════════════════════════════════
+     Navegar no parpadea: el navegador saca una instantánea de la sala que se
+     va y otra de la que llega, y las funde fuera del hilo principal. Coste ≈
+     un crossfade, cero JS de animación.
+
+     El `@supports` es la degradación que pide §8.10: donde la API no existe
+     (Firefox, Safari viejo) no se genera ninguna regla y queda el corte de
+     hoy — que no es una regresión, es el comportamiento actual. La mitad en
+     JS de esta misma guarda vive en `useNavegacionConTransicion`.
+
+     Las instantáneas son pseudo-elementos del documento, no de ningún
+     componente: `::view-transition-old/new(root)` es el par que cubre el
+     cambio de ruta completo. */
+  @supports (view-transition-name: none){
+    ::view-transition-old(root),
+    ::view-transition-new(root){
+      animation-duration: var(--duration-panel);
+      animation-timing-function: var(--ease-settle);
+    }
+
+    /* §7.6 — con movimiento reducido, corte directo. La regla global de arriba
+       no llega aquí: los pseudo-elementos de transición no son descendientes
+       de nada y `*` no los alcanza. */
+    @media (prefers-reduced-motion: reduce){
+      ::view-transition-group(*){ animation: none; }
+    }
+  }
 }
 
 /* ═══ .doc-prose — tipografía de documento propia (§P1) ═════════════════════ */

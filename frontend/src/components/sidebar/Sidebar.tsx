@@ -16,6 +16,14 @@ import { agruparPorFecha } from "./historialPorFecha";
 import { precargaAlApuntar } from "@/lib/rutasPerezosas";
 import { abrirPaletaDeComandos } from "@/lib/atajosBus";
 import { comboDe, teclasDe } from "@/hooks/useShortcuts";
+/**
+ * §8.10 — los cuatro destinos del shell cambian de SALA (perfil, facturación,
+ * ajustes, admin) y por eso viajan con transición. Los enlaces de sesión de
+ * arriba siguen siendo `<Link>` a secas a propósito: cambiar de hilo es
+ * moverse dentro de la misma sala, y fundir la pantalla entera cada vez que se
+ * pincha una conversación de la lista sería ruido, no continuidad.
+ */
+import { EnlaceConTransicion } from "@/components/shared/EnlaceConTransicion";
 
 /**
  * Extract initials from displayName (e.g., "María García" → "MG")
@@ -506,7 +514,7 @@ export function Sidebar() {
             {/* Footer / User Profile */}
             <div className="p-3 sm:p-4 border-t border-surface-highlight bg-midnight/30 space-y-2">
                 {user ? (
-                    <Link
+                    <EnlaceConTransicion
                         to="/profile"
                         {...precargaAlApuntar('perfil')}
                         onClick={() => toggleSidebar(false)}
@@ -538,7 +546,7 @@ export function Sidebar() {
                                 {user.email || ""}
                             </p>
                         </div>
-                    </Link>
+                    </EnlaceConTransicion>
                 ) : (
                     <div className="flex items-center gap-2.5 sm:gap-3 p-2 rounded-xl border border-transparent opacity-50">
                         <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-surface-3 border border-stroke-edge flex items-center justify-center text-content-muted font-bold text-sm">
@@ -549,7 +557,7 @@ export function Sidebar() {
                         </div>
                     </div>
                 )}
-                <Link
+                <EnlaceConTransicion
                     to="/billing"
                     {...precargaAlApuntar('facturacion')}
                     onClick={() => toggleSidebar(false)}
@@ -569,8 +577,8 @@ export function Sidebar() {
                             )}
                         </span>
                     )}
-                </Link>
-                <Link
+                </EnlaceConTransicion>
+                <EnlaceConTransicion
                     to="/settings"
                     {...precargaAlApuntar('ajustes')}
                     onClick={() => toggleSidebar(false)}
@@ -578,9 +586,9 @@ export function Sidebar() {
                 >
                     <Settings className="h-4 w-4" aria-hidden="true" />
                     <span>Configuración</span>
-                </Link>
+                </EnlaceConTransicion>
                 {isAdmin && (
-                    <Link
+                    <EnlaceConTransicion
                         to="/admin"
                         {...precargaAlApuntar('admin')}
                         onClick={() => toggleSidebar(false)}
@@ -588,7 +596,7 @@ export function Sidebar() {
                     >
                         <ShieldCheck className="h-4 w-4" aria-hidden="true" />
                         <span>Admin</span>
-                    </Link>
+                    </EnlaceConTransicion>
                 )}
             </div>
         </div>

@@ -694,7 +694,17 @@ Doce. Ninguno es un degradado, glass, partículas ni nodos flotando. Cada uno ti
 
 ### 8.10 El Cambio de Sala (transiciones de ruta)
 **Qué es.** Navegar no parpadea: **la hoja viaja**. Al abrir un acta desde su tarjeta, la tarjeta se convierte en la hoja (morph de posición/escala); al entrar en ajustes, el panel entra como un pliego que se asienta. La app se recorre como un edificio, no como pestañas de navegador.
-**Implementación.** View Transitions API: React Router 7 soporta `<Link viewTransition>`; `view-transition-name: acta-sheet` en la tarjeta y en la hoja destino, con `::view-transition-old/new` a `--duration-panel`/`--ease-settle`. `@starting-style` para las entradas de elementos nuevos sin JS. Detección: `@supports (view-transition-name: none)` — sin soporte, corte limpio (que es el comportamiento de hoy, no una regresión).
+**Implementación.** View Transitions API, con `::view-transition-old/new(root)` a `--duration-panel`/`--ease-settle`. Detección: `@supports (view-transition-name: none)` — sin soporte, corte limpio (que es el comportamiento de hoy, no una regresión). `@starting-style` para las entradas de elementos nuevos sin JS. El morph pieza a pieza (`view-transition-name: acta-sheet` en la tarjeta y en la hoja destino) queda pendiente; hoy la transición es la de raíz.
+
+> **Corrección (Viveza-1): `<Link viewTransition>` NO sirve en esta app.** Este párrafo decía «React Router 7 soporta `<Link viewTransition>`». Es cierto, pero **sólo con un data router**, y la app monta `<BrowserRouter>` (`main.tsx:47`). Verificado leyendo el fuente instalado (react-router 7.13.0):
+>
+> `<Link viewTransition>` → `useLinkClickHandler` → `useNavigate()` → **`useNavigateUnstable()`** → `navigator.push(path, options.state, options)`.
+>
+> `navigator.push` es el `history` pelado: recibe `viewTransition` dentro de `options` y **no lo mira nunca**. La llamada a `document.startViewTransition` sólo existe en la rama del data router (donde `useNavigate` resuelve a `useNavigateStable`), y `useViewTransitionState` ni siquiera arranca fuera de `RouterProvider` — hace `invariant(vtContext != null, "…must be used within react-router-dom's RouterProvider")`. Con `<BrowserRouter>`, el prop es un **no-op silencioso**: no falla, no avisa, no hace nada.
+>
+> **Mecanismo real:** el hook `useNavegacionConTransicion` envuelve `useNavigate` en `document.startViewTransition` cuando existe, con `flushSync` dentro de la retrollamada —sin él React entrega el commit fuera de turno y las dos instantáneas salen idénticas—, y navega directo cuando no existe. El enlace del shell es `<EnlaceConTransicion>`: un `<a>` de verdad que sólo intercepta el clic primario sin modificadores, así que ctrl/cmd+clic, shift+clic, botón central y menú contextual siguen siendo los de un enlace.
+>
+> Migrar a `createBrowserRouter` sigue siendo la salida limpia (daría además `useViewTransitionState` para el morph por pieza), pero es un cambio de arquitectura del router y no entra en este ciclo.
 **Coste.** El navegador compone las instantáneas fuera del hilo principal; coste ≈ un crossfade. Cero JS de animación.
 **Móvil.** Idéntico; es donde más se nota la continuidad.
 **Reduced-motion.** `::view-transition-group { animation: none }` — corte directo.
