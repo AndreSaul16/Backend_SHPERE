@@ -746,7 +746,14 @@ Un solo primitivo, `<Modal>`, y todos los diálogos lo usan. Hoy hay **cuatro mo
 
 Contrato obligatorio: `role="dialog"` · `aria-modal="true"` · `aria-labelledby` apuntando al título · **trampa de foco** · foco inicial en el primer control (no en el cierre) · `Escape` cierra · foco **restaurado** al disparador · scroll del fondo bloqueado · clic en el velo cierra sólo si no es destructivo · botón de cierre con `aria-label`, área táctil ≥ 44×44px.
 
-Anatomía: velo (§5) · panel e4, `--radius-lg`, `max-width` por tamaño (`sm` 420px / `md` 560px / `lg` 760px), `max-height: 85dvh`, cuerpo con scroll propio · cabecera adherida · pie adherido con las acciones alineadas al final.
+Anatomía: velo (§5) · panel e4, `--radius-lg`, medida por tamaño (tabla abajo), cuerpo con scroll propio · cabecera adherida · pie adherido con las acciones alineadas al final.
+
+| Tamaño | Medida | Para qué |
+|---|---|---|
+| `sm` | 420px de ancho, alto máximo 85dvh | Confirmaciones y avisos de una frase |
+| `md` | 560px, 85dvh | El de por defecto: formularios cortos |
+| `lg` | 760px, 85dvh | Formularios largos y asistentes de varios pasos |
+| `full` | 1200px, y el alto de la ventana entero menos el margen de 24px del velo | **Sólo superficies de lectura** — hoy el Atril (§9.15). **Nunca** un formulario, un asistente ni una confirmación: un diálogo que ocupa la pantalla para pedir un dato es una página disfrazada de diálogo, y le quita al usuario el sitio donde estaba |
 
 Movimiento: velo `opacity` `--duration-reveal`; panel `opacity 0→1` + `scale .98→1` + `translateY 8px→0`, `--duration-panel` / `--ease-settle`. Salida a `--duration-pop` / `--ease-exit`.
 
@@ -834,6 +841,19 @@ Sidebar (izquierda, `--gutter-sidebar`) y panel de artefactos (derecha, redimens
 Nunca un hueco en blanco y nunca sólo un icono. Anatomía: **glifo de línea de 32px** (no ilustración, no emoji) · título en `lg`/550 que dice qué falta · una frase en `xs`/`ink-400` que dice qué hacer · **una** acción primaria · opcionalmente una pista de atajo.
 
 El mejor estado vacío que ya existe en el repo es `ScheduledBoardsSection.tsx:136-140`: es el patrón. Los que faltan: sidebar sin sesiones (hoy la sección entera desaparece), búsqueda sin resultados en `AgentSelectorModal`, `ServiceCredentialsSettings` con lista vacía (hoy página en blanco), `ContactsSettings`, panel de artefactos.
+
+### 9.15 El Atril — el documento ampliado
+
+El panel de artefactos (§9.13) abre a 480px y su tope son 760px. Descontados los paddings, a un documento le quedan **~370px de texto**: la medida de `60ch` que §4.2 le exige a la prosa **no se alcanza nunca dentro del panel**, y una tabla de más de tres columnas se lee a base de scroll horizontal. El tirador de redimensionar no lo arregla — ni en su tope llega, y además exige un arrastre para cada lectura.
+
+El Atril es la salida: el **mismo** documento —acciones de acta si es un acta, banda de veredicto y visor, en ese orden— sobre `<Modal size="full">`. No es un visor nuevo, ni una ruta nueva, ni una segunda forma de leer.
+
+- **Disparador:** botón con glifo `Maximize2` y `aria-label="Ampliar documento"` en la cabecera del panel, junto al cierre. Sólo aparece **si hay un documento activo**: no se ofrece ampliar la nada.
+- **Sólo en `xl+`.** Por debajo de ese punto el panel de artefactos ya ocupa la pantalla entera, así que ampliar no ampliaría nada. El botón **se oculta, no se deshabilita**: §9.1 prohíbe el deshabilitado cuyo motivo no se puede leer, y aquí el motivo es que la acción no significa nada en ese ancho.
+- **Una sola pila.** El Atril y el tabpanel del panel montan el mismo componente. Copiarla sería garantizar que se separen: el día que una gane una banda o una acción, la otra se queda sin ella — que es exactamente lo que ya costó una vez la banda de veredicto.
+- **El contrato de §9.4 se hereda, no se reimplementa:** trampa de foco, `Escape`, `aria-modal`, `aria-labelledby` al título, scroll del fondo bloqueado y foco restaurado al disparador salen del primitivo. Ese es el motivo de que §9.4 exija uno solo.
+- **Estado local.** Ampliar es una postura de lectura de este panel, no un hecho de la sesión: no toca el almacén. Y su apertura mira al documento activo, de forma que el Atril **se cierra solo** si ese documento desaparece — un diálogo abierto sobre nada es una hoja en blanco con el foco atrapado dentro.
+- **Movimiento:** el de la fila **modal** de §7.5, ni uno más. Entrada y salida dirigidas por el evento de abrir y cerrar; **cero bucles**. El presupuesto de la superficie «Acta / documento» (§7.4) es de 1 bucle en el móvil de referencia y el Atril no gasta nada de él.
 
 ---
 

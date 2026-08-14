@@ -1,13 +1,10 @@
 // Artifacts Panel - Main Workspace Component
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { X, FileCode, FileText, Table, GitBranch, File } from 'lucide-react';
+import { X, FileCode, FileText, Table, GitBranch, File, Maximize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChatStore } from '@/store/useChatStore';
-import { ArtifactRenderer } from './ArtifactRenderer';
-import { RegionBoundary } from '@/components/shared/RegionBoundary';
-import { ActaActions } from './ActaActions';
-import { BandaDeVeredicto } from './BandaDeVeredicto';
-import { esActa } from '@/utils/acta';
+import { DocumentoDelArtefacto } from './DocumentoDelArtefacto';
+import { ArtifactExpanded } from './ArtifactExpanded';
 import { cn } from '@/lib/utils';
 import type { ArtifactType } from '@/types/artifact';
 import { EstadoVacio } from '@/components/ui/EstadoVacio';
@@ -31,6 +28,12 @@ export function ArtifactPanel() {
     const setActiveArtifact = useChatStore((s) => s.setActiveArtifact);
 
     const activeArtifact = artifacts.find(a => a.id === activeArtifactId);
+
+    /* El Atril (§9.15) es estado LOCAL de la cabecera: ampliar no es un hecho
+       de la sesión, es una postura de lectura de este panel. Con `open` atado
+       además a `activeArtifact`, el Atril se cierra solo si el documento que
+       estaba mostrando desaparece del almacén. */
+    const [expandido, setExpandido] = useState(false);
 
     // §9.8: flechas ←/→ para moverse entre pestañas, Home/End a los extremos.
     // El foco viaja con la selección, que es el patrón de tabs automáticas.
@@ -93,12 +96,27 @@ export function ArtifactPanel() {
                         )}
                     </div>
                 </div>
-                <button
-                    onClick={() => toggleArtifactPanel()}
-                    className="p-2 rounded-full hover:bg-stroke-highlight transition-colors text-content-muted hover:text-content-strong active-scale"
-                >
-                    <X className="h-5 w-5" />
-                </button>
+                <div className="flex items-center gap-1">
+                    {/* El Atril (§9.15). Sólo en `xl+`: por debajo de ese punto
+                        el panel YA es una hoja a pantalla completa
+                        (`MainLayout`), así que ampliar no ampliaría nada. */}
+                    {activeArtifact && (
+                        <button
+                            type="button"
+                            onClick={() => setExpandido(true)}
+                            aria-label="Ampliar documento"
+                            className="hidden xl:flex items-center justify-center p-2 rounded-full hover:bg-stroke-highlight transition-colors text-content-muted hover:text-content-strong active-scale"
+                        >
+                            <Maximize2 className="h-5 w-5" aria-hidden="true" />
+                        </button>
+                    )}
+                    <button
+                        onClick={() => toggleArtifactPanel()}
+                        className="p-2 rounded-full hover:bg-stroke-highlight transition-colors text-content-muted hover:text-content-strong active-scale"
+                    >
+                        <X className="h-5 w-5" />
+                    </button>
+                </div>
             </div>
 
             {/* Content Area */}
@@ -179,30 +197,11 @@ export function ArtifactPanel() {
                                 exit={{ opacity: 0, y: -10 }}
                                 className="h-full flex flex-col"
                             >
-                                {esActa(activeArtifact) && (
-                                    <ActaActions title={activeArtifact.title} content={activeArtifact.content} />
-                                )}
-                                {/* El veredicto del generador, en UN sitio. Se
-                                    lee del propio artefacto, así que ningún
-                                    visor tiene que acordarse de reenviarlo —y
-                                    olvidarse es justo el fallo que este cambio
-                                    arregla. */}
-                                <BandaDeVeredicto artifact={activeArtifact} />
-                                {/* Eje 3 · el visor es el vecindario peligroso
-                                    del panel: un mermaid mal formado o una
-                                    tabla con una fila rara lanzan al renderizar.
-                                    Aislado aquí, lo que se cae es el documento;
-                                    la tira de pestañas sigue, y cambiar de
-                                    artefacto lo recompone solo (`resetKeys`). */}
-                                <div className="flex-1 min-h-0">
-                                    <RegionBoundary
-                                        region="este artefacto"
-                                        reassurance="El resto de artefactos y la conversación siguen intactos. Prueba con otra pestaña."
-                                        resetKeys={[activeArtifact.id]}
-                                    >
-                                        <ArtifactRenderer artifact={activeArtifact} />
-                                    </RegionBoundary>
-                                </div>
+                                {/* La misma pila que enseña el Atril (§9.15), y
+                                    por construcción: si se copiara, el día que
+                                    una de las dos gane una banda o una acción,
+                                    la otra se quedaría sin ella. */}
+                                <DocumentoDelArtefacto artifact={activeArtifact} />
                             </motion.div>
                         ) : artifacts.length === 0 ? (
                             /* §9.14: glifo de línea, sin bucle ni resplandor —
@@ -234,6 +233,17 @@ export function ArtifactPanel() {
                     </AnimatePresence>
                 </div>
             </div>
+
+            {/* El Atril (§9.15). Se monta siempre y es `open` quien decide, no
+                un `&&` alrededor: atado a `activeArtifact`, el Atril se cierra
+                solo cuando el documento que mostraba desaparece del almacén —y
+                un diálogo abierto sobre nada es una hoja en blanco que además
+                tiene el foco atrapado dentro. */}
+            <ArtifactExpanded
+                artifact={activeArtifact}
+                open={expandido && !!activeArtifact}
+                onClose={() => setExpandido(false)}
+            />
         </div>
     );
 }
