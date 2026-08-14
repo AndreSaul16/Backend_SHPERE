@@ -43,8 +43,8 @@ CONFIRMATION_REQUIRED = "confirmation_required"
 
 ToolOutcome = Literal["result", "error", "confirmation"]
 
-# Vocabulario cerrado de remedios: la tarjeta tiene exactamente tres afordancias.
-ToolRemedy = Literal["retry", "connect", "none"]
+# Vocabulario cerrado de remedios: la tarjeta tiene exactamente cuatro afordancias.
+ToolRemedy = Literal["retry", "connect", "none", "whitelist"]
 
 # Por defecto se reintenta: lo desconocido conserva la conducta de hoy y sólo lo
 # probadamente imposible pierde el botón.
@@ -59,18 +59,25 @@ NO_REMEDY = ""
 # frase humana—, así que con la lista invertida cualquier código nuevo perdería el botón
 # sin que nadie lo hubiera decidido.
 _SUFIJOS_DE_CONEXION = ("_not_configured", "_not_connected")
-_CODIGOS_SIN_ACCION = frozenset({"contact_not_authorized", "user_context_missing"})
+_CODIGOS_SIN_ACCION = frozenset({"user_context_missing"})
+# El destinatario no está en la whitelist. Sí hay algo que hacer y es concreto:
+# darlo de alta en Ajustes → Contactos. Estaba en `_CODIGOS_SIN_ACCION`, o sea
+# el mensaje nombraba una pantalla y la tarjeta no daba forma de llegar a ella.
+_CODIGOS_DE_WHITELIST = frozenset({"contact_not_authorized"})
 
 
 def _remedio_para(error) -> ToolRemedy:
     """Qué puede hacer el usuario ante este fallo.
 
     `connect`: falta una credencial o un OAuth — reintentar no puede funcionar jamás,
-    pero conectar sí. `none`: hay que editar una whitelist o rehacer la sesión, y el
-    propio `hint` ya dice dónde. `retry`: todo lo demás.
+    pero conectar sí. `whitelist`: el contacto no está autorizado, y darlo de alta es
+    una pantalla concreta. `none`: no hay acción posible —hay que rehacer la sesión—
+    y el propio `hint` ya dice qué pasa. `retry`: todo lo demás.
     """
     if not isinstance(error, str):
         return DEFAULT_REMEDY
+    if error in _CODIGOS_DE_WHITELIST:
+        return "whitelist"
     if error in _CODIGOS_SIN_ACCION:
         return "none"
     if error.endswith(_SUFIJOS_DE_CONEXION):

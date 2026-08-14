@@ -25,11 +25,14 @@
  */
 
 /**
- * Qué puede hacer el usuario ante un fallo de herramienta. Vocabulario CERRADO de tres
- * valores porque la tarjeta tiene tres afordancias, y lo decide el backend: el cliente
+ * Qué puede hacer el usuario ante un fallo de herramienta. Vocabulario CERRADO de cuatro
+ * valores porque la tarjeta tiene cuatro afordancias, y lo decide el backend: el cliente
  * no mantiene una lista de códigos de error ajenos ni deduce nada del texto del mensaje.
+ *
+ * `whitelist` es el cuarto: el destinatario no está autorizado y darlo de alta es una
+ * pantalla concreta —Ajustes → Contactos—, distinta de la de Conexiones.
  */
-export type RemedioDeFallo = 'retry' | 'connect' | 'none';
+export type RemedioDeFallo = 'retry' | 'connect' | 'none' | 'whitelist';
 
 /** Una pieza del turno, ya decidida. */
 export type ParteDelTurno =
@@ -85,7 +88,7 @@ const MARCADORES =
  * imposible pierde el botón, y nunca por un fallo de transporte.
  */
 function remedioDelMarcador(valor: string | undefined): RemedioDeFallo {
-    return valor === 'connect' || valor === 'none' ? valor : 'retry';
+    return valor === 'connect' || valor === 'none' || valor === 'whitelist' ? valor : 'retry';
 }
 
 export function parseMessageParts(content: string): ParteDelTurno[] {

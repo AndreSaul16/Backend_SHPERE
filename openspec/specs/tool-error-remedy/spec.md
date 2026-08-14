@@ -20,9 +20,9 @@ ofrece una acción que no puede funcionar**.
 | ID | Requirement | N |
 |----|------------|---|
 | TER-001 | La falta de contexto de usuario MUST emitirse siempre como `user_context_missing`; el deletreo `missing_user_context` MUST NOT existir en `backend/` | 3 |
-| TER-002 | Todo evento `tool_error` MUST incluir `remedy` con exactamente uno de `retry`, `connect`, `none`, decidido en `_classify_tool_output`; el cliente MUST NOT derivarlo por heurística | 3 |
+| TER-002 | Todo evento `tool_error` MUST incluir `remedy` con exactamente uno de `retry`, `connect`, `none`, `whitelist`, decidido en `_classify_tool_output`; el cliente MUST NOT derivarlo por heurística | 3 |
 | TER-003 | `retry` MUST ser el valor por omisión y la lista MUST ser de códigos **no** reintentables; MUST NOT invertirse a una lista de reintentables | 3 |
-| TER-004 | Con remedio `connect` o `none` la tarjeta MUST NOT renderizar «Reintentar»; con `connect` MUST ofrecer un enlace a Ajustes → Conexiones | 4 |
+| TER-004 | Con remedio `connect`, `none` o `whitelist` la tarjeta MUST NOT renderizar «Reintentar»; con `connect` MUST enlazar a Ajustes → Conexiones y con `whitelist` a Ajustes → Contactos | 5 |
 | TER-005 | El marcador de fallo MUST llevar el remedio y MUST colocarlo antes del mensaje; el escritor MUST emitir siempre los tres campos | 4 |
 
 ### TER-001: Un concepto de error tiene exactamente un código
@@ -52,23 +52,25 @@ cambio de conducta.
 
 ### TER-002: Un fallo viaja con su remedio, decidido en el backend
 
-Todo evento `tool_error` **MUST** incluir un campo `remedy` con **exactamente uno** de estos tres
-valores: `retry`, `connect`, `none`.
+Todo evento `tool_error` **MUST** incluir un campo `remedy` con **exactamente uno** de estos cuatro
+valores: `retry`, `connect`, `none`, `whitelist`.
 
-El vocabulario es **cerrado y de tres valores** porque la UI tiene exactamente tres afordancias:
-reintentar, enlazar a Conexiones, o no ofrecer nada. Un booleano «reintentable» no distinguiría
-«enlaza a Conexiones» de «no ofrezcas nada», que es justo la decisión de UX que hay que tomar.
+El vocabulario es **cerrado y de cuatro valores** porque la UI tiene exactamente cuatro afordancias:
+reintentar, enlazar a Conexiones, enlazar a Contactos, o no ofrecer nada. Un booleano «reintentable»
+no distinguiría «enlaza a Conexiones» de «no ofrezcas nada», que es justo la decisión de UX que hay
+que tomar; y un solo valor «enlaza» mandaría al usuario a conectar un servicio que ya está conectado
+cuando lo que falta es autorizar un destinatario.
 
 La decisión **MUST** tomarse en `_classify_tool_output`, que ya es el único punto de clasificación
 (TRI-001) y ya dispone del código del error. El cliente **MUST NOT** derivar la reintentabilidad de
 heurísticas sobre el texto del mensaje, ni **MUST** mantener una lista propia de códigos de error del
 backend.
 
-- GIVEN payloads `{"error": true, "message": M}`, `{"error": "linkedin_not_configured", "hint": H}`
-  y `{"error": "user_context_missing"}`
+- GIVEN payloads `{"error": true, "message": M}`, `{"error": "linkedin_not_configured", "hint": H}`,
+  `{"error": "user_context_missing"}` y `{"error": "contact_not_authorized"}`
   WHEN se clasifican
-  THEN devuelven remedio `retry`, `connect` y `none` respectivamente
-  AND los tres siguen clasificándose como estado «fallo»
+  THEN devuelven remedio `retry`, `connect`, `none` y `whitelist` respectivamente
+  AND los cuatro siguen clasificándose como estado «fallo»
 
 - GIVEN una herramienta que devuelve `{"error": "linkedin_not_configured", "hint": H}`
   WHEN se consume el stream
@@ -88,8 +90,14 @@ probado que reintentar no puede funcionar:
 | Remedio | Regla | Códigos |
 |---|---|---|
 | `connect` | sufijo `_not_configured` o `_not_connected` | `{service}_not_configured`, `whatsapp_not_configured`, `{provider}_not_connected` |
-| `none` | literal | `contact_not_authorized`, `user_context_missing` |
+| `whitelist` | literal | `contact_not_authorized` |
+| `none` | literal | `user_context_missing` |
 | `retry` | **todo lo demás** | `error: true` de n8n, `{provider}_api_error`, y cualquier código futuro |
+
+`contact_not_authorized` estuvo clasificado como `none` y era una afirmación falsa: sí hay algo que
+hacer —dar de alta el destinatario en Ajustes → Contactos— y el propio `hint` lo nombraba, pero la
+tarjeta no daba ninguna forma de llegar. `none` queda para lo que de verdad no tiene acción de
+usuario.
 
 La lista **MUST** ser de **no** reintentables. **MUST NOT** invertirse a una lista de reintentables:
 el campo `error` no siempre contiene un código —hay al menos un caso donde contiene una frase
@@ -111,15 +119,17 @@ humana—, y con la lista invertida cualquier error nuevo perdería el botón en
 
 ### TER-004: Ningún «Reintentar» sobre lo que no puede funcionar
 
-Cuando el remedio es `connect` o `none`, la tarjeta **MUST NOT** renderizar el botón «Reintentar»,
-ni deshabilitado ni oculto tras un estado: **no existe**. Pulsarlo envía un mensaje nuevo al agente
-y **gasta un crédito**.
+Cuando el remedio es `connect`, `none` o `whitelist`, la tarjeta **MUST NOT** renderizar el botón
+«Reintentar», ni deshabilitado ni oculto tras un estado: **no existe**. Pulsarlo envía un mensaje
+nuevo al agente y **gasta un crédito**.
 
 Cuando el remedio es `connect`, la tarjeta **MUST** ofrecer en su lugar un enlace a Ajustes →
-Conexiones. Cuando es `none`, **MUST NOT** ofrecer ninguna acción: sólo el mensaje del error, que ya
-dice qué hacer.
+Conexiones. Cuando es `whitelist`, **MUST** ofrecer un enlace a Ajustes → Contactos
+(`/settings/contacts`) y **MUST NOT** enlazar a Conexiones: el servicio ya está conectado, lo que
+falta es autorizar al destinatario. Cuando es `none`, **MUST NOT** ofrecer ninguna acción: sólo el
+mensaje del error, que ya dice qué pasa.
 
-En los tres casos la tarjeta **MUST** seguir viéndose como un fallo (✗, «— falló»): la acción no
+En los cuatro casos la tarjeta **MUST** seguir viéndose como un fallo (✗, «— falló»): la acción no
 ocurrió.
 
 - GIVEN un fallo con remedio `connect`
@@ -127,6 +137,12 @@ ocurrió.
   THEN muestra ✗ y el mensaje del error
   AND no contiene ningún botón «Reintentar»
   AND contiene un enlace a Ajustes → Conexiones
+
+- GIVEN un fallo con remedio `whitelist`
+  WHEN se renderiza la tarjeta
+  THEN muestra ✗ y el mensaje del error
+  AND no contiene ningún botón «Reintentar»
+  AND contiene un enlace a `/settings/contacts` y ninguno a Conexiones
 
 - GIVEN un fallo con remedio `none`
   WHEN se renderiza la tarjeta

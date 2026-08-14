@@ -67,6 +67,23 @@ describe('parseMessageParts', () => {
         expect(pieza.estado).toBe('failed');
     });
 
+    it('QA-1: el remedio `whitelist` sobrevive al marcador', () => {
+        // Sin añadirlo al vocabulario del lector, `whitelist` cae al defecto
+        // `retry` y la tarjeta ofrece reintentar algo que no puede funcionar
+        // hasta que el usuario dé de alta el contacto. El backend decide; aquí
+        // sólo hay que no perderlo por el camino.
+        const partes = parseMessageParts(
+            '[TOOL_ERROR:whatsapp_send_message:whitelist:El contacto «Ruben Lima» no está autorizado]',
+        );
+        const pieza = partes[0];
+
+        expect(pieza.tipo).toBe('utensilio');
+        if (pieza.tipo !== 'utensilio') return;
+        expect(pieza.remedio).toBe('whitelist');
+        expect(pieza.error).toBe('El contacto «Ruben Lima» no está autorizado');
+        expect(pieza.estado).toBe('failed');
+    });
+
     it('TER-005: un mensaje con dos puntos no rompe el parseo', () => {
         // Éste es el test que justifica la POSICIÓN del campo. El saneado del
         // escritor sólo quita `]`, `\n` y `\r`: los `:` del mensaje sobreviven, así

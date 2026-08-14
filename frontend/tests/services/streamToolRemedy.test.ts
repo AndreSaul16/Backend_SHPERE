@@ -95,6 +95,30 @@ describe('el remedio del evento tool_error llega al cliente', () => {
         });
     });
 
+    it('QA-1: reparte `remedy: whitelist` sin degradarlo a `retry`', async () => {
+        // El cuarto valor del vocabulario recorre los mismos cuatro saltos. Si se
+        // pierde en éste, la tarjeta vuelve a ofrecer «Reintentar» —y gastar un
+        // crédito— sobre un contacto que sigue sin estar autorizado.
+        const cb = espias();
+        servirSSE(
+            JSON.stringify({
+                type: 'tool_error',
+                tool_name: 'whatsapp_send_message',
+                error: "El contacto 'Ruben Lima' no está autorizado.",
+                remedy: 'whitelist',
+            }),
+            '[DONE]',
+        );
+
+        await chatService.streamChat('avisa a Ruben', 's1', cb);
+
+        expect(cb.onToolError).toHaveBeenCalledWith({
+            tool_name: 'whatsapp_send_message',
+            error: "El contacto 'Ruben Lima' no está autorizado.",
+            remedy: 'whitelist',
+        });
+    });
+
     it('un evento sin `remedy` conserva la conducta de hoy', async () => {
         // El defecto es `retry` en todos los saltos: sólo lo probadamente imposible
         // pierde el botón, y nunca por un campo que faltó en el transporte.

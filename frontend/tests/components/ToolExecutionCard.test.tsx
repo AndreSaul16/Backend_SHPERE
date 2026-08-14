@@ -147,6 +147,48 @@ describe('ToolExecutionCard', () => {
         ).toBeInTheDocument();
     });
 
+    // --- QA-1: el contacto que no está en la whitelist tiene remedio, y es una pantalla ---
+    //
+    // Antes viajaba como `none`: el mensaje nombraba «Ajustes → Contactos» y la tarjeta no
+    // daba ninguna forma de llegar. Ahora enlaza, igual que hace `connect` con Conexiones.
+
+    it('QA-1: con remedio `whitelist` hay enlace a Contactos y ningún «Reintentar»', () => {
+        render(
+            <ToolExecutionCard
+                toolName="whatsapp_send_message"
+                status="failed"
+                error="El contacto «Ruben Lima» no está autorizado para enviar WhatsApp."
+                remedio="whitelist"
+            />,
+        );
+
+        const enlace = screen.getByRole('link', { name: /Contactos/ });
+        expect(enlace).toHaveAttribute('href', '/settings/contacts');
+        // Reintentar gasta un crédito y no puede funcionar hasta que el contacto exista.
+        expect(screen.queryByRole('button', { name: /Reintentar/ })).toBeNull();
+        // Sigue siendo un fallo: el mensaje no se ha enviado.
+        expect(screen.getByText('Enviando WhatsApp — falló')).toBeInTheDocument();
+        expect(
+            screen.getByText('El contacto «Ruben Lima» no está autorizado para enviar WhatsApp.'),
+        ).toBeInTheDocument();
+    });
+
+    it('QA-1: el enlace de `whitelist` va a Contactos, no a Conexiones', () => {
+        // Los dos remedios enlazan, y a sitios distintos: confundirlos manda al usuario
+        // a conectar un servicio que ya está conectado.
+        render(
+            <ToolExecutionCard
+                toolName="whatsapp_send_message"
+                status="failed"
+                error="El contacto no está autorizado."
+                remedio="whitelist"
+            />,
+        );
+
+        expect(screen.queryByRole('link', { name: /Conexiones/ })).toBeNull();
+        expect(screen.getByRole('link')).toHaveAttribute('href', '/settings/contacts');
+    });
+
     it('TER-004: con remedio `retry` el botón sigue exactamente como hoy', () => {
         // Esta prueba DEBE estar en verde desde antes del cambio: es la red que impide
         // que el remedio se lleve por delante el caso bueno.

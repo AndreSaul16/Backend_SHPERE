@@ -127,8 +127,23 @@ def test_ter_002_falta_de_oauth_tambien_enlaza_a_conexiones():
     assert remedio == "connect"
 
 
-def test_ter_002_contacto_no_autorizado_no_ofrece_nada():
+def test_ter_002_contacto_no_autorizado_enlaza_a_contactos():
+    """QA-1: sí hay algo que hacer, y hasta ahora la tarjeta no lo ofrecía.
+
+    `none` significa «no hay acción posible», y aquí la hay y es concreta:
+    dar de alta el contacto en Ajustes → Contactos. Clasificarlo como `none`
+    dejaba al usuario con un mensaje que nombra una pantalla y ningún modo de
+    llegar a ella.
+    """
     estado, _, remedio = _clasifica({"error": "contact_not_authorized"})
+
+    assert estado == "error"
+    assert remedio == "whitelist"
+
+
+def test_ter_002_la_falta_de_contexto_sigue_sin_ofrecer_nada():
+    """El otro código de `_CODIGOS_SIN_ACCION` no se mueve: ahí no hay remedio."""
+    estado, _, remedio = _clasifica({"error": "user_context_missing"})
 
     assert estado == "error"
     assert remedio == "none"
@@ -165,7 +180,12 @@ def test_ter_003_el_campo_error_con_una_frase_humana_cae_al_defecto():
     assert remedio == "retry"
 
 
-def test_ter_002_el_remedio_solo_toma_los_tres_valores_del_vocabulario():
+def test_ter_002_el_remedio_solo_toma_los_valores_del_vocabulario():
+    """El vocabulario es cerrado: cuatro afordancias, cuatro valores.
+
+    `whitelist` entra con QA-1 porque la tarjeta gana un cuarto destino —Ajustes
+    → Contactos— que no es ninguno de los otros tres.
+    """
     remedios = {
         _clasifica({"error": True, "message": "M"})[2],
         _clasifica({"error": "whatsapp_not_configured"})[2],
@@ -175,7 +195,7 @@ def test_ter_002_el_remedio_solo_toma_los_tres_valores_del_vocabulario():
         _clasifica({"error": "cualquier_cosa"})[2],
     }
 
-    assert remedios == {"retry", "connect", "none"}
+    assert remedios == {"retry", "connect", "none", "whitelist"}
 
 
 def test_ter_002_el_exito_y_la_confirmacion_no_inventan_remedio():

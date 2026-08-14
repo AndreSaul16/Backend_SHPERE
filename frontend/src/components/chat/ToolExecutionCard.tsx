@@ -24,6 +24,9 @@ interface ToolExecutionCardProps {
 /** Dónde se conectan las credenciales. Un solo destino: Ajustes → Conexiones. */
 const RUTA_DE_CONEXIONES = '/settings/integrations';
 
+/** Dónde se autorizan los destinatarios. Ajustes → Contactos, que es lo que dice el error. */
+const RUTA_DE_CONTACTOS = '/settings/contacts';
+
 
 /**
  * Cabecera de la tarjeta. Cuando hay resultado que desplegar es un <button> con
@@ -105,8 +108,11 @@ export const ToolExecutionCard: React.FC<ToolExecutionCardProps> = ({
     const isFailed = status === 'failed';
     // Lista de NO reintentables, nunca al revés: lo que no está probado imposible
     // conserva el botón. Un remedio ausente o desconocido cae aquí a propósito.
-    const ofreceReintento = remedio !== 'connect' && remedio !== 'none';
+    const ofreceReintento = remedio !== 'connect' && remedio !== 'none' && remedio !== 'whitelist';
     const ofreceConexion = remedio === 'connect';
+    // El contacto no está autorizado: reintentar no puede funcionar hasta que exista,
+    // y darlo de alta es una pantalla distinta de la de Conexiones.
+    const ofreceContactos = remedio === 'whitelist';
     const isAwaiting = status === 'awaiting_confirmation';
     const isStreaming = useChatStore(
         (s) => s.currentSessionId !== null && s.streamingSessionIds.includes(s.currentSessionId)
@@ -183,6 +189,16 @@ export const ToolExecutionCard: React.FC<ToolExecutionCardProps> = ({
                         >
                             <Link2 className="h-3 w-3" />
                             Ir a Ajustes → Conexiones
+                        </Link>
+                    )}
+                    {ofreceContactos && (
+                        <Link
+                            to={RUTA_DE_CONTACTOS}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-oxblood-500/30 text-danger hover:bg-oxblood-500/10 transition-colors text-sm font-medium"
+                            title="Autorizar el contacto en Ajustes"
+                        >
+                            <Link2 className="h-3 w-3" />
+                            Ir a Ajustes → Contactos
                         </Link>
                     )}
                 </div>
