@@ -107,7 +107,12 @@ describe('BoardWarRoom — la cabecera de la junta', () => {
             />,
         );
         // Dos veces: el equivalente visual y la región viva que lo anuncia.
-        expect(screen.getAllByText(/2 a favor · 1 en contra · 1 condicional/)).toHaveLength(2);
+        // Desde §8.12 la cifra visible va dentro de un odómetro, o sea que la
+        // frase deja de ser un único nodo de texto y `getAllByText` ya no la ve.
+        // Se pide cada nodo por su sitio, que además dice cuál es cuál.
+        const recuento = '2 a favor · 1 en contra · 1 condicional';
+        expect(screen.getByTestId('tally-visual')).toHaveTextContent(recuento);
+        expect(screen.getByTestId('live-tally')).toHaveTextContent(recuento);
         expect(screen.getByText('5 créditos')).toBeInTheDocument();
     });
 });

@@ -718,7 +718,16 @@ Doce. Ninguno es un degradado, glass, partículas ni nodos flotando. Cada uno ti
 
 ### 8.12 Las Cifras que Asientan (odómetro de contaduría)
 **Qué es.** Las cifras que importan (saldo de créditos, recuento de votos, confianza, contador de actuaciones) no cambian por teletransporte: **ruedan** como un contador mecánico de registro — el dígito saliente sube, el entrante llega desde abajo — y el cambio queda subrayado un instante por un filete de latón que se desvanece. El número se siente contabilizado, no repintado. Es la gramática del libro de registro aplicada al dato.
-**Implementación.** Cada dígito es un `<span>` en una máscara de `overflow: hidden` con dos hijos apilados; el cambio anima `translateY(-1em)` con `--duration-pop`/`--ease-settle`. `font-variant-numeric: tabular-nums` (ya obligatorio en §3.3) garantiza ancho fijo. El subrayado es un `::after` con `opacity 1→0` a `--duration-reveal`.
+**Implementación.** Cada dígito que cambia es un `<span>` en una máscara de `overflow: hidden` de un em de alto; el cambio anima `translateY(-1em)` con `--duration-pop`/`--ease-settle`. `font-variant-numeric: tabular-nums` (ya obligatorio en §3.3) garantiza ancho fijo. El subrayado es un filete de latón con `opacity 1→0` a `--duration-reveal`.
+
+> **Enmienda (Viveza-2), al implementarlo en `components/ui/Odometro.tsx`.** Dos detalles de la redacción anterior no sobreviven al contacto con el DOM, y los dos importan:
+>
+> 1. **El dígito saliente NO puede ser un nodo de texto.** La versión anterior decía «dos hijos apilados», o sea los dos dígitos como texto. Con eso, durante los 160 ms del rodillo el contenido textual del odómetro es la MEZCLA de las dos cifras: 9 → 10 se lee literalmente «190». Eso lo anuncia un lector de pantalla, lo encuentra la búsqueda de la página y rompe cualquier consulta por texto de la app justo mientras la cifra cambia. El saliente se pinta con un pseudo-elemento alimentado por un atributo de datos (`content: attr(...)`), que es lo que de verdad es: decoración de la transición. El texto del componente es siempre y sólo la cifra vigente.
+> 2. **El subrayado es un elemento, no un `::after`.** Necesita relanzar su animación en CADA cambio, y la única forma barata de relanzar una animación CSS sin tocar un reloj es remontar el elemento (una `key` nueva). Un pseudo-elemento no se puede remontar desde React.
+>
+> Y la regla que gobierna todo el componente: **cero temporizadores**. Nada de `setTimeout`, `setInterval` ni `rAF`; el rodillo es una animación CSS de una sola iteración que se relanza remontando. Está defendido por un test que cuenta los temporizadores montados con relojes falsos y exige 0 — porque un contador que corre solo estaría inventando movimiento donde no ha pasado nada, y §7.4 lo rechaza por nombre.
+>
+> **Dónde está puesto:** el saldo de créditos de la cabecera (`CreditsIndicator`), la cifra grande de `BillingPage` y el recuento de votos de la junta (`BoardWarRoom`). En los tres, la cifra cambia delante del usuario por un hecho real: un turno consumido, una recarga, una ronda de votos.
 **Coste.** Un transform por dígito cambiado, sólo al cambiar. Cero bucles.
 **Móvil.** Idéntico.
 **Reduced-motion.** El dígito cambia sin rodillo; el subrayado de latón se mantiene (información de «esto acaba de cambiar» sin movimiento).

@@ -10,6 +10,7 @@ import { DisagreementBar } from "./DisagreementBar";
 import { gradoDeDesacuerdo } from "./desacuerdo";
 import { DirectorCompare } from "./DirectorCompare";
 import { comboDe, useAtajo } from "@/hooks/useShortcuts";
+import { Odometro } from "@/components/ui/Odometro";
 
 /**
  * La cabecera de la junta: la Mesa (§8.1) y lo que la mesa no puede decir sola.
@@ -55,12 +56,25 @@ export function BoardWarRoom({
     // recibir la lectura, no sólo la aritmética.
     const veredicto = gradoDeDesacuerdo(board.votes);
 
-    const tallyText = (() => {
-        if (!board.tally) return null;
+    /* El recuento, ya partido en cifra y etiqueta.
+       Antes era una sola cadena. Se parte porque §8.12 pide que las cifras que
+       importan rueden, y el recuento de la junta es la cifra que más importa de
+       esta cabecera: va cambiando ronda a ronda con cada `board_consensus`. La
+       cadena sigue existiendo justo debajo, derivada de esto y no en paralelo,
+       porque la región viva tiene que anunciar una FRASE y no dígitos sueltos
+       (§12.6) — y dos fuentes de verdad para el mismo recuento acabarían
+       diciendo cosas distintas. */
+    const tallyPartes = (() => {
+        if (!board.tally) return [];
         const { SI = 0, NO = 0, CONDICIONAL = 0 } = board.tally;
-        const parts = [SI && `${SI} a favor`, NO && `${NO} en contra`, CONDICIONAL && `${CONDICIONAL} condicional`].filter(Boolean);
-        return parts.length ? `La junta votó ${parts.join(" · ")}` : null;
+        return ([[SI, 'a favor'], [NO, 'en contra'], [CONDICIONAL, 'condicional']] as const)
+            .filter(([n]) => n > 0)
+            .map(([n, etiqueta]) => ({ n, etiqueta }));
     })();
+
+    const tallyText = tallyPartes.length
+        ? `La junta votó ${tallyPartes.map((p) => `${p.n} ${p.etiqueta}`).join(' · ')}`
+        : null;
 
     // BVT-004 — un empate no es un consenso, y el recuento no puede dejar que
     // lo parezca: «1 a favor · 1 en contra · 1 condicional» a secas se lee como
@@ -127,8 +141,15 @@ export function BoardWarRoom({
                                 transition={conMovimiento(reducido, { duration: DURACION.pop, ease: CURVA.settle })}
                                 className="text-micro text-brass-800 dark:text-accent font-mono min-w-0 [text-wrap:pretty]"
                                 aria-hidden="true"
+                                data-testid="tally-visual"
                             >
-                                {tallyText}
+                                La junta votó{' '}
+                                {tallyPartes.map((parte, i) => (
+                                    <span key={parte.etiqueta}>
+                                        {i > 0 && ' · '}
+                                        <Odometro valor={parte.n} /> {parte.etiqueta}
+                                    </span>
+                                ))}
                                 {coletilla}
                             </motion.span>
                         )}

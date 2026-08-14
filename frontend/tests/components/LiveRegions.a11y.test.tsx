@@ -64,7 +64,14 @@ describe('D09 — recuento de votos anunciado', () => {
 
         // `aria-atomic` sobre la región relee la frase entera; si además se
         // anunciase el nodo visual, el usuario oiría el recuento por duplicado.
-        const [visual] = screen.getAllByText(/La junta votó 3 a favor/);
+        //
+        // Se busca por `data-testid` y no por texto porque desde §8.12 la cifra
+        // del recuento va dentro de un odómetro, o sea que la frase visible ya
+        // no es un único nodo de texto y `getByText` no la encuentra. La
+        // aserción no se relaja: se pide el nodo visual EXACTO, se comprueba que
+        // dice el recuento y que está oculto al lector.
+        const visual = screen.getByTestId('tally-visual');
+        expect(visual).toHaveTextContent('La junta votó 3 a favor');
         expect(visual).toHaveAttribute('aria-hidden', 'true');
     });
 

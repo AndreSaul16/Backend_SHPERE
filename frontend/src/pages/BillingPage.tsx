@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useBillingStore, skuComprable } from '../store/useBillingStore';
 import { Button } from '@/components/ui/Button';
 import { InlineError, type FalloDeSeccion } from '@/components/ui/InlineError';
+import { Odometro } from '@/components/ui/Odometro';
 import { authHeaders, profileService, type StorageUsage } from '../services/api';
 import { capture, ANALYTICS_EVENTS } from '@/lib/analytics';
 
@@ -389,9 +390,13 @@ export const BillingPage: React.FC = () => {
                             <h2 className="text-xs uppercase tracking-widest font-mono text-content-muted">Tus Créditos</h2>
                         </div>
                         <p className="flex items-baseline gap-2">
-                            <span className="text-5xl font-semibold tabular-nums text-content-strong sm:text-6xl">
-                                {totalBalance}
-                            </span>
+                            {/* §8.12 — es LA cifra de esta pantalla, y la
+                                pantalla existe para cambiarla: se recarga y el
+                                saldo sube. Rodando, la recarga se ve ocurrir. */}
+                            <Odometro
+                                valor={totalBalance}
+                                className="text-5xl font-semibold text-content-strong sm:text-6xl"
+                            />
                             <span className="text-sm text-content-muted">
                                 {totalBalance === 1 ? 'crédito disponible' : 'créditos disponibles'}
                             </span>

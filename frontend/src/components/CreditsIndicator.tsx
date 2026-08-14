@@ -3,6 +3,7 @@ import { Zap } from "lucide-react";
 import { useBillingStore } from "@/store/useBillingStore";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { Odometro } from "@/components/ui/Odometro";
 
 interface Props {
   className?: string;
@@ -108,10 +109,16 @@ export function CreditsIndicator({ className = "", refreshMs = 60_000 }: Props) 
         ) : isZero ? (
           <span className="text-dissent font-medium">0 — Recargar</span>
         ) : (
+          /* §8.12 — el saldo es dinero y cambia en vivo: cada turno lo gasta y
+             el intervalo de arriba lo refresca. Rodando, el usuario ve QUE se
+             ha contabilizado algo; teletransportado, la cifra nueva es
+             indistinguible de un repintado. El odómetro además trae los
+             números tabulares que a esta línea le faltaban, así que la caja
+             deja de bailar al pasar de 9 a 10. */
           <>
-            {pro_messages_balance}
+            <Odometro valor={pro_messages_balance} />
             {topup_messages_balance > 0 && (
-              <> <span className="text-success">+{topup_messages_balance}</span></>
+              <> <Odometro valor={topup_messages_balance} prefijo="+" className="text-success" /></>
             )}
           </>
         )}

@@ -792,6 +792,61 @@
       translate: 0 calc(var(--canto-p, 0) * (100cqh - 100%));
     }
   }
+
+  /* ── §8.12 Las Cifras que Asientan ────────────────────────────────────────
+     El odómetro de contaduría. Cada dígito que cambia es una máscara de un em
+     de alto con dos hijos apilados; lo que se anima es el `transform` de la
+     columna, una sola iteración, y el subrayado de latón es una opacidad que
+     se va. Nada de esto corre en reposo: el componente sólo monta la columna
+     cuando ha habido un cambio de valor de verdad.
+
+     Las animaciones se declaran aquí y no en @theme porque Tailwind v4 sólo
+     emite los fotogramas clave de @theme cuando alguien usa la utilidad de
+     animación correspondiente; escritos a mano en esta capa salen siempre. */
+  @keyframes odometro-rodar{ from{ transform: translateY(0) } to{ transform: translateY(-1em) } }
+  @keyframes odometro-senal{ from{ opacity: 1 } to{ opacity: 0 } }
+
+  .odometro{
+    position: relative;
+    display: inline-flex;
+    align-items: baseline;
+    font-variant-numeric: tabular-nums;
+  }
+  .odometro-digito{
+    display: inline-block;
+    overflow: hidden;
+    block-size: 1em;
+    line-height: 1;
+  }
+  /* El dígito que se va lo pinta un pseudo-elemento, no un nodo de texto: si
+     fuese texto, el contenido del odómetro durante el rodillo sería la mezcla
+     de los dos números y eso lo leería un lector de pantalla y lo encontraría
+     una búsqueda en la página. Lo que se va es decoración de la transición, y
+     así se declara. */
+  .odometro-rodillo{
+    display: block;
+    animation: odometro-rodar var(--duration-pop) var(--ease-settle) 1 both;
+  }
+  .odometro-rodillo::before{
+    content: attr(data-saliente);
+    display: block;
+    block-size: 1em;
+    line-height: 1;
+  }
+  .odometro-entrante{ display: block; block-size: 1em; line-height: 1; }
+  .odometro-senal{
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: -2px;
+    block-size: 1px;
+    background: var(--brass-500);
+    animation: odometro-senal var(--duration-reveal) var(--ease-exit) 1 both;
+  }
+  /* §8.12 con movimiento reducido: «el subrayado de latón se mantiene». Un
+     desvanecido de 1ms —lo que le impondría la regla global de §7.6— no sería
+     una señal sino un parpadeo, así que aquí el filete se queda puesto hasta el
+     cambio siguiente. La información no se pierde; se pierde el tiempo. */
+  .odometro-senal[data-persistente="si"]{ animation: none; opacity: 1; }
 }
 
 /* ╔═══════════════════════════════════════════════════════════════════════════╗
