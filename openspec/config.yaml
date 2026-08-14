@@ -25,7 +25,7 @@ testing:
     integration: "httpx 0.28 + fakeredis 2.35; Mongo/Redis reales como servicios en CI"
     e2e: false
     coverage: false
-    linter: "ruff check backend/app (no bloqueante en CI)"
+    linter: "ruff check backend/app (BLOQUEANTE en CI; config en ruff.toml, versión en backend/requirements-dev.txt)"
     typechecker: false
   frontend:
     runner: "./node_modules/.bin/vitest run  (desde frontend/)"

@@ -180,13 +180,20 @@ jobs:
           path: frontend/dist
           retention-days: 7
 
+  # Bloqueante desde que el backend está a cero hallazgos. Un job no bloqueante con 622
+  # hallazgos no es una red, es un adorno: lleva meses demostrándolo. La versión NO se
+  # escribe aquí — se instala de backend/requirements-dev.txt, que es el único sitio del
+  # repositorio donde vive, para que el desarrollador compruebe exactamente lo mismo.
+  # Sin pin, el mismo comando sobre el mismo árbol da 45 hallazgos con ruff 0.8.6 y 622
+  # con 0.16.3: lo que comprueba el job dependería del día y no del código.
   lint:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Ruff (backend, no bloqueante)
-        run: pipx run ruff check backend/app
+      - name: Instalar herramientas de desarrollo (ruff con versión fijada)
+        run: pip install -r backend/requirements-dev.txt
+      - name: Ruff (backend)
+        run: ruff check backend/app

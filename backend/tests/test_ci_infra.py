@@ -205,11 +205,45 @@ def test_ci_yml_has_frontend_job():
     assert 20 in matrix["node-version"]
 
 
-def test_ci_yml_has_lint_job_non_blocking():
-    """CI-003: lint job exists with continue-on-error."""
+def test_ci_yml_has_lint_job_blocking():
+    """CI-003 / BLG-003: el job `lint` bloquea.
+
+    Este test assertaba lo contrario —`continue-on-error is True`— y era correcto
+    mientras el backend tenía 622 hallazgos: un job en rojo perpetuo no puede bloquear
+    nada. Con el backend a cero eso se invierte: un job no bloqueante no es una red, es
+    un adorno, y lleva meses demostrándolo. El invariante que hay que vigilar ahora es
+    que nadie devuelva el `continue-on-error` sin devolver también los hallazgos.
+    """
     ci = read_ci_yml()
     lint = ci["jobs"]["lint"]
-    assert lint.get("continue-on-error") is True, "Lint must be non-blocking"
+
+    assert "continue-on-error" not in lint, (
+        "el job lint volvió a ser no bloqueante: con el backend a cero, eso reintroduce "
+        "exactamente el job que nadie lee"
+    )
+    nombres = [str(s.get("name", "")) for s in lint["steps"]]
+    assert not any("no bloqueante" in n for n in nombres), (
+        f"el nombre del paso sigue diciendo «no bloqueante»: {nombres}"
+    )
+
+
+def test_ci_yml_lint_no_escribe_la_version_de_ruff():
+    """BLG-004: la versión de ruff vive en UN solo sitio, y no es el workflow.
+
+    Dos literales de versión —uno aquí y otro en el fichero de dependencias— se
+    desincronizan en silencio, y a partir de ahí el CI y el desarrollador comprueban
+    cosas distintas sin que nadie se entere.
+    """
+    ci = read_ci_yml()
+    comandos = [str(s.get("run", "")) for s in ci["jobs"]["lint"]["steps"]]
+
+    assert any("requirements-dev.txt" in c for c in comandos), (
+        f"el job lint no instala del fichero de pines: {comandos}"
+    )
+    assert not any("ruff==" in c for c in comandos), (
+        f"la versión de ruff está escrita en el workflow: {comandos}"
+    )
+    assert (ROOT / "backend" / "requirements-dev.txt").read_text().count("ruff==") == 1
 
 
 def test_ci_yml_has_cache_for_pip():
