@@ -12,17 +12,50 @@
 export const APP_URL = 'https://frontendsphere-production.up.railway.app';
 
 /**
- * Dónde vive ESTA landing. No es `APP_URL`: son dos servicios distintos de
- * Railway y la aplicación ya existía antes que la página.
+ * La subruta desde la que se sirven los ASSETS de la landing, y la `base` de
+ * Vite (la consume `vite.config.ts`).
  *
- * De aquí salen el `canonical`, el `og:url`, la ruta absoluta de `og:image`
- * (las redes no resuelven rutas relativas) y el `sitemap.xml`. Cuando el dueño
- * enganche el dominio definitivo, esta constante es lo único que cambia en el
- * código — y después toca `pnpm og` sólo si el dominio sale dibujado en la
- * tarjeta, que hoy no sale. `test/seo.test.ts` comprueba que robots.txt y
- * sitemap.xml no se queden atrás.
+ * NO puede ser `/`: la landing y el producto comparten servicio de Railway y
+ * por tanto raíz de nginx. Vite escribe los ficheros con hash en `assets/`, así
+ * que con `base: '/'` los de la landing pisarían los del producto en
+ * `/assets/…`. Con `/landing/` cada uno tiene su carpeta y no hay colisión
+ * posible: la del producto es `/assets/`, la de la landing `/landing/assets/`.
+ *
+ * OJO a la asimetría, que es deliberada: el DOCUMENTO se sirve en la raíz del
+ * dominio (ver `LANDING_URL`) y sus assets cuelgan de `/landing/`. Funciona
+ * porque `base` sólo afecta a las URLs que Vite escribe, y las escribe
+ * absolutas.
  */
-export const LANDING_URL = 'https://landingsphere-production.up.railway.app';
+export const BASE_LANDING = '/landing/';
+
+/**
+ * Dónde vive ESTA landing: la RAÍZ del dominio del producto.
+ *
+ * La página dejó de tener servicio propio. Se sirve desde el mismo servicio de
+ * Railway que el frontend, y el dueño decide que sea el punto de entrada del
+ * dominio: quien escribe la dirección a secas ve la landing, y el producto
+ * sigue respondiendo en sus rutas (`/login`, `/register`, `/chat/…`).
+ *
+ * De aquí salen el `canonical`, el `og:url` y la `url` de los datos
+ * estructurados. Cuando el dueño enganche el dominio definitivo, esta constante
+ * y `APP_URL` son lo único que cambia — y después toca `pnpm og` sólo si el
+ * dominio sale dibujado en la tarjeta, que hoy no sale.
+ *
+ * `robots.txt` y `sitemap.xml` ya no son de la landing: declaran el dominio
+ * entero, así que viven en `frontend/public/` y los sirve nginx desde la raíz.
+ * `test/seo.test.ts` comprueba desde aquí que no se queden atrás.
+ */
+export const LANDING_URL = APP_URL;
+
+/**
+ * `og:image` absoluta: ni LinkedIn ni WhatsApp ni Slack resuelven rutas
+ * relativas al rastrear, y la tarjeta saldría sin imagen.
+ *
+ * Apunta a `/landing/og.png` y no a `/og.png` porque el fichero es un activo de
+ * la landing y sale de su `public/`, o sea que su ruta física la fija `base`.
+ * El documento está en la raíz; su imagen social, no.
+ */
+export const URL_OG_IMAGE = `${APP_URL}${BASE_LANDING}og.png`;
 
 /** `utm_content` por posición. Nada más lleva UTM (DIRECCION.md §2.14). */
 export const POSICIONES_CTA = ['nav', 'hero', 'precios', 'cierre'] as const;

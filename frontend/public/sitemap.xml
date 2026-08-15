@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Una sola URL: la raíz, que es la landing de marketing.
+
+     Las secciones S1-S11 de la landing son anclas del mismo documento, no
+     rutas, y las de la aplicación (/login, /register, /chat/...) son pantallas
+     detrás de autenticación. Declarar cualquiera de las dos cosas como URL
+     sería anunciar páginas que no existen o que nadie puede leer.
+
+     La URL tiene que coincidir con `LANDING_URL` de
+     `frontend/landing/src/config.ts`; lo comprueba
+     `frontend/landing/test/seo.test.ts`. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://frontendsphere-production.up.railway.app/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>

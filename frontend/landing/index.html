@@ -8,7 +8,9 @@
   <meta name="description" content="Somete tu decisión a una junta de directores IA: debaten en fases, se rebaten, votan con confianza 0–100 y firman un acta con próximos pasos. 30 créditos gratis al mes.">
 
   <!-- El dominio sale de LANDING_URL (src/config.ts) por el plugin de Vite: una
-       sola constante que cambiar cuando el dueño enganche el dominio bueno. -->
+       sola constante que cambiar cuando el dueño enganche el dominio bueno.
+       Es la RAÍZ: esta página es el punto de entrada del dominio, y nginx la
+       sirve en `/`. La subruta `/landing/` es sólo la de sus assets. -->
   <link rel="canonical" href="%URL_LANDING%/">
 
   <!-- El color con el que el navegador tiñe su barra: baize-950, el fondo real
@@ -21,8 +23,10 @@
   <meta property="og:title" content="SPHERE — La junta directiva de IA que debate, vota y firma tu decisión">
   <meta property="og:description" content="Somete tu decisión a una junta de directores IA: debaten en fases, se rebaten, votan con confianza 0–100 y firman un acta con próximos pasos. 30 créditos gratis al mes.">
   <!-- ABSOLUTA y no «/og.png»: ni LinkedIn ni WhatsApp ni Slack resuelven
-       rutas relativas al rastrear, y la tarjeta saldría sin imagen. -->
-  <meta property="og:image" content="%URL_LANDING%/og.png">
+       rutas relativas al rastrear, y la tarjeta saldría sin imagen. Marcador
+       propio (URL_OG_IMAGE) porque NO cuelga de la raíz como el canonical: la
+       tarjeta es un activo de `public/` y vive bajo la base, en /landing/. -->
+  <meta property="og:image" content="%URL_OG_IMAGE%">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="Deja de decidir solo. — el acta de una junta de SPHERE, sellada, con el recuento SÍ 2 · COND 1 · NO 1.">

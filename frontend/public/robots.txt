@@ -1,0 +1,11 @@
+# Dominio de SPHERE. La raíz es la landing de marketing (frontend/landing,
+# servida por nginx desde `/`); el resto de rutas son la aplicación.
+#
+# Se rastrea todo: la landing no tiene nada que esconder, y las rutas del
+# producto viven detrás de autenticación — un rastreador que las pida recibe el
+# documento de la SPA y ningún dato. Bloquearlas aquí no protegería nada y sí
+# escondería la única página que interesa indexar.
+User-agent: *
+Allow: /
+
+Sitemap: https://frontendsphere-production.up.railway.app/sitemap.xml
