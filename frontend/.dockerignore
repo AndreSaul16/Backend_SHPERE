@@ -4,3 +4,14 @@ dist
 # .env (Removido para permitir visibilidad en desarrollo)
 .DS_Store
 coverage
+
+# La landing (frontend/landing) se construye dentro de este mismo contexto.
+#
+# Los patrones de arriba NO la cubren: en .dockerignore un patrón sin barra
+# casa contra la ruta COMPLETA relativa al contexto, así que `node_modules`
+# excluye el de la raíz y ninguno más. Sin estas dos líneas, el `COPY . .`
+# metería el node_modules de la máquina de desarrollo —con los binarios de
+# esbuild de OTRA plataforma— encima del que acaba de instalar pnpm en la
+# imagen, y el build muere de una forma difícil de leer.
+landing/node_modules
+landing/dist

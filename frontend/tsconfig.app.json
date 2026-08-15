@@ -36,5 +36,13 @@
   },
   "include": [
     "src"
+  ],
+  /* `include: ["src"]` ya deja fuera `landing/`, que es otro proyecto con su
+     propio `tsconfig.json` (bastante más estricto: `noUncheckedIndexedAccess`,
+     `exactOptionalPropertyTypes`) y su propio `tsc --noEmit` en CI. El
+     `exclude` no cambia nada hoy y está aquí para que ampliar el `include`
+     mañana no se trague la landing sin que nadie lo note. */
+  "exclude": [
+    "landing"
   ]
 }

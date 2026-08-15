@@ -1,5 +1,24 @@
 @import "tailwindcss";
 
+/* ─── La landing NO entra en el escaneo del producto ──────────────────────────
+   `frontend/landing/` es un proyecto Vite aparte (su propio Tailwind, su propio
+   `index.css`) que vive dentro de esta carpeta por una sola razón: el contexto
+   de build de Docker del servicio de Railway es `frontend/`, así que lo que no
+   esté aquí dentro no llega a la imagen.
+
+   La detección automática de fuentes de Tailwind v4 escanea TEXTO PLANO bajo
+   este árbol, no imports: sin esta línea, las clases de la landing se compilan
+   dentro del CSS del producto. No es teoría — medido antes de escribirla, las
+   cuatro utilidades de valor arbitrario que sólo existen en la landing
+   (`grid-cols-[minmax(0,32rem)_auto]`, `max-w-[36rem]`, `max-w-[48rem]`,
+   `max-w-[80rem]`) salían las cuatro en el CSS emitido de aquí.
+
+   La ruta es relativa a ESTE fichero (src/index.css → ../landing), que es como
+   Tailwind v4 resuelve `@source`. Si algún día la landing se muda, esta línea
+   se muda con ella o el bundle del producto engorda en silencio: una clase de
+   más no rompe nada, no avisa de nada y no la ve nadie en revisión. */
+@source not "../landing";
+
 /* ═════════════════════════════════════════════════════════════════════════════
    SPHERE — sistema de tokens. Fuente de verdad: DESIGN.md §13.
    Sala capitular: paño verde, latón como único metal, oxblood para el disenso,

@@ -7,7 +7,11 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // `landing/` trae su propia configuración de ESLint (`landing/eslint.config.js`,
+  // sin las reglas de React que aquí son obligatorias: la landing es TypeScript
+  // vanilla) y se comprueba desde `frontend/landing` en el job `test-landing`.
+  // Sin ignorarla, `eslint .` desde aquí la lintaría con reglas ajenas.
+  globalIgnores(['dist', 'landing']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
