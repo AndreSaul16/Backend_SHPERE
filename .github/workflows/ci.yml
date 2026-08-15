@@ -180,6 +180,75 @@ jobs:
           path: frontend/dist
           retention-days: 7
 
+  # ── La landing de marketing (frontend/landing) ──────────────────────────────
+  #
+  # Es un proyecto Vite aparte que vive dentro de `frontend/` porque el contexto
+  # de build de Docker del servicio de Railway es esa carpeta. Job propio porque
+  # todo lo suyo es distinto: pnpm en vez de npm, TypeScript vanilla en vez de
+  # React, `tsc --noEmit` en vez de `tsc -b` (no usa proyectos referenciados) y
+  # una configuración de ESLint sin las reglas de React.
+  #
+  # POR QUÉ IMPORTA MÁS QUE UN JOB NORMAL: la landing tampoco se construye en
+  # local, así que la PRIMERA vez que `vite build` se ejecuta de verdad es aquí.
+  # Y desde este ciclo la landing es la portada del dominio: lo que salga de
+  # este build es lo primero que ve cualquiera que escriba la dirección.
+  test-landing:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/landing
+    steps:
+      - uses: actions/checkout@v4
+      # node 22 y no 20: `packageManager` fija pnpm 11.7.0, cuyo `engines.node`
+      # es >= 22.13. Es la misma versión que la etapa de build del Dockerfile,
+      # para que CI y el despliegue no comprueben cosas distintas.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # corepack trae la versión de pnpm que fija `packageManager`, la misma que
+      # generó el lockfile. Sin esto, el job usaría la que le tocara y
+      # `--frozen-lockfile` podría discutir con el lockfile por la versión.
+      - name: pnpm por corepack
+        run: corepack enable
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+      # `tsc --noEmit` a secas y no `-b`: aquí el tsconfig es uno solo y sí
+      # comprueba ficheros (`src`, `test`, `vite.config.ts`, `eslint.config.js`).
+      - name: Typecheck
+        run: pnpm exec tsc --noEmit
+      - name: Lint
+        run: pnpm exec eslint .
+      # Entre ellos, el contrato de aceptación de DIRECCION.md §8 y el contrato
+      # de despliegue, que ata la `base` de Vite con el COPY del Dockerfile y el
+      # try_files de nginx.
+      - name: Tests
+        run: pnpm exec vitest run
+      # `pnpm exec vite build` y no `pnpm build`: el script `build` es
+      # `tsc --noEmit && vite build`, y el typecheck ya corrió arriba.
+      # La base (`/landing/`) sale de vite.config.ts, no de la línea de órdenes:
+      # un flag aquí sería una segunda fuente de verdad que el Dockerfile no
+      # tiene.
+      - name: Build
+        run: pnpm exec vite build
+      # La única comprobación que NO puede ser un test: necesita `dist/`, y
+      # `dist/` no existe hasta que alguien construye. Mide que todas las URLs
+      # del documento y del CSS cuelguen de `/landing/` — ni de `/assets/`, que
+      # es del producto y colisiona, ni de `/landing/landing/`, que es lo que
+      # sale si alguien escribe la base a mano y Vite la antepone otra vez.
+      # Las dos averías se sirven con 200 en el documento y 404 en todo lo
+      # demás: la página sale desnuda y no falla ningún build.
+      - name: La base llegó al build
+        run: node scripts/comprobar-base.mjs
+      # Se sube SIEMPRE: si la comprobación de arriba falla, el dist es lo único
+      # que permite averiguar qué escribió Vite de verdad.
+      - name: Guardar el build para poder mirarlo
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-landing
+          path: frontend/landing/dist
+          retention-days: 7
+
   # Bloqueante desde que el backend está a cero hallazgos. Un job no bloqueante con 622
   # hallazgos no es una red, es un adorno: lleva meses demostrándolo. La versión NO se
   # escribe aquí — se instala de backend/requirements-dev.txt, que es el único sitio del
