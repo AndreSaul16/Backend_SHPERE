@@ -209,6 +209,34 @@ describe('la landing en la raíz', () => {
         },
     );
 
+    /**
+     * El 301 de arriba no vale de nada si la `Location` sale mal formada.
+     *
+     * Por defecto nginx la construye ABSOLUTA con lo único que ve el
+     * contenedor: su propio esquema (http, el TLS lo termina el proxy de
+     * Railway) y su puerto interno. En producción `/landing` respondía
+     * `301 → http://…up.railway.app:3000/`, una URL que no existe de puertas
+     * afuera. Con `absolute_redirect off` emite `Location: /` y el navegador la
+     * resuelve contra el origen https real.
+     *
+     * A nivel `server` a propósito: cubre este 301 y cualquier otro que venga.
+     */
+    it.each(Object.keys(CONFIGS))(
+        '%s: los 301 salen con Location relativa (absolute_redirect off, en server)',
+        (nombre) => {
+            const config = CONFIGS[nombre];
+            const nivelServer = bloquesDeLocation(config).reduce(
+                (resto, b) => resto.replace(b.cuerpo, ''),
+                config,
+            );
+
+            expect(
+                nivelServer,
+                `${nombre}: sin «absolute_redirect off» a nivel server, el 301 de /landing manda al navegador a http://…:PUERTO_INTERNO/`,
+            ).toMatch(/^[ \t]*absolute_redirect\s+off;/m);
+        },
+    );
+
     it('los dos ficheros sirven la landing igual', () => {
         // La paridad de más abajo sólo compara las líneas de cabecera. Estos
         // bloques no llevan ninguna cabecera propia salvo las repetidas, así
