@@ -1,0 +1,4 @@
+# pnpm 11 ya no lee la clave "pnpm" de package.json: los ajustes viven aquí.
+# esbuild necesita su script de instalación para colocar el binario de plataforma.
+allowBuilds:
+  esbuild: true

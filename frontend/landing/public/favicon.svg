@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32" role="img" aria-label="SPHERE">
+  <!-- El sello de la mesa (DIRECCION.md §5.2): anillo de sello con el arco de la
+       mesa dentro y la muesca central del asiento que preside. Sobre paño.
+       Los hex van clavados porque un favicon no hereda las variables de la página:
+       baize-950 #060F09 · brass-500 #D7A94F. -->
+  <rect width="24" height="24" rx="2" fill="#060F09"/>
+  <g fill="none" stroke="#D7A94F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3A9 9 0 0 1 12 21A9 9 0 0 1 12 3Z"/>
+    <path d="M17.313 13.424A5.5 5.5 0 0 1 13.423 17.313L13.087 16.057A4.2 4.2 0 0 1 10.913 16.057L10.577 17.313A5.5 5.5 0 0 1 6.687 13.424"/>
+  </g>
+</svg>

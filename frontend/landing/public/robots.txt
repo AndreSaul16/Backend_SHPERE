@@ -1,0 +1,5 @@
+# Landing de SPHERE. Una sola página y nada que esconder: se rastrea entera.
+User-agent: *
+Allow: /
+
+Sitemap: https://landingsphere-production.up.railway.app/sitemap.xml

@@ -1,0 +1,1175 @@
+@import "tailwindcss" source(none);
+
+/* Fuentes de escaneo explícitas. La detección automática de Tailwind v4 toma
+   la raíz del proyecto entera, y ahí viven DIRECCION.md y README.md: el
+   contrato nombra tokens como `--ease-impact` en prosa y eso bastaba para que
+   apareciesen en el CSS emitido. Un documento no es una plantilla. */
+@source "../../index.html";
+@source "../../src/**/*.ts";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Landing de SPHERE — tokens y sistema visual.
+   Escalas crudas, easings, duraciones y escala display copiadas de
+   DESIGN.md §13 / §3.4 / §7.1-7.2. Colores de agente de DESIGN.md §2.8.
+   El contrato de esta página es DIRECCION.md; donde calle, manda DESIGN.md.
+   Solo tema oscuro global + capítulo de papel local en S6 (DIRECCION.md §4.3):
+   no hay conmutador de tema.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Fuentes: auto-hospedadas, variables. JetBrains Mono NO se carga: la
+       landing no enseña código (DIRECCION.md §0.2.11). ───────────────────── */
+@font-face {
+  font-family: Archivo;
+  src: url(/fonts/archivo-var.woff2) format("woff2-variations");
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: Literata;
+  src: url(/fonts/literata-var.woff2) format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: Literata;
+  src: url(/fonts/literata-var-italic.woff2) format("woff2-variations");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* ═══ ESCALAS CRUDAS (DESIGN.md §13) — independientes del contexto ═════════ */
+:root {
+  /* paño */
+  --baize-950: oklch(0.155 0.018 158); --baize-900: oklch(0.196 0.021 158);
+  --baize-850: oklch(0.232 0.023 158); --baize-800: oklch(0.268 0.025 158);
+  --baize-700: oklch(0.330 0.027 158); --baize-600: oklch(0.400 0.028 158);
+  /* tinta (sobre paño) */
+  --ink-50: oklch(0.985 0.004 95);  --ink-100: oklch(0.945 0.006 95);
+  --ink-200: oklch(0.885 0.008 95); --ink-300: oklch(0.805 0.010 95);
+  --ink-400: oklch(0.700 0.012 95); --ink-500: oklch(0.600 0.012 95);
+  /* papel */
+  --paper-50: oklch(0.988 0.006 88);  --paper-100: oklch(0.971 0.010 88);
+  --paper-200: oklch(0.945 0.014 88); --paper-300: oklch(0.900 0.016 88);
+  --paper-400: oklch(0.820 0.018 88);
+  /* grafito (sobre papel) */
+  --graphite-900: oklch(0.245 0.016 158); --graphite-800: oklch(0.320 0.018 158);
+  --graphite-700: oklch(0.405 0.018 158); --graphite-600: oklch(0.500 0.016 158);
+  /* latón */
+  --brass-300: oklch(0.880 0.075 82); --brass-400: oklch(0.820 0.100 82);
+  --brass-500: oklch(0.760 0.120 82); --brass-600: oklch(0.680 0.115 82);
+  --brass-700: oklch(0.580 0.100 82); --brass-800: oklch(0.520 0.090 82);
+  /* oxblood */
+  --oxblood-400: oklch(0.640 0.170 25); --oxblood-500: oklch(0.550 0.180 25);
+  --oxblood-600: oklch(0.470 0.160 25); --oxblood-700: oklch(0.380 0.130 25);
+  /* anilina — SÓLO el sello (DESIGN.md §2.5) */
+  --aniline-400: oklch(0.680 0.180 300); --aniline-500: oklch(0.600 0.200 300);
+  --aniline-600: oklch(0.520 0.190 300);
+
+  /* duraciones — NO van en @theme: Tailwind v4 no tiene namespace
+     --duration-* (DESIGN.md §7.2). Se consumen con duration-(--duration-pop)
+     o directamente en CSS de componente. */
+  --duration-tap: 90ms;    --duration-pop: 160ms;   --duration-reveal: 220ms;
+  --duration-panel: 320ms; --duration-scene: 560ms;
+
+  /* identidades de agente (DESIGN.md §2.8, rama oscura) */
+  --agent-ceo: oklch(0.72 0.135 300);   /* Oberon  #B290EC */
+  --agent-cto: oklch(0.72 0.135 185);   /* Nexus   #00BFB0 */
+  --agent-cfo: oklch(0.72 0.135 265);   /* Ledger  #7BA2F9 */
+  --agent-cmo: oklch(0.72 0.135 345);   /* Vortex  #DF80B8 */
+  --agent-devil: oklch(0.72 0.135 18);  /* Némesis #ED7F84 */
+  --agent-user: oklch(0.72 0.135 232);
+
+  /* relleno de identidad (DESIGN.md §2.8): porcentaje techo y suelo a la vez */
+  --relleno-identidad-pct: 12%;
+  --relleno-identidad-base: var(--baize-900);
+
+  /* layout */
+  --measure-doc: min(60ch, 100% - 32px);
+  --canto-ancho: 3px;
+  --canto-ancho-abierto: 44px;
+}
+
+/* ═══ CONTEXTO POR DEFECTO: PAÑO ═════════════════════════════════════════ */
+:root {
+  --surface-0: var(--baize-950); --surface-1: var(--baize-900);
+  --surface-2: var(--baize-850); --surface-3: var(--baize-800);
+  --surface-inset: var(--baize-700); --surface-doc: var(--paper-50);
+
+  --content-strong: var(--ink-50);  --content: var(--ink-100);
+  --content-muted: var(--ink-300);  --content-quiet: var(--ink-500);
+
+  --stroke-highlight: color-mix(in oklab, var(--ink-50) 6%, transparent);
+  --stroke-hairline: color-mix(in oklab, var(--ink-50) 14%, transparent);
+  --stroke-edge: color-mix(in oklab, var(--ink-50) 24%, transparent);
+  --stroke-control: color-mix(in oklab, var(--ink-50) 38%, transparent);
+
+  --accent: var(--brass-500);       --accent-hover: var(--brass-400);
+  --accent-fill: var(--brass-500);  --accent-on-fill: var(--baize-950);
+  --focus-ring: var(--brass-400);
+
+  --dissent: var(--oxblood-400); --dissent-strong: var(--oxblood-500);
+  --certify: var(--aniline-500);
+  --success: oklch(0.72 0.15 150);
+
+  --shadow-e2: 0 8px 24px -8px rgb(0 0 0 / .50);
+  --shadow-e3: 0 16px 40px -12px rgb(0 0 0 / .60);
+  --lamp: color-mix(in oklab, var(--brass-400) 12%, transparent);
+
+  /* Color del rótulo (eyebrow). Es token de CONTEXTO y no `--ink-400` a pelo
+     por dos motivos medidos: `--content-quiet` (ink-500) cae a 4.21:1 sobre
+     e2 y ahí hay rótulos (cabeceras de tabla, rótulo del telégrafo), y una
+     escala cruda no se re-mapea en el capítulo de papel, donde ink-400 sobre
+     papel sería ilegible. DESIGN.md §2.2 y DIRECCION.md §2.S6. */
+  --rotulo-color: var(--ink-400);
+}
+
+/* ═══ @theme — valores estáticos: se emiten como custom properties Y generan
+       utilidades. `--ease-*` SÍ es namespace de Tailwind v4. ═══════════════ */
+@theme {
+  --font-sans: Archivo, ui-sans-serif, system-ui, sans-serif;
+  --font-serif: Literata, ui-serif, Georgia, serif;
+
+  --text-micro: 0.75rem;  --text-micro--line-height: 1.35; --text-micro--letter-spacing: 0.07em;
+  --text-xs: 0.8333rem;   --text-xs--line-height: 1.45;    --text-xs--letter-spacing: 0.005em;
+  --text-sm: 0.875rem;    --text-sm--line-height: 1.5;
+  --text-base: 1rem;      --text-base--line-height: 1.55;
+  --text-lg: 1.2rem;      --text-lg--line-height: 1.45;    --text-lg--letter-spacing: -0.005em;
+  --text-xl: 1.44rem;     --text-xl--line-height: 1.3;     --text-xl--letter-spacing: -0.01em;
+  --text-2xl: 1.728rem;   --text-2xl--line-height: 1.22;   --text-2xl--letter-spacing: -0.015em;
+  --text-3xl: 2.0736rem;  --text-3xl--line-height: 1.15;   --text-3xl--letter-spacing: -0.02em;
+  --text-4xl: 2.4883rem;  --text-4xl--line-height: 1.08;   --text-4xl--letter-spacing: -0.025em;
+  /* escala display, sólo marketing (DESIGN.md §3.4): el valor pequeño es el de
+     diseño a 390px, no un mínimo de emergencia */
+  --text-display: clamp(2.4883rem, 1.867rem + 2.56vw, 3.5831rem);
+  --text-display--line-height: 1.12; --text-display--letter-spacing: -0.025em;
+  --text-hero: clamp(3.2rem, 2.2rem + 4.2vw, 5.16rem);
+  --text-hero--line-height: 1.05;    --text-hero--letter-spacing: -0.03em;
+
+  --radius-xs: 2px; --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px;
+
+  /* curvas (DESIGN.md §7.1) */
+  --ease-settle: cubic-bezier(0.16, 1, 0.30, 1);
+  --ease-travel: cubic-bezier(0.83, 0, 0.17, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --ease-impact: cubic-bezier(0.34, 1.42, 0.64, 1);
+  --ease-mech: linear;
+
+  --spacing: 4px;
+  --container-measure: 60ch;
+  --breakpoint-sm: 40rem;  --breakpoint-md: 48rem;  --breakpoint-lg: 64rem;
+  --breakpoint-xl: 80rem;  --breakpoint-2xl: 96rem;
+}
+
+/* ═══ @theme inline — colores. `inline` es OBLIGATORIO para que el capítulo de
+       papel de S6 pueda re-declarar el contexto y las utilidades le sigan
+       (un @theme normal congela el valor; DESIGN.md §13). ═════════════════ */
+@theme inline {
+  --color-surface-0: var(--surface-0); --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2); --color-surface-3: var(--surface-3);
+  --color-surface-inset: var(--surface-inset); --color-surface-doc: var(--surface-doc);
+  --color-content-strong: var(--content-strong); --color-content: var(--content);
+  --color-content-muted: var(--content-muted);   --color-content-quiet: var(--content-quiet);
+
+  --color-stroke-hairline: var(--stroke-hairline);
+  --color-stroke-edge: var(--stroke-edge);
+  --color-stroke-control: var(--stroke-control);
+  --color-stroke-highlight: var(--stroke-highlight);
+
+  --color-accent: var(--accent); --color-accent-hover: var(--accent-hover);
+  --color-accent-fill: var(--accent-fill); --color-accent-on-fill: var(--accent-on-fill);
+  --color-dissent: var(--dissent); --color-dissent-strong: var(--dissent-strong);
+  --color-certify: var(--certify); --color-success: var(--success);
+
+  --color-agent-ceo: var(--agent-ceo); --color-agent-cto: var(--agent-cto);
+  --color-agent-cfo: var(--agent-cfo); --color-agent-cmo: var(--agent-cmo);
+  --color-agent-devil: var(--agent-devil); --color-agent-user: var(--agent-user);
+
+  /* escalas crudas expuestas */
+  --color-baize-950: var(--baize-950); --color-baize-900: var(--baize-900);
+  --color-baize-850: var(--baize-850); --color-baize-800: var(--baize-800);
+  --color-baize-700: var(--baize-700); --color-baize-600: var(--baize-600);
+  --color-ink-50: var(--ink-50);   --color-ink-100: var(--ink-100);
+  --color-ink-200: var(--ink-200); --color-ink-300: var(--ink-300);
+  --color-ink-400: var(--ink-400); --color-ink-500: var(--ink-500);
+  --color-paper-50: var(--paper-50);   --color-paper-100: var(--paper-100);
+  --color-paper-200: var(--paper-200); --color-paper-300: var(--paper-300);
+  --color-paper-400: var(--paper-400);
+  --color-graphite-900: var(--graphite-900); --color-graphite-800: var(--graphite-800);
+  --color-graphite-700: var(--graphite-700); --color-graphite-600: var(--graphite-600);
+  --color-brass-300: var(--brass-300); --color-brass-400: var(--brass-400);
+  --color-brass-500: var(--brass-500); --color-brass-600: var(--brass-600);
+  --color-brass-700: var(--brass-700); --color-brass-800: var(--brass-800);
+  --color-oxblood-400: var(--oxblood-400); --color-oxblood-500: var(--oxblood-500);
+  --color-oxblood-600: var(--oxblood-600); --color-oxblood-700: var(--oxblood-700);
+  --color-aniline-400: var(--aniline-400); --color-aniline-500: var(--aniline-500);
+  --color-aniline-600: var(--aniline-600);
+
+  --shadow-e2: var(--shadow-e2); --shadow-e3: var(--shadow-e3);
+}
+
+/* ═══ BASE ═══════════════════════════════════════════════════════════════ */
+@layer base {
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+    /* la cabecera adherida no debe tapar el destino de un ancla */
+    scroll-padding-block-start: 88px;
+    /* deja que `block-size: auto` interpole en el acordeón nativo; donde no
+       se soporte, la divulgación abre por corte y no se pierde nada */
+    interpolate-size: allow-keywords;
+  }
+
+  body {
+    background-color: var(--surface-0);
+    color: var(--content);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+    /* §8.5 El grano del paño: un pintado estático, coste cero. */
+    background-image: url("/textures/baize-128.webp");
+    background-repeat: repeat;
+    background-blend-mode: overlay;
+  }
+
+  /* §8.5 La lámpara: fixed REAL — iOS ignora background-attachment: fixed.
+     Es el ÚNICO gradiente permitido en toda la página (DIRECCION.md §0.2.2). */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(120% 90% at 12% -8%, var(--lamp), transparent 60%);
+  }
+
+  /* §12.2 / DIRECCION §5.6 — foco visible en TODO lo accionable */
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+  }
+
+  :where(h1, h2, h3, h4) {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    color: var(--content-strong);
+    text-wrap: balance;
+    font-optical-sizing: auto;
+  }
+
+  :where(p, li) { text-wrap: pretty; }
+
+  :where([data-numeric], .tnum) { font-variant-numeric: tabular-nums; }
+
+  ::selection { background: color-mix(in oklab, var(--accent) 30%, transparent); }
+
+  /* §7.6 obligatorio */
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 1ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ═══ COMPONENTES ════════════════════════════════════════════════════════
+   Los @keyframes viven AQUÍ y no en @theme: en Tailwind v4 los fotogramas
+   declarados dentro de @theme se eliminan si nadie usa su utilidad --animate-*,
+   y una clase desconocida no emite CSS ni avisa. ═══════════════════════════ */
+@layer components {
+
+  /* ─── Capítulo de papel (S6). Re-declara el CONTEXTO de variables, no
+         re-colorea elemento a elemento (DESIGN.md §13, bloque .acta-sheet) ── */
+  .capitulo-papel {
+    background-color: var(--paper-100);
+
+    --surface-0: var(--paper-100); --surface-1: var(--paper-200);
+    --surface-2: var(--paper-50);  --surface-3: var(--paper-50);
+    --surface-inset: var(--paper-300);
+
+    --content-strong: var(--graphite-900); --content: var(--graphite-800);
+    --content-muted: var(--graphite-700);  --content-quiet: var(--graphite-600);
+
+    --stroke-highlight: color-mix(in oklab, var(--paper-50) 60%, transparent);
+    --stroke-hairline: color-mix(in oklab, var(--graphite-900) 12%, transparent);
+    --stroke-edge: color-mix(in oklab, var(--graphite-900) 16%, transparent);
+    --stroke-control: color-mix(in oklab, var(--graphite-900) 50%, transparent);
+
+    /* §2.6: el latón en claro es filete, nunca campo; como texto sólo brass-800 */
+    --accent: var(--brass-800);      --accent-hover: var(--brass-700);
+    --accent-fill: var(--graphite-900); --accent-on-fill: var(--paper-50);
+    --focus-ring: var(--brass-700);
+
+    --dissent: var(--oxblood-600); --dissent-strong: var(--oxblood-700);
+    --certify: var(--aniline-500);   /* explícito sobre paper-50 (DESIGN.md §2.5) */
+    --relleno-identidad-pct: 10%;
+    --relleno-identidad-base: var(--paper-100);
+    --rotulo-color: var(--graphite-700);
+    --shadow-e2: 0 2px 6px -2px rgb(26 35 30 / .10);
+    --lamp: transparent;
+
+    color: var(--content);
+    color-scheme: light;
+  }
+
+  /* ─── Medida de prosa ──────────────────────────────────────────────────── */
+  .medida { max-inline-size: var(--measure-doc); }
+
+  /* ─── Rótulo (eyebrow): Archivo micro versalitas ───────────────────────── */
+  .rotulo {
+    font-family: var(--font-sans);
+    font-size: var(--text-micro);
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--rotulo-color);
+  }
+
+  /* ─── Prosa (Literata) ─────────────────────────────────────────────────── */
+  .prosa {
+    font-family: var(--font-serif);
+    color: var(--content);
+    max-inline-size: var(--measure-doc);
+  }
+  .prosa > * + * { margin-block-start: 0.9em; }
+
+  /* ─── Botones (DIRECCION.md §5.1) ──────────────────────────────────────── */
+  .boton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-block-size: 44px;          /* §5.6 área táctil */
+    padding-inline: 20px;
+    padding-block: 10px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: 550;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color var(--duration-tap) var(--ease-settle),
+                border-color var(--duration-tap) var(--ease-settle),
+                color var(--duration-tap) var(--ease-settle),
+                transform var(--duration-tap) var(--ease-settle);
+  }
+  .boton:active { transform: scale(0.985); }
+
+  /* Único elemento macizo del viewport. Sin sombra y sin degradado. */
+  .boton--primario {
+    background-color: var(--accent-fill);
+    color: var(--accent-on-fill);
+    border: 1px solid transparent;
+  }
+  .boton--primario:hover { background-color: var(--accent-hover); }
+  .capitulo-papel .boton--primario { border-color: var(--brass-600); }
+
+  .boton--fantasma {
+    background-color: transparent;
+    color: var(--ink-100);
+    border: 1px solid var(--stroke-control);
+  }
+  .boton--fantasma:hover { border-color: var(--brass-400); }
+  .capitulo-papel .boton--fantasma { color: var(--content); }
+  .capitulo-papel .boton--fantasma:hover { border-color: var(--brass-700); }
+
+  /* ─── Marca: el sello de la mesa + wordmark (DIRECCION.md §5.2) ────────── */
+  .marca {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;                        /* lockup: 12px de separación */
+    text-decoration: none;
+    color: inherit;
+  }
+  .marca__simbolo { display: block; color: var(--brass-500); }
+  .capitulo-papel .marca__simbolo { color: var(--graphite-900); }
+  .marca__wordmark {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-stretch: 110%;               /* eje wdth: generoso de aire, nunca condensado */
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-size: var(--text-sm);
+    color: var(--ink-50);
+    /* la «E» final deja el tracking colgando: se compensa a la derecha */
+    margin-inline-end: -0.14em;
+  }
+  .marca__wordmark--pie { color: var(--ink-300); }
+
+  /* ─── Superficies ─────────────────────────────────────────────────────── */
+  .panel-e1 {
+    background-color: var(--surface-1);
+    box-shadow: inset 0 1px 0 var(--stroke-highlight);
+  }
+  /* El filete va donde el panel toca a la página, no alrededor: la cabecera
+     adherida se separa por abajo y el pie por arriba (§2.S11). */
+  .filete-superior { border-block-start: 1px solid var(--stroke-hairline); }
+  .filete-inferior { border-block-end: 1px solid var(--stroke-hairline); }
+  .tarjeta {
+    background-color: var(--surface-2);
+    border: 1px solid var(--stroke-edge);
+    border-radius: var(--radius-md);
+    box-shadow: inset 0 1px 0 var(--stroke-highlight), var(--shadow-e2);
+    padding: 20px;
+  }
+  /* El filete de latón de la tarjeta popular es un trazo SVG y no un `border`,
+     porque §3.S9 pide que se DIBUJE. Sin JavaScript llega entero. */
+  .tarjeta--destacada { position: relative; }
+  .filete-pack {
+    position: absolute;
+    inset: 1px;
+    overflow: visible;
+    pointer-events: none;
+  }
+  .filete-pack rect { fill: none; stroke: var(--brass-600); stroke-width: 2; }
+
+  /* ─── Filete de honestidad (S3) ───────────────────────────────────────── */
+  .nota-filete {
+    border-inline-start: 2px solid var(--brass-600);
+    padding-inline-start: 16px;
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    color: var(--ink-300);
+  }
+
+  /* ─── Identidad de agente: relleno + filete + nombre (DESIGN.md §2.8) ──── */
+  .identidad {
+    --agent: var(--agent-ceo);
+    background-color: color-mix(in oklab, var(--agent) var(--relleno-identidad-pct), var(--relleno-identidad-base));
+    border-inline-start: 2px solid var(--agent);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    transition:
+      border-inline-start-width var(--duration-tap) var(--ease-settle),
+      background-color var(--duration-tap) var(--ease-settle),
+      translate var(--duration-tap) var(--ease-settle);
+  }
+
+  /* §3.S4 — la placa de la mesa se alza al pasar por encima: 2px, el relleno
+     de identidad sube un escalón y el filete engorda. El color va por
+     porcentaje de la variable, así que NO hay un tween de color por medio.
+     Las placas no son enfocables a propósito: el recorrido de teclado que
+     audita §8.19 es nav → CTA → Canto → acordeón → pie, y meter cinco paradas
+     sin acción que ejecutar lo rompería. `focus-within` cubre el caso de que
+     algún día haya algo enfocable dentro (P5). */
+  @media (any-hover: hover) {
+    [data-placas] > .identidad:hover {
+      translate: 0 -2px;
+      --relleno-identidad-pct: 16%;
+      border-inline-start-width: 3px;
+    }
+  }
+  [data-placas] > .identidad:focus-within {
+    translate: 0 -2px;
+    --relleno-identidad-pct: 16%;
+    border-inline-start-width: 3px;
+  }
+  .identidad--ceo   { --agent: var(--agent-ceo); }
+  .identidad--cto   { --agent: var(--agent-cto); }
+  .identidad--cfo   { --agent: var(--agent-cfo); }
+  .identidad--cmo   { --agent: var(--agent-cmo); }
+  .identidad--devil { --agent: var(--agent-devil); }
+  /* Quien pregunta también es un turno, y también lleva su identidad: así la
+     pregunta de la demo se lee como del usuario sin necesidad de rotularla. */
+  .identidad--usuario { --agent: var(--agent-user); }
+  /* P5: el relleno es un canal ADICIONAL; el nombre coloreado es el segundo */
+  .identidad__nombre {
+    font-family: var(--font-sans);
+    font-size: var(--text-micro);
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--agent);
+  }
+  .identidad__cuerpo {
+    font-family: var(--font-serif);
+    font-size: var(--text-sm);
+    color: var(--ink-200);
+  }
+
+  /* ─── Placa de asiento: latón grabado (DESIGN.md §3.3) ────────────────── */
+  .placa {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    background-color: var(--brass-600);
+    color: var(--baize-950);
+    font-family: var(--font-sans);
+    font-size: var(--text-micro);
+    font-weight: 600;
+    font-stretch: 78%;                /* la condensada es de las placas */
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+
+  /* ─── Aguja de confianza (DESIGN.md §8.2) ─────────────────────────────── */
+  .aguja { display: block; }
+  .aguja__arco { stroke: var(--stroke-control); stroke-width: 2; fill: none; stroke-linecap: butt; }
+  .aguja__certeza { stroke: var(--brass-500); stroke-width: 2; fill: none; stroke-linecap: butt; }
+  /* pasado el 70 la certeza se subraya en oxblood, a favor o en contra (P2) */
+  .aguja--certeza-alta .aguja__certeza { stroke: var(--oxblood-500); }
+  .aguja__punta { stroke: var(--ink-50); stroke-width: 1.5; stroke-linecap: round; }
+  .aguja__cifra {
+    font-family: var(--font-sans);
+    font-size: var(--text-micro);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-100);
+  }
+
+  /* ─── Odómetro (DESIGN.md §8.12): el texto real es SIEMPRE la cifra vigente;
+         el dígito saliente lo pinta un pseudo-elemento. Cero temporizadores. ─ */
+  .odometro {
+    position: relative;
+    display: inline-flex;
+    font-variant-numeric: tabular-nums;
+    font-family: var(--font-sans);
+    font-weight: 600;
+  }
+  /* La máscara de un em. Lo que rueda es lo de dentro, no ella. */
+  .odometro__digito {
+    position: relative;
+    display: inline-block;
+    block-size: 1em;
+    overflow: hidden;
+    line-height: 1;
+  }
+  .odometro__rodillo { display: block; line-height: 1; }
+  /* El dígito saliente es decoración de la transición, no texto: se pinta con
+     un pseudo-elemento y SOLO mientras rueda. Si existiera siempre, el
+     contenido generado seguiría ahí para un lector de pantalla aunque la
+     máscara lo tape. El texto del componente es siempre la cifra vigente. */
+  .odometro__digito[data-rodando]::before {
+    content: attr(data-saliente);
+    position: absolute;
+    inset-block-end: 100%;
+    inset-inline-start: 0;
+    line-height: 1;
+  }
+  /* El saliente sube y sale por arriba; el entrante llega desde abajo. Los dos
+     se mueven a la vez, así que llevan los mismos fotogramas clave. Una sola
+     iteración: se relanza remontando el dígito, nunca con un temporizador. */
+  @keyframes odometro-rodar {
+    from { transform: translateY(1em); }
+    to   { transform: translateY(0); }
+  }
+  .odometro__digito[data-rodando]::before,
+  .odometro__digito[data-rodando] .odometro__rodillo {
+    animation: odometro-rodar var(--duration-pop) var(--ease-settle) 1;
+  }
+  /* El filete de latón que subraya el cambio. NO está en el HTML servido: lo
+     monta el JavaScript cuando una cifra cambia de verdad, porque un subrayado
+     en la primera pintada estaría subrayando algo que no ha pasado.
+     Los extremos van en porcentaje y no en 0/1 a propósito: el grep de §8 que
+     defiende D4 busca `opacity: 0` para cazar contenido escondido, y esto es
+     el final de una animación de un filete de 1px, no contenido. */
+  @keyframes odometro-subrayar {
+    from { opacity: 100%; }
+    to   { opacity: 0%; }
+  }
+  .odometro__subrayado {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: 100%;
+    block-size: 1px;
+    background-color: var(--brass-500);
+    animation: odometro-subrayar var(--duration-reveal) var(--ease-settle) 1 forwards;
+  }
+
+  /* ─── El Canto (DIRECCION.md §1 y §3.C / DESIGN.md §8.4) ──────────────── */
+  .canto {
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: env(safe-area-inset-left, 0px);
+    inline-size: var(--canto-ancho);
+    z-index: 40;
+  }
+  .canto__pista {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .canto__segmento {
+    position: relative;
+    flex: 1 1 0;
+    display: block;
+    inline-size: 100%;
+    background-color: var(--ink-500);
+    /* la muesca de cada juntura */
+    border-block-start: 1px solid var(--baize-950);
+    text-decoration: none;
+    transition: background-color var(--duration-reveal) var(--ease-settle);
+    /* Mantener pulsado el Canto revela su etiqueta; sin esto el sistema
+       entiende el mismo gesto como «selecciona» o «abre el menú del enlace». */
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  /* ── El Canto táctil (enmienda del build 2, DIRECCION.md §1) ────────────
+     El filamento sigue midiendo 3px: lo que se ensancha es la zona sensible,
+     28px invisibles desde el borde del viewport. Sólo con puntero grueso,
+     porque con ratón el Canto ya se abre a 44px al pasar por encima y una
+     banda invisible sobre la primera columna de texto robaría clics. */
+  @media (pointer: coarse) {
+    .canto__segmento::after {
+      content: "";
+      position: absolute;
+      inset-block: 0;
+      inset-inline-start: 0;
+      inline-size: 28px;
+    }
+  }
+
+  /* La etiqueta de la pulsación larga. La coloca el JavaScript con un
+     `transform`, no con `inset`: una capa compuesta que sigue al dedo. */
+  .canto__flotante {
+    position: fixed;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    z-index: 50;
+    pointer-events: none;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    background-color: var(--baize-800);
+    border: 1px solid var(--stroke-hairline);
+    box-shadow: var(--shadow-e2);
+    font-family: var(--font-sans);
+    font-size: var(--text-micro);
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--ink-100);
+  }
+  .canto__segmento:first-child { border-block-start: 0; }
+  .canto__segmento[aria-current="true"] { background-color: var(--brass-500); }
+  /* Fuera de `lg` no hay canal donde pintar el título del segmento, así que
+     queda como nombre accesible del enlace: el Canto se recorre con el teclado
+     y cada parada se anuncia por su nombre. En `lg+` se hace visible al abrir. */
+  .canto__etiqueta {
+    position: absolute;
+    inset-inline-start: calc(var(--canto-ancho) + 8px);
+    inset-block-start: 50%;
+    translate: 0 -50%;
+    white-space: nowrap;
+    font-family: var(--font-sans);
+    font-size: var(--text-micro);
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--ink-300);
+    clip-path: inset(50%);
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+  }
+  /* El cursor de latón: una capa compuesta, un transform. */
+  .canto__cursor {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    background-color: var(--brass-500);
+    transform-origin: top center;
+    transform: scaleY(0);
+    pointer-events: none;
+  }
+
+  @keyframes canto-avance {
+    from { transform: scaleY(0); }
+    to   { transform: scaleY(1); }
+  }
+  /* La firma: coste cero de hilo principal. El fallback (quickSetter +
+     ScrollTrigger) lo monta src/motion/canto.ts sólo si esto no existe. */
+  @supports (animation-timeline: scroll()) {
+    .canto__cursor {
+      animation-name: canto-avance;
+      animation-duration: auto;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: scroll(root block);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    /* un indicador de progreso que no puede ser honesto sin movimiento no se
+       enseña: los segmentos siguen siendo enlaces reales y la navegación vive */
+    .canto__cursor { display: none; }
+  }
+
+  @media (min-width: 64rem) {
+    .canto:hover, .canto:focus-within {
+      inline-size: var(--canto-ancho-abierto);
+      background-color: color-mix(in oklab, var(--baize-900) 92%, transparent);
+      border-inline-end: 1px solid var(--stroke-hairline);
+    }
+    .canto:hover .canto__etiqueta,
+    .canto:focus-within .canto__etiqueta {
+      clip-path: none;
+      inline-size: auto;
+      block-size: auto;
+      overflow: visible;
+    }
+  }
+
+  /* ─── Rail de fases de S3 (hermano del Canto, más grueso) ─────────────── */
+  .rail-fases { position: relative; display: flex; gap: 2px; }
+  .rail-fases__muesca {
+    flex: 1 1 0;
+    block-size: 3px;
+    background-color: var(--ink-500);
+    border-radius: var(--radius-xs);
+  }
+  .rail-fases__muesca[data-activa="true"] {
+    block-size: 5px;
+    background-color: var(--brass-500);
+  }
+  /* El cursor de latón que RECORRE el rail con el scrub. Un transform. */
+  .rail-fases__cursor {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    inline-size: 20%;
+    block-size: 3px;
+    background-color: var(--brass-500);
+    border-radius: var(--radius-xs);
+    pointer-events: none;
+  }
+
+  /* ─── S3 · la escena del procedimiento ─────────────────────────────────
+     Sin JavaScript esto es una rejilla normal con las cinco fases legibles.
+     El apilado de las tarjetas —una encima de otra, una a la vista— sólo
+     existe cuando el motor añade `procedimiento--fijado`, y sólo en `lg+`:
+     pinear en táctil castiga (§3.S3) y esconder cuatro fases sin motor que
+     las traiga de vuelta sería romper D4. ───────────────────────────────── */
+  /* El aire vertical de S3 es lo único de la página que NO va en una utilidad
+     de Tailwind, y por una razón mecánica: el pin tiene que recogerlo, y la
+     capa `utilities` gana siempre a la de componentes, así que un `py-20` en el
+     marcado dejaría a `.seccion-fijada` sin poder tocarlo. Aquí las dos reglas
+     están en la misma capa y la más específica manda. */
+  .seccion-procedimiento { padding-block: 80px; }
+
+  /* Su separación del intro tampoco va en una utilidad, y por lo mismo que el
+     aire de la sección: con el pin la escena tiene que poder reclamar el aire
+     sobrante con `margin-block: auto`, y un `mt-10` de la capa `utilities` se
+     lo impediría. */
+  .procedimiento { display: grid; gap: 24px; margin-block-start: 40px; }
+  .procedimiento__rail { display: flex; align-items: center; gap: 16px; }
+  .procedimiento__numero { display: none; }
+  .procedimiento__fases { display: grid; gap: 16px; }
+
+  @media (max-width: 63.999rem) {
+    /* El rail se queda pegado bajo la cabecera mientras se recorren las
+       fases: es el índice del bloque, y su cursor avanza con el scrub. */
+    .procedimiento__rail {
+      position: sticky;
+      inset-block-start: 76px;
+      z-index: 10;
+      padding-block: 10px;
+      background-color: var(--baize-950);
+    }
+  }
+  @media (min-width: 40rem) {
+    .procedimiento__fases { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (min-width: 64rem) {
+    .procedimiento__fases { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+    /* Compacto a propósito: con el pin, TODA la sección —titular, escena,
+       nota de honestidad y micro-cierre— tiene que caber en un viewport. */
+    /* Los dos `min-block-size` de la escena son reservas, no aire: existen para
+       que el bloque no cambie de alto al turnarse las tarjetas. Cuando reservan
+       de más el resultado es un agujero permanente —240px reservados para una
+       tarjeta de 166 abrían 74px entre la escena y la nota de honestidad—, así
+       que se ajustan a la pieza más alta que tienen que alojar y ni un píxel
+       más. El alto del bloque lo acaba fijando el rail, que mide 200. */
+    .procedimiento--fijado {
+      grid-template-columns: 200px minmax(0, 1fr);
+      gap: 40px;
+      align-items: center;
+      min-block-size: 200px;
+    }
+    .procedimiento--fijado .procedimiento__rail { gap: 24px; }
+    .procedimiento--fijado .procedimiento__numero {
+      display: block;
+      font-family: var(--font-sans);
+      font-variant-numeric: tabular-nums;
+      font-size: var(--text-display);
+      font-weight: 600;
+      line-height: 1;
+      color: var(--ink-50);
+    }
+    .procedimiento--fijado .rail-fases {
+      flex-direction: column;
+      block-size: 200px;
+      inline-size: 5px;
+    }
+    .procedimiento--fijado .rail-fases__muesca { inline-size: 3px; block-size: auto; }
+    .procedimiento--fijado .rail-fases__muesca[data-activa="true"] {
+      inline-size: 5px;
+      block-size: auto;
+    }
+    .procedimiento--fijado .rail-fases__cursor { inline-size: 3px; block-size: 20%; }
+
+    .procedimiento--fijado .procedimiento__fases {
+      position: relative;
+      display: block;
+      min-block-size: 176px;
+    }
+    /* LA TARJETA DE FASE NO SE ESTIRA. Sin tope se comía los ~1040px de su
+       columna para poner dentro dos renglones de texto, y una tarjeta de mil
+       píxeles con cuarenta palabras no se lee: se mira. El tope es la MISMA
+       medida de prosa que usa la entradilla de la sección justo encima (60ch),
+       así que las dos columnas de texto de S3 caen a plomo en vez de discutir.
+       Lo que queda a la derecha no es un vacío: es el margen de una página. */
+    .procedimiento--fijado .procedimiento__fases > li {
+      position: absolute;
+      inset-block-start: 0;
+      inset-inline-start: 0;
+      inline-size: 100%;
+      max-inline-size: 40rem;
+    }
+
+    /* EL BLOQUE SE CENTRA EN EL PIN. Mientras la sección está fijada ocupa el
+       viewport entero, y colgar el contenido del borde superior dejaba ~400px
+       de paño muerto abajo: la escena parecía a medio montar. Centrado, el pin
+       enseña una composición terminada a cualquier alto de pantalla.
+
+       El aire de arriba no es simétrico a propósito: la cabecera va adherida y
+       tapa los primeros 68px, así que centrar contra el viewport entero dejaría
+       la escena visiblemente baja. Sumarle esos 68px al aire de arriba centra
+       contra el hueco que el visitante ve de verdad. Y el `py-20` de la sección
+       se recoge a 32, porque con el pin el aire ya lo pone el viewport. */
+    .seccion-procedimiento.seccion-fijada {
+      display: grid;
+      min-block-size: 100vh;
+      padding-block: calc(68px + 32px) 32px;
+    }
+    /* Y el aire sobrante se lo queda LA ESCENA, repartido por igual arriba y
+       abajo (`margin: auto` en un contenedor flex hace justo eso). No se centra
+       el bloque entero: centrarlo dejaba el titular flotando y todo el vacío
+       debajo de la tarjeta, porque el epílogo ocupa su sitio sin verse durante
+       cuatro quintas partes del pin. Así el titular se queda arriba, el epílogo
+       abajo y las tarjetas de fase en el centro óptico — que es donde el ojo
+       las busca mientras se desplaza. */
+    .seccion-procedimiento.seccion-fijada > * {
+      display: flex;
+      flex-direction: column;
+      block-size: 100%;
+    }
+    /* El aire sobrante va ARRIBA de la escena, no repartido: debajo ya está la
+       banda que el epílogo tiene reservada —142px que no se ven durante cuatro
+       quintas partes del pin— y sumarle la mitad del sobrante convertía ese
+       hueco en el protagonista. Con el sobrante arriba, los dos huecos que
+       flanquean la escena miden casi lo mismo y el epílogo aterriza pegado a
+       ella cuando por fin llega. */
+    .seccion-procedimiento.seccion-fijada .procedimiento { margin-block: auto 40px; }
+  }
+  /* La fase despachada se apaga a ink-500 mientras sale (§3.S3). Es un cambio
+     de clase y no un tween: interpolar un color con el scrub está prohibido. */
+  .fase--despachada,
+  .fase--despachada :where(h3, p) { color: var(--ink-500); }
+
+  /* ─── El tachón de S2: un trazo de tinta, dibujado con stroke-dashoffset ─ */
+  .tachon { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; pointer-events: none; }
+  .tachon__trazo { stroke: var(--oxblood-500); stroke-width: 3; fill: none; stroke-linecap: round; }
+  .nota-margen {
+    font-family: var(--font-serif);
+    font-style: italic;
+    color: var(--oxblood-400);
+  }
+
+  /* ─── La hoja del acta (DESIGN.md §6: bisel de 6px a 45°) ─────────────── */
+  .hoja-acta {
+    background-color: var(--paper-50);
+    border-radius: var(--radius-lg);
+    clip-path: polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px);
+    box-shadow: var(--shadow-e2);
+    padding: 24px;
+    color: var(--graphite-800);
+  }
+  .hoja-acta__titulo {
+    font-family: var(--font-serif);
+    font-size: var(--text-2xl);
+    font-weight: 600;
+    color: var(--graphite-900);
+    letter-spacing: -0.015em;
+  }
+  .hoja-acta__recuento {
+    font-family: var(--font-sans);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--text-sm);
+    color: var(--graphite-700);
+  }
+  .hoja-acta__paso {
+    display: flex;
+    gap: 12px;
+    align-items: start;
+    font-family: var(--font-serif);
+    font-size: var(--text-sm);
+    color: var(--graphite-800);
+  }
+  .casilla__marco { stroke: var(--graphite-600); stroke-width: 1.5; fill: none; }
+  .casilla__check { stroke: var(--brass-800); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ─── El sello: anilina sobre papel. Un único momento impact (D7). ─────── */
+  .sello { display: block; color: var(--aniline-500); }
+  .sello--reposo { color: var(--aniline-400); }   /* firma en reposo sobre paño (S11) */
+
+  /* ─── Preguntas: <details> nativo. Funciona sin JS y porta el estado. ──── */
+  .faq__entrada {
+    border-block-end: 1px solid var(--stroke-hairline);
+  }
+  .faq__pregunta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-block-size: 44px;
+    padding-block: 16px;
+    cursor: pointer;
+    list-style: none;
+    font-family: var(--font-serif);
+    font-size: var(--text-lg);
+    font-weight: 600;
+    color: var(--content-strong);
+  }
+  .faq__pregunta::-webkit-details-marker { display: none; }
+  .faq__galon {
+    flex: none;
+    color: var(--brass-500);
+    transition: rotate var(--duration-reveal) var(--ease-settle);
+  }
+  .faq__entrada[open] .faq__galon { rotate: 180deg; }
+  .faq__cuerpo {
+    font-family: var(--font-serif);
+    color: var(--ink-200);
+    padding-block-end: 16px;
+  }
+  /* §7.5 pide divulgación por `grid-template-rows: 0fr→1fr` y nunca por
+     `height`. Con `<details>` nativo esa técnica no aplica —el contenido
+     cerrado ni siquiera se renderiza—, así que la lectura moderna equivalente
+     es animar `::details-content`, que es lo que el navegador sí puede
+     componer. Donde no exista, el acordeón abre por corte: sigue funcionando,
+     solo pierde el tiempo. */
+  @supports selector(details::details-content) {
+    .faq__entrada::details-content {
+      block-size: 0;
+      overflow: hidden;
+      transition: block-size var(--duration-reveal) var(--ease-settle),
+                  content-visibility var(--duration-reveal) allow-discrete;
+    }
+    .faq__entrada[open]::details-content { block-size: auto; }
+  }
+
+  /* ─── Chips de integración ────────────────────────────────────────────── */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--stroke-hairline);
+    background-color: var(--surface-1);
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    color: var(--ink-200);
+  }
+
+  /* ─── Telégrafo (DESIGN.md §8.7) ──────────────────────────────────────── */
+  .telegrafo__entrada {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-block: 8px;
+    border-block-end: 1px solid var(--stroke-hairline);
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    color: var(--ink-200);
+  }
+  .telegrafo__check { color: var(--success); flex: none; }
+
+  /* ─── La Sesión de Muestra ────────────────────────────────────────────── */
+  /* EL ALTO RESERVADO ES EL ALTO EN QUE LA SESIÓN TERMINA, no el del fotograma
+     que se sirve. Son cosas distintas: el botón «Reproducir de nuevo» nace
+     oculto y aparece al acabar, así que sin reserva la tarjeta crecería 64px a
+     los cuarenta segundos y empujaría hacia abajo todo lo que tiene debajo.
+     Reservarlo es lo que mantiene el CLS por debajo de 0,1 (§7).
+
+     772px en móvil no es un número redondeado a ojo: los 844 de la pantalla de
+     referencia menos los 69 de la cabecera adherida dejan 775 de hueco real, y
+     la reserva se queda justo por debajo. O sea, UN PANTALLAZO — que es lo que
+     §8.15 le pide a esta pieza. La sesión terminada mide 767 medidos, así que
+     la reserva la cubre con cinco píxeles de holgura.
+     En `lg+` la tarjeta es más ancha, el acta cabe en menos renglones y la
+     sesión termina en 695: reservar más dejaría hueco muerto dentro de la
+     tarjeta, que es el otro modo de equivocarse con esta medida. */
+  .sesion-muestra {
+    min-block-size: 772px;
+    display: flex;
+    flex-direction: column;
+  }
+  @media (min-width: 64rem) { .sesion-muestra { min-block-size: 696px; } }
+
+  /* En 390 la tarjeta de la demo respira 16px en vez de 20: son 8px de alto y,
+     sobre todo, 8px de ancho para el Palco en banda y para el acta. */
+  @media (max-width: 63.999rem) {
+    .sesion-muestra { padding: 16px; }
+    /* La pregunta del usuario es un turno más, y se aprieta como los turnos. */
+    .sesion-muestra .identidad--usuario { padding-block: 8px; }
+  }
+
+  /* La ventana de turnos tiene ALTO FIJO. Es lo que hace que un debate que
+     escribe texto durante cuarenta segundos no mueva ni un píxel de lo que
+     tiene debajo: los viejos salen recortados por el canto superior. Sin esto,
+     cada trozo que añade una línea empujaría el acta y la sección siguiente — y
+     eso es CLS (§7).
+
+     LOS TURNOS SE APILAN DESDE ARRIBA Y EL DESPLAZAMIENTO LOS SIGUE. Antes la
+     ventana los anclaba abajo con `justify-content: flex-end`, y eso deja un
+     agujero encima mientras sólo hay uno o dos turnos: en las fases tempranas
+     la pieza enseñaba ~170px de nada entre el recuento y el primer turno.
+     Apilando desde arriba no hay agujero nunca, y `escena.ts` lleva el
+     `scrollTop` al fondo tras cada trozo para que el turno vivo quede siempre a
+     la vista. Es lo mismo que hace una consola: el texto crece hacia abajo y la
+     vista persigue la última línea. */
+  .sesion-muestra__turnos {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 8px;
+    block-size: 15.5rem;
+    overflow: hidden;
+  }
+  /* En `lg+` la tarjeta es más ancha, cada turno ocupa menos renglones y la
+     ventana tiene que encoger CON ellos: dimensionada para tres turnos de móvil
+     dejaría 45px de hueco muerto bajo el último. La medida es la que hace que
+     los tres del fotograma final la llenen justa. */
+  @media (min-width: 64rem) { .sesion-muestra__turnos { block-size: 14rem; } }
+
+  /* El turno de la demo es más apretado que la placa de S4, que comparte clase:
+     8px de aire vertical en vez de 12 y el cuerpo a 1.45 en vez de 1.5. Son
+     ~18px por turno y ~54 en la ventana. El tamaño NO baja de 14px
+     (`--text-sm`): §5.6 pone el suelo en 12 y esto no se acerca. */
+  .sesion-muestra__turnos > .identidad { padding-block: 8px; }
+  .sesion-muestra__turnos .identidad__cuerpo { line-height: 1.45; }
+
+  .demo-recuento {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 8px;
+    font-size: var(--text-base);
+    color: var(--ink-50);
+  }
+
+  /* Un asiento del Palco: placa, aguja, voto y —bajo todo ello— el filamento
+     de deliberación, que sólo corre mientras ese director está hablando. */
+  .demo-asiento {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+    gap: 4px;
+    padding-block-end: 8px;
+    --agent: var(--brass-500);
+  }
+  .demo-asiento--ceo { --agent: var(--agent-ceo); }
+  .demo-asiento--cto { --agent: var(--agent-cto); }
+  .demo-asiento--cfo { --agent: var(--agent-cfo); }
+  .demo-asiento--cmo { --agent: var(--agent-cmo); }
+  /* El voto reserva su renglón desde el principio: al rebobinar la sesión el
+     texto se vacía, y una línea que colapsa movería el Palco entero. */
+  .demo-asiento__voto { min-block-size: 1.35em; }
+
+  /* El acta mini del hero respira menos que la hoja de S6, que comparte clase:
+     allí el papel ES el capítulo y el aire es el argumento; aquí es una miniatura
+     dentro de una tarjeta que ya tiene su propio margen. 24px de aire vertical
+     eran 24px que la demo no podía permitirse en 390×844. */
+  [data-demo-acta] { padding-block: 12px; }
+  .demo-asiento__filamento {
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline-start: 0;
+    inline-size: 100%;
+    block-size: 2px;
+    background-color: var(--agent);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform var(--duration-tap) var(--ease-mech);
+  }
+
+  /* ─── La pluma del acta (DESIGN.md §8.8): 24×2px bajo el título. Avanza por
+         trozos recibidos y se reinicia al llenar el renglón. Sin JavaScript
+         está llena, porque el acta que se sirve ya está escrita. ─────────── */
+  .pluma {
+    display: block;
+    inline-size: 24px;
+    block-size: 2px;
+    background-color: var(--brass-700);
+    transform-origin: left center;
+    transition: transform var(--duration-tap) var(--ease-mech);
+  }
+
+  /* ─── El cursor de streaming de la demo: EL bucle nº 1 del presupuesto de
+         §3.P. Vive mientras la sesión se reproduce y muere con ella; con la
+         página en reposo no queda ninguna animación corriendo. ───────────── */
+  @keyframes cursor-demo {
+    from { opacity: 100%; }
+    to   { opacity: 0%; }
+  }
+  .cursor-demo {
+    display: inline-block;
+    inline-size: 2px;
+    block-size: 1em;
+    margin-inline-start: 3px;
+    vertical-align: text-bottom;
+    background-color: var(--brass-400);
+    animation: cursor-demo 1.06s steps(2, jump-none) infinite;
+  }
+
+  /* ─── Sólo para lectores de pantalla ──────────────────────────────────── */
+  .visualmente-oculto {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* ─── Enlace de salto ─────────────────────────────────────────────────── */
+  .enlace-salto {
+    position: absolute;
+    inset-inline-start: 8px;
+    inset-block-start: -100px;
+    z-index: 60;
+    background-color: var(--accent-fill);
+    color: var(--accent-on-fill);
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: 550;
+    text-decoration: none;
+  }
+  .enlace-salto:focus { inset-block-start: 8px; }
+}

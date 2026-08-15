@@ -1,0 +1,31 @@
+# dependencias
+node_modules/
+.pnpm-store/
+
+# salida de build (PROHIBIDO construir en local; se construye en CI/despliegue)
+dist/
+dist-ssr/
+.vite/
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# entorno
+.env
+.env.local
+.env.*.local
+
+# editor / sistema
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# cobertura de tests
+coverage/
+
+# temporales del generador de assets
+scripts/.tmp/

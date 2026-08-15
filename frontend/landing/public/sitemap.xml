@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Una URL, porque la landing es una sola página: las secciones S1-S11 son
+     anclas del mismo documento, no rutas. Un sitemap que las listara como
+     URLs distintas estaría declarando páginas que no existen. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://landingsphere-production.up.railway.app/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>

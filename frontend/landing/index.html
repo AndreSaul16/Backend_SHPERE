@@ -1,0 +1,902 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  <title>SPHERE — La junta directiva de IA que debate, vota y firma tu decisión</title>
+  <meta name="description" content="Somete tu decisión a una junta de directores IA: debaten en fases, se rebaten, votan con confianza 0–100 y firman un acta con próximos pasos. 30 créditos gratis al mes.">
+
+  <!-- El dominio sale de LANDING_URL (src/config.ts) por el plugin de Vite: una
+       sola constante que cambiar cuando el dueño enganche el dominio bueno. -->
+  <link rel="canonical" href="%URL_LANDING%/">
+
+  <!-- El color con el que el navegador tiñe su barra: baize-950, el fondo real
+       del documento. #060F09 es el sRGB medido de oklch(0.155 0.018 158) — va
+       en hexadecimal porque theme-color no es CSS y no lee las variables. -->
+  <meta name="theme-color" content="#060F09">
+
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="%URL_LANDING%/">
+  <meta property="og:title" content="SPHERE — La junta directiva de IA que debate, vota y firma tu decisión">
+  <meta property="og:description" content="Somete tu decisión a una junta de directores IA: debaten en fases, se rebaten, votan con confianza 0–100 y firman un acta con próximos pasos. 30 créditos gratis al mes.">
+  <!-- ABSOLUTA y no «/og.png»: ni LinkedIn ni WhatsApp ni Slack resuelven
+       rutas relativas al rastrear, y la tarjeta saldría sin imagen. -->
+  <meta property="og:image" content="%URL_LANDING%/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Deja de decidir solo. — el acta de una junta de SPHERE, sellada, con el recuento SÍ 2 · COND 1 · NO 1.">
+  <meta property="og:locale" content="es_ES">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <!-- Fallback rasterizado para quien no pinta SVG (`pnpm og` lo genera). -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+
+  <!-- ═══ Datos estructurados ══════════════════════════════════════════════
+       SOLO lo que está respaldado en el apéndice factual de DIRECCION.md §6.
+       Nada de `aggregateRating` ni `reviewCount`: no existen reseñas, y §0.2.6
+       prohíbe inventarlas — en datos estructurados además es motivo de sanción
+       manual de Google, no sólo una mentira. La oferta de 0 € con 30 créditos
+       está en `backend/app/core/config.py:145-151` y el alta sin tarjeta en
+       `AuthContext.tsx`. ══════════════════════════════════════════════════ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "SPHERE",
+    "url": "%URL_LANDING%/",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "inLanguage": "es-ES",
+    "description": "Somete tu decisión a una junta de directores IA: debaten en fases, se rebaten, votan con confianza 0–100 y firman un acta con próximos pasos.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "EUR",
+      "description": "30 créditos gratis cada mes al verificar el email. Sin tarjeta y sin suscripción."
+    }
+  }
+  </script>
+
+  <!-- Preload SOLO de las dos caras críticas y ANTES de la hoja de estilos
+       (DESIGN.md §3.1). La itálica de Literata no se precarga: sólo la usan
+       notas de margen y citas, que no están en el primer viewport. -->
+  <link rel="preload" href="/fonts/archivo-var.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/literata-var.woff2" as="font" type="font/woff2" crossorigin>
+
+  <script type="module" src="/src/main.ts"></script>
+</head>
+
+<body>
+  <a class="enlace-salto" href="#contenido">Saltar al contenido</a>
+
+  <!-- ═══ El Canto: el orden del día de la página. Cada segmento es un enlace
+       real, así que la navegación existe sin una línea de JavaScript. ═══ -->
+  <nav class="canto" data-canto role="navigation" aria-label="Orden del día de la página">
+    <div class="canto__pista">
+      <a class="canto__segmento" data-canto-segmento href="#hero"><span class="canto__etiqueta">Convocatoria</span></a>
+      <a class="canto__segmento" data-canto-segmento href="#problema"><span class="canto__etiqueta">El problema</span></a>
+      <a class="canto__segmento" data-canto-segmento href="#procedimiento"><span class="canto__etiqueta">El procedimiento</span></a>
+      <a class="canto__segmento" data-canto-segmento href="#directores"><span class="canto__etiqueta">La mesa</span></a>
+      <a class="canto__segmento" data-canto-segmento href="#voto"><span class="canto__etiqueta">El voto</span></a>
+      <a class="canto__segmento" data-canto-segmento href="#acta"><span class="canto__etiqueta">El acta</span></a>
+      <a class="canto__segmento" data-canto-segmento href="#despues"><span class="canto__etiqueta">Después de la junta</span></a>
+      <a class="canto__segmento" data-canto-segmento href="#sala"><span class="canto__etiqueta">La sala</span></a>
+      <a class="canto__segmento" data-canto-segmento href="#precios"><span class="canto__etiqueta">Precios</span></a>
+      <a class="canto__segmento" data-canto-segmento href="#preguntas"><span class="canto__etiqueta">Preguntas</span></a>
+      <a class="canto__segmento" data-canto-segmento href="#cierre"><span class="canto__etiqueta">Se levanta la sesión</span></a>
+    </div>
+    <span class="canto__cursor" data-canto-cursor aria-hidden="true"></span>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       Definiciones SVG reutilizadas. El sello es un activo pre-horneado: la
+       sangría de tinta vive en las irregularidades del propio trazado, nunca
+       en un filtro de runtime (DESIGN.md §8.3 / DIRECCION.md §5.4).
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+    <defs>
+      <!-- El renglón del sello, con dos correcciones que se explican solas al
+           verlo pero no al leerlo:
+           · r=34 y no r=40. En `textPath` las letras crecen HACIA FUERA desde
+             la línea base, así que a r=40 la leyenda llegaba a r≈41 y el anillo
+             exterior (r≈44, grosor 3 → borde interior 42.5) la partía por la
+             mitad a todos los tamaños. A 34 tiene su propia banda entre las dos
+             reglas y se lee.
+           · La leyenda se centra al 50% del renglón —el punto más lejano del
+             arranque— y el `<text>` se gira 180°. Con `startOffset="25%"` la
+             mitad izquierda del texto caía ANTES del inicio del trazado y el
+             SVG descarta en silencio los glifos que no caben: el sello ponía
+             «HERE · JUNTA · ACTA». Centrada al 50% ocupa 16%→84% y cabe entera;
+             ahí abajo los glifos miran hacia fuera (o sea, del revés), y el
+             giro de 180° los sube al arco superior ya derechos y leyendo de
+             izquierda a derecha.
+           NO se mueve el ARRANQUE del renglón para colocar la leyenda: con
+           `large-arc == sweep`, un arco que empiece abajo resuelve su centro
+           en (48,116) —fuera del viewBox— y la leyenda desaparece entera.
+           Ambos fallos son mudos; los vigila `test/activosSociales.test.ts`. -->
+      <path id="sello-renglon" fill="none" d="M48 14A34 34 0 1 1 47.99 14"/>
+      <symbol id="sello" viewBox="0 0 96 96">
+        <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path stroke-width="3" d="M92.40 48.00A44.4 44.4 0 0 1 78.83 78.83A43.6 43.6 0 0 1 48.00 92.60A44.6 44.6 0 0 1 17.03 78.97A43.8 43.8 0 0 1 3.80 48.00A44.2 44.2 0 0 1 17.24 17.24A43.5 43.5 0 0 1 48.00 3.50A44.5 44.5 0 0 1 79.04 16.96A43.9 43.9 0 0 1 92.40 48.00Z"/>
+          <circle stroke-width="1.2" cx="48" cy="48" r="31.5"/>
+          <g transform="translate(48 48) scale(1.75) translate(-12 -12)" stroke-width="0.9">
+            <path d="M17.313 13.424A5.5 5.5 0 0 1 13.423 17.313L13.087 16.057A4.2 4.2 0 0 1 10.913 16.057L10.577 17.313A5.5 5.5 0 0 1 6.687 13.424"/>
+          </g>
+        </g>
+        <text transform="rotate(180 48 48)" fill="currentColor" font-family="Archivo, sans-serif" font-size="9.5" font-weight="600" letter-spacing="1.6">
+          <textPath href="#sello-renglon" startOffset="50%" text-anchor="middle">SPHERE · JUNTA · ACTA</textPath>
+        </text>
+      </symbol>
+    </defs>
+  </svg>
+
+  <!-- ═══ S0 · Navegación ═══════════════════════════════════════════════ -->
+  <header id="top" class="panel-e1 filete-inferior sticky top-0 z-30">
+    <div class="mx-auto flex max-w-[80rem] items-center gap-4 px-4 py-3 lg:px-8">
+      <a class="marca" href="#top" aria-label="SPHERE, inicio">
+        <svg class="marca__simbolo" width="28" height="28" viewBox="0 0 24 24" aria-hidden="true" focusable="false"
+             fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path data-marca-anillo d="M12 3A9 9 0 0 1 12 21A9 9 0 0 1 12 3Z"/>
+          <path data-marca-arco d="M17.313 13.424A5.5 5.5 0 0 1 13.423 17.313L13.087 16.057A4.2 4.2 0 0 1 10.913 16.057L10.577 17.313A5.5 5.5 0 0 1 6.687 13.424"/>
+        </svg>
+        <span class="marca__wordmark" data-marca-wordmark>SPHERE</span>
+      </a>
+
+      <nav class="ml-auto hidden items-center gap-6 lg:flex" aria-label="Secciones principales">
+        <a class="text-sm text-ink-300 no-underline hover:text-ink-100" href="#procedimiento">Cómo funciona</a>
+        <a class="text-sm text-ink-300 no-underline hover:text-ink-100" href="#directores">Los directores</a>
+        <a class="text-sm text-ink-300 no-underline hover:text-ink-100" href="#acta">El acta</a>
+        <a class="text-sm text-ink-300 no-underline hover:text-ink-100" href="#precios">Precios</a>
+      </nav>
+
+      <div class="ml-auto flex items-center gap-2 lg:ml-0">
+        <a class="boton boton--fantasma" href="%URL_LOGIN%">Entrar</a>
+        <a class="boton boton--primario" href="%CTA_NAV%">Empezar gratis</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="contenido">
+
+    <!-- ═══ S1 · Hero + La Sesión de Muestra ════════════════════════════ -->
+    <section id="hero" class="px-4 pb-16 pt-10 lg:px-8 lg:pb-24 lg:pt-16">
+      <div class="mx-auto grid max-w-[80rem] gap-12 lg:grid-cols-2 lg:items-center lg:gap-16">
+
+        <div data-hero="texto">
+          <p class="rotulo" data-hero="rotulo">La junta directiva de IA</p>
+
+          <h1 class="mt-4 text-hero" data-hero="titular">Deja de decidir solo.</h1>
+
+          <p class="prosa mt-6 text-lg text-ink-200" data-hero="entradilla">SPHERE somete tu decisión a una junta de directores IA que debaten entre sí, se rebaten, votan con su nivel de confianza y firman un acta con los próximos pasos. No busca darte la razón: busca que salgas con una decisión defendible.</p>
+
+          <div class="mt-8 flex flex-wrap gap-3">
+            <a class="boton boton--primario" href="%CTA_HERO%" data-hero="cta">Convoca tu primera junta</a>
+            <a class="boton boton--fantasma" href="#procedimiento" data-hero="cta">Ver cómo funciona</a>
+          </div>
+
+          <p class="mt-4 text-xs text-ink-400" data-hero="microcopy">30 créditos gratis al verificar tu email · Sin tarjeta · Sin suscripción</p>
+        </div>
+
+        <!-- La Sesión de Muestra. Lo que hay escrito aquí es el FOTOGRAMA
+             FINAL: el estado en que la sesión termina, que es también el que
+             exigen `prefers-reduced-motion` y la ausencia de JavaScript (D4).
+             El motor de `src/demo/` rebobina esto y vuelve a llegar al mismo
+             sitio; si algún día dejasen de coincidir, la demo acabaría en un
+             sitio distinto del que la página enseña. -->
+        <div class="sesion-muestra tarjeta" data-hero="demo" data-demo>
+          <p class="rotulo">Demostración · Reproducida con la gramática de eventos real del producto</p>
+
+          <p class="visualmente-oculto">Demostración: una junta de cuatro directores debate una subida de precio en cinco fases, vota tres a uno con niveles de confianza a la vista y cierra un acta con próximos pasos.</p>
+
+          <div class="mt-3 flex flex-1 flex-col" aria-hidden="true">
+            <!-- La pregunta la escribe «el usuario» de la demo: entra como un
+                 turno más, con su relleno de identidad. Así se lee de quién es
+                 sin rotularla con copy que el contrato no prescribe. -->
+            <p class="identidad identidad--usuario font-serif text-sm text-ink-100">¿Subimos el precio de 29 € a 49 € en enero?</p>
+
+            <!-- La fase viva. Los cinco nombres son los de §2.S3. -->
+            <p class="rotulo mt-3" data-demo-fase>Síntesis</p>
+
+            <!-- El Palco: los cuatro asientos visibles a la vez, con su aguja
+                 posada. Pasado el 70 la certeza se subraya en oxblood, vote a
+                 favor o en contra (DESIGN.md §8.2, P2). El arco de certeza es
+                 el MISMO trazado que el arco base, recortado con dasharray:
+                 así el valor se anima en vez de saltar entre trazados.
+
+                 UNA BANDA DE CUATRO, NO UNA REJILLA DE DOS POR DOS. §8.1 pide
+                 «todos los asientos a la vez» y una mesa se lee en fila: los
+                 cuatro asientos en una banda son 68px de alto en vez de 170, y
+                 esos 102px son la mitad de lo que la demo tenía que adelgazar
+                 para caber en 390×844. Cabe de sobra: 4×73px en los 316px
+                 útiles de la tarjeta. -->
+            <ul class="mt-3 grid grid-cols-4 gap-2" data-demo-palco>
+              <li class="demo-asiento demo-asiento--ceo" data-asiento="oberon">
+                <span class="placa">Oberon</span>
+                <svg class="aguja aguja--certeza-alta" width="33" height="20" viewBox="0 0 40 24" data-demo-aguja focusable="false">
+                  <path class="aguja__arco" d="M4 22A16 16 0 0 1 36 22"/>
+                  <path class="aguja__certeza" d="M4 22A16 16 0 0 1 36 22" stroke-dasharray="50.265" stroke-dashoffset="13.069"/>
+                  <line class="aguja__punta" x1="20" y1="22" x2="5.5" y2="22" transform="rotate(133.20 20 22)"/>
+                </svg>
+                <span class="demo-asiento__voto text-micro text-ink-300 tnum" data-demo-voto>SÍ · 74</span>
+                <span class="demo-asiento__filamento" data-demo-filamento hidden></span>
+              </li>
+              <li class="demo-asiento demo-asiento--cto" data-asiento="nexus">
+                <span class="placa">Nexus</span>
+                <svg class="aguja" width="33" height="20" viewBox="0 0 40 24" data-demo-aguja focusable="false">
+                  <path class="aguja__arco" d="M4 22A16 16 0 0 1 36 22"/>
+                  <path class="aguja__certeza" d="M4 22A16 16 0 0 1 36 22" stroke-dasharray="50.265" stroke-dashoffset="17.090"/>
+                  <line class="aguja__punta" x1="20" y1="22" x2="5.5" y2="22" transform="rotate(118.80 20 22)"/>
+                </svg>
+                <span class="demo-asiento__voto text-micro text-ink-300 tnum" data-demo-voto>COND · 66</span>
+                <span class="demo-asiento__filamento" data-demo-filamento hidden></span>
+              </li>
+              <li class="demo-asiento demo-asiento--cfo" data-asiento="ledger">
+                <span class="placa">Ledger</span>
+                <svg class="aguja aguja--certeza-alta" width="33" height="20" viewBox="0 0 40 24" data-demo-aguja focusable="false">
+                  <path class="aguja__arco" d="M4 22A16 16 0 0 1 36 22"/>
+                  <path class="aguja__certeza" d="M4 22A16 16 0 0 1 36 22" stroke-dasharray="50.265" stroke-dashoffset="6.032"/>
+                  <line class="aguja__punta" x1="20" y1="22" x2="5.5" y2="22" transform="rotate(158.40 20 22)"/>
+                </svg>
+                <span class="demo-asiento__voto text-micro text-ink-300 tnum" data-demo-voto>SÍ · 88</span>
+                <span class="demo-asiento__filamento" data-demo-filamento hidden></span>
+              </li>
+              <li class="demo-asiento demo-asiento--cmo" data-asiento="vortex">
+                <span class="placa">Vortex</span>
+                <svg class="aguja aguja--certeza-alta" width="33" height="20" viewBox="0 0 40 24" data-demo-aguja focusable="false">
+                  <path class="aguja__arco" d="M4 22A16 16 0 0 1 36 22"/>
+                  <path class="aguja__certeza" d="M4 22A16 16 0 0 1 36 22" stroke-dasharray="50.265" stroke-dashoffset="14.577"/>
+                  <line class="aguja__punta" x1="20" y1="22" x2="5.5" y2="22" transform="rotate(127.80 20 22)"/>
+                </svg>
+                <span class="demo-asiento__voto text-micro text-ink-300 tnum" data-demo-voto>NO · 71</span>
+                <span class="demo-asiento__filamento" data-demo-filamento hidden></span>
+              </li>
+            </ul>
+
+            <!-- El recuento de la sesión, con cada cifra montada como odómetro:
+                 no se teletransporta, rueda cuando la mesa acaba de votar. -->
+            <p class="demo-recuento mt-4 tnum" data-demo-recuento>
+              <span class="rotulo">SÍ</span>
+              <span class="odometro" data-cifra="si"><span class="odometro__digito"><span class="odometro__rodillo">2</span></span></span>
+              <span class="text-ink-500">·</span>
+              <span class="rotulo">CONDICIONAL</span>
+              <span class="odometro" data-cifra="condicional"><span class="odometro__digito"><span class="odometro__rodillo">1</span></span></span>
+              <span class="text-ink-500">·</span>
+              <span class="rotulo">NO</span>
+              <span class="odometro" data-cifra="no"><span class="odometro__digito"><span class="odometro__rodillo">1</span></span></span>
+            </p>
+
+            <!-- Los últimos turnos, con su relleno de identidad y su filete de
+                 2px. Sin pico de bocadillo: esto es un acta, no mensajería.
+                 La ventana tiene alto fijo y está anclada abajo: los turnos
+                 viejos salen por arriba sin mover nada de lo que hay debajo. -->
+            <ol class="sesion-muestra__turnos mt-3" data-demo-turnos>
+              <li class="identidad identidad--cmo">
+                <p class="identidad__nombre">Vortex · CMO</p>
+                <p class="identidad__cuerpo">Es justo. En enero entra la función que llevan seis meses pidiendo; sin ella la subida no tiene relato.</p>
+              </li>
+              <li class="identidad identidad--cto">
+                <p class="identidad__nombre">Nexus · CTO</p>
+                <p class="identidad__cuerpo">Esa función llega en enero si el precio no me come el sprint de la migración.</p>
+              </li>
+              <li class="identidad identidad--ceo">
+                <p class="identidad__nombre">Oberon · CEO</p>
+                <p class="identidad__cuerpo">Sí, escalonado: nuevos clientes en enero, cartera actual en abril con aviso de 60 días.</p>
+              </li>
+            </ol>
+
+            <!-- El acta mini, ya escrita y sellada: el fotograma del final. El
+                 trazo de la pluma queda lleno porque el acta está cerrada. -->
+            <div class="hoja-acta mt-3 flex items-start gap-4" data-demo-acta>
+              <div class="min-w-0 flex-1">
+                <p class="font-serif text-sm font-semibold text-graphite-900" data-demo-acta-titulo>Acta — Subida de precio a 49 €</p>
+                <span class="pluma mt-2" data-demo-pluma></span>
+                <p class="hoja-acta__recuento mt-2" data-demo-acta-recuento>SÍ 2 · CONDICIONAL 1 · NO 1 — Recomendación: aprobar, escalonado</p>
+              </div>
+              <svg class="sello shrink-0" width="56" height="56" data-demo-sello><use href="#sello"/></svg>
+            </div>
+
+            <!-- El cursor de streaming: EL bucle nº 1 del presupuesto de §3.P.
+                 El motor lo mete dentro del turno vivo y lo retira al terminar
+                 la sesión, que es cuando la página vuelve a cero bucles. -->
+            <span class="cursor-demo" data-demo-cursor hidden></span>
+          </div>
+
+          <!-- El motor retira `hidden` cuando hay algo que reproducir: al
+               terminar la sesión, o desde el primer momento si el visitante
+               pide movimiento reducido (§8.14). Un control muerto es peor que
+               un control ausente. -->
+          <button class="boton boton--fantasma mt-5 self-start" type="button" data-demo-reproducir hidden>Reproducir de nuevo</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ S2 · El problema ════════════════════════════════════════════ -->
+    <section id="problema" class="px-4 py-20 lg:px-8 lg:py-28" data-seccion>
+      <div class="mx-auto max-w-[80rem]">
+        <p class="rotulo" data-revelar="titular">El problema</p>
+        <h2 class="mt-4 text-display" data-revelar="titular">Un chat te da una respuesta. La que querías oír.</h2>
+
+        <div class="prosa mt-8 text-ink-200" data-revelar="cuerpo">
+          <p>Pídele opinión a un único modelo y hará lo que hace siempre: completar tu entusiasmo. Te dirá que tu precio es razonable, que tu plan es sólido y que llegas en el momento perfecto. Y mañana defenderá lo contrario con la misma seguridad.</p>
+          <p>Las decisiones que importan —precio, contratación, runway, lanzamiento— no necesitan un asistente que asiente. Necesitan a alguien enfrente.</p>
+        </div>
+
+        <!-- Sin `data-revelar`: el tachón y su nota tienen coreografía propia
+             (§3.S2) y dos entradas sobre el mismo bloque se pisarían. -->
+        <div class="mt-12 grid gap-6 lg:grid-cols-[minmax(0,32rem)_auto] lg:items-center">
+          <div class="relative" data-bloque-chat>
+            <p class="tarjeta font-serif text-ink-200">Me parece una gran idea. Tu plan es sólido y el momento no podría ser mejor. Adelante.</p>
+            <svg class="tachon" viewBox="0 0 400 96" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+              <path class="tachon__trazo" data-tachon d="M14 62C90 44 168 70 244 50C306 34 350 56 386 40"/>
+            </svg>
+          </div>
+          <p class="nota-margen text-lg" data-nota-margen>¿Y si no?</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ S3 · El procedimiento ═══════════════════════════════════════
+         Sin `lg:py-28`, a diferencia del resto de secciones: en `lg+` esta se
+         FIJA entera (§3.S3) y todo lo que lleve dentro —incluidos la nota de
+         honestidad y el micro-cierre— tiene que caber en un viewport. Treinta
+         y dos píxeles de aire menos es un precio barato por eso. -->
+    <section id="procedimiento" class="seccion-procedimiento px-4 lg:px-8" data-seccion>
+      <div class="mx-auto max-w-[80rem]">
+        <p class="rotulo" data-revelar="titular">El procedimiento</p>
+        <h2 class="mt-4 text-display" data-revelar="titular">Cinco fases. Cuatro directores. Un acta.</h2>
+
+        <p class="prosa mt-8 text-ink-200" data-revelar="cuerpo">Convocas la junta con una pregunta. A partir de ahí hay procedimiento: nadie resume hasta que todos han hablado, y nadie vota sin haber sido rebatido.</p>
+
+        <!-- La escena del procedimiento. En `lg+` el motor le añade la clase
+             `procedimiento--fijado` y sólo entonces las tarjetas se apilan una
+             sobre otra dentro del pin: sin JavaScript el bloque es una rejilla
+             normal con las cinco fases legibles (D4). -->
+        <div class="procedimiento" data-procedimiento>
+          <!-- Rail de fases: hermano del Canto, más grueso. El cursor lo
+               recorre con el scrub (DIRECCION.md §3.S3). -->
+          <div class="procedimiento__rail" aria-hidden="true">
+            <p class="procedimiento__numero" data-fase-numero>
+              <span class="odometro"><span class="odometro__digito"><span class="odometro__rodillo">1</span></span></span>
+            </p>
+            <div class="rail-fases" data-rail-fases>
+              <span class="rail-fases__muesca" data-muesca></span>
+              <span class="rail-fases__muesca" data-muesca></span>
+              <span class="rail-fases__muesca" data-muesca></span>
+              <span class="rail-fases__muesca" data-muesca></span>
+              <span class="rail-fases__muesca" data-muesca></span>
+              <span class="rail-fases__cursor" data-rail-cursor></span>
+            </div>
+          </div>
+
+          <ol class="procedimiento__fases" data-fases>
+            <li class="tarjeta" data-fase>
+              <p class="text-4xl text-ink-50 tnum">1</p>
+              <h3 class="rotulo mt-3 text-ink-100">Apertura</h3>
+              <p class="prosa mt-2 text-sm text-ink-200">Cada director fija su posición inicial y su nivel de confianza.</p>
+            </li>
+            <li class="tarjeta" data-fase>
+              <p class="text-4xl text-ink-50 tnum">2</p>
+              <h3 class="rotulo mt-3 text-ink-100">Análisis</h3>
+              <p class="prosa mt-2 text-sm text-ink-200">Cada uno examina el problema desde su cartera: producto, técnica, caja y mercado.</p>
+            </li>
+            <li class="tarjeta" data-fase>
+              <p class="text-4xl text-ink-50 tnum">3</p>
+              <h3 class="rotulo mt-3 text-ink-100">Réplicas</h3>
+              <p class="prosa mt-2 text-sm text-ink-200">Se rebaten entre sí. Los argumentos débiles no llegan vivos a la votación.</p>
+            </li>
+            <li class="tarjeta" data-fase>
+              <p class="text-4xl text-ink-50 tnum">4</p>
+              <h3 class="rotulo mt-3 text-ink-100">El abogado del diablo</h3>
+              <p class="prosa mt-2 text-sm text-ink-200">Némesis entra con un único encargo: romper el consenso. Opcional. Recomendado justo cuando más seguro estás.</p>
+            </li>
+            <li class="tarjeta" data-fase>
+              <p class="text-4xl text-ink-50 tnum">5</p>
+              <h3 class="rotulo mt-3 text-ink-100">Síntesis</h3>
+              <p class="prosa mt-2 text-sm text-ink-200">El CEO recoge posiciones y votos y cierra el acta: recomendación, recuento y próximos pasos.</p>
+            </li>
+          </ol>
+        </div>
+
+        <!-- Estas dos entran TRAS la quinta fase y dentro del mismo pin
+             (§3.S3), así que no llevan el reveal estándar: las mueve la
+             coreografía de la sección. -->
+        <p class="nota-filete mt-10" data-cierre-fases>Si la junta alcanza consenso pronto, el debate se abrevia y las réplicas se saltan. Pagas deliberación, no teatro.</p>
+
+        <p class="mt-6 font-serif text-lg italic text-ink-200" data-cierre-fases>Y puedes intervenir en cualquier fase. Es tu junta.</p>
+      </div>
+    </section>
+
+    <!-- ═══ S4 · La mesa ════════════════════════════════════════════════ -->
+    <section id="directores" class="px-4 py-20 lg:px-8 lg:py-28" data-seccion>
+      <div class="mx-auto max-w-[80rem]">
+        <p class="rotulo" data-revelar="titular">La mesa</p>
+        <h2 class="mt-4 text-display" data-revelar="titular">Cuatro carteras. Y un quinto que viene a incomodar.</h2>
+
+        <!-- Sin `data-revelar`: las placas entran con su física propia y el
+             barrido de presentación de las agujas va con ellas (§3.S4). -->
+        <ul class="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-5" data-placas>
+          <li class="identidad identidad--ceo">
+            <h3 class="placa">Oberon</h3>
+            <p class="identidad__nombre mt-2">CEO</p>
+            <svg class="aguja aguja--certeza-alta mt-2" width="40" height="24" viewBox="0 0 40 24" role="meter"
+                 aria-valuemin="0" aria-valuemax="100" aria-valuenow="74" aria-label="Confianza de Oberon en la sesión de demostración: 74 sobre 100">
+              <path class="aguja__arco" d="M4 22A16 16 0 0 1 36 22"/>
+              <path class="aguja__certeza" d="M4 22A16 16 0 0 1 36 22" stroke-dasharray="50.265" stroke-dashoffset="13.069"/>
+              <line class="aguja__punta" x1="20" y1="22" x2="5.5" y2="22" transform="rotate(133.20 20 22)"/>
+            </svg>
+            <p class="identidad__cuerpo mt-2">Preside, sintetiza y firma el acta. La recomendación final lleva su nombre.</p>
+          </li>
+
+          <li class="identidad identidad--cto">
+            <h3 class="placa">Nexus</h3>
+            <p class="identidad__nombre mt-2">CTO</p>
+            <svg class="aguja mt-2" width="40" height="24" viewBox="0 0 40 24" role="meter"
+                 aria-valuemin="0" aria-valuemax="100" aria-valuenow="66" aria-label="Confianza de Nexus en la sesión de demostración: 66 sobre 100">
+              <path class="aguja__arco" d="M4 22A16 16 0 0 1 36 22"/>
+              <path class="aguja__certeza" d="M4 22A16 16 0 0 1 36 22" stroke-dasharray="50.265" stroke-dashoffset="17.090"/>
+              <line class="aguja__punta" x1="20" y1="22" x2="5.5" y2="22" transform="rotate(118.80 20 22)"/>
+            </svg>
+            <p class="identidad__cuerpo mt-2">Viabilidad técnica, deuda y plazos. Le da igual lo bonito del plan si no se puede construir.</p>
+          </li>
+
+          <li class="identidad identidad--cfo">
+            <h3 class="placa">Ledger</h3>
+            <p class="identidad__nombre mt-2">CFO</p>
+            <svg class="aguja aguja--certeza-alta mt-2" width="40" height="24" viewBox="0 0 40 24" role="meter"
+                 aria-valuemin="0" aria-valuemax="100" aria-valuenow="88" aria-label="Confianza de Ledger en la sesión de demostración: 88 sobre 100">
+              <path class="aguja__arco" d="M4 22A16 16 0 0 1 36 22"/>
+              <path class="aguja__certeza" d="M4 22A16 16 0 0 1 36 22" stroke-dasharray="50.265" stroke-dashoffset="6.032"/>
+              <line class="aguja__punta" x1="20" y1="22" x2="5.5" y2="22" transform="rotate(158.40 20 22)"/>
+            </svg>
+            <p class="identidad__cuerpo mt-2">Caja, márgenes y runway. Pone números donde tú pusiste esperanza.</p>
+          </li>
+
+          <li class="identidad identidad--cmo">
+            <h3 class="placa">Vortex</h3>
+            <p class="identidad__nombre mt-2">CMO</p>
+            <svg class="aguja aguja--certeza-alta mt-2" width="40" height="24" viewBox="0 0 40 24" role="meter"
+                 aria-valuemin="0" aria-valuemax="100" aria-valuenow="71" aria-label="Confianza de Vortex en la sesión de demostración: 71 sobre 100">
+              <path class="aguja__arco" d="M4 22A16 16 0 0 1 36 22"/>
+              <path class="aguja__certeza" d="M4 22A16 16 0 0 1 36 22" stroke-dasharray="50.265" stroke-dashoffset="14.577"/>
+              <line class="aguja__punta" x1="20" y1="22" x2="5.5" y2="22" transform="rotate(127.80 20 22)"/>
+            </svg>
+            <p class="identidad__cuerpo mt-2">Mercado, posicionamiento y demanda. Pregunta quién lo compra antes de discutir cómo se construye.</p>
+          </li>
+
+          <!-- Némesis no tiene aguja: tiene un filete que se dibuja (§3.S4). -->
+          <li class="identidad identidad--devil">
+            <h3 class="placa">Némesis</h3>
+            <p class="identidad__nombre mt-2">Abogado del diablo</p>
+            <svg class="mt-2" width="40" height="24" viewBox="0 0 40 24" aria-hidden="true" focusable="false">
+              <line data-filete-devil x1="4" y1="18" x2="36" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="text-oxblood-400"/>
+            </svg>
+            <p class="identidad__cuerpo mt-2 font-serif italic">No tiene cartera. Tiene un encargo: encontrar el fallo del consenso antes de que lo encuentre la realidad.</p>
+          </li>
+        </ul>
+
+        <p class="prosa mt-10 text-ink-200" data-revelar="cuerpo">¿Tu decisión pide otra silla —legal, médica, académica—? Crea tus propios especialistas con su base de conocimiento y consúltalos en su despacho.</p>
+      </div>
+    </section>
+
+    <!-- ═══ S5 · El voto ════════════════════════════════════════════════ -->
+    <section id="voto" class="px-4 py-20 lg:px-8 lg:py-28" data-seccion>
+      <div class="mx-auto max-w-[80rem]">
+        <p class="rotulo" data-revelar="titular">El voto</p>
+        <h2 class="mt-4 text-display" data-revelar="titular">El desacuerdo es la señal.</h2>
+
+        <p class="prosa mt-8 text-ink-200" data-revelar="cuerpo">Cada director vota SÍ, NO o CONDICIONAL, con su confianza de 0 a 100 a la vista. Una junta 4–0 te dice una cosa; una 3–1 con un NO al 85 te dice otra mucho más interesante. SPHERE no esconde el conflicto: lo mide y te lo pone delante, porque la certeza alta en contra es la información más valiosa de la mesa.</p>
+
+        <!-- Sin `data-revelar`: los odómetros y las cuatro agujas escalonadas
+             son la coreografía de esta pieza (§3.S5). -->
+        <div class="tarjeta mt-12" data-recuento>
+          <!-- El recuento es la línea de §2.S5. Cada cifra es un odómetro:
+               `data-saliente` declara de qué número viene, y ese dato basta
+               para que el rodillo ruede una vez al entrar en el viewport. -->
+          <p class="flex flex-wrap items-baseline gap-x-3 text-3xl text-ink-50 tnum">
+            <span class="rotulo">SÍ</span>
+            <span class="odometro" data-cifra="si"><span class="odometro__digito" data-saliente="1"><span class="odometro__rodillo">2</span></span></span>
+            <span class="text-ink-500">·</span>
+            <span class="rotulo">CONDICIONAL</span>
+            <span class="odometro" data-cifra="condicional"><span class="odometro__digito" data-saliente="0"><span class="odometro__rodillo">1</span></span></span>
+            <span class="text-ink-500">·</span>
+            <span class="rotulo">NO</span>
+            <span class="odometro" data-cifra="no"><span class="odometro__digito" data-saliente="0"><span class="odometro__rodillo">1</span></span></span>
+          </p>
+
+          <ul class="mt-8 flex flex-wrap gap-6">
+            <li class="flex items-center gap-3">
+              <svg class="aguja aguja--certeza-alta" width="40" height="24" viewBox="0 0 40 24" role="meter"
+                   aria-valuemin="0" aria-valuemax="100" aria-valuenow="74" aria-label="Oberon, sí, confianza 74 sobre 100">
+                <path class="aguja__arco" d="M4 22A16 16 0 0 1 36 22"/>
+                <path class="aguja__certeza" d="M4 22A16 16 0 0 1 36 22" stroke-dasharray="50.265" stroke-dashoffset="13.069"/>
+                <line class="aguja__punta" x1="20" y1="22" x2="5.5" y2="22" transform="rotate(133.20 20 22)"/>
+              </svg>
+              <span class="aguja__cifra">Oberon · SÍ 74</span>
+            </li>
+            <li class="flex items-center gap-3">
+              <svg class="aguja" width="40" height="24" viewBox="0 0 40 24" role="meter"
+                   aria-valuemin="0" aria-valuemax="100" aria-valuenow="66" aria-label="Nexus, condicional, confianza 66 sobre 100">
+                <path class="aguja__arco" d="M4 22A16 16 0 0 1 36 22"/>
+                <path class="aguja__certeza" d="M4 22A16 16 0 0 1 36 22" stroke-dasharray="50.265" stroke-dashoffset="17.090"/>
+                <line class="aguja__punta" x1="20" y1="22" x2="5.5" y2="22" transform="rotate(118.80 20 22)"/>
+              </svg>
+              <span class="aguja__cifra">Nexus · CONDICIONAL 66</span>
+            </li>
+            <li class="flex items-center gap-3">
+              <svg class="aguja aguja--certeza-alta" width="40" height="24" viewBox="0 0 40 24" role="meter"
+                   aria-valuemin="0" aria-valuemax="100" aria-valuenow="88" aria-label="Ledger, sí, confianza 88 sobre 100">
+                <path class="aguja__arco" d="M4 22A16 16 0 0 1 36 22"/>
+                <path class="aguja__certeza" d="M4 22A16 16 0 0 1 36 22" stroke-dasharray="50.265" stroke-dashoffset="6.032"/>
+                <line class="aguja__punta" x1="20" y1="22" x2="5.5" y2="22" transform="rotate(158.40 20 22)"/>
+              </svg>
+              <span class="aguja__cifra">Ledger · SÍ 88</span>
+            </li>
+            <li class="flex items-center gap-3">
+              <svg class="aguja aguja--certeza-alta" width="40" height="24" viewBox="0 0 40 24" role="meter"
+                   aria-valuemin="0" aria-valuemax="100" aria-valuenow="71" aria-label="Vortex, no, confianza 71 sobre 100">
+                <path class="aguja__arco" d="M4 22A16 16 0 0 1 36 22"/>
+                <path class="aguja__certeza" d="M4 22A16 16 0 0 1 36 22" stroke-dasharray="50.265" stroke-dashoffset="14.577"/>
+                <line class="aguja__punta" x1="20" y1="22" x2="5.5" y2="22" transform="rotate(127.80 20 22)"/>
+              </svg>
+              <span class="aguja__cifra">Vortex · NO 71</span>
+            </li>
+          </ul>
+        </div>
+
+        <p class="rotulo mt-4" data-revelar="cuerpo">Confianza 0–100 · Pasado el 70, la certeza se subraya en oxblood</p>
+      </div>
+    </section>
+
+    <!-- ═══ S6 · El acta — el capítulo en papel ═════════════════════════ -->
+    <section id="acta" class="capitulo-papel px-4 py-20 lg:px-8 lg:py-28" data-seccion>
+      <div class="mx-auto max-w-[80rem]">
+        <p class="rotulo" data-revelar="titular">La constancia</p>
+        <h2 class="mt-4 text-display" data-revelar="titular">Sales con un acta, no con una charla.</h2>
+
+        <p class="prosa mt-8" data-revelar="cuerpo">Recomendación razonada, recuento de votos con la confianza de cada director y una sección de próximos pasos con su responsable. Exporta el acta, compártela por un enlace de solo lectura o convierte los próximos pasos en issues de GitHub sin salir de la sala.</p>
+
+        <!-- Sin `data-revelar`: la hoja se desenrolla con su propio scrub y de
+             ahí salen las casillas y el sello (§3.S6). -->
+        <div class="hoja-acta mx-auto mt-12 max-w-measure" data-hoja-acta>
+          <div class="flex items-start justify-between gap-6">
+            <h3 class="hoja-acta__titulo">Acta — Subida de precio a 49 €</h3>
+            <!-- El sello: aterriza UNA vez, y es el único momento impact de la
+                 página junto con su gemelo de la demo (D7). -->
+            <svg class="sello shrink-0" width="96" height="96" data-sello role="img" aria-label="Acta sellada por la junta"><use href="#sello"/></svg>
+          </div>
+
+          <p class="hoja-acta__recuento mt-4">SÍ 2 · CONDICIONAL 1 · NO 1 — Recomendación: aprobar, escalonado</p>
+
+          <h4 class="mt-8 font-serif text-lg font-semibold text-graphite-900">Próximos pasos</h4>
+          <ul class="mt-3 space-y-3">
+            <li class="hoja-acta__paso">
+              <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" focusable="false" class="mt-1 shrink-0">
+                <rect class="casilla__marco" x="1" y="1" width="16" height="16" rx="2"/>
+                <path class="casilla__check" data-casilla d="M4.5 9.5 7.5 12.5 13.5 5.5"/>
+              </svg>
+              <span>① Anunciar el cambio a la cartera con 60 días de aviso — Vortex</span>
+            </li>
+            <li class="hoja-acta__paso">
+              <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" focusable="false" class="mt-1 shrink-0">
+                <rect class="casilla__marco" x="1" y="1" width="16" height="16" rx="2"/>
+                <path class="casilla__check" data-casilla d="M4.5 9.5 7.5 12.5 13.5 5.5"/>
+              </svg>
+              <span>② Configurar el nuevo precio y el grandfathering en Stripe — Nexus</span>
+            </li>
+            <li class="hoja-acta__paso">
+              <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" focusable="false" class="mt-1 shrink-0">
+                <rect class="casilla__marco" x="1" y="1" width="16" height="16" rx="2"/>
+                <path class="casilla__check" data-casilla d="M4.5 9.5 7.5 12.5 13.5 5.5"/>
+              </svg>
+              <span>③ Modelar el impacto en MRR de las dos cohortes — Ledger</span>
+            </li>
+          </ul>
+        </div>
+
+        <p class="mx-auto mt-4 max-w-measure text-xs text-graphite-600" data-revelar="cuerpo">El sello: una vez por debate, cuando el acta queda cerrada. Documento de demostración.</p>
+      </div>
+    </section>
+
+    <!-- ═══ S7 · Después de la junta ════════════════════════════════════ -->
+    <section id="despues" class="px-4 py-20 lg:px-8 lg:py-28" data-seccion>
+      <div class="mx-auto max-w-[80rem]">
+        <p class="rotulo" data-revelar="titular">Después de la junta</p>
+        <h2 class="mt-4 text-display" data-revelar="titular">La junta delibera. Tus directores ejecutan.</h2>
+
+        <p class="prosa mt-8 text-ink-200" data-revelar="cuerpo">Durante el debate no se toca nada: la junta piensa, vota y deja cada acción asignada en el acta. Ejecutar es el segundo acto, en el despacho de cada director, con herramientas conectadas a tus cuentas: enviar el resumen por WhatsApp, llevar el acta a Notion, crear el evento en Google Calendar, abrir las issues en GitHub, publicar en LinkedIn o Instagram, o disparar tus flujos de n8n. Las acciones sensibles piden tu confirmación, y los mensajes solo salen hacia contactos que tú has autorizado.</p>
+
+        <!-- Sin `data-revelar`: las tres entradas del telégrafo llegan
+             escalonadas medio segundo entre sí, no con el stagger de una
+             lista (§3.S7). -->
+        <div class="tarjeta mt-12 max-w-[36rem]" data-telegrafo>
+          <p class="rotulo">Secuencia de demostración</p>
+          <ol class="mt-3">
+            <li class="telegrafo__entrada">
+              <svg class="telegrafo__check" width="16" height="16" viewBox="0 0 18 18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path data-check d="M4 9.5 7 12.5 14 5"/></svg>
+              <span>Acta → Notion · 12:04</span>
+            </li>
+            <li class="telegrafo__entrada">
+              <svg class="telegrafo__check" width="16" height="16" viewBox="0 0 18 18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path data-check d="M4 9.5 7 12.5 14 5"/></svg>
+              <span>Resumen → WhatsApp (Rubén) · 12:05</span>
+            </li>
+            <li class="telegrafo__entrada">
+              <svg class="telegrafo__check" width="16" height="16" viewBox="0 0 18 18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path data-check d="M4 9.5 7 12.5 14 5"/></svg>
+              <span>Issue #142 → GitHub · 12:06</span>
+            </li>
+          </ol>
+          <p class="odometro mt-4 text-xl text-ink-50" data-contador-actuaciones>+<span class="odometro__digito" data-saliente="2"><span class="odometro__rodillo">3</span></span>&nbsp;hoy</p>
+        </div>
+
+        <ul class="mt-10 flex flex-wrap gap-2" data-revelar="pieza">
+          <li class="chip">
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg>
+            WhatsApp
+          </li>
+          <li class="chip">
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+            Notion
+          </li>
+          <li class="chip">
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
+            Google Calendar
+          </li>
+          <li class="chip">
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v12"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+            GitHub
+          </li>
+          <li class="chip">
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            LinkedIn
+          </li>
+          <li class="chip">
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            Instagram
+          </li>
+          <li class="chip">
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98"/><path d="M15.41 6.51L8.59 10.49"/></svg>
+            n8n
+          </li>
+          <li class="chip">
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l6-6-6-6"/><path d="M12 19h8"/></svg>
+            Jules
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ═══ S8 · La sala completa ═══════════════════════════════════════ -->
+    <section id="sala" class="px-4 py-20 lg:px-8 lg:py-28" data-seccion>
+      <div class="mx-auto max-w-[80rem]">
+        <p class="rotulo" data-revelar="titular">La sala</p>
+        <h2 class="mt-4 text-display" data-revelar="titular">Todo lo que una junta necesita para serlo.</h2>
+
+        <ul class="mt-12 grid gap-4 sm:grid-cols-2" data-revelar="pieza">
+          <li class="tarjeta">
+            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false" class="text-brass-500" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M12 14v3l2 1"/></svg>
+            <h3 class="mt-3 text-xl">Juntas programadas</h3>
+            <p class="prosa mt-2 text-sm text-ink-200">Deja convocada la revisión semanal: la junta se celebra sola y el acta te espera. Hasta tres a la vez.</p>
+          </li>
+          <li class="tarjeta">
+            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false" class="text-brass-500" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            <h3 class="mt-3 text-xl">Compartir en solo lectura</h3>
+            <p class="prosa mt-2 text-sm text-ink-200">Un enlace público y tu socio lee el debate y el acta sin cuenta y sin poder tocar nada.</p>
+          </li>
+          <li class="tarjeta">
+            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false" class="text-brass-500" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <h3 class="mt-3 text-xl">Especialistas propios</h3>
+            <p class="prosa mt-2 text-sm text-ink-200">Crea directores a medida y súbeles conocimiento: hasta 20 MB de tus documentos.</p>
+          </li>
+          <li class="tarjeta">
+            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false" class="text-brass-500" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
+            <h3 class="mt-3 text-xl">Artefactos</h3>
+            <p class="prosa mt-2 text-sm text-ink-200">Código, tablas, diagramas y documentos nacen en su panel, no enterrados en el chat.</p>
+          </li>
+          <li class="tarjeta">
+            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false" class="text-brass-500" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+            <h3 class="mt-3 text-xl">Intervenir y detener</h3>
+            <p class="prosa mt-2 text-sm text-ink-200">Corta a la junta cuando quieras, aporta el dato que falta y que sigan con él sobre la mesa.</p>
+          </li>
+          <li class="tarjeta">
+            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false" class="text-brass-500" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            <h3 class="mt-3 text-xl">Razonamiento a la vista</h3>
+            <p class="prosa mt-2 text-sm text-ink-200">Cuando un director razona antes de hablar, su razonamiento queda disponible, plegado, para quien quiera auditarlo.</p>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ═══ S9 · Precios ════════════════════════════════════════════════ -->
+    <section id="precios" class="px-4 py-20 lg:px-8 lg:py-28" data-seccion>
+      <div class="mx-auto max-w-[80rem]">
+        <p class="rotulo" data-revelar="titular">Precios</p>
+        <h2 class="mt-4 text-display" data-revelar="titular">Créditos, no suscripción.</h2>
+
+        <p class="prosa mt-8 text-ink-200" data-revelar="cuerpo">Sin cuota mensual y sin permanencia. Cada mes tienes 30 créditos gratis; cuando necesites más, los compras. Un mensaje a un director cuesta 1 crédito; una junta completa, 5 — y si el triaje decide que tu pregunta no necesita a toda la mesa, 3.</p>
+
+        <div class="tarjeta mt-12 max-w-[36rem] overflow-x-auto" data-revelar="pieza">
+          <table class="w-full text-sm tnum">
+            <thead>
+              <tr>
+                <th class="rotulo pb-2 text-left" scope="col">Acción</th>
+                <th class="rotulo pb-2 text-right" scope="col">Créditos</th>
+              </tr>
+            </thead>
+            <tbody class="text-ink-200">
+              <!-- Las cifras de coste son odómetros: ruedan desde cero al
+                   entrar en el viewport (§2.S9). Sin JavaScript se leen tal
+                   cual, porque el texto real es siempre la cifra vigente. -->
+              <tr><td class="border-t border-stroke-hairline py-2">Mensaje directo a un director</td><td class="border-t border-stroke-hairline py-2 text-right text-ink-50"><span class="odometro" data-coste><span class="odometro__digito" data-saliente="0"><span class="odometro__rodillo">1</span></span></span></td></tr>
+              <tr><td class="border-t border-stroke-hairline py-2">Junta al completo</td><td class="border-t border-stroke-hairline py-2 text-right text-ink-50"><span class="odometro" data-coste><span class="odometro__digito" data-saliente="0"><span class="odometro__rodillo">5</span></span></span></td></tr>
+              <tr><td class="border-t border-stroke-hairline py-2">Junta reducida por el triaje</td><td class="border-t border-stroke-hairline py-2 text-right text-ink-50"><span class="odometro" data-coste><span class="odometro__digito" data-saliente="0"><span class="odometro__rodillo">3</span></span></span></td></tr>
+              <tr><td class="border-t border-stroke-hairline py-2">Junta programada (por ejecución)</td><td class="border-t border-stroke-hairline py-2 text-right text-ink-50"><span class="odometro" data-coste><span class="odometro__digito" data-saliente="0"><span class="odometro__rodillo">5</span></span></span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Sin `data-revelar`: la tarjeta central entra la última y su filete
+             de latón se DIBUJA (§3.S9), que no es el stagger de una lista. -->
+        <ul class="mt-10 grid gap-4 lg:grid-cols-3" data-packs>
+          <li class="tarjeta">
+            <h3 class="text-xl">Executive Pack</h3>
+            <p class="mt-2 text-sm text-ink-300 tnum">150 créditos</p>
+            <p class="mt-1 text-3xl text-ink-50 tnum">39 €</p>
+            <p class="prosa mt-3 text-sm text-ink-200">Para seguir trabajando ese mismo día tras quedarte a medias.</p>
+          </li>
+          <li class="tarjeta tarjeta--destacada" data-pack-popular>
+            <!-- El filete de latón de la tarjeta popular es este trazo, no un
+                 `border`: así se puede dibujar. Sin JavaScript está entero. -->
+            <svg class="filete-pack" aria-hidden="true" focusable="false">
+              <rect data-filete-pack x="0" y="0" width="100%" height="100%" rx="7" ry="7"/>
+            </svg>
+            <p class="rotulo text-brass-400">El más popular</p>
+            <h3 class="mt-2 text-xl">Director Pack</h3>
+            <p class="mt-2 text-sm text-ink-300 tnum">500 créditos</p>
+            <p class="mt-1 text-3xl text-ink-50 tnum">139 €</p>
+            <p class="prosa mt-3 text-sm text-ink-200">Uso recurrente durante la semana. El más popular.</p>
+          </li>
+          <li class="tarjeta">
+            <h3 class="text-xl">Boardroom Pack</h3>
+            <p class="mt-2 text-sm text-ink-300 tnum">2.000 créditos</p>
+            <p class="mt-1 text-3xl text-ink-50 tnum">550 €</p>
+            <p class="prosa mt-3 text-sm text-ink-200">Uso intensivo de herramientas y junta al completo.</p>
+          </li>
+        </ul>
+
+        <ul class="mt-4 grid gap-4 sm:grid-cols-2 lg:max-w-[48rem]" data-revelar="pieza">
+          <li class="tarjeta">
+            <h3 class="text-lg">Quick Meeting</h3>
+            <p class="mt-1 text-sm text-ink-300 tnum">25 créditos — 7,99 €</p>
+            <p class="prosa mt-2 text-sm text-ink-200">5 interacciones extra con la junta al completo.</p>
+          </li>
+          <li class="tarjeta">
+            <h3 class="text-lg">Deep Dive</h3>
+            <p class="mt-1 text-sm text-ink-300 tnum">50 créditos — 14,99 €</p>
+            <p class="prosa mt-2 text-sm text-ink-200">10 interacciones con la junta o una investigación con n8n.</p>
+          </li>
+        </ul>
+
+        <p class="mt-8 text-xs text-ink-400" data-revelar="cuerpo">Los precios son los de la aplicación. Los créditos comprados se añaden a tu saldo al momento.</p>
+
+        <p class="mt-6" data-revelar="cuerpo"><a class="boton boton--fantasma" href="%CTA_PRECIOS%">Empieza con los 30 gratis</a></p>
+      </div>
+    </section>
+
+    <!-- ═══ S10 · Preguntas ═════════════════════════════════════════════ -->
+    <section id="preguntas" class="px-4 py-20 lg:px-8 lg:py-28" data-seccion>
+      <div class="mx-auto max-w-[80rem]">
+        <!-- §2 no prescribe eyebrow para S10. El h2 sí es obligatorio (un h2
+             por sección, §2.15) y toma el nombre de capítulo de §1. -->
+        <h2 class="text-display" data-revelar="titular">Preguntas frecuentes</h2>
+
+        <!-- <details> nativo: el acordeón funciona sin JavaScript y porta la
+             semántica de expandido sin que nadie tenga que sincronizarla. -->
+        <div class="mt-10 max-w-measure" data-revelar="pieza">
+          <details class="faq__entrada">
+            <summary class="faq__pregunta">
+              ¿En qué se diferencia de preguntarle a un chat de IA?
+              <svg class="faq__galon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <div class="faq__cuerpo"><p>Un modelo solo no puede rebatirse a sí mismo con intereses distintos. Aquí hay cuatro carteras con criterios enfrentados, fases de réplica, un voto con confianza a la vista y un acta que deja constancia de quién dijo qué. El mecanismo es la diferencia: no una personalidad, un procedimiento.</p></div>
+          </details>
+
+          <details class="faq__entrada">
+            <summary class="faq__pregunta">
+              ¿Necesito tarjeta para empezar?
+              <svg class="faq__galon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <div class="faq__cuerpo"><p>No. Creas la cuenta, verificas tu email y tienes 30 créditos cada mes. Los packs existen solo para cuando quieras más.</p></div>
+          </details>
+
+          <details class="faq__entrada">
+            <summary class="faq__pregunta">
+              ¿La junta puede tocar mis cuentas de WhatsApp o Notion?
+              <svg class="faq__galon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <div class="faq__cuerpo"><p>Durante el debate, no — por diseño. Las herramientas viven en el despacho de cada director: conectas tú los servicios, las acciones sensibles piden tu confirmación explícita y los mensajes solo pueden salir hacia contactos que hayas autorizado en Ajustes.</p></div>
+          </details>
+
+          <details class="faq__entrada">
+            <summary class="faq__pregunta">
+              ¿Puedo darle contexto de mi empresa?
+              <svg class="faq__galon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <div class="faq__cuerpo"><p>Sí. Crea especialistas propios y súbeles documentos —hasta 20 MB por cuenta—: responderán con tu contexto delante, no de memoria.</p></div>
+          </details>
+
+          <details class="faq__entrada">
+            <summary class="faq__pregunta">
+              ¿Y si no estoy de acuerdo con la junta?
+              <svg class="faq__galon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <div class="faq__cuerpo"><p>Interviene: tu mensaje entra en el debate antes de la siguiente fase. Y si quieres presión de verdad, convoca a Némesis. La decisión sigue siendo tuya; el acta te da el mapa y el disenso.</p></div>
+          </details>
+
+          <details class="faq__entrada">
+            <summary class="faq__pregunta">
+              ¿Qué pasa cuando gasto los 30 créditos del mes?
+              <svg class="faq__galon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <div class="faq__cuerpo"><p>Esperas al mes siguiente o recargas desde 7,99 € (25 créditos). No hay suscripción que cancelar porque no hay suscripción.</p></div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ S11 · Cierre ════════════════════════════════════════════════ -->
+    <section id="cierre" class="px-4 py-24 text-center lg:px-8 lg:py-32" data-seccion>
+      <div class="mx-auto max-w-[48rem]">
+        <h2 class="text-hero" data-revelar="titular">La próxima decisión, no la tomes solo.</h2>
+
+        <p class="mx-auto mt-6 font-serif text-lg text-ink-200" data-revelar="cuerpo">Convoca la junta. Escucha el disenso. Llévate el acta.</p>
+
+        <div class="mt-10 flex flex-wrap items-center justify-center gap-3" data-revelar="pieza">
+          <a class="boton boton--primario" href="%CTA_CIERRE%">Empezar gratis — 30 créditos</a>
+          <!-- El sello va JUNTO al CTA (§2.S11), no debajo: en una fila que se
+               envuelve caía solo a la línea siguiente, centrado bajo los dos
+               botones, y ahí un anillo suelto se lee como un indicador de carga
+               en vez de como una firma. Atado a «Entrar» en un grupo que no se
+               parte, se queda siempre a su derecha.
+
+               Y va `aria-hidden`: es firma, no botón ni información. Ya está
+               dicho todo lo que dice —la marca está en la cabecera y en el pie—
+               y anunciarlo añadía una parada sin nada que hacer en ella. No
+               anima: ya celebró en S6 (D7). -->
+          <span class="flex items-center gap-3">
+            <a class="boton boton--fantasma" href="%URL_LOGIN%">Entrar</a>
+            <svg class="sello sello--reposo" width="44" height="44" aria-hidden="true" focusable="false"><use href="#sello"/></svg>
+          </span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ═══ Footer ════════════════════════════════════════════════════════ -->
+  <footer class="panel-e1 filete-superior px-4 py-12 lg:px-8">
+    <div class="mx-auto flex max-w-[80rem] flex-col gap-6">
+      <!-- §2.S11: símbolo + «SPHERE — la junta directiva de IA.». El «SPHERE»
+           de esa línea ES el wordmark de pie (§5.2), no una marca aparte. -->
+      <p class="marca text-sm text-ink-300">
+        <svg class="marca__simbolo" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" focusable="false"
+             fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3A9 9 0 0 1 12 21A9 9 0 0 1 12 3Z"/>
+          <path d="M17.313 13.424A5.5 5.5 0 0 1 13.423 17.313L13.087 16.057A4.2 4.2 0 0 1 10.913 16.057L10.577 17.313A5.5 5.5 0 0 1 6.687 13.424"/>
+        </svg>
+        <span><span class="marca__wordmark marca__wordmark--pie">SPHERE</span> — la junta directiva de IA.</span>
+      </p>
+
+      <nav aria-label="Enlaces del pie">
+        <ul class="flex flex-wrap gap-x-6 gap-y-2">
+          <li><a class="text-sm text-ink-300 no-underline hover:text-ink-100" href="%URL_APP%">Abrir la aplicación</a></li>
+          <li><a class="text-sm text-ink-300 no-underline hover:text-ink-100" href="%CTA_CIERRE%">Crear cuenta</a></li>
+          <li><a class="text-sm text-ink-300 no-underline hover:text-ink-100" href="%URL_LOGIN%">Entrar</a></li>
+        </ul>
+      </nav>
+
+      <p class="text-xs text-ink-500">© 2026 SPHERE. Todos los derechos reservados.</p>
+      <p class="text-xs text-ink-500">Las sesiones que se muestran en esta página son demostraciones generadas con el producto.</p>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,123 @@
+{
+  "fecha": "2026-08-15T09:45:12.123Z",
+  "url": "http://localhost:4173/",
+  "capturas": [
+    "hero-movil-390.png",
+    "hero-escritorio-1440.png",
+    "demo-terminada-movil-390.png",
+    "procedimiento-escritorio-1440.png",
+    "acta-escritorio-1440.png"
+  ],
+  "resultados": [
+    {
+      "punto": 13,
+      "titulo": "Sin JavaScript: copy completo, CTAs con href y demo en su fotograma final",
+      "estado": "ok",
+      "medido": {
+        "frasesQueFaltan": [],
+        "h1Visible": true,
+        "selloVisible": true,
+        "recuento": [
+          "si=2",
+          "condicional=1",
+          "no=1"
+        ],
+        "ctasDeRegistro": 5,
+        "ctasAbsolutos": true,
+        "utmsPresentes": [
+          "cierre",
+          "hero",
+          "nav",
+          "precios"
+        ],
+        "bloquesInvisibles": []
+      }
+    },
+    {
+      "punto": 15,
+      "titulo": "390×844: sin scroll horizontal, H1 ≤ 3 líneas, CTA en el primer viewport, demo en un pantallazo",
+      "estado": "ok",
+      "medido": {
+        "anchoDocumento": 390,
+        "anchoViewport": 390,
+        "culpablesDeDesborde": [],
+        "demoAbajo": 1477,
+        "demoEntera": false,
+        "altoDeLaCabecera": 69,
+        "pantallazoUtil": 775,
+        "ctaArriba": 511,
+        "ctaEnElPrimerViewport": true,
+        "ctaEnElTercioInferior": false,
+        "altoViewport": 844,
+        "lineasDelH1": 2,
+        "altoDeLaDemo": 772,
+        "altoDeLaDemoAlTerminar": 772,
+        "creceAlTerminar": 0,
+        "cabeEnUnPantallazo": true
+      },
+      "desviacion": "la demo NO comparte el primer viewport con el claim, y no puede: el bloque de texto del hero ocupa 511px antes de que empiece, y ese copy es el de §2, que es cerrado. Lo que sí se le exige a la pieza —caber en una pantalla— es `cabeEnUnPantallazo`, aquí arriba, y eso sí entra en el gate."
+    },
+    {
+      "punto": 16,
+      "titulo": "Bucles: ≤ 2 durante la demo, 0 con la página en reposo",
+      "estado": "ok",
+      "medido": {
+        "duranteLaDemo": 1,
+        "cualesDurante": [
+          {
+            "nombre": "cursor-demo",
+            "estado": "running",
+            "donde": "[data-demo-cursor]"
+          }
+        ],
+        "enReposoSinDemo": 0,
+        "cualesEnReposo": []
+      }
+    },
+    {
+      "punto": 14,
+      "titulo": "Movimiento reducido: cero animaciones creadas y botón «Reproducir» a la vista",
+      "estado": "ok",
+      "medido": {
+        "scrollTriggersConReduce": 0,
+        "tweensConReduce": 0,
+        "scrollTriggersSinReduce": 62,
+        "botonReproducir": {
+          "texto": "Reproducir",
+          "visible": true
+        }
+      }
+    },
+    {
+      "punto": 19,
+      "titulo": "Teclado: del skip-link al footer, con foco visible en cada parada",
+      "estado": "ok",
+      "medido": {
+        "paradas": 31,
+        "zonasEnOrden": [
+          "salto",
+          "canto",
+          "nav",
+          "hero",
+          "precios",
+          "preguntas",
+          "cierre",
+          "footer"
+        ],
+        "primeraParada": {
+          "etiqueta": "a",
+          "texto": "Saltar al contenido",
+          "zona": "salto",
+          "contorno": "2px solid @2px",
+          "esElAnilloDeLaCasa": true
+        },
+        "sinFocoVisible": 0,
+        "conAnilloQueNoEsElDeLaCasa": 0,
+        "ejemplosSinFoco": [],
+        "llegaAlFooter": true,
+        "pasaPorElCanto": true,
+        "pasaPorPreguntas": true
+      }
+    }
+  ]
+}
