@@ -13,6 +13,7 @@ import { AgentSelectorModal } from "@/components/modals/AgentSelectorModal";
 import { ToastProvider } from "@/components/ui/Toast";
 import { CommandPalette } from "@/components/ui/CommandPalette";
 import { MODULOS_DE_RUTA } from "@/lib/rutasPerezosas";
+import { RUTA_DE_INICIO } from "@/lib/rutas";
 import {
   EsqueletoDeAutenticacion,
   EsqueletoDeChat,
@@ -137,8 +138,18 @@ function AuthenticatedApp() {
       <Route path="/share/:token" element={<Suspense fallback={<EsqueletoDeDocumento />}><SharedSessionPage /></Suspense>} />
 
       {/* Protected routes */}
-      <Route path="/" element={<RutaDeChat />} />
+      {/* La casa del producto. Era `/` hasta que la landing de marketing se
+          quedó con la raíz del dominio: ver `@/lib/rutas`. */}
+      <Route path={RUTA_DE_INICIO} element={<RutaDeChat />} />
       <Route path="/chat/:sessionId" element={<RutaDeChat />} />
+      {/* Cinturón y tirantes. Nginx ya no manda `/` a la SPA, así que esta
+          ruta no la ve nadie que llegue por la barra de direcciones. Pero una
+          navegación de cliente a `/` —un `<Link>` viejo, un `history.push` de
+          una librería, el botón de atrás sobre una entrada anterior a este
+          cambio— NO pasa por nginx: la resuelve el enrutador, aquí dentro. Sin
+          esta línea caería en el `*` de abajo, que hace lo mismo pero por
+          accidente; con ella el redirect es una decisión escrita. */}
+      <Route path="/" element={<Navigate to={RUTA_DE_INICIO} replace />} />
       <Route
         path="/profile"
         element={<RutaConShell esqueleto={<EsqueletoDePagina />}><ProfilePage /></RutaConShell>}
@@ -169,7 +180,7 @@ function AuthenticatedApp() {
         element={<RutaConShell esqueleto={<EsqueletoDePagina />}><AdminPage /></RutaConShell>}
       />
       {/* Catch-all: rutas desconocidas (p.ej. /status, ya retirada) → home. */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to={RUTA_DE_INICIO} replace />} />
     </Routes>
     </>
   );
