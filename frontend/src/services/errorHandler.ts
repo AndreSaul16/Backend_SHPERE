@@ -15,6 +15,7 @@
  */
 
 import { useBillingStore } from '../store/useBillingStore';
+import { RUTA_DE_INICIO } from '../lib/rutas';
 
 export type ErrorCode =
     // auth
@@ -162,12 +163,21 @@ export function handleError(err: AppError): AppError {
             // Limpiar TODO el estado del usuario antes de redirigir (A6): si no,
             // en un navegador compartido el siguiente login vería datos de la
             // cuenta anterior hasta que los stores se recarguen.
+            //
+            // El destino es la casa del producto y NO la raíz del dominio: esto
+            // es una recarga de verdad (`window.location`), o sea que la pide
+            // nginx, y nginx sirve la landing de marketing en `/`. Con `'/'`
+            // aquí, a quien se le caduca el token le aparecía la portada
+            // comercial en vez de la pantalla de identificarse. Yendo a `/chat`
+            // entra la SPA, `RequireAuth` ve que no hay sesión y manda a
+            // `/login` guardando el destino — que es lo que este `case` quería
+            // decir desde el principio.
             if (typeof window !== 'undefined') {
                 import('../lib/clearStores').then(({ clearUserStores }) => {
                     clearUserStores();
-                    window.location.href = '/';
+                    window.location.href = RUTA_DE_INICIO;
                 }).catch(() => {
-                    window.location.href = '/';
+                    window.location.href = RUTA_DE_INICIO;
                 });
             }
             break;

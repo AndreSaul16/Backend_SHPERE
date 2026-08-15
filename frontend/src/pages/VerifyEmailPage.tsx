@@ -8,6 +8,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
+import { RUTA_DE_INICIO } from "@/lib/rutas";
 import { MailCheck, RefreshCw, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { AuthAlert, AuthNotice, AuthShell } from "@/components/auth/AuthShell";
@@ -27,8 +28,9 @@ export function VerifyEmailPage() {
     const location = useLocation();
     /* 6.2 · El destino sobrevive también a la verificación: quien abrió un
        enlace a /billing sin verificar pasa por aquí, y al verificar vuelve
-       allí, no a la portada. */
-    const destino = destinoDeRegreso(location.state) ?? "/";
+       allí, no a la casa. La casa, cuando no hay destino guardado, es
+       `/chat`: la raíz del dominio es la landing. */
+    const destino = destinoDeRegreso(location.state) ?? RUTA_DE_INICIO;
     const [cooldown, setCooldown] = useState(0);
     const [checking, setChecking] = useState(false);
     const [resent, setResent] = useState(false);

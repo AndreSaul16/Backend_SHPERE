@@ -4,6 +4,7 @@ import { User, Shield, Bell, ArrowLeft, LogOut, Save, Camera, Loader2 } from "lu
 import { Link, useNavigate } from "react-router-dom";
 import { useUserAvatar, saveUserAvatar } from "@/hooks/useUserAvatar";
 import { TIPOS_ACEPTADOS_ATTR, prepararAvatar } from "@/lib/avatar";
+import { RUTA_DE_INICIO } from "@/lib/rutas";
 import { reasonOf, toast } from "@/lib/toastBus";
 import { profileService } from "@/services/api";
 import { useAuth } from "@/contexts/auth";
@@ -112,7 +113,7 @@ export function ProfilePage() {
             {/* Header */}
             <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-surface flex items-center justify-between bg-surface-0 sticky top-0 z-10">
                 <div className="flex items-center gap-3 sm:gap-4">
-                    <Link to="/" aria-label="Volver al chat" className="p-2 hover:bg-surface rounded-full transition-colors text-content-muted hover:text-content-strong">
+                    <Link to={RUTA_DE_INICIO} aria-label="Volver al chat" className="p-2 hover:bg-surface rounded-full transition-colors text-content-muted hover:text-content-strong">
                         <ArrowLeft className="h-5 w-5" aria-hidden="true" />
                     </Link>
                     <h1 className="text-base sm:text-xl font-bold text-content-strong">Mi Perfil</h1>

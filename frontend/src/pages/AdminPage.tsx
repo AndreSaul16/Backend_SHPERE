@@ -39,6 +39,7 @@ import {
     type AdminMetrics,
 } from "@/services/api";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { RUTA_DE_INICIO } from "@/lib/rutas";
 import { useEsAdminConEspera } from "@/hooks/useEsAdmin";
 import { cn } from "@/lib/utils";
 
@@ -196,7 +197,7 @@ export function AdminPage() {
                     tu sesión sigue abierta: esta pantalla simplemente no es para tu cuenta.
                 </p>
                 <Link
-                    to="/"
+                    to={RUTA_DE_INICIO}
                     className="mt-2 inline-flex items-center gap-2 rounded-sm border border-stroke-control px-4 py-2 text-sm text-content-strong hover:bg-surface-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)"
                 >
                     <Home className="h-4 w-4" aria-hidden="true" />

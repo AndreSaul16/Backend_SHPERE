@@ -7,6 +7,7 @@
 import { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
+import { RUTA_DE_INICIO } from "@/lib/rutas";
 import { PasswordField, TextField } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { buttonClass } from "@/components/ui/buttonStyles";
@@ -35,8 +36,9 @@ export function LoginPage() {
 
   /* 6.2 · Adónde se vuelve tras identificarse. `RequireAuth` deja aquí la ruta
      que el usuario pedía cuando le cortamos el paso; si no hay ninguna (entró
-     por la puerta principal), la portada. */
-  const destino = destinoDeRegreso(location.state) ?? "/";
+     por la puerta principal), la casa del producto — que ya no es la raíz del
+     dominio, porque ahí vive la landing. Ver `@/lib/rutas`. */
+  const destino = destinoDeRegreso(location.state) ?? RUTA_DE_INICIO;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -6,6 +6,7 @@ import { http, HttpResponse } from 'msw';
 import { server } from '../setup';
 import { AdminPage } from '../../src/pages/AdminPage';
 import { useBillingStore } from '../../src/store/useBillingStore';
+import { RUTA_DE_INICIO } from '../../src/lib/rutas';
 
 const USERS = 'http://localhost:8000/api/v1/admin/users';
 
@@ -110,7 +111,10 @@ describe('AdminPage — tabla accesible y guardas (6.9)', () => {
         server.use(http.get(USERS, () => HttpResponse.json({ detail: 'nope' }, { status: 403 })));
         render(<MemoryRouter><AdminPage /></MemoryRouter>);
         await screen.findByText('Sin acceso');
-        expect(screen.getByRole('link', { name: /Volver al chat/ }).getAttribute('href')).toBe('/');
+        // `/chat` y no `/`: la raíz del dominio la sirve la landing de
+        // marketing, así que «volver al chat» apuntando ahí era volver a la
+        // portada comercial. Ver `src/lib/rutas.ts`.
+        expect(screen.getByRole('link', { name: /Volver al chat/ }).getAttribute('href')).toBe(RUTA_DE_INICIO);
     });
 });
 

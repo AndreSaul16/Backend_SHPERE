@@ -11,6 +11,7 @@ import { AGENT_HEX } from '@/store/useChatStore';
 import { contarCambios } from '@/lib/cambiosSinGuardar';
 import { reasonOf, toast } from '@/lib/toastBus';
 import { normalizarModelo } from '@/lib/modelos';
+import { RUTA_DE_INICIO } from '@/lib/rutas';
 import type { AgentDetailAPI, BorradorDeAgente } from './tipos';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
@@ -100,7 +101,7 @@ export function useAgentDetail(agentId: string | undefined): FichaDeAgente {
         setBorrador(JSON.parse(huellaOriginal) as BorradorDeAgente);
     }, [huellaOriginal]);
 
-    const volver = useCallback(() => { navigate('/'); }, [navigate]);
+    const volver = useCallback(() => { navigate(RUTA_DE_INICIO); }, [navigate]);
 
     // ── Traer ────────────────────────────────────────────────────────────
     useEffect(() => {

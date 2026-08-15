@@ -3,6 +3,7 @@ import { CreditCard, Zap, Sparkles, ArrowLeft, HardDrive, FileText, RefreshCw, A
 import { Link } from 'react-router-dom';
 import { useBillingStore, skuComprable } from '../store/useBillingStore';
 import { Button } from '@/components/ui/Button';
+import { RUTA_DE_INICIO } from '@/lib/rutas';
 import { InlineError, type FalloDeSeccion } from '@/components/ui/InlineError';
 import { Odometro } from '@/components/ui/Odometro';
 import { authHeaders, profileService, type StorageUsage } from '../services/api';
@@ -341,7 +342,7 @@ export const BillingPage: React.FC = () => {
         <div className="flex flex-col h-full bg-midnight/40 overflow-y-auto">
             {/* Header */}
             <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-surface flex items-center gap-3 bg-surface-0 sticky top-0 z-10">
-                <Link to="/" aria-label="Volver al chat" className="p-2 hover:bg-surface rounded-full transition-colors text-content-muted hover:text-content-strong">
+                <Link to={RUTA_DE_INICIO} aria-label="Volver al chat" className="p-2 hover:bg-surface rounded-full transition-colors text-content-muted hover:text-content-strong">
                     <ArrowLeft className="h-5 w-5" aria-hidden="true" />
                 </Link>
                 <h1 className="text-base sm:text-xl font-bold text-content-strong flex items-center gap-2">

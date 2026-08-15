@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SettingsPage } from '../../src/pages/SettingsPage';
+import { RUTA_DE_INICIO } from '../../src/lib/rutas';
 
 // Mock all settings sub-components to avoid pulling in their dependencies
 vi.mock('@/pages/settings/ProfileSettings', () => ({
@@ -63,9 +64,10 @@ describe('SettingsPage — Scroll Fix (Task 2.4, SP-001)', () => {
         renderSettingsPage('profile');
 
         expect(screen.getByText('Configuración')).toBeInTheDocument();
-        // The back arrow link should exist
+        // The back arrow link should exist. Apunta a `/chat` y no a `/`: la
+        // raíz del dominio es la landing de marketing (ver `src/lib/rutas.ts`).
         const links = screen.getAllByRole('link');
-        const backLink = links.find(link => link.getAttribute('href') === '/');
+        const backLink = links.find(link => link.getAttribute('href') === RUTA_DE_INICIO);
         expect(backLink).toBeDefined();
     });
 

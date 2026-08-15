@@ -35,6 +35,7 @@ import {
   type EntradaDeAjustes,
 } from "@/components/layout/NavDeAjustes";
 import { useEsAdmin } from "@/hooks/useEsAdmin";
+import { RUTA_DE_INICIO } from "@/lib/rutas";
 
 /**
  * Tarea 4.5 · D17d — las cinco secciones son perezosas.
@@ -130,7 +131,7 @@ export function SettingsPage() {
       {/* Cabecera */}
       <div className="h-14 sm:h-16 pl-14 lg:pl-6 pr-3 sm:pr-6 border-b border-stroke-hairline flex items-center gap-3 bg-surface-0 sticky top-0 z-20">
         <Link
-          to="/"
+          to={RUTA_DE_INICIO}
           className="p-2 hover:bg-surface-1 rounded-sm transition-colors text-content-muted hover:text-content-strong"
           aria-label="Volver al chat"
         >

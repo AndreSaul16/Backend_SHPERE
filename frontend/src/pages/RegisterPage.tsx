@@ -7,6 +7,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
+import { RUTA_DE_INICIO } from "@/lib/rutas";
 import { PasswordField, TextField } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { buttonClass } from "@/components/ui/buttonStyles";
@@ -95,7 +96,7 @@ export function RegisterPage() {
       } else {
         await signInWithMicrosoft();
       }
-      navigate("/");
+      navigate(RUTA_DE_INICIO);
     } catch (err: unknown) {
       if (esCodigoDeFirebase(err, "auth/popup-closed-by-user")) {
         /* QA-4 · mismo criterio que en `/login`: se ofrece la redirección, no

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { AGENT_HEX, getGroupMembers, useAgentes, useChatStore } from "@/store/useChatStore";
 import { cn } from "@/lib/utils";
+import { RUTA_DE_INICIO } from "@/lib/rutas";
 import { panelClass } from "@/components/ui/cardStyles";
 import type { VisualConfig } from "@/types";
 import { TextField } from "@/components/ui/Field";
@@ -149,7 +150,7 @@ export function ChatSettingsPage() {
                     <p className="text-lg font-medium">Sin chat activo</p>
                     <p className="text-sm text-content-quiet">Selecciona o crea un chat primero para acceder a su configuración.</p>
                     <button
-                        onClick={() => navigate('/')}
+                        onClick={() => navigate(RUTA_DE_INICIO)}
                         className="mt-2 px-4 py-2 bg-electric-cyan/10 text-electric-cyan rounded-xl hover:bg-electric-cyan/20 transition-all text-sm font-medium"
                     >
                         Volver al inicio
