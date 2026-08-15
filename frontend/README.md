@@ -84,7 +84,12 @@ frontend/
 │   ├── types/             # TypeScript interfaces
 │   └── lib/               # Firebase config, utils
 ├── tests/                 # Tests con Vitest + MSW
-├── Dockerfile
+├── landing/               # La landing de marketing: proyecto Vite APARTE
+│                          # (pnpm, sin React, su propio Tailwind y su suite).
+│                          # Vive aquí porque el contexto de build de Docker
+│                          # es esta carpeta. Se sirve en `/`; la aplicación,
+│                          # en el resto de rutas. Ver landing/README.md.
+├── Dockerfile             # Construye los dos y los mete en el mismo nginx
 └── package.json
 ```
 

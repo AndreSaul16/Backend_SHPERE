@@ -1,12 +1,46 @@
-# Landing_SPHERE
+# Landing de SPHERE
 
 Landing de marketing de SPHERE — la junta directiva de IA. Página única, español
 de España, sin formulario: todos los CTA llevan a la aplicación, que regala 30
 créditos al mes (D5).
 
 El contrato de dirección creativa, copy y coreografía es [`DIRECCION.md`](./DIRECCION.md).
-Donde ese documento calla, manda `../Frontend_SPHERE/DESIGN.md`.
+Donde ese documento calla, manda `../../DESIGN.md`.
 **Ni el copy ni la paleta se improvisan.**
+
+## Dónde vive esto y por qué
+
+Esta carpeta es un proyecto Vite **independiente** —su propio `package.json`,
+su propio Tailwind, su propio ESLint y su propia suite— que vive dentro de
+`frontend/` por una razón concreta: el contexto de build de Docker del servicio
+de Railway del frontend es esa carpeta, y los ajustes de Railway no se tocan.
+Lo que no esté aquí dentro no llega a la imagen.
+
+Y desde ese mismo servicio se sirve. **La landing es la portada del dominio:**
+
+| URL | Quién responde |
+|---|---|
+| `/` | Esta landing (nginx nombra `landing/index.html` directamente) |
+| `/landing/…` | Sus assets con hash, sus fuentes, su `og.png` |
+| `/landing`, `/landing/` | 301 a `/` — el documento vive en una sola URL |
+| todo lo demás (`/login`, `/register`, `/chat/…`) | La aplicación, igual que siempre |
+
+La asimetría **documento en la raíz, assets en una subruta** es deliberada y es
+lo que hace que la convivencia funcione: `base: '/landing/'` en
+[`vite.config.ts`](./vite.config.ts) es lo único que impide que los ficheros con
+hash de la landing pisen los del producto, que también se llaman `assets/…` y
+comparten raíz de nginx. El documento, en cambio, lo sirve nginx desde donde le
+apetezca, porque `base` sólo afecta a las URLs que escribe Vite.
+
+Esa ruta está escrita en tres sitios —la `base`, el `COPY` del Dockerfile y el
+`try_files` de nginx— y si una se mueve sola, la página se sirve **sin estilos y
+sin JavaScript**, con 200 en el documento y 404 en todo lo demás: no falla
+ningún build y no hay error en ningún log. Lo vigila
+[`test/despliegue.test.ts`](./test/despliegue.test.ts).
+
+Lo que el producto tuvo que aprender a ignorar (`@source not` de Tailwind, el
+`exclude` de vitest, el `globalIgnores` de ESLint) está en sus propios ficheros,
+cada uno con el número que lo justifica.
 
 ## Stack
 
@@ -20,30 +54,46 @@ desarrollo, y que siga siendo así lo vigila un test.
 
 ```bash
 pnpm install        # pnpm SIEMPRE (npm está interceptado en este entorno)
-pnpm dev            # servidor de desarrollo en :4173 ← así se previsualiza
+pnpm dev            # servidor de desarrollo en :4173/landing/ ← así se previsualiza
 pnpm typecheck      # tsc --noEmit
 pnpm lint           # eslint .
-pnpm test           # vitest run — 134 tests, incluye el contrato de §8
+pnpm test           # vitest run — 145 tests, incluye el contrato de §8
 pnpm og             # regenera public/og.png y favicon-32.png (one-off)
 pnpm verificar      # Chromium contra el dev-server: los puntos manuales de §8
 ```
 
+**`pnpm dev` sirve la página en `http://localhost:4173/landing/`, no en `/`.** Es
+la única diferencia dev/producción y sale de `base`: en desarrollo no hay nginx
+que sirva el documento donde quiera, así que Vite lo cuelga de la base y redirige
+la raíz allí (302). En producción es al revés: el documento está en `/` y sólo
+sus assets bajo `/landing/`. Lo que sí es idéntico en los dos sitios son las URLs
+de los activos —Vite les antepone la base también en desarrollo—, y por eso en
+`index.html` se escriben desde la raíz (`/fonts/…`): escribirlas ya con
+`/landing/` las duplicaría en desarrollo (`/landing/landing/fonts/…`).
+
 ## Verificación
 
-**Esta landing no se construye en local.** `vite build` sólo lo ejecuta el
-Dockerfile en Railway (regla del propietario). Los gates de todos los días son
-`pnpm typecheck` + `pnpm lint` + `pnpm test` + el servidor de desarrollo.
+**Esta landing no se construye en local.** `vite build` lo ejecutan el job
+`test-landing` de CI y el Dockerfile en Railway (regla del propietario). Los
+gates de todos los días son `pnpm typecheck` + `pnpm lint` + `pnpm test` + el
+servidor de desarrollo.
 
 Consecuencia práctica que conviene tener presente: **la primera vez que
-`vite build` se ejecuta de verdad es en el primer despliegue.** Merece la pena
-mirar el log de ese build en vez de darlo por bueno.
+`vite build` se ejecuta de verdad es en CI.** Merece la pena mirar el log de ese
+build en vez de darlo por bueno. Ese job hace después algo que ningún test
+puede hacer, porque necesita un `dist/` que en local no existe:
+[`scripts/comprobar-base.mjs`](./scripts/comprobar-base.mjs) mide que todas las
+URLs del documento y del CSS emitido cuelguen de `/landing/`, y enseña las que
+ha encontrado.
 
 El checklist mecánico de `DIRECCION.md` §8 vive en
 [`test/contratoDeAceptacion.test.ts`](./test/contratoDeAceptacion.test.ts): cada
 punto es un test que, al fallar, imprime fichero, línea y texto — no un
 «esperaba 0, recibí 3». Los demás tests defienden el motor de la demo, el
-presupuesto de motion, el gating, los metadatos, las cabeceras de nginx y los
-activos sociales.
+presupuesto de motion, el gating, los metadatos, el contrato de despliegue y los
+activos sociales. Las cabeceras de seguridad las vigila
+`../tests/lib/cabecerasDeSeguridad.test.ts`, en la suite del producto: el
+`nginx.conf` es del servicio, y el guard vive donde vive el fichero.
 
 Para los puntos que sólo se pueden mirar con un navegador:
 
@@ -150,35 +200,47 @@ propósito para no ampliar el ciclo de remate por cuenta propia.
 - El scrub de S3 puede aparcar en el fundido entre fases — un snap por beat lo
   puliría.
 
-## Despliegue en Railway
+## Despliegue
 
-Servicio **nuevo y aparte** del frontend del producto, desde este mismo
-repositorio.
+**Sin servicio propio y sin ajustes de Railway que tocar.** La landing se
+despliega con el frontend del producto, en el mismo servicio y en el mismo
+`docker build`. Los ficheros están en la carpeta de arriba porque son del
+servicio, no de la página:
 
-1. Nuevo servicio → este repo. La raíz del servicio es la raíz del repositorio
-   (no hay `rootDirectory` que fijar).
-2. El constructor es el `Dockerfile`; ya lo declara [`railway.toml`](./railway.toml)
-   junto con el healthcheck en `/`.
-3. **Variables de entorno: ninguna.** `PORT` lo inyecta Railway y el
-   `Dockerfile` acota el `envsubst` a esa única variable.
-4. Cuando haya dominio, cambiar `LANDING_URL` en [`src/config.ts`](./src/config.ts)
-   y, con él, `public/robots.txt` y `public/sitemap.xml`. `test/seo.test.ts`
-   falla hasta que los tres digan lo mismo, así que no se puede olvidar.
-   `APP_URL` es otra cosa —el destino de los CTA, que ya existe— y no se toca.
-   **`og.png` no hay que regenerarlo por un cambio de dominio**: la tarjeta no
-   lleva el dominio dibujado.
+| Fichero | Qué hace con la landing |
+|---|---|
+| [`../Dockerfile`](../Dockerfile) | Instala con pnpm (`--frozen-lockfile`), corre `pnpm build` y copia `dist/` a `/usr/share/nginx/html/landing` |
+| [`../nginx.conf`](../nginx.conf) · [`../nginx.conf.template`](../nginx.conf.template) | `location = /` sirve el documento; `/landing…` redirige a la raíz |
+| [`../.dockerignore`](../.dockerignore) | Deja fuera `landing/node_modules` y `landing/dist` |
 
-El `Dockerfile` compila con pnpm y sirve con nginx. `nginx.conf` es a la vez el
-fichero de referencia y el que se despliega (se copia como plantilla y `envsubst`
-resuelve `${PORT}` al arrancar).
+Dos detalles que cuestan una tarde si se descubren en el despliegue:
 
-**La lección heredada del frontend del producto**, que explica por qué
-`nginx.conf` se ve repetitivo: `add_header` **no se hereda** en un `location`
-que declare el suyo — nginx reemplaza el juego entero. Allí eso dejó la
-aplicación completa servida sin una sola cabecera de seguridad, en silencio.
-Aquí cada `location` que declara cabeceras repite las cinco, y
-`test/cabecerasDeSeguridad.test.ts` las **deduce** del bloque `server` para que
-añadir una cabecera nueva no envejezca el test.
+- **La etapa de build es `node:22-alpine`, no `node:20`.** `packageManager` fija
+  pnpm 11.7.0 y su `engines.node` es `>= 22.13`. Con node 20, corepack se planta
+  antes de instalar nada.
+- **`pnpm-workspace.yaml` va en el `COPY` de los manifiestos.** pnpm 11 ya no lee
+  la clave `"pnpm"` de `package.json` y de ahí sale `allowBuilds: esbuild`. Sin
+  él, esbuild no coloca el binario de su plataforma y `vite build` muere en el
+  arranque.
+
+Cuando haya dominio propio, cambiar `APP_URL` en
+[`src/config.ts`](./src/config.ts) —`LANDING_URL` es ya la raíz de `APP_URL`, así
+que va detrás sola— y, con él, `../public/robots.txt` y `../public/sitemap.xml`.
+[`test/seo.test.ts`](./test/seo.test.ts) falla hasta que los tres digan lo mismo,
+así que no se puede olvidar. **`og.png` no hay que regenerarlo por un cambio de
+dominio**: la tarjeta no lleva el dominio dibujado.
+
+**La lección que explica por qué `nginx.conf` se ve repetitivo:** `add_header`
+**no se hereda** en un `location` que declare el suyo — nginx reemplaza el juego
+entero. En este mismo servicio eso dejó una vez la aplicación completa servida
+sin una sola cabecera de seguridad, en silencio. El bloque nuevo de la raíz
+repite las cuatro, y `../tests/lib/cabecerasDeSeguridad.test.ts` las **deduce**
+del bloque `server` para que añadir una cabecera nueva no envejezca el test.
+
+Por lo mismo, el bloque de la raíz usa `try_files /landing/index.html =404` y
+nombra el fichero entero: un fallback a `/index.html` haría redirección interna
+a otro bloque y las cabeceras de éste **no llegarían al documento** — que es
+exactamente cómo ocurrió la primera vez.
 
 ## Verificación pendiente en máquina con navegador
 
@@ -188,10 +250,12 @@ Lo que este entorno no puede cerrar, con el comando exacto:
   6×, grabar 10 s de scroll con el pulgar en 390×844. Criterio: p95 ≥ 55 fps y
   ningún frame > 16,6 ms por estilo o layout. Requiere el panel a mano; no hay
   API que lo sustituya.
-- **§8.18 · Lighthouse móvil contra producción.** Contra el servicio desplegado,
-  nunca contra `pnpm dev`:
+- **§8.18 · Lighthouse móvil contra producción.** Contra el servicio desplegado
+  —que ahora es el del frontend, y la landing es su raíz—, nunca contra
+  `pnpm dev`:
   ```bash
-  pnpm dlx lighthouse@12 https://TU-DOMINIO/ --preset=perf --form-factor=mobile --view
+  pnpm dlx lighthouse@12 https://frontendsphere-production.up.railway.app/ \
+    --preset=perf --form-factor=mobile --view
   ```
 - **§8.20 · diff de copy sección a sección** contra `DIRECCION.md` §2. Los diez
   titulares se comprueban solos en §8.13; el cuerpo es lectura humana.
@@ -215,9 +279,9 @@ despliegue**: son el punto 18 y siguen pendientes.
 
 ```
 index.html                    las 12 secciones S0–S11 con el copy final de DIRECCION.md §2
-Dockerfile · nginx.conf       despliegue: build con pnpm, servicio con nginx
-railway.toml                  constructor y healthcheck del servicio
-src/config.ts                 APP_URL, LANDING_URL y CTA_REGISTRO() — fuente única de destinos
+vite.config.ts                base '/landing/' + inyección de los destinos de CTA en el HTML
+src/config.ts                 APP_URL, LANDING_URL, BASE_LANDING, URL_OG_IMAGE
+                              y CTA_REGISTRO() — fuente única de destinos y rutas
 src/styles/index.css          tokens (DESIGN.md §13), materia, marca y sistema visual
 src/main.ts                   punto de entrada: estilos + arrancarMotion()
 
@@ -243,6 +307,8 @@ src/piezas/sello.ts           §8.3 — el único aterrizaje `impact` de la pág
 scripts/generar-grano.mjs     generador one-off del tile de grano
 scripts/generar-og.mjs        generador one-off de og.png y favicon-32.png
 scripts/verificar-navegador.mjs  los puntos manuales de §8, medidos con Chromium
+scripts/comprobar-base.mjs    en CI, tras el build: todas las URLs bajo /landing/
+test/despliegue.test.ts       base + Dockerfile + nginx dicen los tres lo mismo
 docs/capturas/                evidencia visual commiteada + verificacion.json
 ```
 
@@ -300,6 +366,12 @@ El motor rebobina y vuelve a llegar al mismo sitio.
   si alguna cara tipográfica no está cargada, si una línea se sale del lienzo,
   si una palabra desborda su caja o si la leyenda del sello no cabe en su
   renglón.
-- **`robots.txt` y `sitemap.xml`**: una sola URL. Las secciones S1–S11 son
-  anclas del mismo documento, no rutas: un sitemap que las listara estaría
-  declarando páginas que no existen.
+- **`robots.txt` y `sitemap.xml`**: **ya no están aquí**, están en
+  `../public/`. Declaran el **dominio entero** —cuya raíz es esta página, pero
+  cuyas otras rutas son la aplicación—, así que son del producto y los sirve
+  nginx desde `/`. Servidos desde `public/` de la landing habrían acabado en
+  `/landing/robots.txt`, y ahí son inertes: ningún rastreador busca el
+  `robots.txt` en una subcarpeta. Siguen declarando una sola URL —las secciones
+  S1–S11 son anclas del mismo documento, no rutas—, y siguen atados a
+  `LANDING_URL`: lo comprueba `test/seo.test.ts` desde aquí, porque la constante
+  que los ata sí es de la landing.
